@@ -1,0 +1,24 @@
+package me.Plugins.SimpleFactions.Army;
+
+public class MilitaryExpansion {
+	private Regiment regiment;
+	private int timeLeft;
+	
+	public MilitaryExpansion(Regiment r) {
+		regiment = r;
+		timeLeft = r.getExpansionTime();
+	}
+	
+	public void tick() {
+		if(timeLeft == 0) return;
+		timeLeft--;
+	}
+	
+	public Regiment getRegiment() {
+		return regiment;
+	}
+	
+	public int getTimeLeft() {
+		return timeLeft;
+	}
+}

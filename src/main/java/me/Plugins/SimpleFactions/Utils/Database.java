@@ -1,0 +1,341 @@
+package me.Plugins.SimpleFactions.Utils;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
+import org.bukkit.DyeColor;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.banner.Pattern;
+import org.bukkit.block.banner.PatternType;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BannerMeta;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+
+import me.Plugins.SimpleFactions.Diplomacy.Attitude;
+import me.Plugins.SimpleFactions.Diplomacy.Relation;
+import me.Plugins.SimpleFactions.Diplomacy.RelationType;
+import me.Plugins.SimpleFactions.Loaders.RelationLoader;
+import me.Plugins.SimpleFactions.Loaders.TitleLoader;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
+import me.Plugins.SimpleFactions.Objects.Bank;
+import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Objects.FactionModifier;
+import me.Plugins.SimpleFactions.Objects.Modifier;
+import me.Plugins.SimpleFactions.Tiers.Title;
+
+public class Database {
+	Formatter format = new Formatter();
+	private JSONObject json; // org.json.simple
+    JSONParser parser = new JSONParser();
+	public void loadFactions() {
+		Bukkit.getLogger().info("[SimpleFactions] loading factions...");
+		File folder = new File("plugins/SimpleFactions/Data");
+    	for (final File file : folder.listFiles()) {
+            if (!file.isDirectory()) {
+            	try {
+    				json = (JSONObject) parser.parse(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+    				String id = (String) json.get("id");
+    				String name = (String) json.get("name");
+    				String rgb = (String) json.get("rgb");
+    				String leader = (String) json.get("leader");
+    				String rulerTitle = (String) json.get("ruler title");
+    				String government = (String) json.get("government");
+    				String culture = (String) json.get("culture");
+    				String religion = (String) json.get("religion");
+    				int exCap = 0;
+    				if(json.containsKey("extra node capacity")) {
+    					exCap = (int) Math.round((Double) json.get("extra node capacity"));
+    				}
+    				List<String> patterns = new ArrayList<String>();
+    				int i = 0;
+    				JSONArray patternArray = (JSONArray) json.get("banner");
+    				while(i < patternArray.size()) {
+    					patterns.add(patternArray.get(i).toString());
+    					i++;
+    				}
+    				List<Integer> provinces = new ArrayList<Integer>();
+    				i = 0;
+    				JSONArray provinceArray = (JSONArray) json.get("provinces");
+    				while(i < provinceArray.size()) {
+    					provinces.add(((Long) provinceArray.get(i)).intValue());
+    					i++;
+    				}
+    				List<Title> titles = new ArrayList<>();
+    				i = 0;
+    				JSONArray titleArray = (JSONArray) json.get("titles");
+    				while(i < titleArray.size()) {
+    					Title t = TitleLoader.getById((String) titleArray.get(i));
+    					if(t != null) titles.add(t);
+    					i++;
+    				}
+    				List<String> members = new ArrayList<String>();
+    				i = 0;
+    				JSONArray memberArray = (JSONArray) json.get("members");
+    				while(i < memberArray.size()) {
+    					members.add(memberArray.get(i).toString());
+    					i++;
+    				}
+    				List<Modifier> prestigeModifiers = new ArrayList<Modifier>();
+    				i = 0;
+    				JSONArray prestigeArray = (JSONArray) json.get("prestige modifiers");
+    				while(i < prestigeArray.size()) {
+    					String type = prestigeArray.get(i).toString().split("\\(")[0];
+    					Double amount = Double.parseDouble(prestigeArray.get(i).toString().split("\\(")[1].replace(")", ""));
+    					Modifier m = new Modifier(type, amount);
+    					prestigeModifiers.add(m);
+    					i++;
+    				}
+    				List<Modifier> wealthModifiers = new ArrayList<Modifier>();
+    				i = 0;
+    				JSONArray wealthArray = (JSONArray) json.get("wealth modifiers");
+    				while(i < wealthArray.size()) {
+    					String type = wealthArray.get(i).toString().split("\\(")[0];
+    					Double amount = Double.parseDouble(wealthArray.get(i).toString().split("\\(")[1].replace(")", ""));
+    					Modifier m = new Modifier(type, amount);
+    					wealthModifiers.add(m);
+    					i++;
+    				}
+    				double tax = 5;
+    				if(json.containsKey("tax rate")) tax = (Double) json.get("tax rate");
+    				Faction f = new Faction(id, rgb, provinces, titles, leader, name, rulerTitle, members, patterns, government, culture, religion, exCap, prestigeModifiers, wealthModifiers, tax);
+    				if(((String) json.get("bank")).equalsIgnoreCase("true")) {
+    					Chunk c = Bukkit.getServer().getWorld((String) json.get("world")).getChunkAt((int) Math.round((Double) json.get("xPos")), (int) Math.round((Double) json.get("zPos")));
+    					Double balance = (Double) json.get("balance");
+    					f.setBank(new Bank(f, balance, c));
+        				f.updateWealth();
+    				}
+    			
+    				i = 0;
+    				JSONArray relationArray = (JSONArray) json.get("relations");
+    				while(i < relationArray.size()) {
+    					String s = (String) relationArray.get(i);
+    					FactionManager.addDBRelation(f, s);
+    					i++;
+    				}
+    				if(json.containsKey("tier index")) {
+    					int index = (int) Math.round((Double) json.get("tier index"));
+    					f.getTier().setIndex(index);
+    				}
+    				FactionManager.factions.add(f);
+    				f.updateWealth();
+    				//Bukkit.getLogger().info("[SimpleFactions] loaded faction "+f.getId());
+    			} catch (Exception ex) {
+    				ex.printStackTrace();
+    			}
+            }
+        }
+	}
+	public void deleteFaction(Faction f) {
+    	File file = new File("plugins/SimpleFactions/Data", f.getId()+".json");
+    	if(file.exists()) file.delete();
+    }
+	@SuppressWarnings("unchecked")
+	public void saveFaction(Faction f) {
+		try {
+			File file = new File("plugins/SimpleFactions/Data",f.getId()+".json");
+			file.createNewFile();
+        	PrintWriter pw = new PrintWriter(file, "UTF-8");
+        	pw.print("{");
+        	pw.print("}");
+        	pw.flush();
+        	pw.close();
+            HashMap<String, Object> defaults = new HashMap<String, Object>();
+        	json = (JSONObject) parser.parse(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+        	defaults.put("id", f.getId());
+        	defaults.put("name", f.getName());
+        	if(f.getBank() != null) {
+        		defaults.put("bank", "true");
+        		Bank b = f.getBank();
+            	defaults.put("world", b.getChunk().getWorld().toString().replace("CraftWorld{name=", "").replace("}", ""));
+            	defaults.put("xPos", b.getChunk().getX());
+            	defaults.put("zPos", b.getChunk().getZ());
+            	defaults.put("balance", b.getWealth());
+        	} else {
+        		defaults.put("bank", "false");
+        	}
+        	defaults.put("government", f.getGovernment());
+        	defaults.put("culture", f.getCulture());
+        	defaults.put("religion", f.getReligion());
+        	defaults.put("rgb", f.getRGB());
+        	defaults.put("tax rate", f.getTaxRate());
+        	if(f.getExtraNodeCapacity() != null) {
+        		defaults.put("extra node capacity", f.getExtraNodeCapacity());
+        	}
+        	int i = 0;
+        	JSONArray provinceArray = new JSONArray();
+        	while(i < f.getProvinces().size()) {
+        		provinceArray.add(f.getProvinces().get(i));
+        		i++;
+        	}
+        	defaults.put("provinces", provinceArray);
+        	i = 0;
+        	JSONArray titleArray = new JSONArray();
+        	while(i < f.getTitles().size()) {
+        		titleArray.add(f.getTitles().get(i).getId());
+        		i++;
+        	}
+        	defaults.put("titles", titleArray);
+        	JSONArray relationArray = new JSONArray();
+        	for(Map.Entry<String, Relation> entry : f.getRelations().entrySet()) {
+        		Relation r = entry.getValue();
+        		String s = entry.getKey()+"("+r.getType().getId()+"."+r.getAttitude().getId()+"."+r.getOpinion()+")";
+        		relationArray.add(s);
+        	}
+        	defaults.put("relations", relationArray);
+        	i = 0;
+        	JSONArray bannerArray = new JSONArray();
+        	while(i < f.getBannerPatterns().size()) {
+        		bannerArray.add(f.getBannerPatterns().get(i));
+        		i++;
+        	}
+        	defaults.put("banner", bannerArray);
+        	i = 0;
+        	JSONArray modifierArray = new JSONArray();
+        	List<FactionModifier> modifiers = new ArrayList<>(f.getModifiers());
+        	while(i < modifiers.size()) {
+        		if(modifiers.get(i).isTimed()) {
+        			FactionModifier m = modifiers.get(i);
+        			String modString = m.getType().toString().toLowerCase()+"("+m.getAmount()+");"+m.getTime();
+        			modifierArray.add(modString);
+        		}
+        		i++;
+        	}
+        	defaults.put("faction modifiers", modifierArray);
+        	i = 0;
+        	JSONArray members = new JSONArray();
+        	while(i < f.getMembers().size()) {
+        		members.add(f.getMembers().get(i));
+        		i++;
+        	}
+        	defaults.put("members", members);
+        	defaults.put("tier", format.formatId(f.getTier().getFormattedName()));
+        	defaults.put("leader", f.getLeader());
+        	defaults.put("ruler title", f.getRulerTitle());
+        	if(f.getTier().getIndex() != -1) defaults.put("tier index", f.getTier().getIndex());
+        	i = 0;
+        	JSONArray prestigeModifiers = new JSONArray();
+        	while(i < f.getPrestigeModifiers().size()) {
+        		String type = f.getPrestigeModifiers().get(i).getType();
+        		List<String> ignore = Arrays.asList("Nodes", "Wealth", "Members");
+        		if(!ignore.contains(type)) {
+        			Double amount = f.getPrestigeModifiers().get(i).getAmount();
+            		prestigeModifiers.add(type+"("+amount+")");
+        		}
+        		i++;
+        	}
+        	defaults.put("prestige modifiers", prestigeModifiers);
+        	i = 0;
+        	JSONArray wealthModifiers = new JSONArray();
+        	while(i < f.getWealthModifiers().size()) {
+        		String type = f.getWealthModifiers().get(i).getType();
+        		List<String> ignore = Arrays.asList("Nodes", "Bank");
+        		if(!ignore.contains(type)) {
+        			Double amount = f.getWealthModifiers().get(i).getAmount();
+            		wealthModifiers.add(type+"("+amount+")");
+        		}
+        		i++;
+        	}
+        	defaults.put("wealth modifiers", wealthModifiers);
+        	if(RelationManager.getOverlord(f) != null) {
+        		defaults.put("overlord", RelationManager.getOverlord(f));
+        	}
+        	save(file, defaults);
+        } catch (Throwable ex) {
+			ex.printStackTrace();
+        }
+	}
+	@SuppressWarnings("unchecked")
+	public boolean save(File file, HashMap<String, Object> defaults) {
+	  try {
+		  JSONObject toSave = new JSONObject();
+	  
+	    for (String s : defaults.keySet()) {
+	      Object o = defaults.get(s);
+	      if (o instanceof String) {
+	        toSave.put(s, getString(s, defaults));
+	      } else if (o instanceof Double) {
+	        toSave.put(s, getDouble(s, defaults));
+	      } else if (o instanceof Integer) {
+	        toSave.put(s, getInteger(s, defaults));
+	      } else if (o instanceof JSONObject) {
+	        toSave.put(s, getObject(s, defaults));
+	      } else if (o instanceof JSONArray) {
+	        toSave.put(s, getArray(s, defaults));
+	      }
+	    }
+	  
+	    TreeMap<String, Object> treeMap = new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
+	    treeMap.putAll(toSave);
+	  
+	   Gson g = new GsonBuilder().setPrettyPrinting().create();
+	   String prettyJsonString = g.toJson(treeMap);
+	  
+	    FileWriter fw = new FileWriter(file);
+	    fw.write(prettyJsonString);
+	    fw.flush();
+	    fw.close();
+	  
+	    return true;
+	  } catch (Exception ex) {
+	    ex.printStackTrace();
+	    return false;
+	  }
+	}
+	
+	public String getRawData(String key, HashMap<String, Object> defaults) {
+	    return json.containsKey(key) ? json.get(key).toString()
+	       : (defaults.containsKey(key) ? defaults.get(key).toString() : key);
+	  }
+	
+	  public String getString(String key, HashMap<String, Object> defaults) {
+	    return ChatColor.translateAlternateColorCodes('&', getRawData(key, defaults));
+	  }
+	
+	  public boolean getBoolean(String key, HashMap<String, Object> defaults) {
+	    return Boolean.valueOf(getRawData(key, defaults));
+	  }
+	
+	  public double getDouble(String key, HashMap<String, Object> defaults) {
+	    try {
+	      return Double.parseDouble(getRawData(key, defaults));
+	    } catch (Exception ex) { }
+	    return -1;
+	  }
+	
+	  public double getInteger(String key, HashMap<String, Object> defaults) {
+	    try {
+	      return Integer.parseInt(getRawData(key, defaults));
+	    } catch (Exception ex) { }
+	    return -1;
+	  }
+	 
+	  public JSONObject getObject(String key, HashMap<String, Object> defaults) {
+	     return json.containsKey(key) ? (JSONObject) json.get(key)
+	       : (defaults.containsKey(key) ? (JSONObject) defaults.get(key) : new JSONObject());
+	  }
+	 
+	  public JSONArray getArray(String key, HashMap<String, Object> defaults) {
+		     return json.containsKey(key) ? (JSONArray) json.get(key)
+		       : (defaults.containsKey(key) ? (JSONArray) defaults.get(key) : new JSONArray());
+	  }
+}
