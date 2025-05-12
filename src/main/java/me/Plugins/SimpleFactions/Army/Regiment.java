@@ -120,6 +120,10 @@ public class Regiment {
 		toOverlord = i;
 	}
 
+	public void setCurrentSlots(int i){
+		currentSlots = i;
+	}
+
 	public int getCurrentSlots() {
 		return currentSlots;
 	}

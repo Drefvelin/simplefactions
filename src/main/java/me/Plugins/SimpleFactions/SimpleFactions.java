@@ -59,6 +59,7 @@ public class SimpleFactions extends JavaPlugin{
 	}
 	@Override
 	public void onDisable() {
+		db.saveTimer(FactionManager.getTimer());
 		for(Faction f : FactionManager.factions) {
 			db.saveFaction(f);
 		}
@@ -84,6 +85,8 @@ public class SimpleFactions extends JavaPlugin{
 		File subFolder = new File(getDataFolder(), "Data");
 		if(!subFolder.exists()) subFolder.mkdir();
 		subFolder = new File(getDataFolder(), "PlayerData");
+		if(!subFolder.exists()) subFolder.mkdir();
+		subFolder = new File(getDataFolder(), "Cache");
 		if(!subFolder.exists()) subFolder.mkdir();
 		subFolder = new File(getDataFolder(), "MapAPI");
 		if(!subFolder.exists()) subFolder.mkdir();

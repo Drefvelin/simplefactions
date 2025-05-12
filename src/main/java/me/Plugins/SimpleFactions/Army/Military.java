@@ -40,6 +40,15 @@ public class Military {
 	}
 	
 	public double getTotalUpkeep() {
+		double d = getRawTotalUpkeep();
+		if(f.getModifier(FactionModifiers.MILITARY_UPKEEP) != null){
+			double mod = 1.0 + f.getModifier(FactionModifiers.MILITARY_UPKEEP).getAmount()/100.0;
+			d*=mod;
+		}
+		return format.formatDouble(d);
+	}
+
+	public double getRawTotalUpkeep() {
 		double d = 0;
 		for(Regiment r : regiments) {
 			d += r.getTotalUpkeep();
@@ -75,6 +84,11 @@ public class Military {
 	public void enqueue(Regiment r) {
 		if(queue.size() == 3) return;
 		queue.add(new MilitaryExpansion(r));
+	}
+
+	public void addQueueItem(Regiment r, int time){
+		if(queue.size() == 3) return;
+		queue.add(new MilitaryExpansion(r, time));
 	}
 	
 	public int getManpower(boolean offense) {

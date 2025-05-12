@@ -30,14 +30,14 @@ public class MilitaryView {
 	
 	public void militaryView(Inventory i, Player player, Faction f, boolean open) {
 		if(open) {
-			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.MILITARY_VIEW), 54, "�7Military View");
+			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.MILITARY_VIEW), 54, "§7Military View");
 		}
 		Military m = f.getMilitary();
 		i.setItem(10, creator.createMilitarySummary(f));
 		for(int x = 0; x<m.getRegiments().size(); x++) {
 			int slot = x+12;
 			Regiment r = m.getRegiments().get(x);
-			i.setItem(slot, creator.createRegimentIcon(r));
+			i.setItem(slot, creator.createRegimentIcon(f, r));
 			if(!r.isLevy() && f.getLeader().equalsIgnoreCase(player.getName())) {
 				int a = slot-9;
 				i.setItem(a, creator.createRegimentIncreaseButton(f, r));
@@ -71,7 +71,7 @@ public class MilitaryView {
 		if(f == null) return;
 		
 		if(f.getMilitary().getQueue().size() == 3) {
-			p.sendMessage("�cQueue is full");
+			p.sendMessage("§cQueue is full");
 			return;
 		}
 		
@@ -85,7 +85,7 @@ public class MilitaryView {
 		String type = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 		if(type == null) return;
 		if(type.contentEquals("increase")) {
-			p.sendMessage("�eQueued "+r.getName());
+			p.sendMessage("§eQueued "+r.getName());
 			f.getMilitary().enqueue(r);
 			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 		} else {

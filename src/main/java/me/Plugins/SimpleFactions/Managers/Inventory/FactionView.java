@@ -44,7 +44,7 @@ public class FactionView {
 			currentRanking.put(player, RankType.PRESTIGE);
 		}
 		RankType t = currentRanking.get(player);
-		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 54, "�7Faction List");
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 54, "§7Faction List");
 		Integer counter = 0;
 		Integer fc = 0;
 		List<Faction> factions = r.getRankedList(t);
@@ -69,7 +69,7 @@ public class FactionView {
 		player.openInventory(i);
 	}
 	public void factionView(Player player, Faction f) {
-		Inventory i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.FACTION_VIEW), 54, "�7Faction View");
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.FACTION_VIEW), 54, "§7Faction View");
 		if(f.getMembers().contains(player.getName())) i.setItem(1, creator.createMenuItem(player, f, MenuItemType.BANNER_GET));
 		i.setItem(10, creator.createMenuItem(player, f, MenuItemType.BANNER));
 		if(f.getLeader().equalsIgnoreCase(player.getName())) i.setItem(19, creator.createMenuItem(player, f, MenuItemType.BANNER_RANDOM));
@@ -88,7 +88,7 @@ public class FactionView {
 	}
 	
 	public void click(InventoryClickEvent e, Inventory inventory, Player p) {
-		if(e.getView().getTitle().equalsIgnoreCase("�7Faction List")) {
+		if(e.getView().getTitle().equalsIgnoreCase("§7Faction List")) {
 			e.setCancelled(true);
 			if(e.getSlot() == 8) {
 				RankType t = currentRanking.get(p);
@@ -114,7 +114,7 @@ public class FactionView {
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				}
 			}
-		} else if(e.getView().getTitle().equalsIgnoreCase("�7Faction View")) {
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Faction View")) {
 			e.setCancelled(true);
 			if(e.getSlot() == 29) {
 				ItemStack item = e.getCurrentItem();

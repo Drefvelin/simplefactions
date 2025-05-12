@@ -24,9 +24,15 @@ import me.Plugins.SimpleFactions.Utils.Database;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 
 public class FactionManager implements Listener{
+	public static int timer = 0;
+
 	public static List<Faction> factions = new ArrayList<Faction>();
 	
 	public static HashMap<Faction, List<String>> dbRelations = new HashMap<>();
+
+	public static int getTimer(){
+		return timer;
+	}
 	
 	public static void addDBRelation(Faction f, String s) {
 		List<String> list = new ArrayList<>();
@@ -96,9 +102,21 @@ public class FactionManager implements Listener{
 				}
 				map.tick();
 				RelationManager.tick();
-				inv.getUpdater().updateInventory();	
+				inv.getUpdater().updateInventory();
+				time();
 	        }
 	    }.runTaskTimer(SimpleFactions.plugin, 0L, 20L);
+	}
+
+	public void time() {
+		timer++;
+
+		if (timer >= 86400) {
+			for(Faction f : factions){
+				f.newDay();
+			}
+			timer = 0;
+		}
 	}
 	
 	public void run() {

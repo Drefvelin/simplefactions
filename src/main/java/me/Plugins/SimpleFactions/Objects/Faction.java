@@ -12,6 +12,7 @@ import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.banner.PatternType;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
@@ -19,6 +20,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Army.Military;
+import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.TierLoader;
@@ -658,4 +660,29 @@ public class Faction {
 	    }
 	    return new FactionModifier(m, totalAmount);
 	}
+
+    public void newDay() {
+        double armyCost = military.getTotalUpkeep();
+		if(armyCost > 0 && bank == null){
+			for(Regiment r : military.getRegiments()){
+				if(r.isLevy()) continue;
+				while(r.getCurrentSlots() > r.getFreeSlots()){
+					r.sizeDecrease();
+				}
+			}
+		}
+		while(armyCost > 0 && bank.getWealth() < armyCost) {
+			for(Regiment r : military.getRegiments()) {
+				if(r.isLevy()) continue;
+				if(r.getCurrentSlots() > r.getFreeSlots()) {
+					r.sizeDecrease();
+					break;
+				}
+			}
+			armyCost = military.getTotalUpkeep();
+		}
+		if(armyCost > 0) {
+			bank.withdraw(armyCost);
+		}
+    }
 }

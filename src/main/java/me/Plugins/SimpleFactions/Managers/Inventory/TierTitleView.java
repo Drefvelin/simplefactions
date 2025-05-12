@@ -33,7 +33,7 @@ public class TierTitleView {
 	
 	public void tierView(Inventory i, Player player, Faction f, boolean open) {
 		if(open) {
-			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TIER_VIEW), 54, "�7Tier View");
+			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TIER_VIEW), 54, "§7Tier View");
 		}
 		if(f.getLeader().equalsIgnoreCase(player.getName())) {
 			int slot = 0;
@@ -52,7 +52,7 @@ public class TierTitleView {
 	}
 	public void titleView(Inventory i, Player player, Faction f, boolean open) {
 		if(open) {
-			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TITLE_VIEW), 54, "�7Title View");
+			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TITLE_VIEW), 54, "§7Title View");
 		}
 		Faction pf = FactionManager.getByLeader(player.getName());
 		String overlord = RelationManager.getOverlord(f);
@@ -85,7 +85,7 @@ public class TierTitleView {
 	}
 	public void titleTypeView(Inventory i, Player player, Faction f, Tier tier, boolean open) {
 		if(open) {
-			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TITLE_TYPE_VIEW), 54, tier.getName()+"�7 View");
+			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TITLE_TYPE_VIEW), 54, tier.getName()+"§7 View");
 		}
 		Faction pf = FactionManager.getByLeader(player.getName());
 		String overlord = RelationManager.getOverlord(f);
@@ -107,7 +107,7 @@ public class TierTitleView {
 	}
 	
 	public void click(InventoryClickEvent e, Inventory inventory, Player p) {
-		if(e.getView().getTitle().equalsIgnoreCase("�7Tier View")) {
+		if(e.getView().getTitle().equalsIgnoreCase("§7Tier View")) {
 			e.setCancelled(true);
 			Material type = e.getCurrentItem().getType();
 			if(!type.equals(Material.YELLOW_CONCRETE)) return;
@@ -121,7 +121,7 @@ public class TierTitleView {
 			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			return;
 			
-		} else if(e.getView().getTitle().equalsIgnoreCase("�7Title View")) {
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Title View")) {
 			e.setCancelled(true);
 			if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
 			SFInventoryHolder h = (SFInventoryHolder) inventory.getHolder();
@@ -154,7 +154,7 @@ public class TierTitleView {
 					return;
 				}
 				TitleManager.isFormingTitle.put(p, tier);
-				p.sendMessage("�eType the name of the new "+tier.getName()+" �ein chat.");
+				p.sendMessage("§eType the name of the new "+tier.getName()+" §ein chat.");
 				p.closeInventory();
 			}
 			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
@@ -171,7 +171,7 @@ public class TierTitleView {
 					Faction overlord = FactionManager.getByString(o);
 					if(overlord != null) {
 						if(t.getTier().getTier() > overlord.getTier().getTier()) {
-							p.sendMessage("�cCannot form this title as it would make your tier higher than that of your overlord!");
+							p.sendMessage("§cCannot form this title as it would make your tier higher than that of your overlord!");
 							p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
 							return;
 						}
@@ -180,7 +180,7 @@ public class TierTitleView {
 				
 				f.addTitle(t);
 				titleTypeView(inventory, p, f, t.getTier(), false);
-				p.sendMessage("�aClaimed the title "+t.getName());
+				p.sendMessage("§aClaimed the title "+t.getName());
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 			} else if(action.equalsIgnoreCase("grant")) {
 				if(!type.equals(Material.GREEN_CONCRETE)) return;
@@ -191,7 +191,7 @@ public class TierTitleView {
 				pf.removeTitle(t);
 				if(TitleManager.getGrantableTitles(f, pf, t.getTier()).size() > 0) titleTypeView(inventory, p, f, t.getTier(), false);
 				else titleView(null, p, f, true);
-				p.sendMessage("�aGranted "+f.getName()+" the title "+t.getName());
+				p.sendMessage("§aGranted "+f.getName()+" the title "+t.getName());
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 			}
 			return;

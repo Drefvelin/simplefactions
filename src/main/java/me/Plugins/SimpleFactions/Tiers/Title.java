@@ -2,8 +2,6 @@ package me.Plugins.SimpleFactions.Tiers;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -14,7 +12,6 @@ import com.google.gson.JsonObject;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Title {

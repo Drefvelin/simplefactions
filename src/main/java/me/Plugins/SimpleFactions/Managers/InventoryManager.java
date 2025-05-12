@@ -109,7 +109,7 @@ public class InventoryManager implements Listener{
 	
 	//Confirm
 	public void confirmView(Player player, Faction f, String key, String data) {
-		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "�7Confirm Action");
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Confirm Action");
 		i.setItem(11, createButton("confirm", key, data));
 		i.setItem(15, createButton("cancel", key, data));
 		player.openInventory(i);
@@ -120,7 +120,7 @@ public class InventoryManager implements Listener{
 	public ItemStack getFiller(Material mat) {
 		ItemStack i = new ItemStack(mat, 1);
 		ItemMeta m = i.getItemMeta();
-		m.setDisplayName("�c");
+		m.setDisplayName("§c");
 		i.setItemMeta(m);
 		return i;
 	}
@@ -132,9 +132,9 @@ public class InventoryManager implements Listener{
 		}
 		ItemMeta m = i.getItemMeta();
 		if(type.equalsIgnoreCase("cancel")) {
-			m.setDisplayName("�cCancel");
+			m.setDisplayName("§cCancel");
 		} else {
-			m.setDisplayName("�cConfirm");
+			m.setDisplayName("§cConfirm");
 		}
 		NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, key);
 		m.getPersistentDataContainer().set(id, PersistentDataType.STRING, data);
@@ -145,7 +145,7 @@ public class InventoryManager implements Listener{
 	public ItemStack createBackButton(SFGUI gui) {
 		ItemStack i = new ItemStack(Material.BARRIER, 1);
 		ItemMeta m = i.getItemMeta();
-		m.setDisplayName("�cBack");
+		m.setDisplayName("§cBack");
 		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "gui");
 		m.getPersistentDataContainer().set(key, PersistentDataType.STRING, gui.toString());
 		i.setItemMeta(m);
@@ -193,7 +193,7 @@ public class InventoryManager implements Listener{
 				}
 			}
 		}
-		if(e.getView().getTitle().equalsIgnoreCase("�7Confirm Action")) {
+		if(e.getView().getTitle().equalsIgnoreCase("§7Confirm Action")) {
 			e.setCancelled(true);
 			if(!confirming.containsKey(p)) return;
 			ItemStack item = e.getCurrentItem();
@@ -209,22 +209,22 @@ public class InventoryManager implements Listener{
 				}
 				Regiment r = f.getMilitary().getRegiment(data);
 				r.sizeDecrease();
-				p.sendMessage("�cDecrased size of "+r.getName());
+				p.sendMessage("§cDecrased size of "+r.getName());
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				militaryView(null, p, f, true);
 				return;
 			}
-		} else if(e.getView().getTitle().equalsIgnoreCase("�7Faction List") || e.getView().getTitle().equalsIgnoreCase("�7Faction View")) {
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Faction List") || e.getView().getTitle().equalsIgnoreCase("§7Faction View")) {
 			factionView.click(e, inv, p);
-		} else if(e.getView().getTitle().equalsIgnoreCase("�7Military View")) {
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Military View")) {
 			militaryView.click(e, inv, p);
-		} else if(e.getView().getTitle().equalsIgnoreCase("�7Diplomacy View") || e.getView().getTitle().equalsIgnoreCase("�7Change Attitude") || e.getView().getTitle().equalsIgnoreCase("�7Change Relation")) {
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Diplomacy View") || e.getView().getTitle().equalsIgnoreCase("§7Change Attitude") || e.getView().getTitle().equalsIgnoreCase("§7Change Relation")) {
 			relationView.click(e, inv, p);
-		} else if(e.getView().getTitle().equalsIgnoreCase("�7Tier View") 
-				|| e.getView().getTitle().equalsIgnoreCase("�7Title View")
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Tier View") 
+				|| e.getView().getTitle().equalsIgnoreCase("§7Title View")
 				|| (inv.getHolder() instanceof SFInventoryHolder && ((SFInventoryHolder) inv.getHolder()).getType().equals(SFGUI.TITLE_TYPE_VIEW))) {
 			tierTitleView.click(e, inv, p);
-		} else if(e.getView().getTitle().equalsIgnoreCase("�7War List")
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7War List")
 				|| (inv.getHolder() instanceof WarInventoryHolder && ((WarInventoryHolder) inv.getHolder()).getType().equals(SFGUI.WAR_VIEW))
 				|| (inv.getHolder() instanceof SFCombinedInventoryHolder && ((SFCombinedInventoryHolder) inv.getHolder()).getType().equals(SFGUI.PARTICIPANT_VIEW))
 				|| (inv.getHolder() instanceof SFCombinedInventoryHolder && ((SFCombinedInventoryHolder) inv.getHolder()).getType().equals(SFGUI.WARGOAL_VIEW))) {

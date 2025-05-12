@@ -3,6 +3,7 @@ package me.Plugins.SimpleFactions.Utils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -13,27 +14,18 @@ import java.util.Map;
 import java.util.TreeMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
-import org.bukkit.DyeColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.block.banner.Pattern;
-import org.bukkit.block.banner.PatternType;
-import org.bukkit.inventory.ItemFlag;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BannerMeta;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
-import me.Plugins.SimpleFactions.Diplomacy.Attitude;
+import me.Plugins.SimpleFactions.Army.Military;
+import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
+import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
-import me.Plugins.SimpleFactions.Diplomacy.RelationType;
-import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
@@ -47,6 +39,35 @@ public class Database {
 	Formatter format = new Formatter();
 	private JSONObject json; // org.json.simple
     JSONParser parser = new JSONParser();
+
+	public int getTimer(){
+		File file = new File("plugins/SimpleFactions/Cache", "data.json");
+		if(file.exists()){
+			try {
+				json = (JSONObject) parser.parse(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+				return (int) Math.round((Double) json.get("time"));
+			} catch (IOException | ParseException e) {
+				e.printStackTrace();
+			}
+		}
+		return 0;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void saveTimer(int time) {
+		File file = new File("plugins/SimpleFactions/Cache", "data.json");
+		JSONObject json = new JSONObject(); 
+		
+		json.put("time", time);
+
+		try (FileWriter writer = new FileWriter(file)) {
+			writer.write(json.toJSONString());
+			writer.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	public void loadFactions() {
 		Bukkit.getLogger().info("[SimpleFactions] loading factions...");
 		File folder = new File("plugins/SimpleFactions/Data");
@@ -73,7 +94,7 @@ public class Database {
     					patterns.add(patternArray.get(i).toString());
     					i++;
     				}
-    				List<Integer> provinces = new ArrayList<Integer>();
+					List<Integer> provinces = new ArrayList<Integer>();
     				i = 0;
     				JSONArray provinceArray = (JSONArray) json.get("provinces");
     				while(i < provinceArray.size()) {
@@ -136,6 +157,25 @@ public class Database {
     					int index = (int) Math.round((Double) json.get("tier index"));
     					f.getTier().setIndex(index);
     				}
+					Military m = f.getMilitary();
+					if (json.containsKey("military")) {
+						i = 0;
+    					JSONArray militaryArray = (JSONArray) json.get("military");
+						while(i < militaryArray.size()) {
+							String info = (String) militaryArray.get(i);
+							m.getRegiment(info.split("\\.")[0]).setCurrentSlots(Integer.parseInt(info.split("\\.")[1]));
+							i++;
+						}
+					}
+					if (json.containsKey("military queue")) {
+						i = 0;
+    					JSONArray queueArray = (JSONArray) json.get("military queue");
+						while(i < queueArray.size()) {
+							String info = (String) queueArray.get(i);
+							m.addQueueItem(m.getRegiment(info.split("\\.")[0]), Integer.parseInt(info.split("\\.")[1]));
+							i++;
+						}
+					}
     				FactionManager.factions.add(f);
     				f.updateWealth();
     				//Bukkit.getLogger().info("[SimpleFactions] loaded faction "+f.getId());
@@ -188,6 +228,26 @@ public class Database {
         		i++;
         	}
         	defaults.put("provinces", provinceArray);
+			i = 0;
+        	JSONArray militaryArray = new JSONArray();
+        	while(i < f.getMilitary().getRegiments().size()) {
+				Regiment reg = f.getMilitary().getRegiments().get(i);
+				if(reg.isLevy()) {
+					i++;
+					continue;
+				}
+        		militaryArray.add(reg.getId()+"."+reg.getCurrentSlots());
+        		i++;
+        	}
+        	defaults.put("military", militaryArray);
+			i = 0;
+        	JSONArray queueArray = new JSONArray();
+        	while(i < f.getMilitary().getQueue().size()) {
+				MilitaryExpansion e = f.getMilitary().getQueue().get(i);
+        		queueArray.add(e.getRegiment().getId()+"."+e.getTimeLeft());
+        		i++;
+        	}
+        	defaults.put("military queue", queueArray);
         	i = 0;
         	JSONArray titleArray = new JSONArray();
         	while(i < f.getTitles().size()) {

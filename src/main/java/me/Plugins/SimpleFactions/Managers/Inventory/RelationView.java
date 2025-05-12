@@ -34,7 +34,7 @@ public class RelationView {
 	
 	public void diplomacyView(Inventory i, Player player, Faction f, boolean open) {
 		if(open) {
-			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.DIPLOMACY_VIEW), 54, "�7Diplomacy View");
+			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.DIPLOMACY_VIEW), 54, "§7Diplomacy View");
 		}
 		if(!f.getMembers().contains(player.getName()) && FactionManager.getByMember(player.getName()) != null) {
 			Faction pf = FactionManager.getByMember(player.getName());
@@ -50,7 +50,7 @@ public class RelationView {
 	}
 	public void attitudeView(Inventory i, Player player, Faction f, boolean open) {
 		if(open) {
-			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.ATTITUDE_VIEW), 27, "�7Change Attitude");
+			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.ATTITUDE_VIEW), 27, "§7Change Attitude");
 		}
 		for(int x = 0; x<RelationLoader.getAttitudes().size(); x++) {
 			int slot = x+10;
@@ -61,7 +61,7 @@ public class RelationView {
 	}
 	public void relationView(Inventory i, Player player, Faction f, boolean open) {
 		if(open) {
-			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.RELATION_VIEW), 27, "�7Change Relation");
+			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.RELATION_VIEW), 27, "§7Change Relation");
 		}
 		int slot = 9;
 		for(int x = 0; x<RelationLoader.getTypes().size(); x++) {
@@ -75,7 +75,7 @@ public class RelationView {
 	}
 	
 	public void click(InventoryClickEvent e, Inventory inventory, Player p) {
-		if(e.getView().getTitle().equalsIgnoreCase("�7Diplomacy View")) {
+		if(e.getView().getTitle().equalsIgnoreCase("§7Diplomacy View")) {
 			e.setCancelled(true);
 			if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
 			SFInventoryHolder h = (SFInventoryHolder) inventory.getHolder();
@@ -90,20 +90,20 @@ public class RelationView {
 			} else if(e.getSlot() == 24) {
 				Faction attacker = FactionManager.getByLeader(p.getName());
 				if(f.getRelation(attacker.getId()).getOpinion() > -50) {
-					p.sendMessage("�cYour opinion of the target is too high");
+					p.sendMessage("§cYour opinion of the target is too high");
 					return;
 				}
 				if(WarManager.exists(attacker, f)) {
-					p.sendMessage("�cYour faction is already part of a war with the target!");
+					p.sendMessage("§cYour faction is already part of a war with the target!");
 					return;
 				}
 				/*
 				if(WarManager.getByFaction(attacker) != null) {
-					p.sendMessage("�cYour faction is already part of another war!");
+					p.sendMessage("§cYour faction is already part of another war!");
 					return;
 				}
 				if(WarManager.getByFaction(f) != null) {
-					p.sendMessage("�cThis faction is already at war!");
+					p.sendMessage("§cThis faction is already at war!");
 					return;
 				}
 				*/
@@ -112,7 +112,7 @@ public class RelationView {
 				inv.warList(p);
 			}
 			
-		} else if(e.getView().getTitle().equalsIgnoreCase("�7Change Attitude")) {
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Change Attitude")) {
 			e.setCancelled(true);
 			if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
 			SFInventoryHolder h = (SFInventoryHolder) inventory.getHolder();
@@ -126,7 +126,7 @@ public class RelationView {
 			RelationManager.setAttitude(p, a, f, origin);
 			
 			diplomacyView(null, p, f, true);
-		} else if(e.getView().getTitle().equalsIgnoreCase("�7Change Relation")) {
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Change Relation")) {
 			e.setCancelled(true);
 			if(e.getCurrentItem().getType().equals(Material.BARRIER)) return;
 			if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
@@ -141,7 +141,7 @@ public class RelationView {
 			RelationType r = RelationLoader.getType(rid);
 			
 			if(origin.getRelation(f.getId()).getType().hasLock()) {
-				p.sendMessage("�cYou are not allowed to change your relationship with "+f.getName()+"�c!");
+				p.sendMessage("§cYou are not allowed to change your relationship with "+f.getName()+"§c!");
 				return;
 			}
 			
@@ -149,8 +149,8 @@ public class RelationView {
 				Tier ot = origin.getTier();
 				Tier tt = f.getTier();
 				if(ot.getTier() <= tt.getTier()) {
-					//p.sendMessage("�cYour nation has the tier "+ot.getFormattedName()+ " �cwhile "+f.getName()+ " �chas the tier "+tt.getFormattedName());
-					p.sendMessage("�cYour tier must be equal to or higher than the target tier to vassalise them!");
+					//p.sendMessage("§cYour nation has the tier "+ot.getFormattedName()+ " §cwhile "+f.getName()+ " §chas the tier "+tt.getFormattedName());
+					p.sendMessage("§cYour tier must be equal to or higher than the target tier to vassalise them!");
 					return;
 				}
 			}

@@ -8,6 +8,11 @@ public class MilitaryExpansion {
 		regiment = r;
 		timeLeft = r.getExpansionTime();
 	}
+
+	public MilitaryExpansion(Regiment r, int time) {
+		regiment = r;
+		timeLeft = time;
+	}
 	
 	public void tick() {
 		if(timeLeft == 0) return;
