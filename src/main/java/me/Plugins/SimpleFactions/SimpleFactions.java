@@ -19,9 +19,11 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.RequestManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
+import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Database;
 import me.Plugins.SimpleFactions.Utils.TabCompletion;
+import me.Plugins.SimpleFactions.War.War;
 
 public class SimpleFactions extends JavaPlugin{
 	public static FileConfiguration config;
@@ -56,12 +58,16 @@ public class SimpleFactions extends JavaPlugin{
 		getCommand(commands.cmd1).setTabCompleter(new TabCompletion());
 		factionManager.run();
 		RequestManager.start();
+		WarManager.start();
 	}
 	@Override
 	public void onDisable() {
 		db.saveTimer(FactionManager.getTimer());
 		for(Faction f : FactionManager.factions) {
 			db.saveFaction(f);
+		}
+		for(War w : WarManager.get()){
+			db.saveWar(w);
 		}
 	}
 	public void loadConfigs() {
@@ -85,6 +91,8 @@ public class SimpleFactions extends JavaPlugin{
 		File subFolder = new File(getDataFolder(), "Data");
 		if(!subFolder.exists()) subFolder.mkdir();
 		subFolder = new File(getDataFolder(), "PlayerData");
+		if(!subFolder.exists()) subFolder.mkdir();
+		subFolder = new File(getDataFolder(), "Wars");
 		if(!subFolder.exists()) subFolder.mkdir();
 		subFolder = new File(getDataFolder(), "Cache");
 		if(!subFolder.exists()) subFolder.mkdir();

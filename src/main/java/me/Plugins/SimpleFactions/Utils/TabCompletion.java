@@ -47,6 +47,9 @@ public class TabCompletion implements TabCompleter{
 		                completions.add("addprestigemodifier");
 		                completions.add("addwealthmodifier");
 		                completions.add("getglobalwealth");
+						completions.add("queueallnations");
+						completions.add("fullregen");
+						completions.add("endwar");
 	                }
 	                TabCleaner.cleanTab(completions, args);
 	                return completions;

@@ -20,6 +20,7 @@ import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Permissions;
+import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class CommandManager implements Listener, CommandExecutor{
@@ -551,6 +552,26 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				FactionManager.getMap().fullRegen();
 				p.sendMessage("§eFull regen started, this might take some time...");
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("endwar") && args.length == 2) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Integer warId = 0;
+				try {
+					Integer.parseInt(args[1]);
+				} catch (Exception e) {
+					p.sendMessage("§cWar id is a number");
+					return false;
+				}
+				War w = WarManager.getById(warId);
+				if(w == null){
+					p.sendMessage("§cNo war by that id");
+					return false;
+				}
+				WarManager.endWar(w);
+				p.sendMessage("§aEnded war "+w.getName());
 				return true;
 			}
 			p.sendMessage("§a[SimpleFactions]§c Error with command format, use the gameplay guide for a list of commands");

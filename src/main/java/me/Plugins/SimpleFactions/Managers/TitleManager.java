@@ -45,7 +45,7 @@ public class TitleManager implements Listener{
 			isFormingTitle.remove(p);
 			return;
 		}
-		p.sendMessage("�aFormed the "+tier.getName()+" �7"+name);
+		p.sendMessage("§aFormed the "+tier.getName()+" §7"+name);
 		f.addTitle(newTitle);
 		FactionManager.getMap().enqueue(tier.getId(), newTitle.getRgb());
 		isFormingTitle.remove(p);

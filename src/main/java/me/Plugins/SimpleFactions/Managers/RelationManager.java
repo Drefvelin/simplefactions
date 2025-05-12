@@ -1,17 +1,10 @@
 package me.Plugins.SimpleFactions.Managers;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
-
-import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Diplomacy.Attitude;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
@@ -19,7 +12,6 @@ import me.Plugins.SimpleFactions.Diplomacy.Threshold;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
-import me.Plugins.SimpleFactions.Objects.Request.Request;
 import me.Plugins.SimpleFactions.Utils.OpinionColourMapper;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
@@ -38,8 +30,6 @@ public class RelationManager {
 	}
 	
 	public static void reset(Faction origin, Faction target, boolean hostile) {
-		String originO = getOverlord(origin);
-		String targetO = getOverlord(target);
 		Relation relation = new Relation(origin.getRelation(target.getId()));
 		Relation reverse = new Relation(target.getRelation(origin.getId()));
 		relation.setType(RelationLoader.getDefaultType());

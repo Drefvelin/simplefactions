@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.Utils;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -27,6 +28,7 @@ import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
+import me.Plugins.SimpleFactions.Loaders.WarGoalLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Bank;
@@ -34,6 +36,10 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.War.Participant;
+import me.Plugins.SimpleFactions.War.Side;
+import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.WarGoal;
 
 public class Database {
 	Formatter format = new Formatter();
@@ -67,6 +73,155 @@ public class Database {
 			e.printStackTrace();
 		}
 	}
+
+	@SuppressWarnings("unchecked")
+	public void saveWar(War w) {
+		try {
+			JSONObject root = new JSONObject();
+			root.put("id", w.getId());
+
+			// Save attackers and defenders
+			root.put("attackers", serializeSide(w.getAttackers()));
+			root.put("defenders", serializeSide(w.getDefenders()));
+
+			// Save to file
+			File folder = new File("plugins/SimpleFactions/Wars");
+			if (!folder.exists()) folder.mkdirs();
+			File file = new File(folder, "war_" + w.getId() + ".json");
+
+			FileWriter writer = new FileWriter(file);
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			writer.write(gson.toJson(root));
+			writer.flush();
+			writer.close();
+
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private JSONObject serializeSide(Side side) {
+		JSONObject sideJson = new JSONObject();
+		sideJson.put("leader", side.getLeader().getId());
+
+		JSONArray participantsArray = new JSONArray();
+		for (Participant p : side.getMainParticipants()) {
+			participantsArray.add(serializeParticipant(p));
+		}
+		sideJson.put("participants", participantsArray);
+
+		return sideJson;
+	}
+
+	@SuppressWarnings("unchecked")
+	private JSONObject serializeParticipant(Participant p) {
+		JSONObject json = new JSONObject();
+
+		json.put("leader", p.getLeader().getId());
+
+		JSONArray subjects = new JSONArray();
+		for (Faction s : p.getSubjects()) {
+			subjects.add(s.getId());
+		}
+		json.put("subjects", subjects);
+
+		JSONObject allies = new JSONObject();
+		for (Map.Entry<Faction, Boolean> entry : p.getAllies().entrySet()) {
+			allies.put(entry.getKey().getId(), entry.getValue());
+		}
+		json.put("allies", allies);
+
+		JSONObject warGoals = new JSONObject();
+		for (Map.Entry<Faction, WarGoal> entry : p.getWarGoals().entrySet()) {
+			warGoals.put(entry.getKey().getId(), entry.getValue().getId());
+		}
+		json.put("warGoals", warGoals);
+
+		return json;
+	}
+
+	public List<War> loadWars() {
+		List<War> wars = new ArrayList<>();
+		File folder = new File("plugins/SimpleFactions/Wars");
+		if (!folder.exists() || !folder.isDirectory()) return wars;
+
+		for (File file : folder.listFiles()) {
+			if (!file.getName().endsWith(".json")) continue;
+
+			try (FileReader reader = new FileReader(file)) {
+				JSONObject warJson = (JSONObject) parser.parse(reader);
+
+				int id = ((Long) warJson.get("id")).intValue();
+
+				JSONObject atkJson = (JSONObject) warJson.get("attackers");
+				JSONObject defJson = (JSONObject) warJson.get("defenders");
+
+				Faction atkLeader = FactionManager.getByString((String) atkJson.get("leader"));
+				Faction defLeader = FactionManager.getByString((String) defJson.get("leader"));
+
+				if (atkLeader == null || defLeader == null) continue;
+
+				War war = new War(id, atkLeader, defLeader);
+
+				war.getAttackers().getMainParticipants().clear();
+				war.getDefenders().getMainParticipants().clear();
+
+				loadParticipants((JSONArray) atkJson.get("participants"), war.getAttackers());
+				loadParticipants((JSONArray) defJson.get("participants"), war.getDefenders());
+
+				wars.add(war);
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+
+		return wars;
+	}
+
+	private void loadParticipants(JSONArray array, Side side) {
+		for (Object obj : array) {
+			JSONObject pJson = (JSONObject) obj;
+
+			Faction leader = FactionManager.getByString((String) pJson.get("leader"));
+			if (leader == null) continue;
+
+			// --- Subjects ---
+			List<Faction> subjects = new ArrayList<>();
+			JSONArray subjectsArray = (JSONArray) pJson.get("subjects");
+			for (Object s : subjectsArray) {
+				Faction subject = FactionManager.getByString((String) s);
+				if (subject != null) subjects.add(subject);
+			}
+
+			// --- Allies ---
+			Map<Faction, Boolean> allies = new HashMap<>();
+			JSONObject alliesJson = (JSONObject) pJson.get("allies");
+			for (Object key : alliesJson.keySet()) {
+				String allyId = (String) key;
+				Boolean joined = (Boolean) alliesJson.get(key);
+				Faction ally = FactionManager.getByString(allyId);
+				if (ally != null) allies.put(ally, joined);
+			}
+
+			// --- War Goals ---
+			Map<Faction, WarGoal> warGoals = new HashMap<>();
+			JSONObject warGoalsJson = (JSONObject) pJson.get("warGoals");
+			for (Object key : warGoalsJson.keySet()) {
+				String targetId = (String) key;
+				String goalId = (String) warGoalsJson.get(key);
+				Faction target = FactionManager.getByString(targetId);
+				WarGoal goal = WarGoalLoader.getByString(goalId);
+				if (target != null && goal != null) warGoals.put(target, goal);
+			}
+
+			// --- Construct and Add ---
+			Participant participant = new Participant(leader, subjects, allies, warGoals);
+			side.getMainParticipants().add(participant);
+		}
+	}
+
 
 	public void loadFactions() {
 		Bukkit.getLogger().info("[SimpleFactions] loading factions...");

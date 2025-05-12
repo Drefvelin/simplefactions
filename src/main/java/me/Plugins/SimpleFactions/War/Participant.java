@@ -25,6 +25,14 @@ public class Participant {
 		}
 	}
 
+	public Participant(Faction leader, List<Faction> subjects, Map<Faction, Boolean> allies, Map<Faction, WarGoal> warGoals) {
+		this.leader = leader;
+		this.subjects = new ArrayList<>(subjects);
+		this.allies = new HashMap<>(allies);
+		this.warGoals = new HashMap<>(warGoals);
+	}
+
+
 	public Faction getLeader() {
 		return leader;
 	}
@@ -49,6 +57,9 @@ public class Participant {
 	public WarGoal getWarGoal(Faction f) {
 		if(hasWarGoal(f)) return warGoals.get(f);
 		return null;
+	}
+	public HashMap<Faction, WarGoal> getWarGoals() {
+		return warGoals;
 	}
 	
 	public void addWarGoal(Faction f, WarGoal goal) {

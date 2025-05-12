@@ -35,7 +35,7 @@ public class RequestManager {
 	
 	public static void addRequest(Player sender, Player p, Request r) {
 		if(hasRequest(p)) {
-			sender.sendMessage("�cThe target is already considering another request.");
+			sender.sendMessage("§cThe target is already considering another request.");
 			return;
 		}
 		requests.put(p, r);

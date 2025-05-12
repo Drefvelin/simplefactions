@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import me.Plugins.SimpleFactions.Managers.FactionManager;
-import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -17,6 +15,12 @@ public class War {
 	
 	public War(Faction attacker, Faction defender) {
 		id = WarManager.newId();
+		attackers = new Side(attacker);
+		defenders = new Side(defender);
+	}
+
+	public War(int i, Faction attacker, Faction defender) {
+		id = i;
 		attackers = new Side(attacker);
 		defenders = new Side(defender);
 	}
