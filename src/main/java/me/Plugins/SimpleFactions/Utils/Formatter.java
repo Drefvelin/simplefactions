@@ -22,11 +22,11 @@ public class Formatter {
         // Remove hex codes like #ffffff
         s = s.replaceAll("#[a-fA-F0-9]{6}", "");
 
-        // Remove Minecraft-style hex codes: �x�R�R�G�G�B�B
-        s = s.replaceAll("�x(�[0-9a-fA-F]){6}", "");
+        // Remove Minecraft-style hex codes: §x§R§R§G§G§B§B
+        s = s.replaceAll("§x(§[0-9a-fA-F]){6}", "");
 
-        // Remove remaining formatting codes like �a, �r, etc.
-        s = s.replaceAll("�[0-9a-frk-orA-FK-OR]", "");
+        // Remove remaining formatting codes like §a, §r, etc.
+        s = s.replaceAll("§[0-9a-frk-orA-FK-OR]", "");
 
         return s;
     }
@@ -41,8 +41,8 @@ public class Formatter {
             s = "#a3a184" + s;
         }
 
-        // Replace legacy color codes (&x) with �
-        s = s.replace("&", "�");
+        // Replace legacy color codes (&x) with §
+        s = s.replace("&", "§");
 
         // Replace _ with space
         s = s.replace("_", " ");

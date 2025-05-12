@@ -33,9 +33,9 @@ public class RandomRGB {
         float l = hsl[2];
 
         // Apply small changes to hue, saturation, and lightness
-        h += (random.nextFloat() - 0.5f) * 0.2f; // �0.1 shift
-        s += (random.nextFloat() - 0.5f) * 0.1f; // �0.05
-        l += (random.nextFloat() - 0.5f) * 0.1f; // �0.05
+        h += (random.nextFloat() - 0.5f) * 0.2f; // §0.1 shift
+        s += (random.nextFloat() - 0.5f) * 0.1f; // §0.05
+        l += (random.nextFloat() - 0.5f) * 0.1f; // §0.05
 
         // Clamp values
         h = (h + 1f) % 1f;

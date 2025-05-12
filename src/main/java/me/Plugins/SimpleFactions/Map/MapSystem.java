@@ -91,39 +91,39 @@ public class MapSystem {
 	
 	public void claim(Player p, Faction f, int province) {
 		if(province == 0) {
-			p.sendMessage("�cThis location has no province!");
+			p.sendMessage("§cThis location has no province!");
 			return;
 		} else if(f.getProvinces().contains(province)) {
-			p.sendMessage("�cYour faction already owns this province!");
+			p.sendMessage("§cYour faction already owns this province!");
 			return;
 		}
 		Faction owner = FactionManager.getByProvince(province);
 		if (owner != null) {
-		    p.sendMessage("�cProvince already claimed by " + owner.getName() + "!");
+		    p.sendMessage("§cProvince already claimed by " + owner.getName() + "!");
 		    return;
 		}
 		if(f.getPrestige() < TitleManager.getClaimCost(f)) {
-			p.sendMessage("�cYou need at least �f"+TitleManager.getClaimCost(f)+"�c prestige to claim a new province �7(currently "+f.getPrestige()+")");
+			p.sendMessage("§cYou need at least §f"+TitleManager.getClaimCost(f)+"§c prestige to claim a new province §7(currently "+f.getPrestige()+")");
 		    return;
 		}
 		if(TitleLoader.getByProvince(province) == null && f.getUntitledProvinces().size() >= Cache.maxUntitledProvinces) {
-			p.sendMessage("�cYou have too many untitled provinces, form a county first!");
+			p.sendMessage("§cYou have too many untitled provinces, form a county first!");
 		    return;
 		}
-		p.sendMessage("�aSuccesfully claimed province "+province);
+		p.sendMessage("§aSuccesfully claimed province "+province);
 		f.addProvince(province);
 		enqueue("nation", f.getRGB());
 	}
 	
 	public void unclaim(Player p, Faction f, int province) {
 		if(province == 0) {
-			p.sendMessage("�cThis location has no province!");
+			p.sendMessage("§cThis location has no province!");
 			return;
 		} else if(!f.getProvinces().contains(province)) {
-			p.sendMessage("�cYour faction does not own this province!");
+			p.sendMessage("§cYour faction does not own this province!");
 			return;
 		}
-		p.sendMessage("�aSuccesfully unclaimed province "+province);
+		p.sendMessage("§aSuccesfully unclaimed province "+province);
 		f.removeProvince(province);
 		Title t = TitleLoader.getByProvince(province);
 		if(t != null) {
