@@ -127,6 +127,13 @@ public class TitleManager implements Listener{
 		}
 		return titles;
 	}
+
+	public static boolean titleIsInRealm(Faction f, String title){
+		for(Title t : getTitles(f)){
+			if(t.getId().equalsIgnoreCase(title)) return true;
+		}
+		return false;
+	}
 	
 	public static Title getParent(Title t) {
 		for(Title c : TitleLoader.getTitles()) {
