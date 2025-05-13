@@ -65,11 +65,16 @@ public class RelationManager {
 		boolean reverseChange = reverseChange(target, origin, r);
 		if(r.isVassalage()) {
 			if(!vassalCheck(target, origin)) {
-				p.sendMessage("§cThis faction is alredy a subject of someone else");
+				if(p != null) p.sendMessage("§cThis faction is alredy a subject of someone else");
 				return;
 			}
-			if(getTopLiege(origin).equalsIgnoreCase(target.getId())) {
-				p.sendMessage("§cThis faction is your top overlord");
+			String topLiege = getTopLiege(origin);
+			if(topLiege != null && topLiege.equalsIgnoreCase(target.getId())) {
+				if(p != null) p.sendMessage("§cThis faction is your top overlord");
+				return;
+			}
+			if(isOnOverlordPath(origin, target)){
+				if(p != null) p.sendMessage("§cThis relation would cause a loop");
 				return;
 			}
 		}
@@ -80,13 +85,13 @@ public class RelationManager {
 			String plus = "";
 			if(h.getOpinion() > 0) plus = "+";
 			if(!h.fulfilled(opinion)) {
-				p.sendMessage(StringFormatter.formatHex("§cYou need an opinion "+h.getFormattedType()+" "+OpinionColourMapper.getOpinionColor(h.getOpinion())+plus+h.getOpinion()+ "§c of them §7(currently "+opinion+")"));
+				if(p != null) p.sendMessage(StringFormatter.formatHex("§cYou need an opinion "+h.getFormattedType()+" "+OpinionColourMapper.getOpinionColor(h.getOpinion())+plus+h.getOpinion()+ "§c of them §7(currently "+opinion+")"));
 				fulfilled = false;
 			}
 			if(h.isMutual()) {
 				int reverseOpinion = target.getRelation(origin.getId()).getOpinion();
 				if(!h.fulfilled(reverseOpinion)) {
-					p.sendMessage(StringFormatter.formatHex("§cThey need an opinion "+h.getFormattedType()+" "+OpinionColourMapper.getOpinionColor(h.getOpinion())+plus+h.getOpinion()+ "§c of us §7(currently "+reverseOpinion+")"));
+					if(p != null) p.sendMessage(StringFormatter.formatHex("§cThey need an opinion "+h.getFormattedType()+" "+OpinionColourMapper.getOpinionColor(h.getOpinion())+plus+h.getOpinion()+ "§c of us §7(currently "+reverseOpinion+")"));
 					fulfilled = false;
 				}
 			}
@@ -115,7 +120,7 @@ public class RelationManager {
 			reverse.setType(r.getLink());
 			target.setRelation(origin, reverse);
 		}
-		p.sendMessage(StringFormatter.formatHex("#a89977Set relation to "+r.getName()));
+		if(p != null) p.sendMessage(StringFormatter.formatHex("#a89977Set relation to "+r.getName()));
 	}
 	
 	public static boolean reverseChange(Faction target, Faction origin, RelationType t) {
@@ -166,6 +171,35 @@ public class RelationManager {
 	    }
 
 	    return liege;
+	}
+
+	public static void transferSubject(Faction subject, Faction reciever) {
+		String overlord = getOverlord(subject);
+		Faction o = FactionManager.getByString(overlord);
+		RelationType type = o.getRelation(subject.getId()).getType();
+		endVassalage(o, subject, false);
+		setRelation(null, type, subject, reciever, false);
+	}
+
+	public static boolean isOnOverlordPath(Faction origin, Faction target) {
+		String liege = getOverlord(origin);
+
+	    while (liege != null) {
+	        Faction overlord = FactionManager.getByString(liege);
+	        if (overlord == null) {
+	            break;
+	        }
+			if(overlord.getId().equalsIgnoreCase(target.getId())) return true;
+
+	        String nextLiege = getOverlord(overlord);
+	        if (nextLiege == null) {
+	            break;
+	        }
+
+	        liege = nextLiege;
+	    }
+
+	    return false;
 	}
 
 	

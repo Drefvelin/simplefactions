@@ -584,6 +584,15 @@ public class Faction {
 	        }
 	    }
 	    if(tier == null || !tier.getId().equalsIgnoreCase(temp.getId())) tier = new Tier(temp, -1);
+		Player p = Bukkit.getPlayerExact(leader);
+		for(Faction subject : RelationManager.getSubjects(this)) {
+			if(subject.getTier().getTier() > tier.getTier()) {
+				RelationManager.endVassalage(subject, this, false);
+				if(p != null && p.isOnline()) {
+					p.sendMessage("§cLost the subject "+subject.getName()+" §cdue to rank difference!");
+				}
+			}
+		}
 	}
 
 	

@@ -97,7 +97,7 @@ public class RelationView {
 					p.sendMessage("§cYour faction is already part of a war with the target!");
 					return;
 				}
-				if(f.numOnline() < 1){
+				if(f.numOnline() < 0){
 					p.sendMessage("§cCannot declare war while none of the target faction members are online!");
 					return;
 				}

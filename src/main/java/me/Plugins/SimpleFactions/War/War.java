@@ -36,6 +36,12 @@ public class War {
 	public Side getDefenders() {
 		return defenders;
 	}
+
+	public void update() {
+		for(Participant p : getParticipants()){
+			p.update(this);
+		}
+	}
 	
 	public boolean canSwitchSides(Faction f) {
 		return true;

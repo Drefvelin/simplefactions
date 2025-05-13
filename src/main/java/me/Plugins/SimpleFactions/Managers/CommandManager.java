@@ -12,8 +12,10 @@ import org.bukkit.inventory.ItemStack;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
 import net.tfminecraft.DenarEconomy.Data.Account;
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Events.FactionCreateEvent;
 import me.Plugins.SimpleFactions.Events.FactionDeleteEvent;
+import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -592,6 +594,81 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				owner.removeTitle(title);
 				p.sendMessage("§aDestroyed title "+title.getName()+" §7("+title.getId()+")");
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("granttitle") && args.length == 3) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Faction reciever = FactionManager.getByString(args[1]);
+				if(reciever == null) {
+					p.sendMessage("§cNo faction by that id");
+					return false;
+				}
+				Title title = TitleLoader.getById(args[2]);
+				if(title == null){
+					p.sendMessage("§cNo title by that id");
+					return false;
+				}
+				if(TitleManager.getOwner(title) != null){
+					p.sendMessage("§cA faction already owns that title, use usurp instead!");
+					return false;
+				}
+				reciever.addTitle(title);
+				p.sendMessage("§aGave "+reciever.getName()+" §athe title "+title.getName()+" §7("+title.getId()+")");
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("transfersubject") && args.length == 3) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Faction subject = FactionManager.getByString(args[1]);
+				if(subject == null) {
+					p.sendMessage("§cNo faction by the id "+args[1]);
+					return false;
+				}
+				Faction recieving = FactionManager.getByString(args[2]);
+				if(recieving == null) {
+					p.sendMessage("§cNo faction by the id "+args[2]);
+					return false;
+				}
+				String overlord = RelationManager.getOverlord(subject);
+				if(overlord == null){
+					p.sendMessage(subject.getName()+" §cis not a subject");
+					return false;
+				}
+				if(recieving.getId().equalsIgnoreCase(overlord)){
+					p.sendMessage(subject.getName()+" §cis already a subject of "+recieving.getName());
+					return false;
+				}
+				if(RelationManager.isOnOverlordPath(recieving, subject)) {
+					p.sendMessage("§cThis transfer would cause a loop");
+					return false;
+				}
+				RelationManager.transferSubject(subject, recieving);
+				p.sendMessage("§aTransfered subject");
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setrelation") && args.length == 4) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Faction sending = FactionManager.getByString(args[1]);
+				if(sending == null) {
+					p.sendMessage("§cNo faction by the id "+args[1]);
+					return false;
+				}
+				Faction recieving = FactionManager.getByString(args[2]);
+				if(recieving == null) {
+					p.sendMessage("§cNo faction by the id "+args[2]);
+					return false;
+				}
+				RelationType type = RelationLoader.getType(args[3]);
+				if(type == null) {
+					p.sendMessage("§cNo relation with the id "+args[3]);
+					return false;
+				}
+				RelationManager.setRelation(p, type, recieving, sending, false);
 				return true;
 			}
 			p.sendMessage("§a[SimpleFactions]§c Error with command format, use the gameplay guide for a list of commands");

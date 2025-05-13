@@ -2,9 +2,12 @@ package me.Plugins.SimpleFactions.War;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import me.Plugins.SimpleFactions.Diplomacy.Relation;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 
@@ -46,6 +49,31 @@ public class Participant {
 		this.warGoals = new HashMap<>(warGoals);
 		this.civilWar = civilWar;
 	}
+
+	public void update(War w) {
+		Iterator<Faction> iterator = subjects.iterator();
+		while(iterator.hasNext()) {
+			Faction subject = iterator.next();
+			if(w.isMainParticipant(subject) || !RelationManager.getOverlord(subject).equalsIgnoreCase(leader.getId())) {
+				iterator.remove();
+			}
+		}
+		Iterator<Map.Entry<Faction, Boolean>> allyIterator = allies.entrySet().iterator();
+		while (allyIterator.hasNext()) {
+			Map.Entry<Faction, Boolean> entry = allyIterator.next();
+			if(!entry.getKey().getRelation(leader.getId()).getType().getId().equalsIgnoreCase("ally")) {
+				allyIterator.remove(); // Safe: modifies original map
+			}
+		}
+		for(Map.Entry<String, Relation> entry : leader.getRelations().entrySet()){
+			Faction ally = FactionManager.getByString(entry.getKey());
+			if(!entry.getValue().getType().getId().equalsIgnoreCase("ally")) continue;
+			if(ally == null) continue;
+			if(allies.containsKey(ally)) continue;
+			allies.put(ally, false);
+		}
+	}
+
 
 	public boolean isCivilWar(){
 		return civilWar;

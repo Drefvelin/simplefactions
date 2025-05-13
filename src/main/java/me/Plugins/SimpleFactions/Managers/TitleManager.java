@@ -123,6 +123,21 @@ public class TitleManager implements Listener{
 		}
 		return null;
 	}
+
+	public static List<Title> getAllOwnedTitles(){
+		List<Title> list = new ArrayList<>();
+		for(Title t : TitleLoader.getTitles()){
+			if(getOwner(t) != null) list.add(t);
+		}
+		return list;
+	}
+	public static List<Title> getAllUnownedTitles(){
+		List<Title> list = new ArrayList<>();
+		for(Title t : TitleLoader.getTitles()){
+			if(getOwner(t) == null) list.add(t);
+		}
+		return list;
+	}
 	
 	public static List<Title> getGrantableTitles(Faction sender, Faction reciever, Tier tier){
 		List<Title> titles = new ArrayList<>();

@@ -47,6 +47,7 @@ public class WarView {
 	}
 	
 	public void warView(Inventory i, Player player, War w, boolean open) {
+		w.update();
 		if(open) {
 			i = SimpleFactions.plugin.getServer().createInventory(new WarInventoryHolder(w.getId(), SFGUI.WAR_VIEW), 54, w.getName());
 		}
@@ -86,6 +87,7 @@ public class WarView {
 	}
 	
 	public void warGoalView(Inventory i, Player player, War w, Faction target, Faction page, boolean open) {
+		w.update();
 		if(open) {
 			i = SimpleFactions.plugin.getServer().createInventory(new SFCombinedInventoryHolder(w.getId(), page.getId(), SFGUI.WARGOAL_VIEW), 27, w.getName());
 		}
@@ -103,6 +105,7 @@ public class WarView {
 	}
 	
 	public void participantView(Inventory i, Player player, War w, Participant p, boolean open) {
+		w.update();
 		if(open) {
 			i = SimpleFactions.plugin.getServer().createInventory(new SFCombinedInventoryHolder(w.getId(), p.getLeader().getId(), SFGUI.PARTICIPANT_VIEW), 54, w.getName());
 		}

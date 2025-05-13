@@ -9,8 +9,13 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
+import me.Plugins.SimpleFactions.Diplomacy.RelationType;
+import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
+import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.TLibs.Utils.TabCleaner;
 
 public class TabCompletion implements TabCompleter{
@@ -50,6 +55,9 @@ public class TabCompletion implements TabCompleter{
 						completions.add("queueallnations");
 						completions.add("fullregen");
 						completions.add("endwar");
+						completions.add("destroytitle");
+						completions.add("granttitle");
+						completions.add("transfersubject");
 	                }
 	                TabCleaner.cleanTab(completions, args);
 	                return completions;
@@ -223,6 +231,73 @@ public class TabCompletion implements TabCompleter{
 		            	List<String> completions = new ArrayList<String>();
 		            	completions.add("<amount>");
 		            	
+		                return completions;
+		            }
+	        	} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("destroytitle")){
+		            if(sender instanceof Player){
+		            	List<String> completions = new ArrayList<String>();
+		            	for(Title t : TitleManager.getAllOwnedTitles()) {
+							completions.add(t.getId());
+						}
+		                return completions;
+		            }
+	        	} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("granttitle")){
+		            if(sender instanceof Player){
+		            	List<String> completions = new ArrayList<String>();
+		            	for(Faction f : FactionManager.factions) {
+		            		completions.add(f.getId());
+		            	}
+		                return completions;
+		            }
+	        	} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("granttitle")){
+		            if(sender instanceof Player){
+		            	List<String> completions = new ArrayList<String>();
+		            	for(Title t : TitleManager.getAllUnownedTitles()) {
+							completions.add(t.getId());
+						}
+		                return completions;
+		            }
+	        	} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("transfersubject")){
+		            if(sender instanceof Player){
+		            	List<String> completions = new ArrayList<String>();
+		            	for(Faction f : FactionManager.factions) {
+							if(RelationManager.getOverlord(f) == null) continue;
+		            		completions.add(f.getId());
+		            	}
+		                return completions;
+		            }
+	        	} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("transfersubject")){
+		            if(sender instanceof Player){
+		            	List<String> completions = new ArrayList<String>();
+		            	for(Faction f : FactionManager.factions) {
+							if(f.getId().equalsIgnoreCase(args[1])) continue;
+		            		completions.add(f.getId());
+		            	}
+		                return completions;
+		            }
+	        	} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("setrelation")){
+		            if(sender instanceof Player){
+		            	List<String> completions = new ArrayList<String>();
+		            	for(Faction f : FactionManager.factions) {
+		            		completions.add(f.getId());
+		            	}
+		                return completions;
+		            }
+	        	} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("setrelation")){
+		            if(sender instanceof Player){
+		            	List<String> completions = new ArrayList<String>();
+		            	for(Faction f : FactionManager.factions) {
+							if(f.getId().equalsIgnoreCase(args[1])) continue;
+		            		completions.add(f.getId());
+		            	}
+		                return completions;
+		            }
+	        	} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 4 && args[0].equalsIgnoreCase("setrelation")){
+		            if(sender instanceof Player){
+		            	List<String> completions = new ArrayList<String>();
+		            	for(RelationType type : RelationLoader.getTypes()) {
+		            		completions.add(type.getId());
+		            	}
 		                return completions;
 		            }
 	        	}
