@@ -14,6 +14,8 @@ public class Participant {
 	private List<Faction> subjects = new ArrayList<>();
 	
 	private HashMap<Faction, WarGoal> warGoals = new HashMap<>();
+
+	private boolean civilWar;
 	
 	public Participant(Faction leader) {
 		this.leader = leader;
@@ -23,15 +25,35 @@ public class Participant {
 		for(Faction a : RelationManager.getAllies(leader)) {
 			allies.put(a, false);
 		}
+		civilWar = false;
 	}
 
-	public Participant(Faction leader, List<Faction> subjects, Map<Faction, Boolean> allies, Map<Faction, WarGoal> warGoals) {
+	public Participant(Faction leader, boolean civilWar) {
+		this.leader = leader;
+		for(Faction s : RelationManager.getSubjects(leader)) {
+			subjects.add(s);
+		}
+		for(Faction a : RelationManager.getAllies(leader)) {
+			allies.put(a, false);
+		}
+		this.civilWar = civilWar;
+	}
+
+	public Participant(Faction leader, List<Faction> subjects, Map<Faction, Boolean> allies, Map<Faction, WarGoal> warGoals, boolean civilWar) {
 		this.leader = leader;
 		this.subjects = new ArrayList<>(subjects);
 		this.allies = new HashMap<>(allies);
 		this.warGoals = new HashMap<>(warGoals);
+		this.civilWar = civilWar;
 	}
 
+	public boolean isCivilWar(){
+		return civilWar;
+	}
+
+	public void setCivilWar(boolean b){
+		civilWar = b;
+	}
 
 	public Faction getLeader() {
 		return leader;

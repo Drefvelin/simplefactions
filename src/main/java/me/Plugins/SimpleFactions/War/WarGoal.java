@@ -83,6 +83,8 @@ public class WarGoal {
 				if(RelationManager.getOverlord(target) != null) return false;
 			} else if(targeter.equalsIgnoreCase("lower_tier")) {
 				if(from.getTier().getTier() < target.getTier().getTier()) return false;
+			} else if(targeter.equalsIgnoreCase("higher_tier")) {
+				if(from.getTier().getTier() > target.getTier().getTier()) return false;
 			}
 		}
 		return true;

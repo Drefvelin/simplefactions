@@ -116,6 +116,13 @@ public class TitleManager implements Listener{
 
 	    return all;
 	}
+
+	public static Faction getOwner(Title title){
+		for(Faction f : FactionManager.factions) {
+			if(getTitles(f).contains(title)) return f;
+		}
+		return null;
+	}
 	
 	public static List<Title> getGrantableTitles(Faction sender, Faction reciever, Tier tier){
 		List<Title> titles = new ArrayList<>();

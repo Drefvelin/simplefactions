@@ -156,21 +156,26 @@ public class WarCreator {
 		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
 		m.getPersistentDataContainer().set(key, PersistentDataType.STRING, par.getLeader().getId());
 		List<String> lore = new ArrayList<>();
+		String participant = "";
 		if(type.equalsIgnoreCase("main_attacker")) {
-			lore.add(StringFormatter.formatHex("#f5ef42Main Attacker"));
+			participant = StringFormatter.formatHex("#f5ef42Main Attacker");
 		} else if(type.equalsIgnoreCase("main_defender")) {
-			lore.add(StringFormatter.formatHex("#f5ef42Main Defender"));
+			participant = StringFormatter.formatHex("#f5ef42Main Defender");
 		} else {
-			lore.add(StringFormatter.formatHex("#65e0bbSecondary Participant"));
+			participant = StringFormatter.formatHex("#65e0bbSecondary Participant");
 		}
+		if(par.isCivilWar()) participant += StringFormatter.formatHex(" §7("+"#14b887Civil War"+"§7)");
+		lore.add(participant);
 		lore.add(" ");
 		Side s = w.getSide(f);
 		if(type.equalsIgnoreCase("main_defender")) {
 			if(!full && !warGoal) lore.add(StringFormatter.formatHex("#a39ba8Soldiers: #28ed70"+s.getTotalManpower(false)));
 			else lore.add(StringFormatter.formatHex("#a39ba8Soldiers: #28ed70"+f.getMilitary().getManpower(false)));
 		} else {
-			if(!full && !warGoal) lore.add(StringFormatter.formatHex("#a39ba8Soldiers: #28ed70"+s.getTotalManpower(true)));
-			else lore.add(StringFormatter.formatHex("#a39ba8Soldiers: #28ed70"+f.getMilitary().getManpower(true)));
+			boolean offensive = true;
+			if(par.isCivilWar()) offensive = false;
+			if(!full && !warGoal) lore.add(StringFormatter.formatHex("#a39ba8Soldiers: #28ed70"+s.getTotalManpower(offensive)));
+			else lore.add(StringFormatter.formatHex("#a39ba8Soldiers: #28ed70"+f.getMilitary().getManpower(offensive)));
 		}
 		if(full && !type.equalsIgnoreCase("secondary_participant")) {
 			if(par.getAllies().size() > 0 || par.getSubjects().size() > 0) {

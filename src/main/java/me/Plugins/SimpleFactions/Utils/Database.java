@@ -138,7 +138,18 @@ public class Database {
 		}
 		json.put("warGoals", warGoals);
 
+		json.put("civilWar", p.isCivilWar());
+
 		return json;
+	}
+
+	public void deleteWar(War w){
+		File folder = new File("plugins/SimpleFactions/Wars");
+		if (!folder.exists()) return;
+		File file = new File(folder, "war_" + w.getId() + ".json");
+		if(file.exists()){
+			file.delete();
+		}
 	}
 
 	public List<War> loadWars() {
@@ -187,6 +198,8 @@ public class Database {
 			Faction leader = FactionManager.getByString((String) pJson.get("leader"));
 			if (leader == null) continue;
 
+			boolean civilWar = (Boolean) pJson.get("civilWar");
+
 			// --- Subjects ---
 			List<Faction> subjects = new ArrayList<>();
 			JSONArray subjectsArray = (JSONArray) pJson.get("subjects");
@@ -217,7 +230,7 @@ public class Database {
 			}
 
 			// --- Construct and Add ---
-			Participant participant = new Participant(leader, subjects, allies, warGoals);
+			Participant participant = new Participant(leader, subjects, allies, warGoals, civilWar);
 			side.getMainParticipants().add(participant);
 		}
 	}

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -15,8 +17,23 @@ import me.Plugins.SimpleFactions.War.War;
 public class WarManager {
 	private static List<War> wars = new ArrayList<>();
 	
-	public static void addWar(War w) {
+	public static War addWar(War w) {
 		wars.add(w);
+		for(String m : w.getAttackers().getLeader().getMembers()){
+			Player p = Bukkit.getPlayerExact(m);
+			if(p != null && p.isOnline()){
+				p.sendTitle("§cWar Declared!", "§e/faction warlist §7to view", 10, 120, 10);
+				p.playSound(p, Sound.ITEM_GOAT_HORN_SOUND_2, SoundCategory.MASTER, 10f, 0.6f);
+			}
+		}
+		for(String m : w.getDefenders().getLeader().getMembers()){
+			Player p = Bukkit.getPlayerExact(m);
+			if(p != null && p.isOnline()){
+				p.sendTitle("§cWar Declared!", "§e/faction warlist §7to view", 10, 120, 10);
+				p.playSound(p, Sound.ITEM_GOAT_HORN_SOUND_2, SoundCategory.MASTER, 10f, 0.6f);
+			}
+		}
+		return w;
 	}
 	
 	public static boolean exists(Faction attacker, Faction defender) {
@@ -48,6 +65,7 @@ public class WarManager {
 		for(War war : wars) {
 			if(war.getId() == w.getId()) {
 				wars.remove(war);
+				(new Database()).deleteWar(w);
 				break;
 			}
 		}

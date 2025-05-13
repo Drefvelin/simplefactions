@@ -89,12 +89,16 @@ public class RelationView {
 				relationView(null, p, f, true);
 			} else if(e.getSlot() == 24) {
 				Faction attacker = FactionManager.getByLeader(p.getName());
-				if(f.getRelation(attacker.getId()).getOpinion() > -50) {
+				if(attacker.getRelation(f.getId()).getOpinion() > -50) {
 					p.sendMessage("§cYour opinion of the target is too high");
 					return;
 				}
 				if(WarManager.exists(attacker, f)) {
 					p.sendMessage("§cYour faction is already part of a war with the target!");
+					return;
+				}
+				if(f.numOnline() < 1){
+					p.sendMessage("§cCannot declare war while none of the target faction members are online!");
 					return;
 				}
 				/*
@@ -107,8 +111,14 @@ public class RelationView {
 					return;
 				}
 				*/
+				boolean civilWar = false;
+				if(RelationManager.endVassalage(attacker, f, true)) civilWar = true;
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-				WarManager.addWar(new War(attacker, f));
+				War w = WarManager.addWar(new War(attacker, f));
+				if(civilWar) {
+					w.getParticipant(attacker).setCivilWar(true);
+					w.getParticipant(f).setCivilWar(true);
+				}
 				inv.warList(p);
 			}
 			

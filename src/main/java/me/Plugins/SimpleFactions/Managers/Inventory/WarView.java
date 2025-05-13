@@ -156,11 +156,12 @@ public class WarView {
 				p.playSound(p, Sound.ITEM_GOAT_HORN_SOUND_2, SoundCategory.MASTER, 10f, 0.6f);
 				boolean offense = false;
 				if(w.getType(pf).equalsIgnoreCase("main_attacker")) offense = true;
+				if(par.isCivilWar()) offense = false;
 				WarbandManager.addWarband(new Warband(par, offense));
 				net.tfminecraft.Warbands.Managers.InventoryManager warinv = new net.tfminecraft.Warbands.Managers.InventoryManager();
 				warinv.warbandList(p);
 			} else if(e.getSlot() == 31) {
-				Faction pf = FactionManager.getByString("lollmao");
+				Faction pf = FactionManager.getByLeader(p.getName());
 				if(pf == null) return;
 				Participant par = w.getParticipant(pf);
 				if(par != null) return;
@@ -168,9 +169,13 @@ public class WarView {
 				if(o == null) return;
 				Faction overlord = FactionManager.getByString(o);
 				if(w.getParticipant(overlord) != null) {
+					Participant oPar = w.getParticipant(overlord);
 					RelationManager.reset(pf, overlord, true);
-					Participant subject = w.getOppositeSide(overlord).addNewParticipant(pf, w.getParticipant(overlord));
+					Participant subject = w.getOppositeSide(overlord).addNewParticipant(pf, oPar);
+					subject.setCivilWar(true);
 					subject.addWarGoal(overlord, WarGoalLoader.getByString("independence"));
+					oPar.setCivilWar(true);
+					oPar.addWarGoal(pf, WarGoalLoader.getByString("subjugate"));
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 					warView(inventory, p, w, false);
 					return;
@@ -179,9 +184,12 @@ public class WarView {
 				if(top.getId().equalsIgnoreCase(overlord.getId())) return;
 				if(w.getParticipant(top) != null) {
 					Participant newPar = w.getSide(top).addNewParticipant(overlord, w.getParticipant(top));
+					newPar.setCivilWar(true);
 					RelationManager.reset(pf, overlord, true);
 					Participant subject = w.getOppositeSide(top).addNewParticipant(pf, newPar);
+					subject.setCivilWar(true);
 					subject.addWarGoal(overlord, WarGoalLoader.getByString("independence"));
+					newPar.addWarGoal(pf, WarGoalLoader.getByString("subjugate"));
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 					warView(inventory, p, w, false);
 					return;

@@ -14,10 +14,12 @@ import net.tfminecraft.DenarEconomy.Data.Account;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Events.FactionCreateEvent;
 import me.Plugins.SimpleFactions.Events.FactionDeleteEvent;
+import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
+import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Permissions;
 import me.Plugins.SimpleFactions.War.War;
@@ -572,6 +574,24 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				WarManager.endWar(w);
 				p.sendMessage("§aEnded war "+w.getName());
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("destroytitle") && args.length == 2) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Title title = TitleLoader.getById(args[1]);
+				if(title == null){
+					p.sendMessage("§cNo title by that id");
+					return false;
+				}
+				Faction owner = TitleManager.getOwner(title);
+				if(owner == null){
+					p.sendMessage("§cNo faction owns that title");
+					return false;
+				}
+				owner.removeTitle(title);
+				p.sendMessage("§aDestroyed title "+title.getName()+" §7("+title.getId()+")");
 				return true;
 			}
 			p.sendMessage("§a[SimpleFactions]§c Error with command format, use the gameplay guide for a list of commands");

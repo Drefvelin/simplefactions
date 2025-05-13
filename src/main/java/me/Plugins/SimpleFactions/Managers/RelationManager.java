@@ -44,6 +44,20 @@ public class RelationManager {
 		origin.setRelation(target, relation);
 		target.setRelation(origin, reverse);
 	}
+
+	public static boolean endVassalage(Faction origin, Faction target, boolean hostile) {
+		if(isOverlord(origin, target) || isOverlord(target, origin)) {
+			reset(origin, target, hostile);
+			return true;
+		}
+		return false;
+	}
+
+	public static boolean isOverlord(Faction origin, Faction target) {
+		String overlord = getOverlord(origin);
+		if(overlord == null) return false;
+		return overlord.equalsIgnoreCase(target.getId());
+	}
 	
 	public static void setRelation(Player p, RelationType r, Faction target, Faction origin, boolean check) {
 		Relation relation = new Relation(origin.getRelation(target.getId()));

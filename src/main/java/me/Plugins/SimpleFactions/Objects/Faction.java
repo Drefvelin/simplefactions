@@ -685,4 +685,13 @@ public class Faction {
 			bank.withdraw(armyCost);
 		}
     }
+
+	public int numOnline() {
+		int count = 0;
+		for(String m : members){
+			Player p = Bukkit.getPlayerExact(m);
+			if(p != null && p.isOnline()) count++;
+		}
+		return count;
+	}
 }
