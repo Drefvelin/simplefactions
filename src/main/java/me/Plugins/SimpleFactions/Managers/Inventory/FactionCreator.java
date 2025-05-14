@@ -25,6 +25,7 @@ import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Objects.PrestigeRank;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.FactionRanker;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.OpinionColourMapper;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
@@ -35,6 +36,7 @@ import me.Plugins.TLibs.Objects.API.ItemAPI;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class FactionCreator {
+	Formatter format = new Formatter();
 	FactionRanker r = new FactionRanker();
 	
 	public ItemStack createListItem(Player p, Faction f) {
@@ -182,7 +184,7 @@ public class FactionCreator {
 					lore.add(StringFormatter.formatHex("#d4c9aeIf the Faction falls below #7fbd73"+(FactionManager.getRankUpAmount(RankLoader.getByLevel(f.getRank().getLevel()))*0.95)+" #4793bfPrestige"));
 					lore.add(StringFormatter.formatHex("#d4c9aethe faction will become an "+rank.getName()));
 				} else {
-					lore.add(StringFormatter.formatHex("#d4c9aeIf the Faction falls below #7fbd73"+(FactionManager.getRankUpAmount(RankLoader.getByLevel(f.getRank().getLevel()))*0.95)+" #4793bfPrestige"));
+					lore.add(StringFormatter.formatHex("#d4c9aeIf the Faction falls below #7fbd73"+(format.formatDouble(FactionManager.getRankUpAmount(RankLoader.getByLevel(f.getRank().getLevel()))*0.95))+" #4793bfPrestige"));
 					lore.add(StringFormatter.formatHex("#d4c9aethe faction will become a "+rank.getName()));
 				}
 			}

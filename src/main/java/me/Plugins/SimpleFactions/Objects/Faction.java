@@ -392,7 +392,7 @@ public class Faction {
 	}
 	public void updatePrestige() {
 		prestige = 0.0;
-		addPrestigeModifier(new Modifier("Members", format.formatDouble(Math.pow(members.size(), 1.5)+5)));
+		addPrestigeModifier(new Modifier("Members", format.formatDouble(Math.pow(members.size()+2, 2.8)+5)));
 		if(wealth == 0) {
 			addPrestigeModifier(new Modifier("Wealth", 0.0));
 		}
@@ -401,7 +401,7 @@ public class Faction {
 			if(amount > wealth) {
 				amount = wealth;
 			}
-			addPrestigeModifier(new Modifier("Wealth", amount));
+			addPrestigeModifier(new Modifier("Wealth", format.formatDouble(amount)));
 		}
 		int provincePrestige = TierLoader.getByString("province").getPrestige();
 		if(provinces.size() > 0 && provincePrestige > 0) {
