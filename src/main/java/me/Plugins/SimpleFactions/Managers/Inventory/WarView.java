@@ -160,7 +160,7 @@ public class WarView {
 				boolean offense = false;
 				if(w.getType(pf).equalsIgnoreCase("main_attacker")) offense = true;
 				if(par.isCivilWar()) offense = false;
-				WarbandManager.addWarband(new Warband(par, offense));
+				WarbandManager.addWarband(new Warband(w, par, offense));
 				net.tfminecraft.Warbands.Managers.InventoryManager warinv = new net.tfminecraft.Warbands.Managers.InventoryManager();
 				warinv.warbandList(p);
 			} else if(e.getSlot() == 31) {

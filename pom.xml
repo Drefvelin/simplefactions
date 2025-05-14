@@ -66,9 +66,9 @@
         <dependency>
             <groupId>local</groupId>
             <artifactId>Warbands</artifactId>
-            <version>0.2.0</version>
+            <version>0.2.1</version>
             <scope>system</scope>
-            <systemPath>D:/Dokumenter/My Plugins/TFMC/Warbands/warbands_0.2.0-BETA.jar</systemPath>
+            <systemPath>D:/Dokumenter/My Plugins/TFMC/Warbands/warbands-0.2.1.jar</systemPath>
         </dependency>
         <!-- https://mvnrepository.com/artifact/commons-lang/commons-lang -->
         <dependency>
