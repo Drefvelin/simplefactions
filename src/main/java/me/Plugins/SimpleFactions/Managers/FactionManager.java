@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -261,4 +262,27 @@ public class FactionManager implements Listener{
 	        return 2;
 	    }
 	}
+
+    public static Title usurp(Player p, Faction usurping, Faction losing) {
+        Title t = losing.getHighestTitle();
+		if(t == null){
+			if(p != null) p.sendMessage("§ctarget has no titles");
+			return null;
+		}
+		usurping.addTitle(t);
+		for(Faction subject : RelationManager.getSubjects(losing)) {
+			if(subject.getId().equalsIgnoreCase(usurping.getId())) continue;
+			RelationManager.transferSubject(subject, usurping);
+		}
+		String o = RelationManager.getOverlord(losing);
+		if(o != null){
+			Faction overlord = FactionManager.getByString(o);
+			RelationManager.endVassalage(overlord, losing, false);
+			RelationManager.transferSubject(usurping, overlord);
+		}
+		RelationManager.endVassalage(usurping, losing, true);
+		RelationManager.setRelation(p, RelationLoader.getType("subject"), losing, usurping, false);
+		losing.removeTitle(t);
+		return t;
+    }
 }

@@ -670,6 +670,24 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				RelationManager.setRelation(p, type, recieving, sending, false);
 				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("usurp") && args.length == 3) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Faction usurping = FactionManager.getByString(args[1]);
+				if(usurping == null) {
+					p.sendMessage("§cNo faction by the id "+args[1]);
+					return false;
+				}
+				Faction losing = FactionManager.getByString(args[2]);
+				if(losing == null) {
+					p.sendMessage("§cNo faction by the id "+args[2]);
+					return false;
+				}
+				Title t = FactionManager.usurp(p, usurping, losing);
+				if(t != null) p.sendMessage(usurping.getName()+" §ausurped "+t.getName());;
+				return true;
 			}
 			p.sendMessage("§a[SimpleFactions]§c Error with command format, use the gameplay guide for a list of commands");
 		}

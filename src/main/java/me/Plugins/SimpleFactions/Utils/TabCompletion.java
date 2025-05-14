@@ -58,6 +58,8 @@ public class TabCompletion implements TabCompleter{
 						completions.add("destroytitle");
 						completions.add("granttitle");
 						completions.add("transfersubject");
+						completions.add("setrelation");
+						completions.add("usurp");
 	                }
 	                TabCleaner.cleanTab(completions, args);
 	                return completions;
@@ -297,6 +299,24 @@ public class TabCompletion implements TabCompleter{
 		            	List<String> completions = new ArrayList<String>();
 		            	for(RelationType type : RelationLoader.getTypes()) {
 		            		completions.add(type.getId());
+		            	}
+		                return completions;
+		            }
+	        	} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("usurp")){
+		            if(sender instanceof Player){
+		            	List<String> completions = new ArrayList<String>();
+		            	for(Faction f : FactionManager.factions) {
+		            		completions.add(f.getId());
+		            	}
+		                return completions;
+		            }
+	        	} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("usurp")){
+		            if(sender instanceof Player){
+		            	List<String> completions = new ArrayList<String>();
+		            	for(Faction f : FactionManager.factions) {
+							if(f.getId().equalsIgnoreCase(args[1])) continue;
+							if(f.getTitles().size() == 0) continue;
+		            		completions.add(f.getId());
 		            	}
 		                return completions;
 		            }

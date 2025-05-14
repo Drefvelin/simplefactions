@@ -74,6 +74,14 @@ public class FactionCreator {
 				lore.add(StringFormatter.formatHex("#a39ba8Their opinion of us: "+OpinionColourMapper.getOpinionColor(ofR.getOpinion())+ofR.getOpinion()));
 			}
 		}
+		List<Faction> subjects = RelationManager.getSubjects(f);
+		if(subjects.size() > 0){
+			lore.add("");
+			lore.add(StringFormatter.formatHex("#5eadccSubjects:"));
+			for(Faction subject : subjects) {
+				lore.add(StringFormatter.formatHex("#bccbd1- "+subject.getName()));
+			}
+		}
 		meta.setLore(lore);
 		NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");
 		meta.getPersistentDataContainer().set(id, PersistentDataType.STRING, f.getId());

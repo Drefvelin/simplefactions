@@ -593,6 +593,7 @@ public class Faction {
 				}
 			}
 		}
+		updatePrestige();
 	}
 
 	
