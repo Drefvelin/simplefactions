@@ -12,6 +12,7 @@ public class Cache {
 	public static int maxUntitledProvinces;
 	public static int maxFreeTitles;
 	public static double deJureRequirement;
+	public static boolean mapEnabled;
 	
 	public static HashMap<String, String> icons = new HashMap<>();
 }

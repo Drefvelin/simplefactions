@@ -3,7 +3,6 @@ package me.Plugins.SimpleFactions.REST;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -16,12 +15,11 @@ import java.util.List;
 import org.bukkit.entity.Player;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Objects.Faction;
 
 public class RestServer {
@@ -30,7 +28,8 @@ public class RestServer {
 	
 	public static List<String> fetchBannerList() {
         try {
-            URL url = new URL(apiURL+"/generator/banner");
+            @SuppressWarnings("deprecation")
+			URL url = new URL(apiURL+"/generator/banner");
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
 
@@ -56,6 +55,7 @@ public class RestServer {
     }
 	
 	public static int claim(Player p, Faction f) {
+		if(!Cache.mapEnabled) return -2;
 	    int x = p.getLocation().getBlockX();
 	    int z = p.getLocation().getBlockZ();
 	    try {
@@ -63,7 +63,8 @@ public class RestServer {
 	        		apiURL+"/map/province/%d,%d",
 	            x, z
 	        );
-	        URL url = new URL(urlStr);
+	        @SuppressWarnings("deprecation")
+			URL url = new URL(urlStr);
 	        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 	        connection.setRequestMethod("GET");
 
@@ -87,6 +88,7 @@ public class RestServer {
 	}
 	
 	public static void upload(String mode, File file) {
+		if(!Cache.mapEnabled) return;
 	    String charset = "UTF-8";
 	    String uploadUrl = String.format(
 	    		apiURL + "/data/upload/%s",
@@ -100,7 +102,8 @@ public class RestServer {
 	        reader.close();
 
 	        // 3. Setup connection
-	        URL url = new URL(uploadUrl);
+	        @SuppressWarnings("deprecation")
+			URL url = new URL(uploadUrl);
 	        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 	        connection.setUseCaches(false);
 	        connection.setDoOutput(true);
@@ -131,13 +134,15 @@ public class RestServer {
 	}
 	
 	public static void commenceRegen(String regenType) {
+		if(!Cache.mapEnabled) return;
 	    String urlStr = String.format(
 	        RestServer.apiURL + "/47a4921f7506514aec2d1471b424d8ae/api/regenerate/%s",
 	        regenType
 	    );
 
 	    try {
-	        URL url = new URL(urlStr);
+	        @SuppressWarnings("deprecation")
+			URL url = new URL(urlStr);
 	        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 	        connection.setRequestMethod("GET"); // Or POST, if your backend uses POST
 	        connection.setConnectTimeout(5000);

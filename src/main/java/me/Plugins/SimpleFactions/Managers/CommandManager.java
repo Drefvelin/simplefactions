@@ -57,7 +57,7 @@ public class CommandManager implements Listener, CommandExecutor{
 					Faction f = FactionManager.getByMember(p.getName());
 					int claim = RestServer.claim(p, f);
 					if(claim == -2) {
-						p.sendMessage("could not connect");
+						p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
 					} else {
 						FactionManager.getMap().claim(p, f, claim);
 					}
@@ -70,7 +70,7 @@ public class CommandManager implements Listener, CommandExecutor{
 					Faction f = FactionManager.getByMember(p.getName());
 					int claim = RestServer.claim(p, f);
 					if(claim == -2) {
-						p.sendMessage("could not connect");
+						p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
 					} else {
 						FactionManager.getMap().unclaim(p, f, claim);
 					}

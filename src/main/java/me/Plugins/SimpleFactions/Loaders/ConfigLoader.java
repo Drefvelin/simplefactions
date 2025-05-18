@@ -24,6 +24,7 @@ public class ConfigLoader {
 		Cache.deJureRequirement = config.getDouble("de-jure-requirement", 100.0);
 		Cache.maxUntitledProvinces = config.getInt("max-untitled-provinces", 5);
 		Cache.maxFreeTitles = config.getInt("max-free-titles", 3);
+		Cache.mapEnabled = config.getBoolean("enable-map", false);
 		
 		if(config.contains("icons")) {
 			for(String s : config.getStringList("icons")) {

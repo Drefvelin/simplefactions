@@ -16,7 +16,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
-import org.bukkit.inventory.meta.ItemMeta;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Army.Military;
@@ -183,6 +182,7 @@ public class Faction {
 	public void addProvince(int i) {
 		if(provinces.contains(i)) return;
 		provinces.add(i);
+		updateTier();
 	}
 	
 	public void removeProvince(int i) {
@@ -193,6 +193,7 @@ public class Faction {
 				return;
 			}
 		}
+		updateTier();
 	}
 	public List<Integer> getProvinces(){
 		return provinces;
