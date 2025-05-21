@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project name="maven-antrun-" default="main">
-  <target name="main">
-    <copy file="D:\Dokumenter\My Plugins\VSCode Workspace\simplefactions\target/simplefactions-2.2.7.jar" tofile="D:\Dokumenter\My Plugins\TFMC\SimpleFactions\simplefactions-2.2.7.jar" />
-  </target>
-</project>
