@@ -179,6 +179,13 @@ public class FactionView {
 				ItemStack i = new ItemStack(f.getBanner());
 				p.getInventory().addItem(i);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			} else if(e.getSlot() == 25) {
+				if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
+				SFInventoryHolder h = (SFInventoryHolder) inventory.getHolder();
+				Faction f = FactionManager.getByString(h.getId());
+				if(!f.getLeader().equalsIgnoreCase(p.getName())) return;
+				inv.taxView(p);;
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			}
 		}
 	}

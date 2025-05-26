@@ -306,7 +306,9 @@ public class Database {
     				}
     				double tax = 5;
     				if(json.containsKey("tax rate")) tax = (Double) json.get("tax rate");
-    				Faction f = new Faction(id, rgb, provinces, titles, leader, name, rulerTitle, members, patterns, government, culture, religion, exCap, prestigeModifiers, wealthModifiers, tax);
+					double vassalTax = 100;
+					if(json.containsKey("vassal tax rate")) vassalTax = (Double) json.get("vassal tax rate");
+    				Faction f = new Faction(id, rgb, provinces, titles, leader, name, rulerTitle, members, patterns, government, culture, religion, exCap, prestigeModifiers, wealthModifiers, tax, vassalTax);
     				if(((String) json.get("bank")).equalsIgnoreCase("true")) {
     					Chunk c = Bukkit.getServer().getWorld((String) json.get("world")).getChunkAt((int) Math.round((Double) json.get("xPos")), (int) Math.round((Double) json.get("zPos")));
     					Double balance = (Double) json.get("balance");
@@ -386,6 +388,7 @@ public class Database {
         	defaults.put("religion", f.getReligion());
         	defaults.put("rgb", f.getRGB());
         	defaults.put("tax rate", f.getTaxRate());
+			defaults.put("vassal tax rate", f.getVassalTaxRate());
         	if(f.getExtraNodeCapacity() != null) {
         		defaults.put("extra node capacity", f.getExtraNodeCapacity());
         	}

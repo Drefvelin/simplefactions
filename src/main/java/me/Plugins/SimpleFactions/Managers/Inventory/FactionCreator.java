@@ -267,14 +267,23 @@ public class FactionCreator {
 		} else if(t.equals(MenuItemType.TAX)) {
 			i = new ItemStack(Material.GOLD_INGOT, 1);
 			ItemMeta m = i.getItemMeta();
-			double foreignTax = f.getModifier(FactionModifiers.TAX).getAmount();
+			double foreignTax = f.getTotalForeignTaxRate();
 			m.setDisplayName(StringFormatter.formatHex("#c77c32Tax Rate§e: #a39a84"+(f.getTaxRate()+foreignTax)+"%"));
 			List<String> lore = new ArrayList<String>();
 			lore.add(StringFormatter.formatHex("#d4c9aeDomestic Taxes§e: #a39a84"+f.getTaxRate()+"%"));
 			if(foreignTax > 0) lore.add(StringFormatter.formatHex("#d4c9aeForeign Taxes§e: #a39a84"+foreignTax+"%"));
+			if(RelationManager.getSubjects(f).size() > 0) {
+				lore.add("");
+				if(f.getMembers().contains(p.getName())) lore.add(StringFormatter.formatHex("#c49760§lWe Impose:"));
+				else lore.add(StringFormatter.formatHex("#c49760§lThey Impose:"));
+				lore.add(StringFormatter.formatHex("#6c93bdVassal Taxes§e: #a39a84"+f.getVassalTaxRate()+"% of their type"));
+				lore.add(StringFormatter.formatHex("#ccac41§oInfo: #4c5250§oIf a vassal has 5% tax from their relation"));
+				lore.add(StringFormatter.formatHex("#4c5250§oand the overlord has a 50% vassal tax rate"));
+				lore.add(StringFormatter.formatHex("#4c5250§othe vassal has a 2.5% effective tax rate"));
+			}
 			if(f.getLeader().equalsIgnoreCase(p.getName())) {
 				lore.add("");
-				lore.add(StringFormatter.formatHex("§7Click to change #7a915eDomestic §7tax rate"));
+				lore.add(StringFormatter.formatHex("§7Click to change #7a915eDomestic#d4c9ae/#6c93bdVassal §7tax rate"));
 			}
 			m.setLore(lore);
 			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");

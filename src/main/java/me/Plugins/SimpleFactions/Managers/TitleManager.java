@@ -10,6 +10,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Tier;
@@ -52,7 +53,7 @@ public class TitleManager implements Listener{
 	}
 	
 	public static double getClaimCost(Faction f) {
-	    return f.getProvinces().size()*30;
+	    return f.getProvinces().size()*Cache.provinceCost+Cache.provinceCost;
 	}
 
 	

@@ -59,6 +59,7 @@ public class Faction {
 	List<Integer> provinces = new ArrayList<>();
 	
 	private double taxRate = 5;
+	private double vassalTax = 100;
 
 	private Tier tier;
 	
@@ -96,7 +97,7 @@ public class Faction {
 		updatePrestige();
 		updateTier();
 	}
-	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> members, List<String> patterns, String government, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, List<Modifier> wealthModifiers, double taxRate) {
+	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> members, List<String> patterns, String government, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, List<Modifier> wealthModifiers, double taxRate, double vassalTax) {
 		this.id = id;
 		this.name = name;
 		this.leader = leader;
@@ -117,6 +118,7 @@ public class Faction {
 		this.titles = titles;
 		this.military = new Military(this); //TODO persistence
 		this.taxRate = taxRate;
+		this.vassalTax = vassalTax;
 		init();
 		createBanner(bannerPatterns);
 		updateTier();
@@ -149,9 +151,73 @@ public class Faction {
 		item.setItemMeta(b);
 		this.banner = item;
 	}
+
+	public double getForeignTaxRate(Faction f) {
+		double taxRate = 0;
+		for(FactionModifier mod : getModifiers()) {
+			if(mod.getFrom() == null) continue;
+			if(!mod.getFrom().getId().equalsIgnoreCase(f.getId())) continue;
+			if(!mod.getType().equals(FactionModifiers.TAX)) continue;
+			double tax = mod.getAmount();
+			String overlord = RelationManager.getOverlord(this);
+			if(overlord != null && overlord.equalsIgnoreCase(mod.getFrom().getId())) {
+				tax = mod.getFrom().getVassalTaxRate()/100.0*tax;
+			}
+			Faction from = mod.getFrom();
+			if(from.getBank() == null) continue;
+			taxRate += tax;
+		}
+		return taxRate;
+	}
+
+	public double getTotalForeignTaxRate() {
+		double taxRate = 0;
+		for(FactionModifier mod : getModifiers()) {
+			if(mod.getFrom() == null) continue;
+			if(!mod.getType().equals(FactionModifiers.TAX)) continue;
+			taxRate+=getForeignTaxRate(mod.getFrom());
+		}
+		return taxRate;
+	}
+
+	public void giveTax(double amount) {
+		double paidTax = 0;
+		for(FactionModifier mod : getModifiers()) {
+			if(paidTax >= amount) break;
+			if(mod.getFrom() == null) continue;
+			if(!mod.getType().equals(FactionModifiers.TAX)) continue;
+			double tax = mod.getAmount()/100.0*amount;
+			String overlord = RelationManager.getOverlord(this);
+			if(overlord != null && overlord.equalsIgnoreCase(mod.getFrom().getId())) {
+				tax = mod.getFrom().getVassalTaxRate()/100.0*tax;
+			}
+			Faction from = mod.getFrom();
+			if(from.getBank() == null) continue;
+			paidTax += tax;
+			from.giveTax(tax);
+		}
+		amount -= paidTax;
+		Bukkit.getPlayer("drefvelin").sendMessage(name+" §frecieved §e"+amount+"d");
+		bank.deposit(amount);
+	}
+
+	public double setTaxRate(double d) {
+		double totalForeignTax = getTotalForeignTaxRate();
+		if(d+totalForeignTax > 100) d = 100-totalForeignTax;
+		taxRate = d;
+		return taxRate;
+	}
 	
 	public double getTaxRate() {
 		return taxRate;
+	}
+
+	public void setVassalTaxRate(double d) {
+		vassalTax = d;
+	}
+
+	public double getVassalTaxRate() {
+		return vassalTax;
 	}
 	
 	public void init() {
@@ -172,6 +238,10 @@ public class Faction {
 	}
 	
 	public void tick() {
+		//taxation fix, doubt this will be neccesary
+		double tax = getTotalForeignTaxRate();
+		if(taxRate + tax > 100) taxRate = 100-tax;
+		
 		military.tick();
 		for(FactionModifier m : getModifiers()) {
 			if(!m.isTimed()) continue;
@@ -393,7 +463,7 @@ public class Faction {
 	}
 	public void updatePrestige() {
 		prestige = 0.0;
-		addPrestigeModifier(new Modifier("Members", format.formatDouble(Math.pow(members.size()+2, 2.8)+5)));
+		addPrestigeModifier(new Modifier("Members", format.formatDouble(Math.pow(members.size()+4, 1.8)+5)));
 		if(wealth == 0) {
 			addPrestigeModifier(new Modifier("Wealth", 0.0));
 		}

@@ -1,6 +1,8 @@
 package me.Plugins.SimpleFactions.Managers;
 
 import java.util.HashMap;
+import java.util.Map;
+
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -8,10 +10,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Army.Regiment;
@@ -22,6 +26,8 @@ import me.Plugins.SimpleFactions.Managers.Inventory.FactionView;
 import me.Plugins.SimpleFactions.Managers.Inventory.InventoryUpdater;
 import me.Plugins.SimpleFactions.Managers.Inventory.MilitaryView;
 import me.Plugins.SimpleFactions.Managers.Inventory.RelationView;
+import me.Plugins.SimpleFactions.Managers.Inventory.TaxChange;
+import me.Plugins.SimpleFactions.Managers.Inventory.TaxView;
 import me.Plugins.SimpleFactions.Managers.Inventory.TierTitleView;
 import me.Plugins.SimpleFactions.Managers.Inventory.WarView;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -29,14 +35,31 @@ import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.War.Participant;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.enums.SFGUI;
+import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class InventoryManager implements Listener{
 	public HashMap<Player, Faction> confirming = new HashMap<>();
+	public HashMap<Player, TaxChange> taxChange = new HashMap<>();
 	
 	InventoryUpdater updater = new InventoryUpdater(this);
 	
 	public InventoryUpdater getUpdater() {
 		return updater;
+	}
+
+	public void start() {
+		new BukkitRunnable() {
+			@SuppressWarnings("unchecked")
+			@Override
+			public void run() {
+				for(Map.Entry<Player, TaxChange> entry : ((HashMap<Player, TaxChange>) taxChange.clone()).entrySet()) {
+					if(entry.getValue().tick()) {
+						taxChange.remove(entry.getKey());
+						entry.getKey().sendMessage("§cTax change timed out.");
+					}
+				}
+			}
+		}.runTaskTimer(SimpleFactions.plugin, 0, 20L);
 	}
 	
 	/*
@@ -105,6 +128,59 @@ public class InventoryManager implements Listener{
 	}
 	public void relationView(Inventory i, Player player, Faction f, boolean open) {
 		relationView.relationView(i, player, f, open);
+	}
+
+	//Tax
+	public TaxView taxView = new TaxView(this);
+
+	public void taxView(Player p) {
+		taxView.taxView(p);
+	}
+
+	public boolean isChanging(Player p) {
+		return taxChange.containsKey(p);
+	}
+
+	public void setChanging(Player p, boolean b) {
+		taxChange.put(p, new TaxChange(b));
+	}
+
+	@EventHandler
+	public void setRate(AsyncPlayerChatEvent e) {
+		Player p = e.getPlayer();
+		if(!isChanging(p)) return;
+		e.setCancelled(true);
+		new BukkitRunnable() {
+			@Override
+			public void run() {
+				Faction f = FactionManager.getByLeader(p.getName());
+				if(f == null) {
+					taxChange.remove(p);
+					return;
+				}
+				TaxChange change = taxChange.get(p);
+				double amount = 0;
+				try {
+					amount = Double.parseDouble(e.getMessage());
+				} catch (Exception e) {
+					p.sendMessage("§cError inputting the amount, use the format §e15.67 §cfor 15.67% tax (example)");
+					return;
+				}
+				amount = Math.round(amount*100.0)/100.0;
+				amount = Math.min(100.0, amount);
+				if(change.isDomestic()) {
+					double tax = f.setTaxRate(amount);
+					p.sendMessage(StringFormatter.formatHex("§7Set #7a915eDomestic §7tax rate to #a39a84"+tax+"%"));
+					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				} else {
+					f.setVassalTaxRate(amount);
+					p.sendMessage(StringFormatter.formatHex("§7Set #6c93bdVassal §7tax rate to #a39a84"+f.getVassalTaxRate()+"%"));
+					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				}
+				taxChange.remove(p);
+				taxView.taxView(p);
+			}
+		}.runTask(SimpleFactions.plugin);
 	}
 	
 	//Confirm
@@ -229,6 +305,8 @@ public class InventoryManager implements Listener{
 				|| (inv.getHolder() instanceof SFCombinedInventoryHolder && ((SFCombinedInventoryHolder) inv.getHolder()).getType().equals(SFGUI.PARTICIPANT_VIEW))
 				|| (inv.getHolder() instanceof SFCombinedInventoryHolder && ((SFCombinedInventoryHolder) inv.getHolder()).getType().equals(SFGUI.WARGOAL_VIEW))) {
 			warView.click(e, inv, p);
+		} else if(inv.getHolder() instanceof SFInventoryHolder && ((SFInventoryHolder) inv.getHolder()).getType().equals(SFGUI.TAX_VIEW)) {
+			taxView.click(e, inv, p);
 		}
 	}
 }

@@ -59,6 +59,7 @@ public class SimpleFactions extends JavaPlugin{
 		factionManager.run();
 		RequestManager.start();
 		WarManager.start();
+		inventoryManager.start();
 	}
 	@Override
 	public void onDisable() {
