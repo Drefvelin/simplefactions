@@ -44,6 +44,9 @@ public class RelationCreator {
 		List<String> lore = new ArrayList<>();
 		if(r.hasThreshold()) {
 			addThreshold(lore, r.getThreshold());
+			lore.add("");
+			lore.add("§45Only click this if you have");
+			lore.add("§4an approved War Ticket in the discord!");
 		}
 		lore.add(" ");
 		m.setLore(lore);

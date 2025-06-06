@@ -21,7 +21,7 @@ public class RelationManager {
 	
 	public static void tick() {
 		tick++;
-		if(tick >= 10) {
+		if(tick >= 3600) {
 			tick = 0;
 			for(Faction f : FactionManager.factions) {
 				f.updateRelations();
