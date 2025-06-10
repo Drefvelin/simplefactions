@@ -16,6 +16,7 @@ import me.Plugins.SimpleFactions.Diplomacy.Attitude;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
+import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Map.MapSystem;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
@@ -65,6 +66,17 @@ public class FactionManager implements Listener{
 		dbRelations.clear();
 	}
 	
+	public static void reloadTitles() {
+		for(Faction f : factions) {
+			List<Title> newTitles = new ArrayList<>();
+			for(Title t : f.getTitles()) {
+				Title title = TitleLoader.getById(t.getId());
+				if(title == null) continue;
+				newTitles.add(title);
+			}
+			f.resetTitles(newTitles);
+		}
+	}
 	
 	public static Double globalWealth = 0.0;
 	

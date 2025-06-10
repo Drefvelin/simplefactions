@@ -158,7 +158,7 @@ public class RelationView {
 			if(r.isVassalage()) {
 				Tier ot = origin.getTier();
 				Tier tt = f.getTier();
-				if(ot.getTier() <= tt.getTier()) {
+				if(ot.getTier() < tt.getTier()) {
 					//p.sendMessage("§cYour nation has the tier "+ot.getFormattedName()+ " §cwhile "+f.getName()+ " §chas the tier "+tt.getFormattedName());
 					p.sendMessage("§cYour tier must be equal to or higher than the target tier to vassalise them!");
 					return;

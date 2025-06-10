@@ -54,6 +54,7 @@ public class TabCompletion implements TabCompleter{
 		                completions.add("getglobalwealth");
 						completions.add("queueallnations");
 						completions.add("fullregen");
+						completions.add("reloadtitles");
 						completions.add("endwar");
 						completions.add("destroytitle");
 						completions.add("granttitle");

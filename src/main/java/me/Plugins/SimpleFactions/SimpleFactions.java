@@ -35,7 +35,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final RegimentLoader regimentLoader = new RegimentLoader();
 	private final RelationLoader relationLoader = new RelationLoader();
 	private final TierLoader tierLoader = new TierLoader();
-	private final TitleLoader titleLoader = new TitleLoader();
+	private static final TitleLoader titleLoader = new TitleLoader();
 	private final WarGoalLoader goalLoader = new WarGoalLoader();
 	
 	private final CommandManager commands = new CommandManager();
@@ -121,5 +121,9 @@ public class SimpleFactions extends JavaPlugin{
 	            saveResource(s, false);
 	        }
 		}
+	}
+
+	public static void reloadTitles() {
+		titleLoader.reload();
 	}
 }

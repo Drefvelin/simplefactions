@@ -51,6 +51,9 @@ public class Formatter {
         return s;
     }
     public Double formatDouble(Double d) {
+        if (d == null || d.isNaN() || d.isInfinite()) {
+            return 0.0; // or any default value you'd prefer
+        }
         return round(d, 2);
     }
 

@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.Loaders;
 
 import com.google.gson.*;
 
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.Tiers.Title;
 
@@ -13,6 +14,11 @@ public class TitleLoader {
 
     private static List<Title> titles = new ArrayList<>();
     private static final File inputFolder = new File("plugins/SimpleFactions/Input");
+
+    public void reload() {
+        loadAll();
+        FactionManager.reloadTitles();
+    }
 
     public void loadAll() {
         titles.clear();

@@ -88,6 +88,11 @@ public class TitleManager implements Listener{
 		for(int p : getProvinces(f)) {
 			if(TitleLoader.getByProvince(p) == null) provinces.add(p);
 		}
+		for(Faction subject : RelationManager.getSubjects(f)) {
+			for(int p : subject.getProvinces()) {
+				if(TitleLoader.getByProvince(p) == null) provinces.add(p);
+			}
+		}
 		return provinces;
 	}
 	

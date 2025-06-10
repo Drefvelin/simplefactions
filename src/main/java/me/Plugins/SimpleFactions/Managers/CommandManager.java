@@ -12,6 +12,7 @@ import org.bukkit.inventory.ItemStack;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
 import net.tfminecraft.DenarEconomy.Data.Account;
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Events.FactionCreateEvent;
 import me.Plugins.SimpleFactions.Events.FactionDeleteEvent;
@@ -329,7 +330,7 @@ public class CommandManager implements Listener, CommandExecutor{
 					return true;
 				}
 				i.setAmount(1);
-				f.setBanner(i);;
+				f.setBanner(i);
 				p.sendMessage("§aFaction banner changed!");
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setbank") && args.length == 1) {
@@ -556,6 +557,14 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				FactionManager.getMap().fullRegen();
 				p.sendMessage("§eFull regen started, this might take some time...");
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("reloadtitles") && args.length == 1) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				SimpleFactions.reloadTitles();
+				p.sendMessage("§eReloaded titles!");
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("endwar") && args.length == 2) {
 				if(!Permissions.isAdmin(sender)) {

@@ -197,7 +197,6 @@ public class Faction {
 			from.giveTax(tax);
 		}
 		amount -= paidTax;
-		Bukkit.getPlayer("drefvelin").sendMessage(name+" §frecieved §e"+amount+"d");
 		bank.deposit(amount);
 	}
 
@@ -386,9 +385,7 @@ public class Faction {
 			String pattern = p.getPattern().toString();
 			this.bannerPatterns.add(colour+"."+pattern);
 		}
-		for(String s : bannerPatterns) {
-			System.out.println(s);
-		}
+		createBanner(bannerPatterns);
 	}
 	public List<String> getBannerPatterns() {
 		return bannerPatterns;
@@ -479,13 +476,8 @@ public class Faction {
 			addPrestigeModifier(new Modifier("Provinces", (double) (provincePrestige*provinces.size())));
 		}
 		if(titles.size() > 0) {
-			double titleAmount = 0;
-			for(Title t : titles) {
-				titleAmount += t.getTier().getPrestige();
-			}
-			if(titleAmount > 0) {
-				addPrestigeModifier(new Modifier("Titles", titleAmount));
-			}
+			double titleAmount = getHighestTitle().getTier().getPrestige();
+			addPrestigeModifier(new Modifier("Titles", titleAmount));
 		}
 		if(getModifier(FactionModifiers.PRESTIGE_BONUS).getAmount() > 0.0) {
 			double multiplier = getModifier(FactionModifiers.PRESTIGE_BONUS).getAmount()/100.0;
@@ -571,11 +563,21 @@ public class Faction {
 	}
 	
 	//Titles
+
+	public void resetTitles(List<Title> list) {
+		titles = list;
+		updatePrestige();
+	}
 	
 	public List<Integer> getUntitledProvinces() {
 		List<Integer> p = new ArrayList<>();
 		for(int i : provinces) {
 			if(TitleLoader.getByProvince(i) == null) p.add(i);
+		}
+		for(Faction subject : RelationManager.getSubjects(this)) {
+			for(int i : subject.getProvinces()) {
+				if(TitleLoader.getByProvince(i) == null) p.add(i);
+			}
 		}
 		return p;
 	}

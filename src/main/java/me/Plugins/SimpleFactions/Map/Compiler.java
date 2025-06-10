@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 
@@ -25,35 +26,32 @@ public class Compiler {
     }
 	
 	public void exportAllFactionsToNationJson() {
-	    File folder = new File("plugins/SimpleFactions/Data");
-	    File[] files = folder.listFiles((dir, name) -> name.endsWith(".json"));
+		File folder = new File("plugins/SimpleFactions/Data");
+		File[] files = folder.listFiles((dir, name) -> name.endsWith(".json"));
 
-	    if (files == null || files.length == 0) {
-	        return;
-	    }
+		JsonObject root = new JsonObject();
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
-	    JsonObject root = new JsonObject();
+		if (files != null && files.length > 0) {
+			for (File file : files) {
+				try (FileReader reader = new FileReader(file, StandardCharsets.UTF_8)) {
+					JsonObject factionData = JsonParser.parseReader(reader).getAsJsonObject();
+					String id = factionData.get("id").getAsString();
+					root.add(id, factionData);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
 
-	    for (File file : files) {
-	        try (FileReader reader = new FileReader(file)) {
-	            JsonObject factionData = JsonParser.parseReader(reader).getAsJsonObject();
-	            String id = factionData.get("id").getAsString();
-	            root.add(id, factionData);
-	        } catch (Exception e) {
-	            e.printStackTrace();
-	        }
-	    }
+		File outputFile = new File("plugins/SimpleFactions/MapAPI/nation.json");
+		outputFile.getParentFile().mkdirs();
 
-	    try {
-	        File outputFile = new File("plugins/SimpleFactions/MapAPI/nation.json");
-	        outputFile.getParentFile().mkdirs(); // Ensure folder exists
-	        try (FileWriter writer = new FileWriter(outputFile)) {
-	            Gson gson = new GsonBuilder().setPrettyPrinting().create();
-	            gson.toJson(root, writer);
-	        }
-
-	    } catch (IOException e) {
-	        e.printStackTrace();
-	    }
+		try (FileWriter writer = new FileWriter(outputFile, StandardCharsets.UTF_8)) {
+			gson.toJson(root, writer);
+			System.out.println("Successfully exported nations to: " + outputFile.getPath());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }
