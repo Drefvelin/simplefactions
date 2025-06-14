@@ -550,6 +550,7 @@ public class Faction {
 		
 		//update
 		relations.put(f.getId(), r);
+		if(f.getId().equalsIgnoreCase("cape_vander")) Bukkit.getPlayerExact("drefvelin").sendMessage(this.getName()+ " to "+f.getName()+" necpome "+r.getType().getName());
 		
 		//Apply new modifiers
 		if(r.getType().hasRecieveModifiers()) addModifiers(f, r.getType().getRecieveModifiers());
@@ -680,11 +681,13 @@ public class Faction {
 	}
 	
 	public void addModifier(Faction from, FactionModifier m) {
-		modifiers.computeIfAbsent(m.getType(), k -> new ArrayList<>());
-
+		if(from != null && from.getId().equalsIgnoreCase("cape_vander")) Bukkit.getPlayerExact("drefvelin").sendMessage(m.getType().toString()+" "+m.getAmount());
+		FactionModifier mod = new FactionModifier(from, m.getType(), m.getAmount(), m.getTime());
+		modifiers.computeIfAbsent(mod.getType(), k -> new ArrayList<>());
         List<FactionModifier> list = modifiers.get(m.getType());
-        if (!list.contains(m)) {
-            list.add(new FactionModifier(from, m));
+        if (!list.contains(mod)) {
+            list.add(mod);
+			if(mod.getFrom() != null && id.equalsIgnoreCase("Wythe")) Bukkit.getPlayerExact("drefvelin").sendMessage(mod.getFrom().getName()+" "+mod.getType().toString()+" "+mod.getAmount());
         }
 	}
 

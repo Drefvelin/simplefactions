@@ -52,6 +52,13 @@ public class FactionModifier {
 		this.amount = m.getAmount();
 		this.time = m.getTime();
 	}
+	public FactionModifier(Faction from, FactionModifiers type, double amount, int time) {
+		this.from = from;
+		id = UUID.randomUUID().toString();
+		this.type = type;
+		this.amount = amount;
+		this.time = time;
+	}
 	
 	public String getId() {
 		return id;

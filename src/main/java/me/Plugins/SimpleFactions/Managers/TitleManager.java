@@ -11,6 +11,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Loaders.TierLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Tier;
@@ -37,8 +38,11 @@ public class TitleManager implements Listener{
 		Tier tier = isFormingTitle.get(p);
 		
 		List<String> titleStringList = new ArrayList<>();
-		for(Title title : f.getFreeTitles(tier)) {
-			titleStringList.add(title.getId());
+		Tier lower = TierLoader.getByLevel(tier.getTier()-1);
+		if(lower != null) {
+			for(Title title : f.getFreeTitles(lower)) {
+				titleStringList.add(title.getId());
+			}
 		}
 		String name = WordUtils.capitalize(format.formatId(message).replace("_", " "));
 		Title newTitle = TitleLoader.createNewTitle(tier, format.formatId(message), name, RandomRGB.similarButDistinct(f.getRGB()), f.getUntitledProvinces(), titleStringList, false);
