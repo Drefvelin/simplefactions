@@ -145,17 +145,24 @@ public class TierTitleView {
 				Tier tier = TierLoader.getByString(tierString);
 				int needed = creator.getNewTitleCost(f, tier);
 				int current = 0;
+				Tier lower = TierLoader.getByLevel(tier.getTier()-1);
 				if(tier.getId().equalsIgnoreCase("county")) {
 					current = f.getUntitledProvinces().size();
 				} else {
-					current = f.getFreeTitles(tier).size();
+					if(lower == null) return;
+					current = f.getFreeTitles(TierLoader.getByLevel(lower.getTier())).size();
 				}
 				if(current < needed) {
+					return;
+				}
+				if(RelationManager.getOverlord(f) != null && FactionManager.getByString(RelationManager.getOverlord(f)).getTier().getTier() < f.getTier().getTier()+1) {
+					p.sendMessage("§cForming a new "+tier.getName()+" title would make you a higher tier than your liege!");
 					return;
 				}
 				TitleManager.isFormingTitle.put(p, tier);
 				p.sendMessage("§eType the name of the new "+tier.getName()+" §ein chat.");
 				p.closeInventory();
+				return;
 			}
 			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
 			String s = e.getCurrentItem().getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.STRING);
