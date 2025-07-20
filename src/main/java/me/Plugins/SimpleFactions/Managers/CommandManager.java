@@ -1,18 +1,16 @@
 package me.Plugins.SimpleFactions.Managers;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import java.util.List;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 
-import net.tfminecraft.DenarEconomy.DenarEconomy;
-import net.tfminecraft.DenarEconomy.Data.Account;
 import me.Plugins.SimpleFactions.Cache;
-import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Events.FactionCreateEvent;
 import me.Plugins.SimpleFactions.Events.FactionDeleteEvent;
@@ -22,11 +20,14 @@ import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Permissions;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
+import net.tfminecraft.DenarEconomy.Data.Account;
+import net.tfminecraft.DenarEconomy.DenarEconomy;
 
 public class CommandManager implements Listener, CommandExecutor{
 	public String cmd1 = "faction";
@@ -498,6 +499,41 @@ public class CommandManager implements Listener, CommandExecutor{
 				for(Player pl : Bukkit.getOnlinePlayers()) {
 					if(f.getMembers().contains(pl.getName())) {
 						pl.sendMessage("§a"+args[2]+ " is the new faction leader!");
+					}
+				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("forcewithdraw") && args.length == 3) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Faction f = FactionManager.getByString(args[1]);
+				if(f == null) {
+					p.sendMessage("§a[SimpleFactions]§c Error! faction does not exist!");
+					return true;
+				}
+				double amount = 0.0;
+				try {
+					amount = Double.parseDouble(args[2]);
+				} catch (Exception e) {
+					p.sendMessage("Error reading amount, setting it to 0");
+				}
+				if(amount == 0) return true;
+
+				if(f.getBank().getWealth() < amount) {
+					p.sendMessage("§cBank does not have enough wealth");
+					return true;
+				}
+				f.getBank().withdraw(amount);
+				List<ItemStack> items = DenarEconomy.getMoneyManager().amountToItems(amount);
+				for(ItemStack i : items) {
+					p.getInventory().addItem(i);
+				}
+				p.sendMessage("§6"+amount+" §cwas withdrawn from the bank of "+f.getName());
+				for(String s : f.getMembers()) {
+					Player member = Bukkit.getPlayer(s);
+					if(member != null && member.isOnline()) {
+						member.sendMessage("§6"+amount+" §cwas withdrawn from the faction by admins, §cmake a ticket if you believe this was a mistake");
 					}
 				}
 				return true;

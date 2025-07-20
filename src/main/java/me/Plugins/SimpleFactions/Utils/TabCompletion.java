@@ -49,6 +49,7 @@ public class TabCompletion implements TabCompleter{
 	                }
 	                if(Permissions.isAdmin(sender)) {
 		                completions.add("forceleader");
+						completions.add("forcewithdraw");
 		                completions.add("addprestigemodifier");
 		                completions.add("addwealthmodifier");
 		                completions.add("getglobalwealth");
@@ -197,6 +198,21 @@ public class TabCompletion implements TabCompleter{
 		            		completions.addAll(f.getMembers());
 			            	completions.remove(f.getLeader());
 		            	}
+		                return completions;
+		            }
+	        	}if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("forcewithdraw")){
+		            if(sender instanceof Player){
+		            	List<String> completions = new ArrayList<String>();
+		            	for(Faction f : FactionManager.factions) {
+		            		completions.add(f.getId());
+		            	}
+		            	
+		                return completions;
+		            }
+	        	} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("forcewithdraw")){
+		            if(sender instanceof Player){
+						List<String> completions = new ArrayList<String>();
+		            	completions.add("1.0");
 		                return completions;
 		            }
 	        	} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("addprestigemodifier")){
