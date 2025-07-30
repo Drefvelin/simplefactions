@@ -20,9 +20,22 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
+import me.Plugins.TLibs.TLibs;
+import me.Plugins.TLibs.Enums.APIType;
+import me.Plugins.TLibs.Objects.API.ItemAPI;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class TierTitleCreator {
+
+	public ItemStack getPageItem(String s, int page) {
+		ItemAPI api = TLibs.getItemAPI();
+		ItemStack i = api.getCreator().getItemsAdderItem(s);
+		ItemMeta m = i.getItemMeta();
+		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "page");
+		m.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, page);
+		i.setItemMeta(m);
+		return i;
+	}
 	
 	public ItemStack createNoTitleItem() {
 		ItemStack i = new ItemStack(Material.RED_CONCRETE);

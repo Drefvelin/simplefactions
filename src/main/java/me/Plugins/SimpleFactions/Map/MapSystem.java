@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Cache;
@@ -98,32 +99,48 @@ public class MapSystem {
 			return;
 		}
 		Faction owner = FactionManager.getByProvince(province);
+		boolean stolen = false;
 		if (owner != null) {
-		    p.sendMessage("§cProvince already claimed by " + owner.getName() + "!");
-		    return;
+			if(TitleManager.overProvinceCap(owner)) {
+				stolen = true;
+			} else {
+				p.sendMessage("§cProvince already claimed by " + owner.getName() + "!");
+		    	return;
+			}
 		}
-		if(f.getPrestige() < TitleManager.getClaimCost(f)) {
-			p.sendMessage("§cYou need at least §f"+TitleManager.getClaimCost(f)+"§c prestige to claim a new province §7(currently "+f.getPrestige()+")");
-		    return;
+		claimProvince(p, f, owner, province, stolen);
+	}
+
+	private void claimProvince(Player p, Faction f, Faction owner, int province, boolean stolen) {
+		double cost = TitleManager.getClaimCost(f);
+		if(f.getPrestige() < cost) {
+			p.sendMessage("§cYou need at least §f" + cost + "§c prestige to claim a new province §7(currently " + f.getPrestige() + ")");
+			return;
 		}
 		if(TitleLoader.getByProvince(province) == null && f.getUntitledProvinces().size() >= Cache.maxUntitledProvinces) {
 			p.sendMessage("§cYou have too many untitled provinces, form a county first!");
 		    return;
 		}
-		p.sendMessage("§aSuccesfully claimed province "+province);
+		if(stolen) {
+			Player leader = Bukkit.getPlayerExact(owner.getLeader());
+			if(leader != null) leader.sendMessage(f.getName()+" §cclaimed one of your provinces since you lacked the prestige to hold it!");
+			unclaim(null, owner, province);
+			enqueue("nation", owner.getRGB());
+		}
+		p.sendMessage(stolen ? "aSuccessfully  claimed province "+province+" §afrom "+owner.getName() : "aSuccessfully  claimed province "+province);
 		f.addProvince(province);
 		enqueue("nation", f.getRGB());
 	}
 	
 	public void unclaim(Player p, Faction f, int province) {
 		if(province == 0) {
-			p.sendMessage("§cThis location has no province!");
+			if(p != null) p.sendMessage("§cThis location has no province!");
 			return;
 		} else if(!f.getProvinces().contains(province)) {
-			p.sendMessage("§cYour faction does not own this province!");
+			if(p != null) p.sendMessage("§cYour faction does not own this province!");
 			return;
 		}
-		p.sendMessage("§aSuccesfully unclaimed province "+province);
+		if(p != null) p.sendMessage("aSuccessfully  unclaimed province "+province);
 		f.removeProvince(province);
 		Title t = TitleLoader.getByProvince(province);
 		if(t != null) {

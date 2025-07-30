@@ -6,12 +6,11 @@
 
     <groupId>net.tfminecraft</groupId>
     <artifactId>simplefactions</artifactId>
-    <version>2.3.4</version>
+    <version>2.3.6</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
@@ -20,55 +19,56 @@
             <artifactId>json-simple</artifactId>
             <version>1.1</version>
             <scope>system</scope>
-            <systemPath>C:/Users/vbdre/Documents/Reference Libs/json-simple-1.1.jar</systemPath>
+            <systemPath>D:/Dokumenter/My Plugins/Reference Libs/json-simple-1.1.jar</systemPath>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
         <dependency>
-            <groupId>com.google.code.gson</groupId>
+            <groupId>local</groupId>
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
+            <scope>system</scope>
+            <systemPath>D:/Dokumenter/My Plugins/Reference Libs/gson-2.10.1.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
             <artifactId>MMOItems</artifactId>
             <version>6.10</version>
             <scope>system</scope>
-            <systemPath>C:/Users/vbdre/Documents/Reference Libs/MMOItems-6.10.jar</systemPath>
+            <systemPath>D:/Dokumenter/My Plugins/Reference Libs/MMOItems-6.10.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
             <artifactId>MythicLib</artifactId>
             <version>1.6.1</version>
             <scope>system</scope>
-            <systemPath>C:/Users/vbdre/Documents/Reference Libs/MythicLib-1.7.jar</systemPath>
+            <systemPath>D:/Dokumenter/My Plugins/Reference Libs/MythicLib-1.7.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
             <artifactId>spigot-api</artifactId>
             <version>1.20.2-R0.1-SNAPSHOT</version>
             <scope>system</scope>
-            <systemPath>C:/Users/vbdre/Documents/Reference Libs/spigot-api-1.20.2-R0.1-SNAPSHOT.jar</systemPath>
+            <systemPath>D:/Dokumenter/My Plugins/Reference Libs/spigot-api-1.20.2-R0.1-SNAPSHOT.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
             <artifactId>TLibs</artifactId>
             <version>1.0</version>
             <scope>system</scope>
-            <systemPath>C:/Users/vbdre/Documents/Reference Libs/TLibs.jar</systemPath>
+            <systemPath>D:/Dokumenter/My Plugins/TFMC/TLibs/TLibs.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
             <artifactId>DenarEconomy</artifactId>
             <version>0.1.2</version>
             <scope>system</scope>
-            <systemPath>C:/Users/vbdre/Documents/Reference Libs/denareconomy-0.1.4.jar</systemPath>
+            <systemPath>D:/Dokumenter/My Plugins/TFMC/DenarEconomy/denareconomy-0.1.2.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
             <artifactId>Warbands</artifactId>
             <version>0.2.1</version>
             <scope>system</scope>
-            <systemPath>C:/Users/vbdre/Documents/Reference Libs/warbands-0.2.1.jar</systemPath>
+            <systemPath>D:/Dokumenter/My Plugins/TFMC/Warbands/warbands-0.2.1.jar</systemPath>
         </dependency>
         <!-- https://mvnrepository.com/artifact/commons-lang/commons-lang -->
         <dependency>
@@ -90,7 +90,7 @@
                         <configuration>
                             <target>
                                 <copy file="${project.build.directory}/${project.build.finalName}.jar"
-                                    tofile="C:\Users\vbdre\Documents\Output\${project.build.finalName}.jar"/>
+                                    tofile="D:\Dokumenter\My Plugins\TFMC\SimpleFactions\${project.build.finalName}.jar"/>
                             </target>
                         </configuration>
                     </execution>

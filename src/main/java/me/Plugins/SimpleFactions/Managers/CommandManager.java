@@ -67,18 +67,33 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cYou need to be a faction leader to claim land");
 				}
 				return true;
-			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("unclaim") && args.length == 1) {
-				if(FactionManager.getByLeader(p.getName()) != null) {
-					Faction f = FactionManager.getByMember(p.getName());
-					int claim = RestServer.claim(p, f);
-					if(claim == -2) {
-						p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("unclaim") && args.length >= 1) {
+				Faction f = null;
+				if(args.length == 1) {
+					if(FactionManager.getByLeader(p.getName()) != null) {
+						f = FactionManager.getByMember(p.getName());
 					} else {
-						FactionManager.getMap().unclaim(p, f, claim);
+						p.sendMessage("§cYou need to be a faction leader to unclaim land");
+						return true;
 					}
-				} else {
-					p.sendMessage("§cYou need to be a faction leader to unclaim land");
+				} else if(args.length == 2) {
+					if(!Permissions.isAdmin(sender)) {
+						p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+						return true;
+					}
+					f = FactionManager.getByString(args[1]);
+					if(f == null) {
+						p.sendMessage("§cNo faction by the id "+args[1]);
+						return true;
+					}
 				}
+				int claim = RestServer.claim(p, f);
+				if(claim == -2) {
+					p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
+				} else {
+					FactionManager.getMap().unclaim(p, f, claim);
+				}
+				
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("accept") && args.length == 1) {
 				if(FactionManager.getByLeader(p.getName()) != null) {

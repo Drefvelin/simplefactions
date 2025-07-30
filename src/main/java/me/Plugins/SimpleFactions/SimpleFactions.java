@@ -17,6 +17,7 @@ import me.Plugins.SimpleFactions.Managers.BankManager;
 import me.Plugins.SimpleFactions.Managers.CommandManager;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
+import me.Plugins.SimpleFactions.Managers.PlayerManager;
 import me.Plugins.SimpleFactions.Managers.RequestManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
@@ -44,6 +45,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final Database db = new Database();
 	private final FactionManager factionManager = new FactionManager();
 	private final TitleManager titleManager = new TitleManager();
+	private final PlayerManager playerManager = new PlayerManager();
 	
 	@Override
 	public void onEnable() {
@@ -86,6 +88,7 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(inventoryManager, this);
 		getServer().getPluginManager().registerEvents(bankManager, this);
 		getServer().getPluginManager().registerEvents(titleManager, this);
+		getServer().getPluginManager().registerEvents(playerManager, this);
 	}
 	public void createFolders() {
 		if (!getDataFolder().exists()) getDataFolder().mkdir();

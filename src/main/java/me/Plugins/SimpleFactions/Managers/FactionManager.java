@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -23,6 +24,7 @@ import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Objects.PrestigeRank;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Database;
+import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 
 public class FactionManager implements Listener{
@@ -123,18 +125,30 @@ public class FactionManager implements Listener{
 
 	public void time() {
 		timer++;
-
+		if(timer%300 == 0) {
+			for(Faction f : factions) {
+				if(f.getProvinces().size() == 0) continue;
+				Player leader = Bukkit.getPlayerExact(f.getLeader());
+				if(leader == null) continue;
+				if(TitleManager.overProvinceCap(f)) {
+					leader.sendMessage("§cYou are over your province cap! Other nations can steal your provinces from you!");
+					leader.sendMessage("§cGet more prestige or unclaim provinces to counteract this!");
+				}
+			}
+		}
 		if (timer >= 86400) {
 			for(Faction f : factions){
 				f.newDay();
 			}
+			FactionCleanup.kickInactiveMembers(factions);
 			timer = 0;
 		}
 	}
 	
 	public void run() {
+		timer = (new Database()).getTimer();	
 		loadRelations();
-		tickCycle();		
+		tickCycle();	
 		for(Faction f : factions) {
 			f.updatePrestige();
 		}

@@ -46,18 +46,25 @@ public class Database {
 	private JSONObject json; // org.json.simple
     JSONParser parser = new JSONParser();
 
-	public int getTimer(){
+	public int getTimer() {
 		File file = new File("plugins/SimpleFactions/Cache", "data.json");
-		if(file.exists()){
+		if (file.exists()) {
 			try {
 				json = (JSONObject) parser.parse(new InputStreamReader(new FileInputStream(file), "UTF-8"));
-				return (int) Math.round((Double) json.get("time"));
+				Object timeObj = json.get("time");
+
+				if (timeObj instanceof Number) {
+					return ((Number) timeObj).intValue();  // Safely convert to int
+				} else {
+					System.err.println("Invalid type for 'time': " + timeObj.getClass().getName());
+				}
 			} catch (IOException | ParseException e) {
 				e.printStackTrace();
 			}
 		}
 		return 0;
 	}
+
 
 	@SuppressWarnings("unchecked")
 	public void saveTimer(int time) {

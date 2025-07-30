@@ -105,8 +105,8 @@ public class InventoryManager implements Listener{
 	public void titleView(Inventory i, Player player, Faction f, boolean open) {
 		tierTitleView.titleView(i, player, f, open);
 	}
-	public void titleTypeView(Inventory i, Player player, Faction f, Tier tier, boolean open) {
-		tierTitleView.titleTypeView(i, player, f, tier, open);
+	public void titleTypeView(Inventory i, Player player, Faction f, Tier tier, boolean open, int page) {
+		tierTitleView.titleTypeView(i, player, f, tier, open, page);
 	}
 	
 	//Military

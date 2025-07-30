@@ -22,6 +22,10 @@ import me.Plugins.SimpleFactions.Utils.RandomRGB;
 public class TitleManager implements Listener{
 	Formatter format = new Formatter();
 	public static HashMap<Player, Tier> isFormingTitle = new HashMap<>();
+
+	public static boolean overProvinceCap(Faction f) {
+		return f.getPrestige() <  Math.max(0, f.getProvinces().size()-1)*Cache.provinceCost+Cache.provinceCost;
+	}
 	
 	@EventHandler
 	public void formTitle(AsyncPlayerChatEvent e) {

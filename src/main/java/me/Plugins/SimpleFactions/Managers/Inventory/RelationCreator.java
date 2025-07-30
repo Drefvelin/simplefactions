@@ -45,7 +45,7 @@ public class RelationCreator {
 		if(r.hasThreshold()) {
 			addThreshold(lore, r.getThreshold());
 			lore.add("");
-			lore.add("§45Only click this if you have");
+			lore.add("§4Only click this if you have");
 			lore.add("§4an approved War Ticket in the discord!");
 		}
 		lore.add(" ");

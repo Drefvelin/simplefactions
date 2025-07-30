@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.Managers.Inventory;
 
+import java.util.List;
+
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -83,17 +85,33 @@ public class TierTitleView {
 		i.setItem(53, inv.createBackButton(SFGUI.TITLE_VIEW));
 		if(open) player.openInventory(i);
 	}
-	public void titleTypeView(Inventory i, Player player, Faction f, Tier tier, boolean open) {
+	public void titleTypeView(Inventory i, Player player, Faction f, Tier tier, boolean open, int page) {
 		if(open) {
-			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TITLE_TYPE_VIEW), 54, tier.getName()+"§7 View");
+			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TITLE_TYPE_VIEW, page), 54, tier.getName()+"§7 View");
 		}
 		Faction pf = FactionManager.getByLeader(player.getName());
 		String overlord = RelationManager.getOverlord(f);
 		int slot = 0;
+		//Simple clearing, didnt make it good
+		for (int x = 0; x < 45; x++) {
+			if(i.getItem(x) == null) continue;
+			i.getItem(x).setAmount(0);
+		}
 		if(f.getLeader().equalsIgnoreCase(player.getName())) {
-			for(ItemStack item : creator.getSortedTitleItems(player, f, TitleLoader.getByTier(tier))) {
-				i.setItem(slot, item);
+			int maxPerPage = 45;
+			List<ItemStack> items = creator.getSortedTitleItems(player, f, TitleLoader.getByTier(tier));
+			int start = page * maxPerPage;
+			int end = Math.min(start + maxPerPage, items.size());
+
+			for (int x = start; x < end; x++) {
+				i.setItem(x - start, items.get(x));
 				slot++;
+			}
+			if (page > 0) {
+				i.setItem(50, creator.getPageItem("mcicons:icon_back_orange", page-1));
+			}
+			if (end < items.size()) {
+				i.setItem(51, creator.getPageItem("mcicons:icon_next_orange", page+1));
 			}
 			i.setItem(52, creator.createNewTitleItem(f, tier));
 		} else if(pf != null && overlord != null && overlord.equalsIgnoreCase(pf.getId())) {
@@ -130,7 +148,7 @@ public class TierTitleView {
 			String s = e.getCurrentItem().getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.STRING);
 			Tier t = TierLoader.getByString(s);
 			if(t == null) return;
-			titleTypeView(null, p, f, t, true);
+			titleTypeView(null, p, f, t, true, 0);
 			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			return;
 			
@@ -164,7 +182,15 @@ public class TierTitleView {
 				p.closeInventory();
 				return;
 			}
-			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
+			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "page");
+			Integer page = e.getCurrentItem().getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.INTEGER);
+			if(page != null) {
+				key = new NamespacedKey(SimpleFactions.plugin, "id");
+				String s = inventory.getContents()[0].getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.STRING);
+				titleTypeView(inventory, p, f, TitleLoader.getById(s).getTier(), false, page);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "id");
 			String s = e.getCurrentItem().getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.STRING);
 			Title t = TitleLoader.getById(s);
 			if(t == null) return;
@@ -186,7 +212,7 @@ public class TierTitleView {
 				}		
 				
 				f.addTitle(t);
-				titleTypeView(inventory, p, f, t.getTier(), false);
+				titleTypeView(inventory, p, f, t.getTier(), false, h.getPage());
 				p.sendMessage("§aClaimed the title "+t.getName());
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 			} else if(action.equalsIgnoreCase("grant")) {
@@ -196,7 +222,7 @@ public class TierTitleView {
 				
 				f.addTitle(t);
 				pf.removeTitle(t);
-				if(TitleManager.getGrantableTitles(f, pf, t.getTier()).size() > 0) titleTypeView(inventory, p, f, t.getTier(), false);
+				if(TitleManager.getGrantableTitles(f, pf, t.getTier()).size() > 0) titleTypeView(inventory, p, f, t.getTier(), false, h.getPage());
 				else titleView(null, p, f, true);
 				p.sendMessage("§aGranted "+f.getName()+" the title "+t.getName());
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
