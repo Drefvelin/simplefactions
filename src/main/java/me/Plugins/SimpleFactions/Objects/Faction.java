@@ -3,8 +3,10 @@ package me.Plugins.SimpleFactions.Objects;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
@@ -181,21 +183,31 @@ public class Faction {
 	}
 
 	public void giveTax(double amount) {
+    	giveTax(amount, new HashSet<>());
+	}
+
+	private void giveTax(double amount, Set<String> visitedFactions) {
+		if (!visitedFactions.add(this.getId())) return; // prevent recursion loops
+
 		double paidTax = 0;
-		for(FactionModifier mod : getModifiers()) {
-			if(paidTax >= amount) break;
-			if(mod.getFrom() == null) continue;
-			if(!mod.getType().equals(FactionModifiers.TAX)) continue;
-			double tax = mod.getAmount()/100.0*amount;
-			String overlord = RelationManager.getOverlord(this);
-			if(overlord != null && overlord.equalsIgnoreCase(mod.getFrom().getId())) {
-				tax = mod.getFrom().getVassalTaxRate()/100.0*tax;
-			}
+
+		for (FactionModifier mod : getModifiers()) {
+			if (paidTax >= amount) break;
+			if (mod.getFrom() == null || !mod.getType().equals(FactionModifiers.TAX)) continue;
+
+			double tax = mod.getAmount() / 100.0 * amount;
 			Faction from = mod.getFrom();
-			if(from.getBank() == null) continue;
+
+			String overlordId = RelationManager.getOverlord(this);
+			if (overlordId != null && overlordId.equalsIgnoreCase(from.getId())) {
+				tax = from.getVassalTaxRate() / 100.0 * tax;
+			}
+
+			if (from.getBank() == null) continue;
 			paidTax += tax;
-			from.giveTax(tax);
+			from.giveTax(tax, visitedFactions);
 		}
+
 		amount -= paidTax;
 		bank.deposit(amount);
 	}

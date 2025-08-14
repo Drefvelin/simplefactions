@@ -26,6 +26,8 @@ import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Database;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.Utils.Formatter;
+import net.tfminecraft.DenarEconomy.DenarEconomy;
+import net.tfminecraft.DenarEconomy.Enum.Accounts;
 
 public class FactionManager implements Listener{
 	public static int timer = 0;
@@ -193,6 +195,14 @@ public class FactionManager implements Listener{
 			return amount;
 		}
 		return rank.getMin();
+	}
+	public static double getPouchWealth() {
+		Formatter format = new Formatter();
+		return format.formatDouble(DenarEconomy.getMoneyManager().getServerBal(Accounts.POUCH));
+	}
+	public static double getBankWealth() {
+		Formatter format = new Formatter();
+		return format.formatDouble(DenarEconomy.getMoneyManager().getServerBal(Accounts.BANK));
 	}
 	public static Double getGlobalWealth() {
 		Formatter format = new Formatter();

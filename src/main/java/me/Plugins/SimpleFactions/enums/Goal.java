@@ -8,4 +8,5 @@ public enum Goal {
 	INDEPENDENCE,
 	WAR_REPARATIONS,
 	TRANSFER_SUBJECT,
+	USURP,
 }

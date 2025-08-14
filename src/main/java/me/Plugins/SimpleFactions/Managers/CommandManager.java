@@ -582,11 +582,14 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
 					return true;
 				}
+				double globalWealth = FactionManager.getGlobalWealth()+FactionManager.getPouchWealth()+FactionManager.getBankWealth();
 				p.sendMessage("§f======================================");
-				p.sendMessage("§eGlobal Wealth: §6"+FactionManager.getGlobalWealth()+"d");
+				p.sendMessage("§eGlobal Wealth: §6"+globalWealth+"d");
 				p.sendMessage("§aTaken up by Nodes: §6"+FactionManager.getGlobalNodeWealth()+"d");
-				p.sendMessage("§aLiquid Capital: §6"+FactionManager.getGlobalLiquidWealth()+"d");
-				p.sendMessage("§aNode Percentage: §f"+Math.round((FactionManager.getGlobalNodeWealth()/FactionManager.getGlobalWealth())*100)+"% §aof global wealth");
+				p.sendMessage("§aLiquid Faction Capital: §6"+FactionManager.getGlobalLiquidWealth()+"d");
+				p.sendMessage("§aPersonal Pouches: §6"+FactionManager.getPouchWealth()+"d");
+				p.sendMessage("§aPersonal Banks: §6"+FactionManager.getBankWealth()+"d");
+				p.sendMessage("§aNode Percentage: §f"+Math.round((FactionManager.getGlobalNodeWealth()/globalWealth)*100)+"% §aof global wealth");
 				p.sendMessage("§f======================================");
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("queueallnations") && args.length == 1) {

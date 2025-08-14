@@ -56,7 +56,7 @@ public class FactionView {
 		reserved.add(35);
 		reserved.add(44);
 		reserved.add(53);
-		while(fc < factions.size() && counter < 55) {
+		while(fc < factions.size() && counter < 54) {
 			if(!reserved.contains(counter)) {
 				Faction f = factions.get(fc);
 				ItemStack banner = creator.createListItem(player, f);
