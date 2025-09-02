@@ -38,12 +38,12 @@ public class FactionCleanup {
                 offlineDays.put(entry.getKey(), entry.getValue() + 1);
             }
 
-            for (Faction faction : factions) {
+            for (Faction faction : new ArrayList<>(factions)) {
                 List<String> members = new ArrayList<>(faction.getMembers()); // Avoid ConcurrentModificationException
 
                 for (String member : members) {
                     int daysOffline = offlineDays.getOrDefault(member.toLowerCase(), 0);
-
+                    if(!faction.getMembers().contains(member)) continue;
                     if (daysOffline >= MAX_DAYS_OFFLINE) {
                         if (faction.getLeader().equalsIgnoreCase(member)) {
                             if (faction.getMembers().size() == 1) {

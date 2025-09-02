@@ -153,6 +153,7 @@ public class FactionManager implements Listener{
 		tickCycle();	
 		for(Faction f : factions) {
 			f.updatePrestige();
+			f.countyCheck();
 		}
 	}
 	

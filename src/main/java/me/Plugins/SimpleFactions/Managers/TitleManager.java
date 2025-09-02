@@ -77,6 +77,13 @@ public class TitleManager implements Listener{
 		}
 		return f.getProvinces().size()+added;
 	}
+
+	public static Faction getByProvince(int province) {
+		for(Faction f : FactionManager.factions) {
+			if(f.hasProvince(province)) return f;
+		}
+		return null;
+	}
 	
 	public static List<Integer> getProvinces(Faction f) {
 	    List<Integer> allProvinces = new ArrayList<>(f.getProvinces());

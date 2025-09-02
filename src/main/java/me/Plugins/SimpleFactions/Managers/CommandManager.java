@@ -751,6 +751,15 @@ public class CommandManager implements Listener, CommandExecutor{
 				Title t = FactionManager.usurp(p, usurping, losing);
 				if(t != null) p.sendMessage(usurping.getName()+" §ausurped "+t.getName());;
 				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("provincecap") && args.length == 1) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				for(Faction f : FactionManager.factions) {
+					f.provinceCap();
+				}
+				return true;
 			}
 			p.sendMessage("§a[SimpleFactions]§c Error with command format, use the gameplay guide for a list of commands");
 		}

@@ -145,9 +145,12 @@ public class RelationManager {
 		return allies;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static List<Faction> getSubjects(Faction f){
 		List<Faction> subjects = new ArrayList<>();
-		for(Map.Entry<String, Relation> entry : f.getRelations().entrySet()) {
+		if(f == null) return subjects;
+		for(Map.Entry<String, Relation> entry : ((Map<String, Relation>) f.getRelations().clone()).entrySet()) {
+			if(FactionManager.getByString(entry.getKey()) == null) f.getRelations().remove(entry.getKey());
 			if(entry.getValue().getType().isVassalage()) subjects.add(FactionManager.getByString(entry.getKey()));
 		}
 		return subjects;

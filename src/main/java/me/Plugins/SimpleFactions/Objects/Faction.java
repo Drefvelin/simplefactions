@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -116,9 +117,12 @@ public class Faction {
 		this.prestigeModifiers = prestigeModifiers;
 		this.wealthModifiers = wealthModifiers;
 		this.rgb = rgb;
-		this.provinces = provinces;
+		for(int i : provinces) {
+			if(TitleManager.getByProvince(i) != null) continue;
+			this.provinces.add(i);
+		}
 		this.titles = titles;
-		this.military = new Military(this); //TODO persistence
+		this.military = new Military(this);
 		this.taxRate = taxRate;
 		this.vassalTax = vassalTax;
 		init();
@@ -258,6 +262,10 @@ public class Faction {
 			if(!m.isTimed()) continue;
 			if(m.tick()) removeModifier(m);
 		}
+	}
+
+	public boolean hasProvince(int i) {
+		return provinces.contains(i);
 	}
 	
 	public void addProvince(int i) {
@@ -576,7 +584,20 @@ public class Faction {
 	}
 	
 	//Titles
+	public void countyCheck() {
+		List<Title> counties = getTitles(TierLoader.getByString("county"));
+		Random rand = new Random();
 
+		while (counties.size() > members.size()) {
+			int index = rand.nextInt(counties.size()); // pick random index
+			removeTitle(counties.get(index));          // remove that county
+			counties.remove(index);                    // keep local list in sync
+		}
+		for(Title t : new ArrayList<>(getTitles())) {
+			if(!hasTitle(t)) continue;
+			t.destroy(this, TitleManager.getProvinces(this), TitleManager.getTitles(this));
+		}
+	}
 	public void resetTitles(List<Title> list) {
 		titles = list;
 		updatePrestige();
@@ -782,7 +803,14 @@ public class Faction {
 		if(armyCost > 0) {
 			bank.withdraw(armyCost);
 		}
+		provinceCap();
     }
+
+	public void provinceCap() {
+		if(TitleManager.overProvinceCap(this) && provinces.size() > 0) {
+			removeProvince(provinces.get(provinces.size() - 1));
+		}
+	}
 
 	public int numOnline() {
 		int count = 0;
