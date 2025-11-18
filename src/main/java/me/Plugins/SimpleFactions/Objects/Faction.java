@@ -219,7 +219,7 @@ public class Faction {
 	public double setTaxRate(double d) {
 		double totalForeignTax = getTotalForeignTaxRate();
 		if(d+totalForeignTax > 100) d = 100-totalForeignTax;
-		taxRate = d;
+		taxRate = Math.min(60, d);
 		return taxRate;
 	}
 	
@@ -228,7 +228,7 @@ public class Faction {
 	}
 
 	public void setVassalTaxRate(double d) {
-		vassalTax = d;
+		vassalTax = Math.max(20, Math.min(100, d));
 	}
 
 	public double getVassalTaxRate() {
@@ -518,7 +518,7 @@ public class Faction {
 		}
 		if(fromSubjects > 0) {
 			fromSubjects = format.formatDouble(fromSubjects);
-			addPrestigeModifier(new Modifier("From Subjects", fromSubjects));
+			addPrestigeModifier(new Modifier("Subjects", fromSubjects));
 		}
 		for(Modifier p : prestigeModifiers) {
 			prestige = prestige + p.getAmount();

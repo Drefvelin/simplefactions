@@ -296,6 +296,10 @@ public class Database {
     				JSONArray prestigeArray = (JSONArray) json.get("prestige modifiers");
     				while(i < prestigeArray.size()) {
     					String type = prestigeArray.get(i).toString().split("\\(")[0];
+						if(type.contains("% Bonus") || type.contains("Subjects") || type.contains("Titles") || type.contains("Provinces")) {
+							i++;
+							continue;
+						}
     					Double amount = Double.parseDouble(prestigeArray.get(i).toString().split("\\(")[1].replace(")", ""));
     					Modifier m = new Modifier(type, amount);
     					prestigeModifiers.add(m);
@@ -474,8 +478,8 @@ public class Database {
         	JSONArray prestigeModifiers = new JSONArray();
         	while(i < f.getPrestigeModifiers().size()) {
         		String type = f.getPrestigeModifiers().get(i).getType();
-        		List<String> ignore = Arrays.asList("Nodes", "Wealth", "Members");
-        		if(!ignore.contains(type)) {
+        		List<String> ignore = Arrays.asList("Nodes", "Wealth", "Members", "Titles", "Provinces");
+        		if(!ignore.contains(type) && !type.contains("% Bonus") && !type.contains("Subjects")) {
         			Double amount = f.getPrestigeModifiers().get(i).getAmount();
             		prestigeModifiers.add(type+"("+amount+")");
         		}

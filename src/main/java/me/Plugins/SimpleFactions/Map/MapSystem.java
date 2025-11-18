@@ -127,7 +127,7 @@ public class MapSystem {
 			unclaim(null, owner, province);
 			enqueue("nation", owner.getRGB());
 		}
-		p.sendMessage(stolen ? "aSuccessfully  claimed province "+province+" §afrom "+owner.getName() : "aSuccessfully  claimed province "+province);
+		p.sendMessage(stolen ? "§aSuccessfully  claimed province "+province+" §afrom "+owner.getName() : "§aSuccessfully  claimed province "+province);
 		f.addProvince(province);
 		enqueue("nation", f.getRGB());
 	}
@@ -140,7 +140,7 @@ public class MapSystem {
 			if(p != null) p.sendMessage("§cYour faction does not own this province!");
 			return;
 		}
-		if(p != null) p.sendMessage("aSuccessfully  unclaimed province "+province);
+		if(p != null) p.sendMessage("§aSuccessfully  unclaimed province "+province);
 		f.removeProvince(province);
 		Title t = TitleLoader.getByProvince(province);
 		if(t != null) {

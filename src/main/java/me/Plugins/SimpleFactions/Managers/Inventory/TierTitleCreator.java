@@ -133,7 +133,8 @@ public class TierTitleCreator {
 	    } else if(progressRatio(t, f, provinces, titles) > -1){
 	        lore.add(""); // Spacer
 	        t.getGUIString(f, provinces, titles, f.getModifier(FactionModifiers.DE_JURE).getAmount(), lore);
-	    } else {
+		}
+		if(FactionManager.getTitleOwner(t) != null) {
 	    	lore.add(""); // Spacer
 	        lore.add(StringFormatter.formatHex("#cab58eOwned by: "+FactionManager.getTitleOwner(t).getName()));
 	    }
@@ -151,17 +152,16 @@ public class TierTitleCreator {
 	
 	public int getNewTitleCost(Faction f, Tier t) {
 		if(t == null) return 0;
+		int amount = 0;
+		if(t.canForm()) {
+			amount = t.getFormCost();
+		}
+		/* //Remove the comment out part if you want DE JURE scaling cost
 		double deJure = f.getModifier(FactionModifiers.DE_JURE).getAmount();
 		deJure = deJure/100.0;
-		int amount = 0;
-		if(t.getId().equalsIgnoreCase("province")) {
-			amount = Cache.maxUntitledProvinces;
-			
-		} else {
-			amount = Cache.maxFreeTitles;
-		}
 		amount = (int) Math.round(amount*deJure);
 		if(amount < 1) amount = 1;
+		*/
 		return amount;
 	}
 	
@@ -170,7 +170,7 @@ public class TierTitleCreator {
 		ItemMeta m = i.getItemMeta();
 		m.setDisplayName(StringFormatter.formatHex("#c49760Create a new "+t.getName()));
 		List<String> lore = new ArrayList<String>();
-		int cost = getNewTitleCost(f, TierLoader.getByLevel(t.getTier()-1));
+		int cost = getNewTitleCost(f, TierLoader.getByLevel(t.getTier()));
 		int current = 0;
 		if(t.getId().equalsIgnoreCase("county")) {
 			current = f.getUntitledProvinces().size();

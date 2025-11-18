@@ -14,6 +14,8 @@ public class Tier {
 	private int tier;
 	private List<String> aliases = new ArrayList<>();
 	private int index = -1;
+
+	private int formCost = 0;
 	
 	
 	public Tier(String key, ConfigurationSection config) {
@@ -26,6 +28,7 @@ public class Tier {
 				aliases.add(StringFormatter.formatHex(s));
 			}
 		}
+		formCost = config.getInt("form-cost", 0);
 	}
 	
 	public Tier(Tier another, int i) {
@@ -35,6 +38,14 @@ public class Tier {
 		tier = another.getTier();
 		aliases = another.getAliases();
 		index = i;
+	}
+
+	public boolean canForm() {
+		return formCost > 0;
+	}
+
+	public int getFormCost() {
+		return formCost;
 	}
 
 	public String getId() {

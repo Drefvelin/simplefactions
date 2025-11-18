@@ -105,14 +105,13 @@ public class Title {
 	public boolean canBeHeld(Faction f) {
 		List<Integer> ownedProvinces = TitleManager.getProvinces(f);
 		List<Title> ownedTitles = TitleManager.getTitles(f);
-		int current = getCurrentAmount(f, ownedProvinces, ownedTitles);
-		if(current <= 0) return false;
-		return true;
+		return canBeHeld(f, ownedProvinces, ownedTitles);
 	}
 	
 	public boolean canBeHeld(Faction f, List<Integer> ownedProvinces, List<Title> ownedTitles) {
 		int current = getCurrentAmount(f, ownedProvinces, ownedTitles);
 		if(current <= 0) return false;
+		if(tier.getTier() == 2 && f.getTitles(tier).size() > f.getMembers().size()) return false;
 		return true;
 	}
 	
@@ -121,7 +120,7 @@ public class Title {
 	    int requiredTitles = getDeJureNeeded(deJure);
 	    int ownedNestedProvinces = nestedProvinceCheck(ownedProvinces, TitleManager.getProvinces(this));
 	    int requiredProvinces = compositeNeeded(deJure);
-	    
+		if(tier.getTier() == 2 && f.getTitles(tier).size() >= f.getMembers().size()) return false;
 	    if (!composite) {
 	        if(titleComplete) return titleCount >= provinces.size();
 	        return titleCount >= getDeJureNeeded(deJure);
@@ -136,7 +135,7 @@ public class Title {
 	public int getDeJureNeeded(double deJure) {
 		deJure = deJure/100.0;
 		int amount = composite ? titles.size() : provinces.size();
-		amount = (int) Math.round(amount*deJure);
+		amount = (int) (amount > 2 ? Math.round(amount*deJure) : Math.ceil(amount*deJure));
 		if(amount < 1) amount = 1;
 		return amount;
 	}
@@ -144,7 +143,7 @@ public class Title {
 	public int compositeNeeded(double deJure) {
 		deJure = deJure/100.0;
 		int amount = composite ? TitleManager.getProvinces(this).size() : provinces.size();
-		amount = (int) Math.round(amount*deJure);
+		amount = (int) (amount > 2 ? Math.round(amount*deJure) : Math.ceil(amount*deJure));
 		if(amount < 1) amount = 1;
 		return amount;
 	}

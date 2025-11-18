@@ -119,8 +119,12 @@ public class Military {
 			for(Regiment r : subject.getMilitary().getRegiments()) {
 				int count = r.getCurrentSlots();
 				count = (int) Math.round(count * (subject.getModifier(FactionModifiers.LEVY).getAmount()/100));
-				r.setSentToOverlord(count);
+				if(total+count >= subject.getMembers().size()) {
+					count = subject.getMembers().size() - total;
+				}
 				total+=count;
+				if(count > 0) r.setSentToOverlord(count);
+				else continue;
 			}
 			levies.add(new LevyEntry(subject, total));
 			for(LevyEntry e : subjectLevies) {

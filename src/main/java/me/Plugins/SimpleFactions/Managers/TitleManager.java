@@ -48,8 +48,14 @@ public class TitleManager implements Listener{
 				titleStringList.add(title.getId());
 			}
 		}
+		String id = format.formatId(message);
+		if(TitleLoader.getById(id) != null) {
+			p.sendMessage("§cA title with that ID already exists!");
+			isFormingTitle.remove(p);
+			return;
+		}
 		String name = WordUtils.capitalize(format.formatId(message).replace("_", " "));
-		Title newTitle = TitleLoader.createNewTitle(tier, format.formatId(message), name, RandomRGB.similarButDistinct(f.getRGB()), f.getUntitledProvinces(), titleStringList, false);
+		Title newTitle = TitleLoader.createNewTitle(tier, id, name, RandomRGB.similarButDistinct(f.getRGB()), f.getUntitledProvinces(), titleStringList, false);
 		if(newTitle == null) {
 			isFormingTitle.remove(p);
 			return;

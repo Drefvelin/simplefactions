@@ -49,6 +49,7 @@ public class TabCompletion implements TabCompleter{
 	                }
 	                if(Permissions.isAdmin(sender)) {
 		                completions.add("forceleader");
+						completions.add("forcejoin");
 						completions.add("forcewithdraw");
 		                completions.add("addprestigemodifier");
 		                completions.add("addwealthmodifier");
@@ -200,7 +201,32 @@ public class TabCompletion implements TabCompleter{
 		            	}
 		                return completions;
 		            }
-	        	}if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("forcewithdraw")){
+	        	} else if (args.length == 2 && args[0].equalsIgnoreCase("forcejoin")) {
+					List<String> completions = new ArrayList<String>();
+					// Suggest faction names
+					for (Faction f : FactionManager.factions) {
+						if (f.getId().toLowerCase().startsWith(args[1].toLowerCase())) {
+							completions.add(f.getName());
+						}
+					}
+					return completions;
+				} 
+				else if (args.length == 3 && args[0].equalsIgnoreCase("forcejoin")) {
+					List<String> completions = new ArrayList<String>();
+					// Suggest players who are valid to be forcejoined
+					Faction f = FactionManager.getByString(args[1]);
+					if (f != null) {
+						for (Player pl : Bukkit.getOnlinePlayers()) {
+							String name = pl.getName();
+							if (name.toLowerCase().startsWith(args[2].toLowerCase())
+								&& !f.getMembers().contains(name)
+								&& FactionManager.getByMember(name) == null) {
+								completions.add(name);
+							}
+						}
+					}
+					return completions;
+				} if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("forcewithdraw")){
 		            if(sender instanceof Player){
 		            	List<String> completions = new ArrayList<String>();
 		            	for(Faction f : FactionManager.factions) {

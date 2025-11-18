@@ -84,6 +84,14 @@ public class FactionCreator {
 				lore.add(StringFormatter.formatHex("#bccbd1- "+subject.getName()));
 			}
 		}
+		List<Faction> allies = RelationManager.getAllies(f);
+		if(allies.size() > 0){
+			lore.add("");
+			lore.add(StringFormatter.formatHex("#975bbdAllies:"));
+			for(Faction ally : allies) {
+				lore.add(StringFormatter.formatHex("#bccbd1- "+ally.getName()));
+			}
+		}
 		meta.setLore(lore);
 		NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");
 		meta.getPersistentDataContainer().set(id, PersistentDataType.STRING, f.getId());

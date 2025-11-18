@@ -4,8 +4,8 @@ name: SimpleFactions
 version: 1.0
 author: Drefvelin
 
-depend: [DenarEconomy]
-softdepend: [MMOItems, MythicLib, DenarEconomy]
+depend: [DenarEconomy, TLibs]
+softdepend: [MMOItems, MythicLib]
 
 commands:
   faction:

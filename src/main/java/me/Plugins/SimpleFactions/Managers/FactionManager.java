@@ -81,6 +81,20 @@ public class FactionManager implements Listener{
 			f.resetTitles(newTitles);
 		}
 	}
+
+	public void fixRelations() {
+		//Allies
+		for(Faction f : factions) {
+			List<Faction> allies = RelationManager.getAllies(f);
+			for(Faction ally : allies) {
+				if(!ally.getRelation(f.getId()).getType().getId().equalsIgnoreCase("ally")) {
+					Relation r = ally.getRelation(f.getId());
+					r.setType(RelationLoader.getType("ally"));
+					ally.setRelation(f, r);
+				}
+			}
+		}
+	}
 	
 	public static Double globalWealth = 0.0;
 	
@@ -155,6 +169,7 @@ public class FactionManager implements Listener{
 			f.updatePrestige();
 			f.countyCheck();
 		}
+		fixRelations();
 	}
 	
 	public void start(List<Faction> l) {

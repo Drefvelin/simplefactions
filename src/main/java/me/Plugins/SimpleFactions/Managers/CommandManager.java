@@ -379,6 +379,10 @@ public class CommandManager implements Listener, CommandExecutor{
 					}
 					double amount = Double.parseDouble(args[1]);
 					Account pouch = DenarEconomy.getPlayerManager().get(p).getPouch();
+					if(amount <= 0) {
+						p.sendMessage("§cAmount must be greater than 0");
+						return false;
+					}
 					if(pouch.getBal() < amount) {
 						p.sendMessage("§cNot enough funds");
 						return false;
@@ -409,6 +413,10 @@ public class CommandManager implements Listener, CommandExecutor{
 					}
 					double amount = Double.parseDouble(args[1]);
 					Account pouch = DenarEconomy.getPlayerManager().get(p).getPouch();
+					if(amount <= 0) {
+						p.sendMessage("§cAmount must be greater than 0");
+						return false;
+					}
 					if(b.getWealth() < amount) {
 						p.sendMessage("§cNot enough funds in the faction bank");
 						return false;
@@ -517,6 +525,31 @@ public class CommandManager implements Listener, CommandExecutor{
 					}
 				}
 				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("forcejoin") && args.length == 3) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Faction f = FactionManager.getByString(args[1]);
+				if(f == null) {
+					p.sendMessage("§a[SimpleFactions]§c Error! faction does not exist!");
+					return true;
+				}
+				if(f.getMembers().contains(args[2])) {
+					p.sendMessage("§cPlayer is already in the faction");
+					return true;
+				}
+				if(FactionManager.getByMember(args[2]) != null) {
+					p.sendMessage("§cPlayer is already in a faction");
+					return true;
+				}
+				f.addMember(args[2]);;
+				for(Player pl : Bukkit.getOnlinePlayers()) {
+					if(f.getMembers().contains(pl.getName())) {
+						pl.sendMessage("§a"+args[2]+ " joined the faction!");
+					}
+				}
+				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("forcewithdraw") && args.length == 3) {
 				if(!Permissions.isAdmin(sender)) {
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
@@ -533,7 +566,10 @@ public class CommandManager implements Listener, CommandExecutor{
 				} catch (Exception e) {
 					p.sendMessage("Error reading amount, setting it to 0");
 				}
-				if(amount == 0) return true;
+				if(amount <= 0) {
+					p.sendMessage("§cAmount must be greater than 0");
+					return false;
+				}
 
 				if(f.getBank().getWealth() < amount) {
 					p.sendMessage("§cBank does not have enough wealth");
