@@ -60,7 +60,7 @@ public class RestServer {
 	    int z = p.getLocation().getBlockZ();
 	    try {
 	        String urlStr = String.format(
-	        		apiURL+"/map/province/%d,%d",
+	        		apiURL+"/"+Cache.mapRef+"/map/province/%d,%d",
 	            x, z
 	        );
 	        @SuppressWarnings("deprecation")
@@ -91,7 +91,7 @@ public class RestServer {
 		if(!Cache.mapEnabled) return;
 	    String charset = "UTF-8";
 	    String uploadUrl = String.format(
-	    		apiURL + "/data/upload/%s",
+	    		apiURL + "/"+Cache.mapRef+"/data/upload/%s",
 	            mode
 	        );
 
@@ -136,7 +136,7 @@ public class RestServer {
 	public static void commenceRegen(String regenType) {
 		if(!Cache.mapEnabled) return;
 	    String urlStr = String.format(
-	        RestServer.apiURL + "/47a4921f7506514aec2d1471b424d8ae/api/regenerate/%s",
+	        RestServer.apiURL + "/"+Cache.mapRef+"/47a4921f7506514aec2d1471b424d8ae/api/regenerate/%s",
 	        regenType
 	    );
 
@@ -163,5 +163,4 @@ public class RestServer {
 	        e.printStackTrace();
 	    }
 	}
-
 }
