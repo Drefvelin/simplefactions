@@ -3,6 +3,8 @@ package me.Plugins.SimpleFactions;
 import java.util.HashMap;
 
 public class Cache {
+	public static String mapRef;
+
 	public static int maxMembers;
 	public static int maxWealthPrestige;
 	public static String bankBlock;

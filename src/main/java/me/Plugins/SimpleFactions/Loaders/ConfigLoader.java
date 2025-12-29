@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.Loaders;
 
 import java.io.File;
 import java.io.IOException;
+
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -16,6 +17,8 @@ public class ConfigLoader {
         } catch (IOException | InvalidConfigurationException e) {
             e.printStackTrace();
         }
+		Cache.mapRef = config.getString("map-reference", "main");
+
 		Cache.maxMembers = config.getInt("max-members", 64);
 		Cache.maxWealthPrestige = config.getInt("max-prestige-from-wealth", 1000);
 		Cache.bankBlock = config.getString("bank-block", "v.lodestone");
