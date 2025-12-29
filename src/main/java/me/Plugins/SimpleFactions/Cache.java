@@ -1,6 +1,9 @@
 package me.Plugins.SimpleFactions;
 
 import java.util.HashMap;
+import java.util.Map;
+
+import me.Plugins.SimpleFactions.enums.Terrain;
 
 public class Cache {
 	public static String mapRef;
@@ -19,4 +22,6 @@ public class Cache {
 	public static int provinceCost;
 	
 	public static HashMap<String, String> icons = new HashMap<>();
+
+	public static Map<Terrain, Double> tradeCarry = new HashMap<>();
 }

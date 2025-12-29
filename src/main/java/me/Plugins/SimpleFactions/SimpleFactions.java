@@ -7,6 +7,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import me.Plugins.SimpleFactions.Loaders.CoinLoader;
 import me.Plugins.SimpleFactions.Loaders.ConfigLoader;
+import me.Plugins.SimpleFactions.Loaders.ProvinceLoader;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.RegimentLoader;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
@@ -18,6 +19,7 @@ import me.Plugins.SimpleFactions.Managers.CommandManager;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.PlayerManager;
+import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Managers.RequestManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
@@ -46,6 +48,8 @@ public class SimpleFactions extends JavaPlugin{
 	private final FactionManager factionManager = new FactionManager();
 	private final TitleManager titleManager = new TitleManager();
 	private final PlayerManager playerManager = new PlayerManager();
+	private final ProvinceManager provinceManager = new ProvinceManager();
+	private final ProvinceLoader provinceLoader = new ProvinceLoader();
 	
 	@Override
 	public void onEnable() {
@@ -58,6 +62,19 @@ public class SimpleFactions extends JavaPlugin{
 		db.loadFactions();
 		getCommand(commands.cmd1).setExecutor(commands);
 		getCommand(commands.cmd1).setTabCompleter(new TabCompletion());
+		try {
+			provinceManager.start(
+				provinceLoader.loadProvinces(
+					new File(getDataFolder(), "Input/provinces.txt"),
+					new File(getDataFolder(), "Input/province_neighbors.json")
+				)
+			);
+		} catch (Exception e) {
+			getLogger().severe("Failed to load provinces! Plugin disabled.");
+			e.printStackTrace();
+			getServer().getPluginManager().disablePlugin(this);
+			return;
+		}
 		factionManager.run();
 		RequestManager.start();
 		WarManager.start();
