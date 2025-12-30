@@ -108,20 +108,25 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(playerManager, this);
 	}
 	public void createFolders() {
-		if (!getDataFolder().exists()) getDataFolder().mkdir();
-		File subFolder = new File(getDataFolder(), "Data");
-		if(!subFolder.exists()) subFolder.mkdir();
-		subFolder = new File(getDataFolder(), "PlayerData");
-		if(!subFolder.exists()) subFolder.mkdir();
-		subFolder = new File(getDataFolder(), "Wars");
-		if(!subFolder.exists()) subFolder.mkdir();
-		subFolder = new File(getDataFolder(), "Cache");
-		if(!subFolder.exists()) subFolder.mkdir();
-		subFolder = new File(getDataFolder(), "MapAPI");
-		if(!subFolder.exists()) subFolder.mkdir();
-		subFolder = new File(getDataFolder(), "Input");
-		if(!subFolder.exists()) subFolder.mkdir();
+		File dataFolder = getDataFolder();
+		if (!dataFolder.exists()) dataFolder.mkdir();
+
+		String[] subFolders = {
+			"Data",
+			"PlayerData",
+			"Wars",
+			"Cache",
+			"MapAPI",
+			"Input",
+			"Guilds"
+		};
+
+		for (String name : subFolders) {
+			File folder = new File(dataFolder, name);
+			if (!folder.exists()) folder.mkdir();
+		}
 	}
+
 	public static int getMaxExtraNodeCapacity() {
 		return Cache.maxExtraNodeCapacity;
 	}

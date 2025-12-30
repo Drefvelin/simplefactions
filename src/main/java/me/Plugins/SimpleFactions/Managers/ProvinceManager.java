@@ -15,4 +15,8 @@ public class ProvinceManager {
     public void start(Map<Integer, Province> map) {
         provinces = map;
     }
+
+    public void calculateTrade() {
+        
+    }
 }
