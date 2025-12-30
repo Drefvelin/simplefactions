@@ -147,27 +147,33 @@ public class Database {
                 }
 
                 // --- Guild ---
-                if (data.guild != null) {
-                    Map<Integer, Branch> branches = new HashMap<>();
-                    for (GuildBranchData bd : data.guild.branches) {
-                        Branch base = BranchLoader.getByString(bd.id);
-                        if (base != null) {
-                            branches.put(bd.group.intValue(),
-                                    new Branch(base, bd.level.intValue()));
+                if (data.guilds != null) {
+                    for (GuildData gd : data.guilds) {
+
+                        Map<Integer, Branch> branches = new HashMap<>();
+                        for (GuildBranchData bd : gd.branches) {
+                            Branch base = BranchLoader.getByString(bd.id);
+                            if (base != null) {
+                                branches.put(
+                                    bd.group.intValue(),
+                                    new Branch(base, bd.level.intValue())
+                                );
+                            }
                         }
-                    }
 
-                    Guild g = new Guild(
-                            data.guild.id,
-                            data.guild.name,
-                            data.guild.leader,
-                            data.guild.capital != null ? data.guild.capital : -1,
-                            data.guild.type,
-                            data.guild.members,
+                        Guild g = new Guild(
+                            gd.id,
+                            gd.name,
+                            gd.leader,
+                            gd.rgb,
+                            gd.capital != null ? gd.capital : -1,
+                            gd.type,
+                            gd.members,
                             branches
-                    );
+                        );
 
-                    f.getGuildHandler().addGuild(g);
+                        f.getGuildHandler().addGuild(g);
+                    }
                 }
 
                 FactionManager.factions.add(f);
@@ -243,12 +249,13 @@ public class Database {
                     data.wealthModifiers.add(m.getType() + "(" + m.getAmount() + ")"));
 
             // --- Guild ---
-            Guild g = f.getGuildHandler().getGuild(f.getId());
-            if (g != null) {
+            for (Guild g : f.getGuildHandler().getGuilds()) {
+
                 GuildData gd = new GuildData();
                 gd.id = g.getId();
                 gd.name = g.getName();
                 gd.leader = g.getLeader();
+                gd.rgb = g.getRGB();
                 gd.type = g.getType().getId();
                 gd.capital = g.getCapital();
                 gd.members = new ArrayList<>(g.getMembers());
@@ -261,8 +268,10 @@ public class Database {
                     bd.level = b.getLevel();
                     gd.branches.add(bd);
                 }
-                data.guild = gd;
+
+                data.guilds.add(gd);
             }
+
 
             data.overlord = RelationManager.getOverlord(f);
             data.tierIndex = (double) f.getTier().getIndex();

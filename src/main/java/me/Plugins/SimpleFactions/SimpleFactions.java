@@ -162,4 +162,12 @@ public class SimpleFactions extends JavaPlugin{
 	public static void reloadTitles() {
 		titleLoader.reload();
 	}
+
+	public static SimpleFactions getInstance() {
+		return plugin;
+	}
+
+	public ProvinceManager getProvinceManager() {
+		return provinceManager;
+	}
 }

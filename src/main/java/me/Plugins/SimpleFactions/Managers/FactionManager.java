@@ -17,6 +17,7 @@ import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Diplomacy.Attitude;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Map.MapSystem;
@@ -170,6 +171,15 @@ public class FactionManager implements Listener{
 			f.countyCheck();
 		}
 		fixRelations();
+	}
+
+	public static boolean guildExists(String id) {
+		for(Faction f : factions) {
+			for(Guild guild : f.getGuildHandler().getGuilds()) {
+				if(guild.getId().equalsIgnoreCase(id)) return true;
+			}
+		}
+		return false;
 	}
 	
 	public void start(List<Faction> l) {

@@ -16,8 +16,10 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Events.FactionCreateEvent;
 import me.Plugins.SimpleFactions.Events.FactionDeleteEvent;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
+import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
@@ -27,11 +29,13 @@ import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Permissions;
 import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import net.tfminecraft.DenarEconomy.Data.Account;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
 
 public class CommandManager implements Listener, CommandExecutor{
+	private Formatter format = new Formatter();
 	public String cmd1 = "faction";
 	public String cmd2 = "guild";
 
@@ -85,7 +89,31 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cYour faction has no land");
 					return true;
 				}
-
+				int claim = RestServer.getProvince(p);
+				if(claim == -2) {
+					p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
+				} else {
+					if(claim == 0) {
+						p.sendMessage("§cThis location has no province!");
+						return true;
+					} else if(!f.getProvinces().contains(claim)) {
+						p.sendMessage("§cYour faction doesb't own this province!");
+						return true;
+					} else {
+						Province province = SimpleFactions.getInstance().getProvinceManager().get(claim);
+						if(province.getTerrain().equals(Terrain.WATER) || province.getTerrain().equals(Terrain.SEA)) {
+							p.sendMessage("§cThis location has no province!");
+							return true;
+						}
+					}
+				}
+				String id = format.formatId(args[2]);
+				if(FactionManager.guildExists(id)) {
+					p.sendMessage("§cThis guild already exists");
+					return true;
+				}
+				Guild guild = new Guild(args[2], p, f, claim);
+				f.getGuildHandler().addGuild(guild);
 				return true;
 			}
 			if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("create") && args.length == 2) {

@@ -61,7 +61,7 @@ public class FactionData {
 
     public String overlord;
 
-    public GuildData guild;
+    public List<GuildData> guilds = new ArrayList<>();
 
     @SerializedName("faction modifiers")
     public List<String> factionModifiers = new ArrayList<>();

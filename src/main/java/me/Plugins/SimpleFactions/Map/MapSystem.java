@@ -14,9 +14,12 @@ import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
+import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.REST.RestServer;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.enums.Terrain;
 
 public class MapSystem {
 	private Compiler compiler = new Compiler();
@@ -90,15 +93,21 @@ public class MapSystem {
 		queues.clear();
 	}
 	
-	public void claim(Player p, Faction f, int province) {
-		if(province == 0) {
+	public void claim(Player p, Faction f, int pid) {
+		if(pid == 0) {
 			p.sendMessage("§cThis location has no province!");
 			return;
-		} else if(f.getProvinces().contains(province)) {
+		} else if(f.getProvinces().contains(pid)) {
 			p.sendMessage("§cYour faction already owns this province!");
 			return;
+		} else {
+			Province province = SimpleFactions.getInstance().getProvinceManager().get(pid);
+			if(province.getTerrain().equals(Terrain.WATER) || province.getTerrain().equals(Terrain.SEA)) {
+				p.sendMessage("§cThis location has no province!");
+				return;
+			}
 		}
-		Faction owner = FactionManager.getByProvince(province);
+		Faction owner = FactionManager.getByProvince(pid);
 		boolean stolen = false;
 		if (owner != null) {
 			if(TitleManager.overProvinceCap(owner)) {
@@ -108,7 +117,7 @@ public class MapSystem {
 		    	return;
 			}
 		}
-		claimProvince(p, f, owner, province, stolen);
+		claimProvince(p, f, owner, pid, stolen);
 	}
 
 	private void claimProvince(Player p, Faction f, Faction owner, int province, boolean stolen) {

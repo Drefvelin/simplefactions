@@ -5,14 +5,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bukkit.entity.Player;
+
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.Utils.RandomRGB;
+import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Guild {
+    private Formatter format = new Formatter();
+
     private String id;
     private String name;
     private String leader;
+    private String rgb;
     private GuildType type;
     private List<String> members = new ArrayList<>();
     private Map<Integer, Branch> branches = new HashMap<>();
@@ -21,15 +29,34 @@ public class Guild {
 
     public Guild(Faction f) {
         id = f.getId();
+        rgb = RandomRGB.similarButDistinct(f.getRGB());
+        while(!RandomRGB.isFree(rgb)) {
+            rgb = RandomRGB.similarButDistinct(f.getRGB());
+        }
         name = f.getName();
         leader = f.getLeader();
+        members.add(leader);
         type = GuildLoader.getByString("realm");
+    }
+
+    public Guild(String id, Player p, Faction f, int province) {
+        this.id = format.formatId(id);
+		this.name = StringFormatter.formatHex(format.formatName(id));
+        this.leader = p.getName();
+        rgb = RandomRGB.random();
+        while(!RandomRGB.isFree(rgb)) {
+            rgb = RandomRGB.random();
+        }
+        this.members.add(leader);
+        this.type = GuildLoader.getByString("guild");
+        this.capital = province;
     }
 
     public Guild(
         String id,
         String name,
         String leader,
+        String rgb,
         int capital,
         String type,
         List<String> members,
@@ -38,6 +65,7 @@ public class Guild {
         this.id = id;
         this.name = name;
         this.leader = leader;
+        this.rgb = rgb;
         this.capital = capital;
         this.members = members != null ? members : new ArrayList<>();
         this.branches = branches != null ? branches : new HashMap<>();
@@ -70,5 +98,11 @@ public class Guild {
     }
     public void setCapital(int i) {
         capital = i;
+    }
+    public String getRGB() {
+        return rgb;
+    }
+    public void setRGB(String rgb) {
+        this.rgb = rgb;
     }
 }

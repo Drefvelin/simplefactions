@@ -7,6 +7,7 @@ public class GuildData {
     public String id;
     public String name;
     public String leader;
+    public String rgb;
     public String type;
     public Integer capital;
 

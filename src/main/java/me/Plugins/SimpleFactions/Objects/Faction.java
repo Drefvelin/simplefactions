@@ -98,6 +98,9 @@ public class Faction {
 		this.prestige = 0.0;
 		this.extraNodeCapacity = 0;
 		this.rgb = RandomRGB.random();
+		while(!RandomRGB.isFree(rgb)) {
+			this.rgb = RandomRGB.random();
+		}
 		this.military = new Military(this);
 		guildHandler.addGuild(new Guild(this));
 		init();

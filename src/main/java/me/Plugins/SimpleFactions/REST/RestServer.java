@@ -78,7 +78,8 @@ public class RestServer {
 	        // Parse JSON and get province_id
 	        JsonObject json = gson.fromJson(response.toString(), JsonObject.class);
 
-	        return json.get("province_id").getAsInt();
+			int pid = json.get("province_id").getAsInt();
+	        return pid;
 
 	    } catch (Exception e) {
 	        e.printStackTrace();
