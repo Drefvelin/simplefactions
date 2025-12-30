@@ -107,13 +107,14 @@ public class CommandManager implements Listener, CommandExecutor{
 						}
 					}
 				}
-				String id = format.formatId(args[2]);
+				String id = format.formatId(args[1]);
 				if(FactionManager.guildExists(id)) {
 					p.sendMessage("§cThis guild already exists");
 					return true;
 				}
-				Guild guild = new Guild(args[2], p, f, claim);
+				Guild guild = new Guild(args[1], p, f, claim);
 				f.getGuildHandler().addGuild(guild);
+				p.sendMessage("§aGuild "+guild.getName()+" §acreated!");
 				return true;
 			}
 			if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("create") && args.length == 2) {

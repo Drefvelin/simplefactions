@@ -50,6 +50,7 @@ public class Guild {
         this.members.add(leader);
         this.type = GuildLoader.getByString("guild");
         this.capital = province;
+        f.getOrCreateMainGuild().kick(p.getName());
     }
 
     public Guild(
