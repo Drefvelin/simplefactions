@@ -15,6 +15,7 @@ import org.bukkit.persistence.PersistentDataType;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
@@ -74,6 +75,14 @@ public class FactionCreator {
 				}
 				lore.add(StringFormatter.formatHex("#a39ba8Our opinion of them: "+OpinionColourMapper.getOpinionColor(r.getOpinion())+r.getOpinion()));
 				lore.add(StringFormatter.formatHex("#a39ba8Their opinion of us: "+OpinionColourMapper.getOpinionColor(ofR.getOpinion())+ofR.getOpinion()));
+			}
+		}
+		List<Guild> guilds = f.getGuildHandler().getGuilds();
+		if(guilds.size() > 0){
+			lore.add("");
+			lore.add(StringFormatter.formatHex("#d6a376Guilds:"));
+			for(Guild guild : guilds) {
+				lore.add(StringFormatter.formatHex("#bccbd1- "+guild.getName()+" #a39ba8("+guild.getType().getName()+"#a39ba8)"));
 			}
 		}
 		List<Faction> subjects = RelationManager.getSubjects(f);

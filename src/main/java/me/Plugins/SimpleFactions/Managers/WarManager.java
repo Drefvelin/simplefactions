@@ -8,9 +8,9 @@ import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 
+import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Request.WarRequest;
-import me.Plugins.SimpleFactions.Utils.Database;
 import me.Plugins.SimpleFactions.War.Side;
 import me.Plugins.SimpleFactions.War.War;
 

@@ -10,13 +10,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.Tiers.Title;
-import me.Plugins.SimpleFactions.Utils.Database;
 
 public class MapSystem {
 	private Compiler compiler = new Compiler();
@@ -138,6 +138,10 @@ public class MapSystem {
 			return;
 		} else if(!f.getProvinces().contains(province)) {
 			if(p != null) p.sendMessage("§cYour faction does not own this province!");
+			return;
+		}
+		if(f.getCapital() == province) {
+			if(p != null) p.sendMessage("§cCannot unclaim the capital!");
 			return;
 		}
 		if(p != null) p.sendMessage("§aSuccessfully  unclaimed province "+province);

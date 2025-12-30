@@ -19,12 +19,14 @@ public class Branch {
     private int group;
     private List<GuildType> allowedTypes = new ArrayList<>();
     private Map<GuildModifier, BranchModifier> modifiers = new HashMap<>();
+    private int level;
 
     public Branch(String key, ConfigurationSection config) {
         id = key;
         name = config.getString("name", id);
         icon = config.getString("icon", "black_dye.10");
         group = config.getInt("group", 0);
+        level = 0;
         for(String s : config.getStringList("allowed-types")) {
             GuildType type = GuildLoader.getByString(s);
             if(type != null) allowedTypes.add(type);
@@ -48,5 +50,17 @@ public class Branch {
         }
     }
 
+    public Branch(Branch b, int level) {
+        id = b.id;
+        name = b.name;
+        icon = b.icon;
+        group = b.group;
+        allowedTypes = b.allowedTypes;
+        modifiers = b.modifiers;
+        this.level = level;
+    }
+
+
     public String getId() { return id; }
+    public int getLevel() { return level; }
 }

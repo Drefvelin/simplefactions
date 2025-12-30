@@ -7,7 +7,9 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.inventory.ItemStack;
 
 import me.Plugins.SimpleFactions.Cache;
@@ -31,14 +33,59 @@ import net.tfminecraft.DenarEconomy.DenarEconomy;
 
 public class CommandManager implements Listener, CommandExecutor{
 	public String cmd1 = "faction";
-	
+	public String cmd2 = "guild";
+
+	@EventHandler(ignoreCancelled = true)
+	public void onCommand(PlayerCommandPreprocessEvent event) {
+		String msg = event.getMessage();
+
+		// Only intercept plain /guild
+		if (!msg.toLowerCase().startsWith("/guild")) return;
+
+		// Do not intercept namespaced calls
+		if (msg.toLowerCase().startsWith("/simplefactions:guild")) return;
+
+		Player p = event.getPlayer();
+		event.setCancelled(true);
+
+		// Rewrite: /guild ... -> /simplefactions:guild ...
+		String rewritten = msg.replaceFirst("(?i)^/guild", "/simplefactions:guild");
+
+		Bukkit.dispatchCommand(p, rewritten.substring(1));
+	}
+
 	
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		if(sender instanceof Player) {
 			Player p = (Player) sender;
-			if(cmd.getName().equalsIgnoreCase(cmd1) && args.length < 1) {
+			if((cmd.getName().equalsIgnoreCase(cmd1) || cmd.getName().equalsIgnoreCase(cmd2)) && args.length < 1) {
 				p.sendMessage("§a[SimpleFactions]§c Error with command format, use the gameplay guide for a list of commands");
+				return true;
+			}
+			if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("create") && args.length == 2) {
+				Faction f = FactionManager.getByMember(p.getName());
+				if(f == null) {
+					p.sendMessage("§cYou need to be in a faction to make a guild");
+					return true;
+				}
+				if(f.isInGuild(p.getName())) {
+					p.sendMessage("§cYou are already in a guild");
+					return true;
+				}
+				if(f.getLeader().equalsIgnoreCase(p.getName())) {
+					p.sendMessage("§cYou are the leader of the faction");
+					return true;
+				}
+				if(!f.hasCapital()) {
+					p.sendMessage("§cYour faction has no capital");
+					return true;
+				}
+				if(f.getProvinces().isEmpty()) {
+					p.sendMessage("§cYour faction has no land");
+					return true;
+				}
+
 				return true;
 			}
 			if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("create") && args.length == 2) {
@@ -57,7 +104,7 @@ public class CommandManager implements Listener, CommandExecutor{
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("claim") && args.length == 1) {
 				if(FactionManager.getByLeader(p.getName()) != null) {
 					Faction f = FactionManager.getByMember(p.getName());
-					int claim = RestServer.claim(p, f);
+					int claim = RestServer.getProvince(p);
 					if(claim == -2) {
 						p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
 					} else {
@@ -87,7 +134,7 @@ public class CommandManager implements Listener, CommandExecutor{
 						return true;
 					}
 				}
-				int claim = RestServer.claim(p, f);
+				int claim = RestServer.getProvince(p);
 				if(claim == -2) {
 					p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
 				} else {
@@ -188,7 +235,11 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cPlayer is not a member");
 					return true;
 				}
-				f.removeMember(args[1]);;
+				if(f.isInGuild(args[1])) {
+					p.sendMessage("§cPlayer is a member of a guild");
+					return true;
+				}
+				f.forceRemoveMember(args[1]);;
 				p.sendMessage("§aKicked "+args[1]);
 				for(Player pl : Bukkit.getOnlinePlayers()) {
 					if(pl.getName().equalsIgnoreCase(args[1])) {
@@ -235,8 +286,16 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cPlayer is already a member");
 					return true;
 				}
+				if(FactionManager.getByMember(args[1]) != null) {
+					p.sendMessage("§cPlayer is a member of another faction");
+					return true;
+				}
 				if(f.getMembers().size() == Cache.maxMembers) {
 					p.sendMessage("§cFaction already has the maximum amount of members");
+					return true;
+				}
+				if(Bukkit.getPlayer(args[1]) == null) {
+					p.sendMessage("§cNo player found by that IGN");
 					return true;
 				}
 				f.getInvited().add(args[1]);
@@ -279,7 +338,10 @@ public class CommandManager implements Listener, CommandExecutor{
 					return true;
 				}
 				Faction f = FactionManager.getByMember(p.getName());
-				f.removeMember(p.getName());;
+				if(f.isInGuild(p.getName())) {
+					p.sendMessage("§cYou are in a guild, use /guild leave instead");
+				}
+				f.forceRemoveMember(p.getName());
 				p.sendMessage("§aLeft "+f.getName());
 				f.updatePrestige();
 				return true;
@@ -303,6 +365,32 @@ public class CommandManager implements Listener, CommandExecutor{
 				String s = args[1].replace("_", " ");
 				f.setRulerTitle(s);
 				p.sendMessage("§aFaction ruler title changed to "+f.getRulerTitle());
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setcapital") && args.length == 1) {
+				Faction f = FactionManager.getByLeader(p.getName());
+				if(f == null) {
+					p.sendMessage("§cYou must be the leader of a faction to set the capital");
+					return true;
+				}
+				if(f.hasCapital()) {
+					p.sendMessage("§cYour faction already has a capital");
+					return true;
+				}
+				int claim = RestServer.getProvince(p);
+				if(claim == -2) {
+					p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
+				} else {
+					if(claim == 0) {
+						p.sendMessage("§cThis location has no province!");
+						return true;
+					} else if(!f.getProvinces().contains(claim)) {
+						p.sendMessage("§cYour faction doesn't own this province!");
+						return true;
+					}
+				}
+				f.setCapital(claim);
+				p.sendMessage("§aCapital set!");
+				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setrulingsystem") && args.length == 2) {
 				Faction f = FactionManager.getByLeader(p.getName());

@@ -11,3 +11,6 @@ commands:
   faction:
       useage: /<command>
       description: Faction Command
+  guild:
+      useage: /<command>
+      description: Guild Command
