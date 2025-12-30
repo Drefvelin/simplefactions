@@ -97,7 +97,7 @@ public class CommandManager implements Listener, CommandExecutor{
 						p.sendMessage("§cThis location has no province!");
 						return true;
 					} else if(!f.getProvinces().contains(claim)) {
-						p.sendMessage("§cYour faction doesb't own this province!");
+						p.sendMessage("§cYour faction doesn't own this province!");
 						return true;
 					} else {
 						Province province = SimpleFactions.getInstance().getProvinceManager().get(claim);
