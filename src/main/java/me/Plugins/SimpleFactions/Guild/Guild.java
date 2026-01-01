@@ -17,17 +17,21 @@ import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 public class Guild {
     private Formatter format = new Formatter();
 
+    private Faction host;
+
     private String id;
     private String name;
     private String leader;
     private String rgb;
     private GuildType type;
     private List<String> members = new ArrayList<>();
+    private List<String> invites = new ArrayList<>();
     private Map<Integer, Branch> branches = new HashMap<>();
 
     private int capital = -1;
 
     public Guild(Faction f) {
+        host = f;
         id = f.getId();
         rgb = RandomRGB.similarButDistinct(f.getRGB());
         while(!RandomRGB.isFree(rgb)) {
@@ -40,6 +44,7 @@ public class Guild {
     }
 
     public Guild(String id, Player p, Faction f, int province) {
+        host = f;
         this.id = format.formatId(id);
 		this.name = StringFormatter.formatHex(format.formatName(id));
         this.leader = p.getName();
@@ -61,8 +66,10 @@ public class Guild {
         int capital,
         String type,
         List<String> members,
-        Map<Integer, Branch> branches
+        Map<Integer, Branch> branches,
+        Faction host
     ) {
+        this.host = host;
         this.id = id;
         this.name = name;
         this.leader = leader;
@@ -73,13 +80,21 @@ public class Guild {
         this.type = GuildLoader.getByString(type);
     }
 
-
+    public Faction getFaction() { return host; }
+    public List<String> getInvites() { return invites; }
+    public boolean isInvited(String p) {
+        return invites.contains(p);
+    }
+    public void invite(String p) {
+        if(!invites.contains(p)) invites.add(p);
+    }
     public String getId() { return id; }
     public String getName() { return name; }
     public List<String> getMembers() { return members; }
     public boolean isMember(String p) { return members.contains(p); }
     public void addMember(String p) {
         if(isMember(p)) return;
+        if(isInvited(p)) invites.remove(p);
         members.add(p);
     }
     public void kick(String member) {

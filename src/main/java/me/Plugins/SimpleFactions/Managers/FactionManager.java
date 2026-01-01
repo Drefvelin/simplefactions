@@ -181,6 +181,40 @@ public class FactionManager implements Listener{
 		}
 		return false;
 	}
+
+	public static boolean canJoinGuild(Player p) {
+		Guild guild = getGuildByMember(p.getName());
+		if(guild == null) return true;
+		if(guild.getLeader().equalsIgnoreCase(p.getName())) return false;
+		return guild.getType().isBase();
+	}
+
+	public static Guild getGuildByMember(String player) {
+		for(Faction f : factions) {
+			for(Guild guild : f.getGuildHandler().getGuilds()) {
+				if(guild.isMember(player)) return guild;
+			}
+		}
+		return null;
+	}
+
+	public static Guild getGuildByLeader(String leader) {
+		for(Faction f : factions) {
+			for(Guild guild : f.getGuildHandler().getGuilds()) {
+				if(guild.isLeader(leader)) return guild;
+			}
+		}
+		return null;
+	}
+
+	public static Guild getGuildByString(String id) {
+		for(Faction f : factions) {
+			for(Guild guild : f.getGuildHandler().getGuilds()) {
+				if(guild.getId().equalsIgnoreCase(id)) return guild;
+			}
+		}
+		return null;
+	}
 	
 	public void start(List<Faction> l) {
 		factions = l;

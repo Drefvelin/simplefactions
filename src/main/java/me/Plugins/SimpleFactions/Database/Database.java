@@ -169,7 +169,8 @@ public class Database {
                             gd.capital != null ? gd.capital : -1,
                             gd.type,
                             gd.members,
-                            branches
+                            branches,
+                            f
                         );
 
                         f.getGuildHandler().addGuild(g);

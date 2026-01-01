@@ -7,9 +7,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.inventory.ItemStack;
 
 import me.Plugins.SimpleFactions.Cache;
@@ -38,26 +36,6 @@ public class CommandManager implements Listener, CommandExecutor{
 	private Formatter format = new Formatter();
 	public String cmd1 = "faction";
 	public String cmd2 = "guild";
-
-	@EventHandler(ignoreCancelled = true)
-	public void onCommand(PlayerCommandPreprocessEvent event) {
-		String msg = event.getMessage();
-
-		// Only intercept plain /guild
-		if (!msg.toLowerCase().startsWith("/guild")) return;
-
-		// Do not intercept namespaced calls
-		if (msg.toLowerCase().startsWith("/simplefactions:guild")) return;
-
-		Player p = event.getPlayer();
-		event.setCancelled(true);
-
-		// Rewrite: /guild ... -> /simplefactions:guild ...
-		String rewritten = msg.replaceFirst("(?i)^/guild", "/simplefactions:guild");
-
-		Bukkit.dispatchCommand(p, rewritten.substring(1));
-	}
-
 	
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -115,6 +93,66 @@ public class CommandManager implements Listener, CommandExecutor{
 				Guild guild = new Guild(args[1], p, f, claim);
 				f.getGuildHandler().addGuild(guild);
 				p.sendMessage("§aGuild "+guild.getName()+" §acreated!");
+				return true;
+			}
+			if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("menu") && args.length == 1) {
+				Guild guild = FactionManager.getGuildByMember(p.getName());
+				if(guild == null) {
+					p.sendMessage("§cYou are not in a guild");
+					return true;
+				}
+				p.sendMessage("Opening menu (temp)");
+				return true;
+			}
+			if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("invite") && args.length == 1) {
+				Guild guild = FactionManager.getGuildByLeader(p.getName());
+				if(guild == null) {
+					p.sendMessage("§cYou are not the leader of a guild");
+					return true;
+				}
+				String invitee = args[1];
+				if(invitee.equalsIgnoreCase(p.getName())) {
+					p.sendMessage("§cCannot invite yourself");
+					return true;
+				}
+				Player invited = Bukkit.getPlayer(invitee);
+				if(invited == null) {
+					p.sendMessage("§cCould not find the player "+invitee);
+					return true;
+				}
+				if(guild.isInvited(invitee)) {
+					p.sendMessage("§cPlayer is already invited");
+					return true;
+				}
+				if(guild.isMember(invitee)) {
+					p.sendMessage("§cPlayer is already a member");
+					return true;
+				}
+				guild.invite(invitee);
+				invited.sendMessage("§aYou have been invited to the guild "+guild.getName());
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("join") && args.length == 2) {
+				if(FactionManager.getGuildByLeader(p.getName()) != null) {
+					p.sendMessage("§cYou are the leader of a guild");
+					return true;
+				}
+				if(!FactionManager.canJoinGuild(p)) {
+					p.sendMessage("§cYou are already in a guild");
+					return true;
+				}
+				Guild g = FactionManager.getGuildByString(args[1]);
+				if(!g.isInvited(p.getName())) {
+					p.sendMessage("§cYou need to be invited to this guild by the leader first!");
+					return true;
+				}
+				g.addMember(p.getName());
+				p.sendMessage("§aJoined "+g.getName());
+				g.getFaction().updatePrestige();
+				for(Player pl : Bukkit.getOnlinePlayers()) {
+					if(g.getFaction().getMembers().contains(pl.getName())) {
+						pl.sendMessage("§a"+p.getName()+ " joined the faction!");
+					}
+				}
 				return true;
 			}
 			if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("create") && args.length == 2) {
@@ -241,6 +279,15 @@ public class CommandManager implements Listener, CommandExecutor{
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("list") && args.length == 1) {
 				InventoryManager i = new InventoryManager();
 				i.factionList(p);
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("menu") && args.length == 1) {
+				Faction f = FactionManager.getByMember(p.getName());
+				if(f == null) {
+					p.sendMessage("§cYou are not in a faction");
+					return true;
+				}
+				InventoryManager i = new InventoryManager();
+				i.factionView(p, f);
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("warlist") && args.length == 1) {
 				InventoryManager i = new InventoryManager();
