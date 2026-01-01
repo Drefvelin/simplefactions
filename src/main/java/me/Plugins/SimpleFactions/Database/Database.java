@@ -170,6 +170,7 @@ public class Database {
                             gd.type,
                             gd.members,
                             branches,
+                            gd.banner,
                             f
                         );
 
@@ -260,6 +261,7 @@ public class Database {
                 gd.type = g.getType().getId();
                 gd.capital = g.getCapital();
                 gd.members = new ArrayList<>(g.getMembers());
+                gd.banner = new ArrayList<>(g.getBannerPatterns());
 
                 for (Map.Entry<Integer, Branch> e : g.getBranches().entrySet()) {
                     Branch b = e.getValue();

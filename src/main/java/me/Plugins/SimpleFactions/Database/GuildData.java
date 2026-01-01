@@ -10,6 +10,8 @@ public class GuildData {
     public String rgb;
     public String type;
     public Integer capital;
+    
+    public List<String> banner = new ArrayList<>();
 
     public List<String> members = new ArrayList<>();
     public List<GuildBranchData> branches = new ArrayList<>();

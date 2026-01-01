@@ -101,7 +101,8 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cYou are not in a guild");
 					return true;
 				}
-				p.sendMessage("Opening menu (temp)");
+				InventoryManager inv = new InventoryManager();
+				inv.guildView(p, guild);
 				return true;
 			}
 			if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("invite") && args.length == 1) {
@@ -366,8 +367,8 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cPlayer is a member of another faction");
 					return true;
 				}
-				if(f.getMembers().size() == Cache.maxMembers) {
-					p.sendMessage("§cFaction already has the maximum amount of members");
+				if(f.getOrCreateMainGuild().getMembers().size() == Cache.maxMembers) {
+					p.sendMessage("§cMain faction guild already has the maximum amount of members");
 					return true;
 				}
 				if(Bukkit.getPlayer(args[1]) == null) {

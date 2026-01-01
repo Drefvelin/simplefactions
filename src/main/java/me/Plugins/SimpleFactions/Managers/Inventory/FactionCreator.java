@@ -56,7 +56,7 @@ public class FactionCreator {
 		lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernment()));
 		lore.add(StringFormatter.formatHex("#b8ae61Culture: #d4c9ae"+f.getCulture()));
 		lore.add(StringFormatter.formatHex("#b8ae61Religion: #d4c9ae"+f.getReligion()));
-		lore.add(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+f.getMembers().size()+"/"+Cache.maxMembers));
+		lore.add(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+f.getMembers().size()));
 		lore.add(" ");
 		lore.add(StringFormatter.formatHex("#4793bfPrestige: #6eafba"+f.getPrestige()+" #7a706a("+r.getPrestigeRank(f)+")"));
 		lore.add(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+f.getWealth()+"d #7a706a("+r.getWealthRank(f)+")"));
@@ -210,7 +210,7 @@ public class FactionCreator {
 		} else if(t.equals(MenuItemType.MEMBERS)) {
 				i = new ItemStack(Material.PLAYER_HEAD, 1);
 				ItemMeta m = i.getItemMeta();
-				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+f.getMembers().size()+"/"+Cache.maxMembers));
+				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+f.getMembers().size())); //TODO full subject population as well cause cool
 				List<String> lore = new ArrayList<String>();
 				for(String s : f.getMembers()) {
 					lore.add(StringFormatter.formatHex("#d4c9ae"+s));
