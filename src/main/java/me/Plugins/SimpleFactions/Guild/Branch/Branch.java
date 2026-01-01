@@ -6,7 +6,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import me.Plugins.SimpleFactions.Guild.GuildType;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
@@ -62,5 +65,23 @@ public class Branch {
 
 
     public String getId() { return id; }
+    public String getName() { return name; }
+    public int getGroup() { return group; }
+    public boolean isAllowed(GuildType type) {
+        return allowedTypes.contains(type);
+    }
     public int getLevel() { return level; }
+    public ItemStack getIconItem() {
+        String[] args = icon.split("\\.");
+        ItemStack item = new ItemStack(Material.DIRT, 1);
+        try {
+            item = new ItemStack(Material.valueOf(args[0].toUpperCase()), 1);
+            ItemMeta m = item.getItemMeta();
+            m.setCustomModelData(Integer.parseInt(args[1]));
+            item.setItemMeta(m);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return item;
+    }
 }

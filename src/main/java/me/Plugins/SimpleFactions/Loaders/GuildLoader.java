@@ -29,6 +29,20 @@ public class GuildLoader {
 		}
 		return null;
 	}
+
+	public static GuildType getBaseType() {
+		for(GuildType t : getList()) {
+			if(t.isBase()) return t;
+		}
+		return getList().get(0);
+	}
+
+	public static GuildType getDefaultType() {
+		for(GuildType t : getList()) {
+			if(t.isDefault()) return t;
+		}
+		return getList().get(0);
+	}
 	public void load(File configFile) {
 		FileConfiguration config = new YamlConfiguration();
         try {

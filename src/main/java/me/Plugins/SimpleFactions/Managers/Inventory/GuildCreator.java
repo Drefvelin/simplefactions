@@ -11,11 +11,14 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
 import me.Plugins.TLibs.Enums.APIType;
 import me.Plugins.TLibs.Objects.API.ItemAPI;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
+import me.Plugins.TLibs.Utils.TimeFormatter;
 import me.Plugins.TLibs.TLibs;
 
 public class GuildCreator {
@@ -57,7 +60,12 @@ public class GuildCreator {
 		} else if(t.equals(MenuItemType.WEALTH)) {
 			i = new ItemStack(Material.GOLD_NUGGET, 1);
 			ItemMeta m = i.getItemMeta();
-			m.setDisplayName(StringFormatter.formatHex("#d1b43fWealth: #ccbb76N/A (not implemented)"));
+			m.setDisplayName(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+guild.getWealth()));
+			List<String> lore = new ArrayList<String>();
+			for(Modifier mod : guild.getWealthModifiers()) {
+				lore.add(StringFormatter.formatHex("#93c9a7+"+mod.getAmount()+" from "+mod.getType()));
+			}
+			m.setLore(lore);
 			i.setItemMeta(m);
 		} else if(t.equals(MenuItemType.MEMBERS)) {
 				i = new ItemStack(Material.PLAYER_HEAD, 1);
@@ -77,6 +85,17 @@ public class GuildCreator {
 			m.setCustomModelData(icon.getItemMeta().getCustomModelData());
 			i.setItemMeta(m);
 		}
+		return i;
+	}
+
+	public ItemStack createBranchItem(Branch branch) {
+		ItemStack i = branch.getIconItem();
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(branch.getName());
+		List<String> lore = new ArrayList<String>();
+		lore.add(StringFormatter.formatHex("#857e59[WIP]"));
+		meta.setLore(lore);
+		i.setItemMeta(meta);
 		return i;
 	}
 }

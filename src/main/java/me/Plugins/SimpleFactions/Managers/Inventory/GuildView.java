@@ -6,6 +6,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
+import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
@@ -32,6 +33,12 @@ public class GuildView {
 		i.setItem(11, creator.createMenuItem(player, guild, MenuItemType.LEADER));
 		i.setItem(12, creator.createMenuItem(player, guild, MenuItemType.WEALTH));
 		i.setItem(14, creator.createMenuItem(player, guild, MenuItemType.MEMBERS));
+		int group = 0;
+		while(guild.getBranch(group) != null || group > 10) {
+			Branch b = guild.getBranch(group);
+			group++;
+			i.setItem(group+28, creator.createBranchItem(b));
+		}
 		player.openInventory(i);
 	}
 

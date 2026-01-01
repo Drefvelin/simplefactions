@@ -124,8 +124,9 @@ public class TabCompletion implements TabCompleter{
 				Faction f = FactionManager.getByMember(p.getName());
 				List<String> completions = new ArrayList<String>();
 				if(f != null) {
-					completions.addAll(f.getMembers());
-					completions.remove(f.getLeader());
+					for(String member : f.getMembers()) {
+						if(f.canBecomeLeader(member)) completions.add(member);
+					}
 				}
 				return completions;
 			}
@@ -211,8 +212,9 @@ public class TabCompletion implements TabCompleter{
 					
 					Faction f = FactionManager.getByString(args[1]);
 					if(f != null) {
-						completions.addAll(f.getMembers());
-						completions.remove(f.getLeader());
+						for(String member : f.getMembers()) {
+							if(f.canBecomeLeader(member)) completions.add(member);
+						}
 					}
 					return completions;
 				}

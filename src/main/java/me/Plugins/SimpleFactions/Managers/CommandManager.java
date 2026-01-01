@@ -426,6 +426,10 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cPlayer is already the leader");
 					return true;
 				}
+				if(!f.canBecomeLeader(args[1])) {
+					p.sendMessage("§cPlayer is not eligble to be leader (perhaps they are a guild leader?)");
+					return true;
+				}
 				f.setLeader(args[1]);
 				for(Player pl : Bukkit.getOnlinePlayers()) {
 					if(f.getMembers().contains(pl.getName())) {
@@ -765,6 +769,10 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				if(args[2].equalsIgnoreCase(f.getLeader())) {
 					p.sendMessage("§cPlayer is already the leader");
+					return true;
+				}
+				if(!f.canBecomeLeader(args[2])) {
+					p.sendMessage("§cPlayer is not eligble to be leader (perhaps they are a guild leader?)");
 					return true;
 				}
 				f.setLeader(args[2]);

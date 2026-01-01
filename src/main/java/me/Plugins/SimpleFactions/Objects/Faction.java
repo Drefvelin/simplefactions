@@ -437,11 +437,25 @@ public class Faction {
 		getOrCreateMainGuild().addMember(m);
 	}
 	public void forceRemoveMember(String m) {
-		guildHandler.forceKick(m);;
+		guildHandler.forceKick(m);
 	}
 	public boolean isInGuild(String member) {
 		if(!getMembers().contains(member)) return false;
 		return !getOrCreateMainGuild().isMember(member);
+	}
+	public boolean isMember(String member) {
+		return getMembers().contains(member);
+	}
+	public boolean isLeader(String member) {
+		return getOrCreateMainGuild().isLeader(member);
+	}
+	public boolean canBecomeLeader(String member) {
+		if(isLeader(member)) return false;
+		if(!isMember(member)) return false;
+		for(Guild g : guildHandler.getGuilds()) {
+			if(g.isLeader(member)) return false;
+		}
+		return true;
 	}
 	public boolean canBeCleanKicked(String p) {
 		if(leader.equalsIgnoreCase(p)) return false;

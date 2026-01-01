@@ -16,6 +16,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
 
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
+import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -34,7 +35,7 @@ public class Guild {
     private String name;
     private String leader;
     private String rgb;
-    private GuildType type;
+    private final GuildType type;
     private List<String> members = new ArrayList<>();
     private List<String> invites = new ArrayList<>();
     private Map<Integer, Branch> branches = new HashMap<>();
@@ -61,9 +62,14 @@ public class Guild {
         name = f.getName();
         leader = f.getLeader();
         members.add(leader);
-        type = GuildLoader.getByString("realm");
+        type = GuildLoader.getBaseType();
         this.wealth = 0.0;
 		this.prestige = 0.0;
+        int group = 0;
+        while(BranchLoader.getByGroup(this, group) != null) {
+            branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 1));
+            group++;
+        }
         createBanner();
     }
 
@@ -78,10 +84,15 @@ public class Guild {
         }
         this.bannerPatterns = RestServer.fetchBannerList();
         this.members.add(leader);
-        this.type = GuildLoader.getByString("guild");
+        this.type = GuildLoader.getDefaultType();
         this.capital = province;
         this.wealth = 0.0;
 		this.prestige = 0.0;
+        int group = 0;
+        while(BranchLoader.getByGroup(this, group) != null) {
+            branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 1));
+            group++;
+        }
         f.getOrCreateMainGuild().kick(p.getName());
         createBanner();
     }
@@ -99,6 +110,7 @@ public class Guild {
         List<Modifier> wealthModifiers,
         Faction host
     ) {
+        this.type = GuildLoader.getByString(type);
         this.host = host;
         this.id = id;
         this.name = name;
@@ -107,7 +119,14 @@ public class Guild {
         this.capital = capital;
         this.members = members != null ? members : new ArrayList<>();
         this.branches = branches != null ? branches : new HashMap<>();
-        this.type = GuildLoader.getByString(type);
+        int group = 0;
+        while(group < 10) {
+            if(!branches.containsKey(group)) {
+                Branch b = BranchLoader.getByGroup(this, group);
+                if(b != null) branches.put(group, new Branch(b, 1));
+            }
+            group++;
+        }
         this.bannerPatterns = patterns;
         this.wealth = 0.0;
 		this.prestige = 0.0;
@@ -137,7 +156,7 @@ public class Guild {
     public void kick(String member) {
         members.remove(member);
     }
-    public String getLeader() { return leader; }
+    public String getLeader() { return isBase() ? host.getLeader() : leader; }
     public void setLeader(String leader) {
         this.leader = leader;
     }
@@ -146,6 +165,9 @@ public class Guild {
     }
     public boolean isLeader(Player p) { return isLeader(p.getName()); }
     public Map<Integer, Branch> getBranches() { return branches; }
+    public Branch getBranch(int i) {
+        return branches.getOrDefault(i, null);
+    }
     public GuildType getType() { return type; }
     public int getCapital() {
         return isBase() ? host.getCapital() : capital;
