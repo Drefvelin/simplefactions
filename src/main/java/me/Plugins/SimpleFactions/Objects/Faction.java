@@ -20,16 +20,18 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
 
-import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.Regiment;
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.TierLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
+import me.Plugins.SimpleFactions.Objects.Handler.GuildHandler;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.Tiers.Title;
@@ -39,27 +41,26 @@ import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Faction {
-	Formatter format = new Formatter();
-	String id;
-	String name;
-	PrestigeRank rank;
-	String government;
-	String culture;
-	String religion;
-	String rgb;
-	ItemStack banner;
-	List<String> bannerPatterns = new ArrayList<String>();
-	List<String> members = new ArrayList<String>();
-	List<String> invited = new ArrayList<String>();
-	Double wealth;
-	Double prestige;
-	Bank bank;
-	String rulerTitle;
-	String leader;
-	Integer extraNodeCapacity;
-	List<Modifier> prestigeModifiers = new ArrayList<Modifier>();
-	List<Modifier> wealthModifiers = new ArrayList<Modifier>();
-	List<Integer> provinces = new ArrayList<>();
+	private Formatter format = new Formatter();
+	private String id;
+	private String name;
+	private PrestigeRank rank;
+	private String government;
+	private String culture;
+	private String religion;
+	private String rgb;
+	private ItemStack banner;
+	private List<String> bannerPatterns = new ArrayList<>();
+	private List<String> invited = new ArrayList<>();
+	private Double wealth;
+	private Double prestige;
+	private String rulerTitle;
+	private String leader;
+	private Integer extraNodeCapacity;
+	private List<Modifier> prestigeModifiers = new ArrayList<>();
+	private List<Integer> provinces = new ArrayList<>();
+
+	private int capital = -1;
 	
 	private double taxRate = 5;
 	private double vassalTax = 100;
@@ -77,14 +78,15 @@ public class Faction {
 	
 	//Modifiers
 	private HashMap<FactionModifiers, List<FactionModifier>> modifiers = new HashMap<>();
+
+	//Guilds
+	private GuildHandler guildHandler = new GuildHandler();
 	
 	public Faction(String id, String leader) {
-		Formatter format = new Formatter();
 		this.id = format.formatId(id);
 		this.name = StringFormatter.formatHex(format.formatName(id));
 		this.leader = leader;
 		this.rulerTitle = "Leader";
-		this.members.add(leader);
 		this.bannerPatterns = RestServer.fetchBannerList();
 		this.rank = RankLoader.getLowest();
 		this.government = "Homestead";
@@ -94,18 +96,21 @@ public class Faction {
 		this.prestige = 0.0;
 		this.extraNodeCapacity = 0;
 		this.rgb = RandomRGB.random();
+		while(!RandomRGB.isFree(rgb)) {
+			this.rgb = RandomRGB.random();
+		}
 		this.military = new Military(this);
+		guildHandler.addGuild(new Guild(this));
 		init();
 		createBanner(bannerPatterns);
 		updatePrestige();
 		updateTier();
 	}
-	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> members, List<String> patterns, String government, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, List<Modifier> wealthModifiers, double taxRate, double vassalTax) {
+	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> patterns, String government, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, double taxRate, double vassalTax, int capital) {
 		this.id = id;
 		this.name = name;
 		this.leader = leader;
 		this.rulerTitle = rulerTitle;
-		this.members = members;
 		this.bannerPatterns = patterns;
 		this.rank = RankLoader.getLowest();
 		this.government = government;
@@ -115,8 +120,8 @@ public class Faction {
 		this.prestige = 0.0;
 		this.extraNodeCapacity = exCap;
 		this.prestigeModifiers = prestigeModifiers;
-		this.wealthModifiers = wealthModifiers;
 		this.rgb = rgb;
+		this.capital = capital;
 		for(int i : provinces) {
 			if(TitleManager.getByProvince(i) != null) continue;
 			this.provinces.add(i);
@@ -150,12 +155,34 @@ public class Faction {
 				} catch (IllegalArgumentException ex) {
 				    // Invalid pattern or color name, skip it
 					Bukkit.getLogger().info(pattern+" is not a valid pattern");
-				    continue;
 				}
 			}
 		}
 		item.setItemMeta(b);
 		this.banner = item;
+	}
+
+	public Guild getOrCreateMainGuild() {
+		Guild g = guildHandler.getGuild(id);
+		if (g == null) {
+			g = new Guild(this);
+			guildHandler.addGuild(g);
+		}
+		return g;
+	}
+
+	public boolean hasCapital() {
+		return capital != -1;
+	}
+
+	public int getCapital() {
+		return capital;
+	}
+
+	public void setCapital(int i) {
+		if(!provinces.contains(i)) return;
+		getOrCreateMainGuild().setCapital(i);
+		capital = i;
 	}
 
 	public double getForeignTaxRate(Faction f) {
@@ -213,7 +240,7 @@ public class Faction {
 		}
 
 		amount -= paidTax;
-		bank.deposit(amount);
+		getBank().deposit(amount);
 	}
 
 	public double setTaxRate(double d) {
@@ -294,10 +321,13 @@ public class Faction {
 		this.invited = invited;
 	}
 	public List<Modifier> getWealthModifiers() {
-		return wealthModifiers;
-	}
-	public void setWealthModifiers(List<Modifier> wealthModifiers) {
-		this.wealthModifiers = wealthModifiers;
+		List<Modifier> list = new ArrayList<>(getOrCreateMainGuild().getWealthModifiers());
+		for(Guild guild : guildHandler.getGuilds()) {
+			if(guild.isBase()) continue;
+			if(guild.getWealth() == 0) continue;
+			list.add(new Modifier(guild.getName()+" #a39ba8("+guild.getType().getName()+"#a39ba8)", guild.getWealth()));
+		}
+		return list;
 	}
 	public void setRGB(String rgb) {
 		this.rgb = rgb;
@@ -361,23 +391,6 @@ public class Faction {
 			prestigeModifiers.add(p);
 		}
 	}
-	public void addPersistentWealthModifier(Modifier m) {
-		for(int i = 0; i<wealthModifiers.size(); i++) {
-			if(wealthModifiers.get(i).getType().equalsIgnoreCase(m.getType())) {
-				m.setAmount(wealthModifiers.get(i).getAmount()+m.getAmount());
-				if(Double.compare(m.getAmount(), 0) == 0) {
-					wealthModifiers.remove(i);
-					i--;
-				} else {
-					wealthModifiers.set(i, m);
-				}
-				return;
-			}
-		}
-		if(m.getAmount() != 0) {
-			wealthModifiers.add(m);
-		}
-	}
 	public void addPrestigeModifier(Modifier p) {
 		for(int i = 0; i<prestigeModifiers.size(); i++) {
 			if(prestigeModifiers.get(i).getType().equalsIgnoreCase(p.getType())) {
@@ -386,15 +399,6 @@ public class Faction {
 			}
 		}
 		prestigeModifiers.add(p);
-	}
-	public void addWealthModifier(Modifier m) {
-		for(int i = 0; i<wealthModifiers.size(); i++) {
-			if(wealthModifiers.get(i).getType().equalsIgnoreCase(m.getType())) {
-				wealthModifiers.set(i, m);
-				return;
-			}
-		}
-		wealthModifiers.add(m);
 	}
 	public void setBanner(ItemStack banner) {
 		BannerMeta b = (BannerMeta) banner.getItemMeta();
@@ -427,16 +431,35 @@ public class Faction {
 		this.name = name;
 	}
 	public List<String> getMembers() {
-		return members;
+		return guildHandler.getAllMembers();
 	}
 	public void addMember(String m) {
-		this.members.add(m);
+		getOrCreateMainGuild().addMember(m);
 	}
-	public void removeMember(String m) {
-		this.members.remove(m);
+	public void forceRemoveMember(String m) {
+		guildHandler.forceKick(m);
 	}
-	public void setMembers(List<String> members) {
-		this.members = members;
+	public boolean isInGuild(String member) {
+		if(!getMembers().contains(member)) return false;
+		return !getOrCreateMainGuild().isMember(member);
+	}
+	public boolean isMember(String member) {
+		return getMembers().contains(member);
+	}
+	public boolean isLeader(String member) {
+		return getOrCreateMainGuild().isLeader(member);
+	}
+	public boolean canBecomeLeader(String member) {
+		if(isLeader(member)) return false;
+		if(!isMember(member)) return false;
+		for(Guild g : guildHandler.getGuilds()) {
+			if(g.isLeader(member)) return false;
+		}
+		return true;
+	}
+	public boolean canBeCleanKicked(String p) {
+		if(leader.equalsIgnoreCase(p)) return false;
+		return !guildHandler.isGuildLeader(p);
 	}
 	public Double getWealth() {
 		return wealth;
@@ -451,15 +474,16 @@ public class Faction {
 		this.prestige = prestige;
 	}
 	public Bank getBank() {
-		return bank;
+		return getOrCreateMainGuild().getBank();
 	}
 	public void setBank(Bank bank) {
-		this.bank = bank;
+		getOrCreateMainGuild().setBank(bank);
 	}
 	public String getLeader() {
 		return leader;
 	}
 	public void setLeader(String leader) {
+		getOrCreateMainGuild().setLeader(leader);
 		this.leader = leader;
 	}
 	public List<Modifier> getPrestigeModifiers() {
@@ -475,12 +499,14 @@ public class Faction {
 		this.extraNodeCapacity = extraNodeCapacity;
 	}
 	public boolean canPurchaseCapacity() {
-		if(this.extraNodeCapacity < Cache.maxExtraNodeCapacity) return true;
-		return false;
+		return this.extraNodeCapacity < Cache.maxExtraNodeCapacity;
+	}
+	public GuildHandler getGuildHandler() {
+		return guildHandler;
 	}
 	public void updatePrestige() {
 		prestige = 0.0;
-		addPrestigeModifier(new Modifier("Members", format.formatDouble(Math.pow(members.size()+4, 1.8)+5)));
+		addPrestigeModifier(new Modifier("Members", format.formatDouble(Math.pow(guildHandler.getAllMembers().size()+4, 1.8)+5)));
 		if(wealth == 0) {
 			addPrestigeModifier(new Modifier("Wealth", 0.0));
 		}
@@ -545,11 +571,9 @@ public class Faction {
 		}
 	}
 	public void updateWealth() {
-		if(bank == null) return;
 		wealth = 0.0;
-		addWealthModifier(new Modifier("Bank", bank.getWealth()));
-		for(Modifier p : wealthModifiers) {
-			wealth = wealth + p.getAmount();
+		for(Guild guild : guildHandler.getGuilds()) {
+			wealth += guild.getWealth();
 		}
 		wealth = format.formatDouble(wealth);
 		FactionManager.updateAllPrestige();
@@ -570,7 +594,6 @@ public class Faction {
 		
 		//update
 		relations.put(f.getId(), r);
-		if(f.getId().equalsIgnoreCase("cape_vander")) Bukkit.getPlayerExact("drefvelin").sendMessage(this.getName()+ " to "+f.getName()+" necpome "+r.getType().getName());
 		
 		//Apply new modifiers
 		if(r.getType().hasRecieveModifiers()) addModifiers(f, r.getType().getRecieveModifiers());
@@ -588,7 +611,7 @@ public class Faction {
 		List<Title> counties = getTitles(TierLoader.getByString("county"));
 		Random rand = new Random();
 
-		while (counties.size() > members.size()) {
+		while (counties.size() > guildHandler.getAllMembers().size()) {
 			int index = rand.nextInt(counties.size()); // pick random index
 			removeTitle(counties.get(index));          // remove that county
 			counties.remove(index);                    // keep local list in sync
@@ -782,7 +805,7 @@ public class Faction {
 
     public void newDay() {
         double armyCost = military.getTotalUpkeep();
-		if(armyCost > 0 && bank == null){
+		if(armyCost > 0 && getBank() == null){
 			for(Regiment r : military.getRegiments()){
 				if(r.isLevy()) continue;
 				while(r.getCurrentSlots() > r.getFreeSlots()){
@@ -790,7 +813,7 @@ public class Faction {
 				}
 			}
 		}
-		while(armyCost > 0 && bank.getWealth() < armyCost) {
+		while(armyCost > 0 && getBank().getWealth() < armyCost) {
 			for(Regiment r : military.getRegiments()) {
 				if(r.isLevy()) continue;
 				if(r.getCurrentSlots() > r.getFreeSlots()) {
@@ -801,20 +824,23 @@ public class Faction {
 			armyCost = military.getTotalUpkeep();
 		}
 		if(armyCost > 0) {
-			bank.withdraw(armyCost);
+			getBank().withdraw(armyCost);
 		}
 		provinceCap();
     }
 
 	public void provinceCap() {
 		if(TitleManager.overProvinceCap(this) && provinces.size() > 0) {
-			removeProvince(provinces.get(provinces.size() - 1));
+			int toRemove = provinces.get(provinces.size() - 1);
+			if(toRemove == capital && provinces.size() > 1) toRemove = provinces.get(provinces.size() - 2);
+			if(toRemove == capital) return;
+			removeProvince(toRemove);
 		}
 	}
 
 	public int numOnline() {
 		int count = 0;
-		for(String m : members){
+		for(String m : guildHandler.getAllMembers()){
 			Player p = Bukkit.getPlayerExact(m);
 			if(p != null && p.isOnline()) count++;
 		}

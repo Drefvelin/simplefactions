@@ -15,6 +15,7 @@ import org.bukkit.persistence.PersistentDataType;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
@@ -55,7 +56,7 @@ public class FactionCreator {
 		lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernment()));
 		lore.add(StringFormatter.formatHex("#b8ae61Culture: #d4c9ae"+f.getCulture()));
 		lore.add(StringFormatter.formatHex("#b8ae61Religion: #d4c9ae"+f.getReligion()));
-		lore.add(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+f.getMembers().size()+"/"+Cache.maxMembers));
+		lore.add(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+f.getMembers().size()));
 		lore.add(" ");
 		lore.add(StringFormatter.formatHex("#4793bfPrestige: #6eafba"+f.getPrestige()+" #7a706a("+r.getPrestigeRank(f)+")"));
 		lore.add(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+f.getWealth()+"d #7a706a("+r.getWealthRank(f)+")"));
@@ -74,6 +75,14 @@ public class FactionCreator {
 				}
 				lore.add(StringFormatter.formatHex("#a39ba8Our opinion of them: "+OpinionColourMapper.getOpinionColor(r.getOpinion())+r.getOpinion()));
 				lore.add(StringFormatter.formatHex("#a39ba8Their opinion of us: "+OpinionColourMapper.getOpinionColor(ofR.getOpinion())+ofR.getOpinion()));
+			}
+		}
+		List<Guild> guilds = f.getGuildHandler().getGuilds();
+		if(guilds.size() > 0){
+			lore.add("");
+			lore.add(StringFormatter.formatHex("#d6a376Guilds:"));
+			for(Guild guild : guilds) {
+				lore.add(StringFormatter.formatHex("#bccbd1- "+guild.getName()+" #a39ba8("+guild.getType().getName()+"#a39ba8)"));
 			}
 		}
 		List<Faction> subjects = RelationManager.getSubjects(f);
@@ -201,7 +210,7 @@ public class FactionCreator {
 		} else if(t.equals(MenuItemType.MEMBERS)) {
 				i = new ItemStack(Material.PLAYER_HEAD, 1);
 				ItemMeta m = i.getItemMeta();
-				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+f.getMembers().size()+"/"+Cache.maxMembers));
+				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+f.getMembers().size())); //TODO full subject population as well cause cool
 				List<String> lore = new ArrayList<String>();
 				for(String s : f.getMembers()) {
 					lore.add(StringFormatter.formatHex("#d4c9ae"+s));

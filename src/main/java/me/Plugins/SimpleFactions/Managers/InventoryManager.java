@@ -17,12 +17,13 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Army.Regiment;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.Holder.SFCombinedInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Inventory.FactionView;
+import me.Plugins.SimpleFactions.Managers.Inventory.GuildView;
 import me.Plugins.SimpleFactions.Managers.Inventory.InventoryUpdater;
 import me.Plugins.SimpleFactions.Managers.Inventory.MilitaryView;
 import me.Plugins.SimpleFactions.Managers.Inventory.RelationView;
@@ -31,6 +32,7 @@ import me.Plugins.SimpleFactions.Managers.Inventory.TaxView;
 import me.Plugins.SimpleFactions.Managers.Inventory.TierTitleView;
 import me.Plugins.SimpleFactions.Managers.Inventory.WarView;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.War.Participant;
 import me.Plugins.SimpleFactions.War.War;
@@ -94,6 +96,12 @@ public class InventoryManager implements Listener{
 	}
 	public void factionView(Player player, Faction f) {
 		factionView.factionView(player, f);
+	}
+
+	//Guilds
+	GuildView guildView = new GuildView(this);
+	public void guildView(Player player, Guild guild) {
+		guildView.guildView(player, guild);
 	}
 	
 	//Tiers
@@ -292,6 +300,8 @@ public class InventoryManager implements Listener{
 			}
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Faction List") || e.getView().getTitle().equalsIgnoreCase("§7Faction View")) {
 			factionView.click(e, inv, p);
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Guild View")) {
+			guildView.click(e, inv, p);
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Military View")) {
 			militaryView.click(e, inv, p);
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Diplomacy View") || e.getView().getTitle().equalsIgnoreCase("§7Change Attitude") || e.getView().getTitle().equalsIgnoreCase("§7Change Relation")) {

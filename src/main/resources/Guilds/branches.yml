@@ -1,0 +1,36 @@
+bureaucracy:
+  name: "§fBureaucracy"
+  icon: "writable_book.0"
+  group: 0
+  allowed-types:
+    - realm
+  modifiers:
+    - trade_power 3 1
+    - diplomatic_capacity 5
+    - production 0.05
+guild_halls:
+  name: "§fGuild Halls"
+  icon: "gold_ingot.0"
+  group: 0
+  allowed-types:
+    - guild
+  modifiers:
+    - trade_power 5 2
+workshops:
+  name: "§fWorkshops"
+  icon: "iron_axe.0"
+  group: 1
+  allowed-types:
+    - guild
+    - realm
+  modifiers:
+    - production 0.1
+storehouses:
+  name: "§fStorehouses"
+  icon: "barrel.0"
+  group: 2
+  allowed-types:
+    - guild
+    - realm
+  modifiers:
+    - trade_carry 10 0.5

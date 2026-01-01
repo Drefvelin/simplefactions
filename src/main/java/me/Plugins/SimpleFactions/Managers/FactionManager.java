@@ -13,9 +13,11 @@ import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Diplomacy.Attitude;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Map.MapSystem;
@@ -23,7 +25,6 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Objects.PrestigeRank;
 import me.Plugins.SimpleFactions.Tiers.Title;
-import me.Plugins.SimpleFactions.Utils.Database;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
@@ -170,6 +171,49 @@ public class FactionManager implements Listener{
 			f.countyCheck();
 		}
 		fixRelations();
+	}
+
+	public static boolean guildExists(String id) {
+		for(Faction f : factions) {
+			for(Guild guild : f.getGuildHandler().getGuilds()) {
+				if(guild.getId().equalsIgnoreCase(id)) return true;
+			}
+		}
+		return false;
+	}
+
+	public static boolean canJoinGuild(Player p) {
+		Guild guild = getGuildByMember(p.getName());
+		if(guild == null) return true;
+		if(guild.getLeader().equalsIgnoreCase(p.getName())) return false;
+		return guild.getType().isBase();
+	}
+
+	public static Guild getGuildByMember(String player) {
+		for(Faction f : factions) {
+			for(Guild guild : f.getGuildHandler().getGuilds()) {
+				if(guild.isMember(player)) return guild;
+			}
+		}
+		return null;
+	}
+
+	public static Guild getGuildByLeader(String leader) {
+		for(Faction f : factions) {
+			for(Guild guild : f.getGuildHandler().getGuilds()) {
+				if(guild.isLeader(leader)) return guild;
+			}
+		}
+		return null;
+	}
+
+	public static Guild getGuildByString(String id) {
+		for(Faction f : factions) {
+			for(Guild guild : f.getGuildHandler().getGuilds()) {
+				if(guild.getId().equalsIgnoreCase(id)) return guild;
+			}
+		}
+		return null;
 	}
 	
 	public void start(List<Faction> l) {

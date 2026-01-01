@@ -1,17 +1,20 @@
 package me.Plugins.SimpleFactions.Utils;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
-
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.File;
-import java.lang.reflect.Type;
-import java.util.*;
 
 public class FactionCleanup {
 
@@ -51,7 +54,8 @@ public class FactionCleanup {
                             }
                             continue;
                         }
-                        faction.removeMember(member);
+                        if(!faction.canBeCleanKicked(member)) continue;
+                        faction.forceRemoveMember(member);
                         System.out.println("Kicked " + member + " from faction " + faction.getName() + " (offline for " + daysOffline + " days)");
                     }
                 }

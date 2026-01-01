@@ -20,7 +20,6 @@ import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
 import me.Plugins.SimpleFactions.Cache;
-import me.Plugins.SimpleFactions.Objects.Faction;
 
 public class RestServer {
 	private static final Gson gson = new Gson();
@@ -54,7 +53,7 @@ public class RestServer {
         }
     }
 	
-	public static int claim(Player p, Faction f) {
+	public static int getProvince(Player p) {
 		if(!Cache.mapEnabled) return -2;
 	    int x = p.getLocation().getBlockX();
 	    int z = p.getLocation().getBlockZ();
@@ -79,7 +78,8 @@ public class RestServer {
 	        // Parse JSON and get province_id
 	        JsonObject json = gson.fromJson(response.toString(), JsonObject.class);
 
-	        return json.get("province_id").getAsInt();
+			int pid = json.get("province_id").getAsInt();
+	        return pid;
 
 	    } catch (Exception e) {
 	        e.printStackTrace();
