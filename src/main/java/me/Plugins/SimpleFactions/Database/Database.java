@@ -141,12 +141,11 @@ public class Database {
                 if (data.guilds != null) {
                     for (GuildData gd : data.guilds) {
 
-                        Map<Integer, Branch> branches = new HashMap<>();
+                        List<Branch> branches = new ArrayList<>();
                         for (GuildBranchData bd : gd.branches) {
                             Branch base = BranchLoader.getByString(bd.id);
                             if (base != null) {
-                                branches.put(
-                                    bd.group.intValue(),
+                                branches.add(
                                     new Branch(base, bd.level.intValue())
                                 );
                             }
@@ -266,7 +265,6 @@ public class Database {
                 for (Map.Entry<Integer, Branch> e : g.getBranches().entrySet()) {
                     Branch b = e.getValue();
                     GuildBranchData bd = new GuildBranchData();
-                    bd.group = e.getKey();
                     bd.id = b.getId();
                     bd.level = b.getLevel();
                     gd.branches.add(bd);

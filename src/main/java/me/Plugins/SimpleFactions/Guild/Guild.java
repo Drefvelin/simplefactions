@@ -67,7 +67,7 @@ public class Guild {
 		this.prestige = 0.0;
         int group = 0;
         while(BranchLoader.getByGroup(this, group) != null) {
-            branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 1));
+            branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 0));
             group++;
         }
         createBanner();
@@ -90,7 +90,7 @@ public class Guild {
 		this.prestige = 0.0;
         int group = 0;
         while(BranchLoader.getByGroup(this, group) != null) {
-            branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 1));
+            branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 0));
             group++;
         }
         f.getOrCreateMainGuild().kick(p.getName());
@@ -105,7 +105,7 @@ public class Guild {
         int capital,
         String type,
         List<String> members,
-        Map<Integer, Branch> branches,
+        List<Branch> branchList,
         List<String> patterns,
         List<Modifier> wealthModifiers,
         Faction host
@@ -118,12 +118,14 @@ public class Guild {
         this.rgb = rgb;
         this.capital = capital;
         this.members = members != null ? members : new ArrayList<>();
-        this.branches = branches != null ? branches : new HashMap<>();
+        for(Branch b : branchList) {
+            this.branches.put(b.getGroup(), b);
+        }
         int group = 0;
         while(group < 10) {
-            if(!branches.containsKey(group)) {
+            if(!this.branches.containsKey(group)) {
                 Branch b = BranchLoader.getByGroup(this, group);
-                if(b != null) branches.put(group, new Branch(b, 1));
+                if(b != null) this.branches.put(group, new Branch(b, 0));
             }
             group++;
         }

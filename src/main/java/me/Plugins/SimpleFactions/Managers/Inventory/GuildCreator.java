@@ -10,15 +10,16 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
+import me.Plugins.SimpleFactions.Guild.Branch.BranchModifier;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
 import me.Plugins.TLibs.Enums.APIType;
 import me.Plugins.TLibs.Objects.API.ItemAPI;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
-import me.Plugins.TLibs.Utils.TimeFormatter;
 import me.Plugins.TLibs.TLibs;
 
 public class GuildCreator {
@@ -93,7 +94,16 @@ public class GuildCreator {
 		ItemMeta meta = i.getItemMeta();
 		meta.setDisplayName(branch.getName());
 		List<String> lore = new ArrayList<String>();
-		lore.add(StringFormatter.formatHex("#857e59[WIP]"));
+		lore.add(StringFormatter.formatHex("#575150[#d6cf69LVL "+branch.getLevel()+"#575150]"));
+		lore.add("");
+		lore.addAll(branch.getDescription());
+		lore.add("");
+		lore.add(StringFormatter.formatHex("#a6c793Effects:"));
+		for(GuildModifier m : branch.getModifierKeys()) {
+			BranchModifier mod = branch.getModifier(m);
+			if(mod == null) continue;
+			lore.add(StringFormatter.formatHex("§f - "+m.getName()+"#d6cf69:"+(m.isPositive() ? " #4fd945" : " #cf493a")+(mod.getCurrent(branch.getLevel())+ " #575150("+(m.isPositive() ? "#4fd945" : "#cf493a")+mod.getPerLevel()+"#87807f/level#575150)")));
+		}
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;
