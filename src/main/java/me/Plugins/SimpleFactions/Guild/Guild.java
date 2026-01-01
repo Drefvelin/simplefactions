@@ -170,6 +170,12 @@ public class Guild {
     public Branch getBranch(int i) {
         return branches.getOrDefault(i, null);
     }
+    public Branch getBranch(String id) {
+        for(Branch b : branches.values()) {
+            if(b.getId().equalsIgnoreCase(id)) return b;
+        }
+        return null;
+    }
     public GuildType getType() { return type; }
     public int getCapital() {
         return isBase() ? host.getCapital() : capital;
@@ -252,7 +258,9 @@ public class Guild {
     public void updateWealth() {
         if(bank == null) return;
 		wealth = 0.0;
-		addWealthModifier(new Modifier("Bank", bank.getWealth()));
+		addWealthModifier(new Modifier("Bank", bank.getWealth(), false));
+        double spent = getTotalExpansionSpent();
+        if(spent > 0) addWealthModifier(new Modifier("Expansions", spent, false));
 		for(Modifier p : wealthModifiers) {
 			wealth = wealth + p.getAmount();
 		}
@@ -294,4 +302,40 @@ public class Guild {
 			wealthModifiers.add(m);
 		}
 	}
+
+    public int getSize() {
+        int size = 0;
+        for(Branch b : branches.values()) {
+            size += b.getLevel();
+        }
+        return size;
+    }
+
+    public double getExpansionCost() {
+        int size = getSize();
+        double baseCost = 100.0;
+        double k = 0.0124;
+
+        double cost = baseCost * (1.0 + k * size * size);
+        return Math.round(cost * 100.0) / 100.0;
+    }
+
+    public double getTotalExpansionSpent() {
+        int size = getSize();
+        if (size <= 0) return 0.0;
+
+        double baseCost = 100.0;
+        double k = 0.0124;
+
+        double linearPart = baseCost * size;
+
+        double quadraticSum =
+            (size - 1) * size * (2.0 * size - 1.0) / 6.0;
+
+        double quadraticPart = baseCost * k * quadraticSum;
+
+        double total = linearPart + quadraticPart;
+
+        return Math.round(total * 100.0) / 100.0;
+    }
 }

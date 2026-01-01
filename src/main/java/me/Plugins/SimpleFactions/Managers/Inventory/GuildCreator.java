@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.SimpleFactions.Cache;
@@ -17,6 +18,7 @@ import me.Plugins.SimpleFactions.Guild.Branch.BranchModifier;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
+import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.TLibs.Enums.APIType;
 import me.Plugins.TLibs.Objects.API.ItemAPI;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -61,10 +63,10 @@ public class GuildCreator {
 		} else if(t.equals(MenuItemType.WEALTH)) {
 			i = new ItemStack(Material.GOLD_NUGGET, 1);
 			ItemMeta m = i.getItemMeta();
-			m.setDisplayName(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+guild.getWealth()));
+			m.setDisplayName(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+guild.getWealth()+"d"));
 			List<String> lore = new ArrayList<String>();
 			for(Modifier mod : guild.getWealthModifiers()) {
-				lore.add(StringFormatter.formatHex("#93c9a7+"+mod.getAmount()+" from "+mod.getType()));
+				lore.add(StringFormatter.formatHex("#93c9a7+"+mod.getAmount()+"d from "+mod.getType()));
 			}
 			m.setLore(lore);
 			i.setItemMeta(m);
@@ -89,7 +91,7 @@ public class GuildCreator {
 		return i;
 	}
 
-	public ItemStack createBranchItem(Branch branch) {
+	public ItemStack createBranchItem(Player p, Guild guild, Branch branch) {
 		ItemStack i = branch.getIconItem();
 		ItemMeta meta = i.getItemMeta();
 		meta.setDisplayName(branch.getName());
@@ -104,6 +106,12 @@ public class GuildCreator {
 			if(mod == null) continue;
 			lore.add(StringFormatter.formatHex("§f - "+m.getName()+"#d6cf69:"+(m.isPositive() ? " #4fd945" : " #cf493a")+(mod.getCurrent(branch.getLevel())+ " #575150("+(m.isPositive() ? "#4fd945" : "#cf493a")+mod.getPerLevel()+"#87807f/level#575150)")));
 		}
+		if(guild.isLeader(p)) {
+			lore.add("");
+			lore.add(StringFormatter.formatHex("#73adbfUpgrade Cost#d6cf69: #ccbb76"+guild.getExpansionCost()+"d"));
+			lore.add(StringFormatter.formatHex("#50e846§lClick to Upgrade"));
+		}
+		meta.getPersistentDataContainer().set(Keys.BRANCH_ID, PersistentDataType.STRING, branch.getId());
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;

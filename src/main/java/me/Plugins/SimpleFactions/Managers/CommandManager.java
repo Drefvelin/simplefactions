@@ -699,7 +699,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				String type = args[2];
 				Double amount = Double.parseDouble(args[3]);
-				Modifier m = new Modifier(type, amount);
+				Modifier m = new Modifier(type, amount, true);
 				f.addPersistentPrestigeModifier(m);
 				f.updatePrestige();
 				p.sendMessage("§aFaction prestige changed!");

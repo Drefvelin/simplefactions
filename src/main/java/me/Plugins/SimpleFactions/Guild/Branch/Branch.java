@@ -81,6 +81,9 @@ public class Branch {
         return allowedTypes.contains(type);
     }
     public int getLevel() { return level; }
+    public void levelUp() {
+        level++;
+    }
     public ItemStack getIconItem() {
         String[] args = icon.split("\\.");
         ItemStack item = new ItemStack(Material.DIRT, 1);

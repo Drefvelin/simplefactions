@@ -167,10 +167,10 @@ public class FactionCreator {
 		} else if(t.equals(MenuItemType.WEALTH)) {
 			i = new ItemStack(Material.GOLD_NUGGET, 1);
 			ItemMeta m = i.getItemMeta();
-			m.setDisplayName(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+f.getWealth()));
+			m.setDisplayName(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+f.getWealth()+"d"));
 			List<String> lore = new ArrayList<String>();
 			for(Modifier mod : f.getWealthModifiers()) {
-				lore.add(StringFormatter.formatHex("#93c9a7+"+mod.getAmount()+" from "+mod.getType()));
+				lore.add(StringFormatter.formatHex("#93c9a7+"+mod.getAmount()+"d from "+mod.getType()));
 			}
 			m.setLore(lore);
 			i.setItemMeta(m);
