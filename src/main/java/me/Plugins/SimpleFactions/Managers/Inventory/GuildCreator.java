@@ -13,6 +13,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.Branch.BranchModifier;
 import me.Plugins.SimpleFactions.Guild.Guild;
@@ -109,6 +110,21 @@ public class GuildCreator {
 		if(guild.isLeader(p)) {
 			lore.add("");
 			lore.add(StringFormatter.formatHex("#73adbfUpgrade Cost#d6cf69: #ccbb76"+guild.getExpansionCost()+"d"));
+			lore.add("");
+
+			double deltaIncome =
+					SimpleFactions.getInstance()
+					.getProvinceManager()
+					.previewUpgradeIncome(guild, branch);
+			lore.add("§aCurrent §6"+SimpleFactions.getInstance()
+					.getProvinceManager()
+					.getIncome(guild));
+			lore.add(StringFormatter.formatHex(
+				"#73adbfEstimated Income#d6cf69: "
+				+ (deltaIncome >= 0 ? "#4fd945+" : "#cf493a")
+				+ String.format("%.2f", deltaIncome)
+				+ "d/day"
+			));
 			lore.add(StringFormatter.formatHex("#50e846§lClick to Upgrade"));
 		}
 		meta.getPersistentDataContainer().set(Keys.BRANCH_ID, PersistentDataType.STRING, branch.getId());

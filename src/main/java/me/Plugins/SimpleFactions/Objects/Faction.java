@@ -181,7 +181,6 @@ public class Faction {
 
 	public void setCapital(int i) {
 		if(!provinces.contains(i)) return;
-		getOrCreateMainGuild().setCapital(i);
 		capital = i;
 	}
 

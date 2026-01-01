@@ -11,6 +11,12 @@ public class ProvinceDataEntry {
         this.production = 0;
     }
 
+    public ProvinceDataEntry(String id, double trade, double production) {
+        this.id = id;
+        this.trade = trade;
+        this.production = production;
+    }
+
     public boolean isConsidered() {
         return trade > 0 || production > 0;
     }

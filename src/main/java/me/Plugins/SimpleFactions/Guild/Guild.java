@@ -24,6 +24,7 @@ import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
+import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Guild {
@@ -180,6 +181,9 @@ public class Guild {
     public int getCapital() {
         return isBase() ? host.getCapital() : capital;
     }
+    public boolean hasCapital() {
+		return capital != -1;
+	}
     public void setCapital(int i) {
         capital = i;
     }
@@ -337,5 +341,15 @@ public class Guild {
         double total = linearPart + quadraticPart;
 
         return Math.round(total * 100.0) / 100.0;
+    }
+
+    public double getModifier(GuildModifier m) {
+        double amount = 0.0;
+        int lvl = getSize();
+        for(Branch b : branches.values()) {
+            amount += b.getAmount(lvl, m);
+        }
+        if(m.equals(GuildModifier.TRADE_CARRY)) amount = amount/100;
+        return amount;
     }
 }

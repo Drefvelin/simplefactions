@@ -103,6 +103,12 @@ public class Branch {
     public BranchModifier getModifier(GuildModifier id) {
         return modifiers.getOrDefault(id, null);
     }
+    public double getAmount(int lvl, GuildModifier m) {
+        double amount = 0.0;
+        BranchModifier mod = getModifier(m);
+        if(mod != null) amount = mod.getCurrent(lvl);
+        return amount;
+    }
     public Map<GuildModifier, BranchModifier> getModifiers() { return modifiers; }
     public List<GuildModifier> getModifierKeys() {
         List<GuildModifier> ids = new ArrayList<>(modifiers.keySet());

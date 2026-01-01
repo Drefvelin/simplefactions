@@ -24,4 +24,7 @@ public class Cache {
 	public static HashMap<String, String> icons = new HashMap<>();
 
 	public static Map<Terrain, Double> tradeCarry = new HashMap<>();
+	public static double getTradeCarry(Terrain t) {
+		return tradeCarry.getOrDefault(t, 0.5);
+	}
 }

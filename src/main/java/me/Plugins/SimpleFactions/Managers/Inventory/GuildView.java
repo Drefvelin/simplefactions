@@ -82,6 +82,7 @@ public class GuildView {
 				p.sendMessage("§aUpgraded "+b.getName()+ "§a to level §e"+b.getLevel());
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				guild.getBank().withdraw(cost);
+				SimpleFactions.getInstance().getProvinceManager().calculateTrade(guild, true);
 				guildView(p, guild, inventory);
 			}
 		}
