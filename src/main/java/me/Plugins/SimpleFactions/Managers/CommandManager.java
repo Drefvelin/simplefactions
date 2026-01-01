@@ -105,7 +105,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				inv.guildView(p, guild);
 				return true;
 			}
-			if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("invite") && args.length == 1) {
+			if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("invite") && args.length == 2) {
 				Guild guild = FactionManager.getGuildByLeader(p.getName());
 				if(guild == null) {
 					p.sendMessage("§cYou are not the leader of a guild");
@@ -153,6 +153,90 @@ public class CommandManager implements Listener, CommandExecutor{
 					if(g.getFaction().getMembers().contains(pl.getName())) {
 						pl.sendMessage("§a"+p.getName()+ " joined the faction!");
 					}
+				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("setbank") && args.length == 1) {
+				if(FactionManager.getGuildByLeader(p.getName()) != null) {
+					Guild g = FactionManager.getGuildByLeader(p.getName());
+					if(g.getBank() != null) {
+						Bank bank = g.getBank();
+						bank.setChunk(p.getLocation().getChunk());
+						p.sendMessage("§aBank Chunk Moved");
+					} else {
+						g.setBank(new Bank(g, 0, p.getLocation().getChunk()));
+						p.sendMessage("§aBank Chunk Set");
+					}
+					p.playSound(p, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 1f);
+				} else {
+					p.sendMessage("§cYou need to be a guild or faction leader to place the bank location");
+				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("deposit") && args.length == 2) {
+				if(FactionManager.getGuildByMember(p.getName()) != null) {
+					Guild g = FactionManager.getGuildByMember(p.getName());
+					Bank b = g.getBank();
+					if(b == null) {
+						p.sendMessage("§cYour guild has no bank chunk");
+						return false;
+					}
+					if(!p.getLocation().getChunk().equals(g.getBank().getChunk())) {
+						p.sendMessage("§cYou need to be in the Guild Bank Chunk to deposit money");
+						return false;
+					}
+					double amount = Double.parseDouble(args[1]);
+					Account pouch = DenarEconomy.getPlayerManager().get(p).getPouch();
+					if(amount <= 0) {
+						p.sendMessage("§cAmount must be greater than 0");
+						return false;
+					}
+					if(pouch.getBal() < amount) {
+						p.sendMessage("§cNot enough funds");
+						return false;
+					}
+					pouch.change(amount*-1);
+					g.getBank().deposit(amount);
+					p.sendMessage("§e============§6[Bank Report]§e==============");
+					p.sendMessage(StringFormatter.formatHex("#6ab05aDeposited: #b39122"+amount+"#dbaf1dd"));
+					p.sendMessage(StringFormatter.formatHex("#3ce8c9New Guild Balance: #b39122"+b.getWealth()+"#dbaf1dd"));
+					p.sendMessage(StringFormatter.formatHex("#3ce8c9New Pouch Balance: #b39122"+pouch.getBal()+"#dbaf1dd"));
+					p.sendMessage("§e=====================================");
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_CHIME, 1f, 1f);
+				} else {
+					p.sendMessage("§cYou need to be a in a guild to deposit money into the guild bank");
+				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("withdraw") && args.length == 2) {
+				if(FactionManager.getGuildByMember(p.getName()) != null) {
+					Guild g = FactionManager.getGuildByMember(p.getName());
+					Bank b = g.getBank();
+					if(b == null) {
+						p.sendMessage("§cYour guild has no bank chunk");
+						return false;
+					}
+					if(!p.getLocation().getChunk().equals(b.getChunk())) {
+						p.sendMessage("§cYou need to be in the Guild Bank Chunk to withdraw money");
+						return false;
+					}
+					double amount = Double.parseDouble(args[1]);
+					Account pouch = DenarEconomy.getPlayerManager().get(p).getPouch();
+					if(amount <= 0) {
+						p.sendMessage("§cAmount must be greater than 0");
+						return false;
+					}
+					if(b.getWealth() < amount) {
+						p.sendMessage("§cNot enough funds in the guild bank");
+						return false;
+					}
+					pouch.change(amount);
+					g.getBank().withdraw(amount);
+					p.sendMessage("§e============§6[Bank Report]§e==============");
+					p.sendMessage(StringFormatter.formatHex("#6ab05aWithdrew: #b39122"+amount+"#dbaf1dd"));
+					p.sendMessage(StringFormatter.formatHex("#3ce8c9New Guild Balance: #b39122"+b.getWealth()+"#dbaf1dd"));
+					p.sendMessage(StringFormatter.formatHex("#3ce8c9New Pouch Balance: #b39122"+pouch.getBal()+"#dbaf1dd"));
+					p.sendMessage("§e=====================================");
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_CHIME, 1f, 1f);
+				} else {
+					p.sendMessage("§cYou need to be a guild leader to withdraw from the guild bank");
 				}
 				return true;
 			}
@@ -522,7 +606,7 @@ public class CommandManager implements Listener, CommandExecutor{
 						bank.setChunk(p.getLocation().getChunk());
 						p.sendMessage("§aBank Chunk Moved");
 					} else {
-						f.setBank(new Bank(f, 0, p.getLocation().getChunk()));
+						f.setBank(new Bank(f.getOrCreateMainGuild(), 0, p.getLocation().getChunk()));
 						p.sendMessage("§aBank Chunk Set");
 					}
 					p.playSound(p, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 1f);
@@ -616,7 +700,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				f.updatePrestige();
 				p.sendMessage("§aFaction prestige changed!");
 				return true;
-			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("addwealthmodifier") && args.length == 4) {
+			} /*else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("addwealthmodifier") && args.length == 4) {
 				if(!Permissions.isAdmin(sender)) {
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
 					return true;
@@ -634,7 +718,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				p.sendMessage("§aFaction wealth changed!");
 				return true;
 			} 
-			/*else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("loadall") && args.length == 1) {
+			else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("loadall") && args.length == 1) {
 				if(!Permissions.isAdmin(sender)) {
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
 					return true;

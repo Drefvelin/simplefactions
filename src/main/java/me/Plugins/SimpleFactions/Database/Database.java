@@ -110,19 +110,10 @@ public class Database {
                         data.religion,
                         extraCap,
                         loadModifiers(data.prestigeModifiers),
-                        loadModifiers(data.wealthModifiers),
                         tax,
                         vassalTax,
                         capital
                 );
-
-                // --- Bank ---
-                if ("true".equalsIgnoreCase(data.bank)) {
-                    Chunk c = Bukkit.getWorld(data.world)
-                            .getChunkAt(data.xPos.intValue(), data.zPos.intValue());
-                    f.setBank(new Bank(f, data.balance != null ? data.balance : 0.0, c));
-                    f.updateWealth();
-                }
 
                 // --- Relations ---
                 for (String r : data.relations) {
@@ -171,8 +162,17 @@ public class Database {
                             gd.members,
                             branches,
                             gd.banner,
+                            loadModifiers(gd.wealthModifiers),
                             f
                         );
+
+                        // --- Bank ---
+                        if ("true".equalsIgnoreCase(gd.bank)) {
+                            Chunk c = Bukkit.getWorld(gd.world)
+                                    .getChunkAt(gd.xPos.intValue(), gd.zPos.intValue());
+                            g.setBank(new Bank(g, gd.balance != null ? gd.balance : 0.0, c));
+                            g.updateWealth();
+                        }
 
                         f.getGuildHandler().addGuild(g);
                     }
@@ -215,18 +215,6 @@ public class Database {
             for (int p : f.getProvinces()) data.provinces.add(p);
             for (Title t : f.getTitles()) data.titles.add(t.getId());
 
-            // --- Bank ---
-            if (f.getBank() != null) {
-                Bank b = f.getBank();
-                data.bank = "true";
-                data.world = b.getChunk().getWorld().getName();
-                data.xPos = (double) b.getChunk().getX();
-                data.zPos = (double) b.getChunk().getZ();
-                data.balance = b.getWealth();
-            } else {
-                data.bank = "false";
-            }
-
             // --- Military ---
             for (Regiment r : f.getMilitary().getRegiments()) {
                 if (!r.isLevy()) {
@@ -247,9 +235,6 @@ public class Database {
             f.getPrestigeModifiers().forEach(m ->
                     data.prestigeModifiers.add(m.getType() + "(" + m.getAmount() + ")"));
 
-            f.getWealthModifiers().forEach(m ->
-                    data.wealthModifiers.add(m.getType() + "(" + m.getAmount() + ")"));
-
             // --- Guild ---
             for (Guild g : f.getGuildHandler().getGuilds()) {
 
@@ -262,6 +247,21 @@ public class Database {
                 gd.capital = g.getCapital();
                 gd.members = new ArrayList<>(g.getMembers());
                 gd.banner = new ArrayList<>(g.getBannerPatterns());
+
+                // --- Bank ---
+                if (g.getBank() != null) {
+                    Bank b = g.getBank();
+                    gd.bank = "true";
+                    gd.world = b.getChunk().getWorld().getName();
+                    gd.xPos = (double) b.getChunk().getX();
+                    gd.zPos = (double) b.getChunk().getZ();
+                    gd.balance = b.getWealth();
+                } else {
+                    gd.bank = "false";
+                }
+                // --- Modifiers ---
+                g.getWealthModifiers().forEach(m ->
+                    gd.wealthModifiers.add(m.getType() + "(" + m.getAmount() + ")"));
 
                 for (Map.Entry<Integer, Branch> e : g.getBranches().entrySet()) {
                     Branch b = e.getValue();

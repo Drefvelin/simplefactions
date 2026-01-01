@@ -18,17 +18,6 @@ public class FactionData {
     public String culture;
     public String religion;
 
-    public String bank;
-    public String world;
-
-    @SerializedName("xPos")
-    public Double xPos;
-
-    @SerializedName("zPos")
-    public Double zPos;
-
-    public Double balance;
-
     @SerializedName("tax rate")
     public Double taxRate;
 
@@ -55,9 +44,6 @@ public class FactionData {
 
     @SerializedName("prestige modifiers")
     public List<String> prestigeModifiers = new ArrayList<>();
-
-    @SerializedName("wealth modifiers")
-    public List<String> wealthModifiers = new ArrayList<>();
 
     public String overlord;
 

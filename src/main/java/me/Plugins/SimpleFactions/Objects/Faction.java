@@ -54,12 +54,10 @@ public class Faction {
 	private List<String> invited = new ArrayList<>();
 	private Double wealth;
 	private Double prestige;
-	private Bank bank;
 	private String rulerTitle;
 	private String leader;
 	private Integer extraNodeCapacity;
 	private List<Modifier> prestigeModifiers = new ArrayList<>();
-	private List<Modifier> wealthModifiers = new ArrayList<>();
 	private List<Integer> provinces = new ArrayList<>();
 
 	private int capital = -1;
@@ -108,7 +106,7 @@ public class Faction {
 		updatePrestige();
 		updateTier();
 	}
-	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> patterns, String government, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, List<Modifier> wealthModifiers, double taxRate, double vassalTax, int capital) {
+	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> patterns, String government, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, double taxRate, double vassalTax, int capital) {
 		this.id = id;
 		this.name = name;
 		this.leader = leader;
@@ -122,7 +120,6 @@ public class Faction {
 		this.prestige = 0.0;
 		this.extraNodeCapacity = exCap;
 		this.prestigeModifiers = prestigeModifiers;
-		this.wealthModifiers = wealthModifiers;
 		this.rgb = rgb;
 		this.capital = capital;
 		for(int i : provinces) {
@@ -243,7 +240,7 @@ public class Faction {
 		}
 
 		amount -= paidTax;
-		bank.deposit(amount);
+		getBank().deposit(amount);
 	}
 
 	public double setTaxRate(double d) {
@@ -324,10 +321,13 @@ public class Faction {
 		this.invited = invited;
 	}
 	public List<Modifier> getWealthModifiers() {
-		return wealthModifiers;
-	}
-	public void setWealthModifiers(List<Modifier> wealthModifiers) {
-		this.wealthModifiers = wealthModifiers;
+		List<Modifier> list = new ArrayList<>(getOrCreateMainGuild().getWealthModifiers());
+		for(Guild guild : guildHandler.getGuilds()) {
+			if(guild.isBase()) continue;
+			if(guild.getWealth() == 0) continue;
+			list.add(new Modifier(guild.getName()+" #a39ba8("+guild.getType().getName()+"#a39ba8)", guild.getWealth()));
+		}
+		return list;
 	}
 	public void setRGB(String rgb) {
 		this.rgb = rgb;
@@ -391,23 +391,6 @@ public class Faction {
 			prestigeModifiers.add(p);
 		}
 	}
-	public void addPersistentWealthModifier(Modifier m) {
-		for(int i = 0; i<wealthModifiers.size(); i++) {
-			if(wealthModifiers.get(i).getType().equalsIgnoreCase(m.getType())) {
-				m.setAmount(wealthModifiers.get(i).getAmount()+m.getAmount());
-				if(Double.compare(m.getAmount(), 0) == 0) {
-					wealthModifiers.remove(i);
-					i--;
-				} else {
-					wealthModifiers.set(i, m);
-				}
-				return;
-			}
-		}
-		if(m.getAmount() != 0) {
-			wealthModifiers.add(m);
-		}
-	}
 	public void addPrestigeModifier(Modifier p) {
 		for(int i = 0; i<prestigeModifiers.size(); i++) {
 			if(prestigeModifiers.get(i).getType().equalsIgnoreCase(p.getType())) {
@@ -416,15 +399,6 @@ public class Faction {
 			}
 		}
 		prestigeModifiers.add(p);
-	}
-	public void addWealthModifier(Modifier m) {
-		for(int i = 0; i<wealthModifiers.size(); i++) {
-			if(wealthModifiers.get(i).getType().equalsIgnoreCase(m.getType())) {
-				wealthModifiers.set(i, m);
-				return;
-			}
-		}
-		wealthModifiers.add(m);
 	}
 	public void setBanner(ItemStack banner) {
 		BannerMeta b = (BannerMeta) banner.getItemMeta();
@@ -486,10 +460,10 @@ public class Faction {
 		this.prestige = prestige;
 	}
 	public Bank getBank() {
-		return bank;
+		return getOrCreateMainGuild().getBank();
 	}
 	public void setBank(Bank bank) {
-		this.bank = bank;
+		getOrCreateMainGuild().setBank(bank);
 	}
 	public String getLeader() {
 		return leader;
@@ -583,11 +557,9 @@ public class Faction {
 		}
 	}
 	public void updateWealth() {
-		if(bank == null) return;
 		wealth = 0.0;
-		addWealthModifier(new Modifier("Bank", bank.getWealth()));
-		for(Modifier p : wealthModifiers) {
-			wealth = wealth + p.getAmount();
+		for(Guild guild : guildHandler.getGuilds()) {
+			wealth += guild.getWealth();
 		}
 		wealth = format.formatDouble(wealth);
 		FactionManager.updateAllPrestige();
@@ -608,7 +580,6 @@ public class Faction {
 		
 		//update
 		relations.put(f.getId(), r);
-		if(f.getId().equalsIgnoreCase("cape_vander")) Bukkit.getPlayerExact("drefvelin").sendMessage(this.getName()+ " to "+f.getName()+" necpome "+r.getType().getName());
 		
 		//Apply new modifiers
 		if(r.getType().hasRecieveModifiers()) addModifiers(f, r.getType().getRecieveModifiers());
@@ -820,7 +791,7 @@ public class Faction {
 
     public void newDay() {
         double armyCost = military.getTotalUpkeep();
-		if(armyCost > 0 && bank == null){
+		if(armyCost > 0 && getBank() == null){
 			for(Regiment r : military.getRegiments()){
 				if(r.isLevy()) continue;
 				while(r.getCurrentSlots() > r.getFreeSlots()){
@@ -828,7 +799,7 @@ public class Faction {
 				}
 			}
 		}
-		while(armyCost > 0 && bank.getWealth() < armyCost) {
+		while(armyCost > 0 && getBank().getWealth() < armyCost) {
 			for(Regiment r : military.getRegiments()) {
 				if(r.isLevy()) continue;
 				if(r.getCurrentSlots() > r.getFreeSlots()) {
@@ -839,7 +810,7 @@ public class Faction {
 			armyCost = military.getTotalUpkeep();
 		}
 		if(armyCost > 0) {
-			bank.withdraw(armyCost);
+			getBank().withdraw(armyCost);
 		}
 		provinceCap();
     }

@@ -17,7 +17,9 @@ import org.bukkit.inventory.meta.BannerMeta;
 
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
+import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
@@ -36,11 +38,17 @@ public class Guild {
     private List<String> members = new ArrayList<>();
     private List<String> invites = new ArrayList<>();
     private Map<Integer, Branch> branches = new HashMap<>();
+    private Bank bank;
+
+    private Double wealth;
+	private Double prestige;
 
     private ItemStack banner;
 	private List<String> bannerPatterns = new ArrayList<>();
 
     private int capital = -1;
+
+	private List<Modifier> wealthModifiers = new ArrayList<>();
 
     public Guild(Faction f) {
         host = f;
@@ -54,6 +62,8 @@ public class Guild {
         leader = f.getLeader();
         members.add(leader);
         type = GuildLoader.getByString("realm");
+        this.wealth = 0.0;
+		this.prestige = 0.0;
         createBanner();
     }
 
@@ -70,6 +80,8 @@ public class Guild {
         this.members.add(leader);
         this.type = GuildLoader.getByString("guild");
         this.capital = province;
+        this.wealth = 0.0;
+		this.prestige = 0.0;
         f.getOrCreateMainGuild().kick(p.getName());
         createBanner();
     }
@@ -84,6 +96,7 @@ public class Guild {
         List<String> members,
         Map<Integer, Branch> branches,
         List<String> patterns,
+        List<Modifier> wealthModifiers,
         Faction host
     ) {
         this.host = host;
@@ -96,6 +109,9 @@ public class Guild {
         this.branches = branches != null ? branches : new HashMap<>();
         this.type = GuildLoader.getByString(type);
         this.bannerPatterns = patterns;
+        this.wealth = 0.0;
+		this.prestige = 0.0;
+        this.wealthModifiers = wealthModifiers;
         createBanner();
     }
 
@@ -109,7 +125,7 @@ public class Guild {
         if(!invites.contains(p)) invites.add(p);
     }
     public String getId() { return id; }
-    public String getName() { return name; }
+    public String getName() { return isBase() ? host.getName() : name; }
     public List<String> getMembers() { return members; }
     public boolean isMember(String p) { return members.contains(p); }
     public boolean isMember(Player p) { return isMember(p.getName()); }
@@ -132,13 +148,13 @@ public class Guild {
     public Map<Integer, Branch> getBranches() { return branches; }
     public GuildType getType() { return type; }
     public int getCapital() {
-        return capital;
+        return isBase() ? host.getCapital() : capital;
     }
     public void setCapital(int i) {
         capital = i;
     }
     public String getRGB() {
-        return rgb;
+        return isBase() ? host.getRGB() : rgb;
     }
     public void setRGB(String rgb) {
         this.rgb = rgb;
@@ -194,4 +210,64 @@ public class Guild {
         if(isBase()) return host.getBanner();
         return banner;
     }
+
+    public Bank getBank() {
+		return bank;
+	}
+	public void setBank(Bank bank) {
+		this.bank = bank;
+	}
+
+    public Double getWealth() {
+		return wealth;
+	}
+	public void setWealth(Double wealth) {
+		this.wealth = wealth;
+	}
+
+    public void updateWealth() {
+        if(bank == null) return;
+		wealth = 0.0;
+		addWealthModifier(new Modifier("Bank", bank.getWealth()));
+		for(Modifier p : wealthModifiers) {
+			wealth = wealth + p.getAmount();
+		}
+		wealth = format.formatDouble(wealth);
+        host.updateWealth();
+    }
+
+    public List<Modifier> getWealthModifiers() {
+		return wealthModifiers;
+	}
+	public void setWealthModifiers(List<Modifier> wealthModifiers) {
+		this.wealthModifiers = wealthModifiers;
+	}
+
+    public void addWealthModifier(Modifier m) {
+		for(int i = 0; i<wealthModifiers.size(); i++) {
+			if(wealthModifiers.get(i).getType().equalsIgnoreCase(m.getType())) {
+				wealthModifiers.set(i, m);
+				return;
+			}
+		}
+		wealthModifiers.add(m);
+	}
+
+    public void addPersistentWealthModifier(Modifier m) {
+		for(int i = 0; i<wealthModifiers.size(); i++) {
+			if(wealthModifiers.get(i).getType().equalsIgnoreCase(m.getType())) {
+				m.setAmount(wealthModifiers.get(i).getAmount()+m.getAmount());
+				if(Double.compare(m.getAmount(), 0) == 0) {
+					wealthModifiers.remove(i);
+					i--;
+				} else {
+					wealthModifiers.set(i, m);
+				}
+				return;
+			}
+		}
+		if(m.getAmount() != 0) {
+			wealthModifiers.add(m);
+		}
+	}
 }
