@@ -7,11 +7,18 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
+import me.Plugins.SimpleFactions.Managers.ProvinceManager;
+import me.Plugins.SimpleFactions.Map.Provinces.Province;
+import me.Plugins.SimpleFactions.Map.Provinces.ProvinceDataEntry;
+import me.Plugins.SimpleFactions.SimpleFactions;
 
 public class Compiler {
 	public void exportQueue(HashMap<String, List<String>> queues) {
@@ -52,6 +59,47 @@ public class Compiler {
 			System.out.println("Successfully exported nations to: " + outputFile.getPath());
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+
+	private static double r2(double v) {
+		return Math.round(v * 100.0) / 100.0;
+	}
+
+	public void exportProvincesToJson(File out) throws Exception {
+		JsonArray arr = new JsonArray();
+
+		ProvinceManager pm = SimpleFactions.getInstance().getProvinceManager();
+
+		for (Province p : pm.getProvinces()) {
+			JsonObject o = new JsonObject();
+
+			o.addProperty("id", p.getId());
+			o.addProperty("prosperity", p.getProsperity());
+
+			// trade data
+			JsonObject trade = new JsonObject();
+			double totalTrade = 0;
+
+			for (Map.Entry<String, ProvinceDataEntry> e : p.getAllData().entrySet()) {
+				ProvinceDataEntry d = e.getValue();
+				if (d.getTrade() < 0.1) continue;
+
+				JsonObject g = new JsonObject();
+				g.addProperty("trade", r2(d.getTrade()));
+				g.addProperty("production", r2(d.getProduction()));
+
+				trade.add(e.getKey(), g);
+				totalTrade += d.getTrade();
+			}
+
+			o.add("trade", trade);
+
+			arr.add(o);
+		}
+
+		try (FileWriter w = new FileWriter(out)) {
+			new GsonBuilder().setPrettyPrinting().create().toJson(arr, w);
 		}
 	}
 }

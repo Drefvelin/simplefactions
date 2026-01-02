@@ -15,13 +15,16 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
+import me.Plugins.SimpleFactions.Guild.income.TradeBreakdown;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
@@ -51,6 +54,8 @@ public class Guild {
     private int capital = -1;
 
 	private List<Modifier> wealthModifiers = new ArrayList<>();
+
+    private TradeBreakdown breakdown = new TradeBreakdown();
 
     public Guild(Faction f) {
         host = f;
@@ -186,6 +191,7 @@ public class Guild {
 	}
     public void setCapital(int i) {
         capital = i;
+        SimpleFactions.getInstance().getProvinceManager().recalculate();
     }
     public String getRGB() {
         return isBase() ? host.getRGB() : rgb;
@@ -317,10 +323,8 @@ public class Guild {
 
     public double getExpansionCost() {
         int size = getSize();
-        double baseCost = 100.0;
-        double k = 0.0124;
-
-        double cost = baseCost * (1.0 + k * size * size);
+        double baseCost = Cache.branchUpgradeCost;
+        double cost = baseCost*Math.pow(Cache.branchUpgradeExponent, size);
         return Math.round(cost * 100.0) / 100.0;
     }
 
@@ -328,28 +332,21 @@ public class Guild {
         int size = getSize();
         if (size <= 0) return 0.0;
 
-        double baseCost = 100.0;
-        double k = 0.0124;
+        double baseCost = Cache.branchUpgradeCost;
+        double r = Cache.branchUpgradeExponent;
 
-        double linearPart = baseCost * size;
-
-        double quadraticSum =
-            (size - 1) * size * (2.0 * size - 1.0) / 6.0;
-
-        double quadraticPart = baseCost * k * quadraticSum;
-
-        double total = linearPart + quadraticPart;
-
+        double total = baseCost * (Math.pow(r, size) - 1) / (r - 1);
         return Math.round(total * 100.0) / 100.0;
     }
 
     public double getModifier(GuildModifier m) {
         double amount = 0.0;
-        int lvl = getSize();
         for(Branch b : branches.values()) {
-            amount += b.getAmount(lvl, m);
+            amount += b.getAmount(m);
         }
         if(m.equals(GuildModifier.TRADE_CARRY)) amount = amount/100;
         return amount;
     }
+
+    public TradeBreakdown getTradeBreakdown() { return breakdown; }
 }

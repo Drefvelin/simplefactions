@@ -13,5 +13,6 @@ public enum MenuItemType {
 	TIER,
 	TITLES,
 	MODIFIERS,
-	TAX
+	TAX,
+	TRADE_BREAKDOWN
 }

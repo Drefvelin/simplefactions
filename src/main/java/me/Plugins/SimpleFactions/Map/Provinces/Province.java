@@ -8,7 +8,7 @@ import java.util.Set;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Guild;
-import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.SimpleFactions.enums.Terrain;
 
@@ -46,23 +46,25 @@ public class Province {
     public void setData(String id, ProvinceDataEntry entry) {
         data.put(id, entry);
     }
-    public void calculateTrade(Guild guild, ProvinceDataEntry prev, boolean calculateProsperity) {
+    public void clearGuildData(String guildId) {
+        data.remove(guildId);
+    }
+    public void calculateTrade(
+            ProvinceManager manager,
+            Guild guild,
+            ProvinceDataEntry prev
+    ) {
         double amount;
 
         if (prev == null) {
-            // Capital province: no decay
+            // Capital province
             amount = guild.getModifier(GuildModifier.TRADE_POWER);
         } else {
-            double factor = guild.getModifier(GuildModifier.TRADE_CARRY)
-                        * getTradeCarry();
 
-            factor = Math.min(factor, 0.95);
-            amount = prev.getTrade() * factor;
+            amount = prev.getTrade() * getTradeCarry();
 
             // Hard cutoff
-            if (amount < 0.1) {
-                return;
-            }
+            if (amount < 1) return;
         }
 
         ProvinceDataEntry entry = data.get(guild.getId());
@@ -75,23 +77,21 @@ public class Province {
         double production = amount * guild.getModifier(GuildModifier.PRODUCTION);
 
         if (entry == null) {
-            // Create once
             entry = new ProvinceDataEntry(guild.getId());
             data.put(guild.getId(), entry);
         }
 
-        // Update in-place
         entry.setTrade(amount);
         entry.setProduction(production);
 
         for (Integer n : neighbours) {
-            Province neighbour =
-                    SimpleFactions.getInstance().getProvinceManager().get(n);
+            Province neighbour = manager.get(n);
             if (neighbour != null) {
-                neighbour.calculateTrade(guild, entry, calculateProsperity);
+                neighbour.calculateTrade(manager, guild, entry);
             }
         }
     }
+
     public void calculateProsperity() {
         double total = 0;
         for(ProvinceDataEntry entry : data.values()) {
@@ -126,5 +126,23 @@ public class Province {
 
     public double getProsperity() {
         return prosperity;
+    }
+
+    public Province cloneShell() {
+        Province p = new Province(id, terrain.name(), fertility);
+        p.neighbours.addAll(this.neighbours);
+        return p;
+    }
+
+    public void clearData() {
+        data.clear();
+    }
+
+    public Map<String, ProvinceDataEntry> getAllData() {
+        return data;
+    }
+
+    public void setProsperity(double p) {
+        this.prosperity = p;
     }
 }

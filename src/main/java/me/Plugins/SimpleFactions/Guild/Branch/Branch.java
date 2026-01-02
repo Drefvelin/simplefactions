@@ -84,6 +84,9 @@ public class Branch {
     public void levelUp() {
         level++;
     }
+    public void levelDown() {
+        if (level > 0) level--;
+    }
     public ItemStack getIconItem() {
         String[] args = icon.split("\\.");
         ItemStack item = new ItemStack(Material.DIRT, 1);
@@ -103,10 +106,10 @@ public class Branch {
     public BranchModifier getModifier(GuildModifier id) {
         return modifiers.getOrDefault(id, null);
     }
-    public double getAmount(int lvl, GuildModifier m) {
+    public double getAmount(GuildModifier m) {
         double amount = 0.0;
         BranchModifier mod = getModifier(m);
-        if(mod != null) amount = mod.getCurrent(lvl);
+        if(mod != null) amount = mod.getCurrent(level);
         return amount;
     }
     public Map<GuildModifier, BranchModifier> getModifiers() { return modifiers; }

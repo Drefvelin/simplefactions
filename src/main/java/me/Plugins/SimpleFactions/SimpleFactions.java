@@ -53,7 +53,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final TitleManager titleManager = new TitleManager();
 	private final PlayerManager playerManager = new PlayerManager();
 	private final ProvinceManager provinceManager = new ProvinceManager();
-	private final ProvinceManager provinceSnapshot = new ProvinceManager();
+	private ProvinceManager provinceSnapshot = new ProvinceManager();
 	private final ProvinceLoader provinceLoader = new ProvinceLoader();
 	
 	@Override
@@ -86,6 +86,7 @@ public class SimpleFactions extends JavaPlugin{
 		RequestManager.start();
 		WarManager.start();
 		inventoryManager.start();
+		provinceSnapshot = provinceManager.createSnapshotShell();
 		provinceManager.recalculate();
 	}
 	@Override
@@ -171,5 +172,9 @@ public class SimpleFactions extends JavaPlugin{
 
 	public ProvinceManager getProvinceManager() {
 		return provinceManager;
+	}
+
+	public ProvinceManager getProvinceSnapshot() {
+		return provinceSnapshot;
 	}
 }

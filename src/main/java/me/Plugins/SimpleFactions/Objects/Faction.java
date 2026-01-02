@@ -31,8 +31,10 @@ import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
+import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Handler.GuildHandler;
 import me.Plugins.SimpleFactions.REST.RestServer;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
@@ -182,6 +184,7 @@ public class Faction {
 	public void setCapital(int i) {
 		if(!provinces.contains(i)) return;
 		capital = i;
+		SimpleFactions.getInstance().getProvinceManager().recalculate();
 	}
 
 	public double getForeignTaxRate(Faction f) {
@@ -844,5 +847,15 @@ public class Faction {
 			if(p != null && p.isOnline()) count++;
 		}
 		return count;
+	}
+
+	public double getProsperity() {
+		double amount = 0;
+		for(int p : provinces) {
+			Province province = SimpleFactions.getInstance().getProvinceManager().get(p);
+			if(province == null)  continue;
+			amount += province.getProsperity();
+		}
+		return amount;
 	}
 }

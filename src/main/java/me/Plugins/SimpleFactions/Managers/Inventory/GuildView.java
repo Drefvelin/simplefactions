@@ -41,6 +41,7 @@ public class GuildView {
 		if(guild.isLeader(player) && !guild.isBase()) i.setItem(19, creator.createMenuItem(player, guild, MenuItemType.BANNER_RANDOM));
 		i.setItem(11, creator.createMenuItem(player, guild, MenuItemType.LEADER));
 		i.setItem(12, creator.createMenuItem(player, guild, MenuItemType.WEALTH));
+		i.setItem(13, creator.createMenuItem(player, guild, MenuItemType.TRADE_BREAKDOWN));
 		i.setItem(14, creator.createMenuItem(player, guild, MenuItemType.MEMBERS));
 		int group = 0;
 		while(guild.getBranch(group) != null || group > 10) {
@@ -82,7 +83,7 @@ public class GuildView {
 				p.sendMessage("§aUpgraded "+b.getName()+ "§a to level §e"+b.getLevel());
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				guild.getBank().withdraw(cost);
-				SimpleFactions.getInstance().getProvinceManager().calculateTrade(guild, true);
+				SimpleFactions.getInstance().getProvinceManager().recalculate();
 				guildView(p, guild, inventory);
 			}
 		}

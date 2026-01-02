@@ -17,6 +17,7 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.Branch.BranchModifier;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
 import me.Plugins.SimpleFactions.keys.Keys;
@@ -34,7 +35,7 @@ public class GuildCreator {
 			ItemMeta m = i.getItemMeta();
 			m.setDisplayName(StringFormatter.formatHex("#d4c9ae§lBanner of "+guild.getName()));
             List<String> lore = new ArrayList<>();
-            if(guild.isBase()) lore.add(StringFormatter.formatHex(guild.getType().getName()+"#b8ae61Guild of "+guild.getFaction().getName()));
+            if(guild.isBase()) lore.add(StringFormatter.formatHex(guild.getType().getName()+" #b8ae61Guild of "+guild.getFaction().getName()));
 			else lore.add(StringFormatter.formatHex("#b8ae61Part of: "+guild.getFaction().getName()));
             m.setLore(lore);
 			i.setItemMeta(m);
@@ -68,6 +69,24 @@ public class GuildCreator {
 			List<String> lore = new ArrayList<String>();
 			for(Modifier mod : guild.getWealthModifiers()) {
 				lore.add(StringFormatter.formatHex("#93c9a7+"+mod.getAmount()+"d from "+mod.getType()));
+			}
+			m.setLore(lore);
+			i.setItemMeta(m);
+		} else if(t.equals(MenuItemType.TRADE_BREAKDOWN)) {
+			i = new ItemStack(Material.EMERALD, 1);
+			ItemMeta m = i.getItemMeta();
+			m.setDisplayName(StringFormatter.formatHex("#338651Trade Breakdown"));
+			List<String> lore = new ArrayList<String>();
+			lore.add(StringFormatter.formatHex("#d4c9aeIncome from trade: #7fbd73"+guild.getTradeBreakdown().getIncome()));
+			lore.add(StringFormatter.formatHex("#d4c9aeUpkeep from trade: #cb5b4f"+guild.getTradeBreakdown().getIncome()));
+			lore.add(StringFormatter.formatHex("#d4c9aeTotal Trade Power: #a4bc5c"+guild.getTradeBreakdown().getIncome()));
+			lore.add("");
+			lore.add(StringFormatter.formatHex("#73adbfIncome Contributors:"));
+			int x = 0;
+			for(Faction f : guild.getTradeBreakdown().getFactionsByIncomeDesc()) {
+				if(x == 10) break;
+				x++;
+				lore.add(StringFormatter.formatHex("§f - "+f.getName()+"#d4c9ae: #7fbd73"+guild.getTradeBreakdown().getIncome()));
 			}
 			m.setLore(lore);
 			i.setItemMeta(m);
@@ -115,7 +134,7 @@ public class GuildCreator {
 			double deltaIncome =
 					SimpleFactions.getInstance()
 					.getProvinceManager()
-					.previewUpgradeIncome(guild, branch);
+					.previewUpgradeIncomeExact(guild, branch);
 			lore.add("§aCurrent §6"+SimpleFactions.getInstance()
 					.getProvinceManager()
 					.getIncome(guild));

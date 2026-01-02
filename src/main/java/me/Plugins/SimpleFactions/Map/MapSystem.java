@@ -163,4 +163,15 @@ public class MapSystem {
 		}
 		enqueue("nation", f.getRGB());
 	}
+
+	public void exportProvinces() {
+		try {
+			File out = new File("plugins/SimpleFactions/MapAPI/province_data.json");
+			compiler.exportProvincesToJson(out);
+			//RestServer.upload("provinces", out); not yet
+		} catch (Exception e) {
+			Bukkit.getLogger().severe("[SimpleFactions] Failed to export provinces.json");
+			e.printStackTrace();
+		}
+	}
 }

@@ -60,6 +60,8 @@ public class FactionCreator {
 		lore.add(" ");
 		lore.add(StringFormatter.formatHex("#4793bfPrestige: #6eafba"+f.getPrestige()+" #7a706a("+r.getPrestigeRank(f)+")"));
 		lore.add(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+f.getWealth()+"d #7a706a("+r.getWealthRank(f)+")"));
+		double prosperity = f.getProsperity();
+		if(prosperity > 0) lore.add(StringFormatter.formatHex("#4bb244Prosperity: #4fd945"+f.getProsperity()));
 		if(!f.getMembers().contains(p.getName())) {
 			Faction origin = FactionManager.getByMember(p.getName());
 			if(origin != null) {

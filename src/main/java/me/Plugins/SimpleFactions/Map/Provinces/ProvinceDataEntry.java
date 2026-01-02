@@ -17,6 +17,13 @@ public class ProvinceDataEntry {
         this.production = production;
     }
 
+    public ProvinceDataEntry copy() {
+        ProvinceDataEntry e = new ProvinceDataEntry(id);
+        e.setTrade(trade);
+        e.setProduction(production);
+        return e;
+    }
+
     public boolean isConsidered() {
         return trade > 0 || production > 0;
     }
