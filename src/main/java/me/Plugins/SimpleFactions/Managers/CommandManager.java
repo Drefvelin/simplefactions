@@ -94,8 +94,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				f.getGuildHandler().addGuild(guild);
 				p.sendMessage("§aGuild "+guild.getName()+" §acreated!");
 				return true;
-			}
-			if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("menu") && args.length == 1) {
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("menu") && args.length == 1) {
 				Guild guild = FactionManager.getGuildByMember(p.getName());
 				if(guild == null) {
 					p.sendMessage("§cYou are not in a guild");
@@ -104,8 +103,11 @@ public class CommandManager implements Listener, CommandExecutor{
 				InventoryManager inv = new InventoryManager();
 				inv.guildView(p, guild);
 				return true;
-			}
-			if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("invite") && args.length == 2) {
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("list") && args.length == 1) {
+				InventoryManager i = new InventoryManager();
+				i.guildList(p);
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("invite") && args.length == 2) {
 				Guild guild = FactionManager.getGuildByLeader(p.getName());
 				if(guild == null) {
 					p.sendMessage("§cYou are not the leader of a guild");
@@ -875,14 +877,17 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
 					return true;
 				}
-				double globalWealth = FactionManager.getGlobalWealth()+FactionManager.getPouchWealth()+FactionManager.getBankWealth();
+				double globalWealth = format.formatDouble(FactionManager.getGlobalWealth()+FactionManager.getPouchWealth()+FactionManager.getBankWealth());
 				p.sendMessage("§f======================================");
 				p.sendMessage("§eGlobal Wealth: §6"+globalWealth+"d");
 				p.sendMessage("§aTaken up by Nodes: §6"+FactionManager.getGlobalNodeWealth()+"d");
 				p.sendMessage("§aLiquid Faction Capital: §6"+FactionManager.getGlobalLiquidWealth()+"d");
+				p.sendMessage("§aLiquid Guild Capital: §6"+FactionManager.getGuildLiquidWealth()+"d");
+				p.sendMessage("§aGuild Expansions: §6"+FactionManager.getGlobalGuildExpansions()+"d");
 				p.sendMessage("§aPersonal Pouches: §6"+FactionManager.getPouchWealth()+"d");
 				p.sendMessage("§aPersonal Banks: §6"+FactionManager.getBankWealth()+"d");
 				p.sendMessage("§aNode Percentage: §f"+Math.round((FactionManager.getGlobalNodeWealth()/globalWealth)*100)+"% §aof global wealth");
+				p.sendMessage("§bDaily Total Guild Income: §6"+FactionManager.getTotalGuildIncome()+"d§7/day");
 				p.sendMessage("§f======================================");
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("queueallnations") && args.length == 1) {

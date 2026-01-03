@@ -170,7 +170,18 @@ public class MapSystem {
 			compiler.exportProvincesToJson(out);
 			//RestServer.upload("provinces", out); not yet
 		} catch (Exception e) {
-			Bukkit.getLogger().severe("[SimpleFactions] Failed to export provinces.json");
+			Bukkit.getLogger().severe("[SimpleFactions] Failed to export province_data.json");
+			e.printStackTrace();
+		}
+	}
+
+	public void exportGuilds() {
+		try {
+			File out = new File("plugins/SimpleFactions/MapAPI/guilds.json");
+			compiler.exportGuildsToJson(out);
+			//RestServer.upload("provinces", out); not yet
+		} catch (Exception e) {
+			Bukkit.getLogger().severe("[SimpleFactions] Failed to export guilds.json");
 			e.printStackTrace();
 		}
 	}

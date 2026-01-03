@@ -3,8 +3,11 @@ package me.Plugins.SimpleFactions.Managers.Inventory;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.management.relation.Relation;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -16,9 +19,11 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.Branch.BranchModifier;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
+import me.Plugins.SimpleFactions.Utils.FactionRanker;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
 import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.TLibs.Enums.APIType;
@@ -27,6 +32,33 @@ import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import me.Plugins.TLibs.TLibs;
 
 public class GuildCreator {
+
+	FactionRanker r = new FactionRanker();
+
+	public ItemStack createListItem(Player p, Guild guild) {
+		ItemStack i = new ItemStack(guild.getBanner());
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName("§f"+guild.getName());
+		List<String> lore = new ArrayList<String>();
+		lore.add(StringFormatter.formatHex("#7a706a§lType: "+guild.getType().getName()));
+		if(guild.hasCapital()) lore.add(StringFormatter.formatHex("#c45749§lSize: #d4c9ae"+guild.getSize()));
+		lore.add(StringFormatter.formatHex("#b8ae61Part of: "+guild.getFaction().getName()));
+		lore.add(" ");
+		lore.add(StringFormatter.formatHex("#9c9775Leader: #c2bea7"+guild.getLeader()));
+		lore.add(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+guild.getMembers().size()));
+		lore.add(" ");
+		if(guild.hasCapital()) {
+			lore.add(StringFormatter.formatHex("#41b541§lTrade Power: #a4bc5c"+guild.getTradeBreakdown().getTradePower()));
+			lore.add(StringFormatter.formatHex("#74ba74Estimated Income: #5cbc5c"+guild.getTradeBreakdown().getNetIncome()));
+		}
+		lore.add(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+guild.getWealth()+"d #7a706a("+r.getWealthRank(guild)+")"));
+		meta.setLore(lore);
+		NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");
+		meta.getPersistentDataContainer().set(id, PersistentDataType.STRING, guild.getId());
+		i.setItemMeta(meta);
+		return i;
+	}
+
     @SuppressWarnings("deprecation")
 	public ItemStack createMenuItem(Player p, Guild guild, MenuItemType t) {
 		ItemStack i = new ItemStack(Material.DIRT, 1);
@@ -78,15 +110,22 @@ public class GuildCreator {
 			m.setDisplayName(StringFormatter.formatHex("#338651Trade Breakdown"));
 			List<String> lore = new ArrayList<String>();
 			lore.add(StringFormatter.formatHex("#d4c9aeIncome from trade: #7fbd73"+guild.getTradeBreakdown().getIncome()));
-			lore.add(StringFormatter.formatHex("#d4c9aeUpkeep from trade: #cb5b4f"+guild.getTradeBreakdown().getIncome()));
-			lore.add(StringFormatter.formatHex("#d4c9aeTotal Trade Power: #a4bc5c"+guild.getTradeBreakdown().getIncome()));
+			lore.add(StringFormatter.formatHex("#d4c9aeUpkeep from trade: #cb5b4f"+guild.getTradeBreakdown().getUpkeep()));
+			lore.add(StringFormatter.formatHex("#d4c9aeTotal Trade Power: #a4bc5c"+guild.getTradeBreakdown().getTradePower()));
 			lore.add("");
 			lore.add(StringFormatter.formatHex("#73adbfIncome Contributors:"));
 			int x = 0;
 			for(Faction f : guild.getTradeBreakdown().getFactionsByIncomeDesc()) {
 				if(x == 10) break;
 				x++;
-				lore.add(StringFormatter.formatHex("§f - "+f.getName()+"#d4c9ae: #7fbd73"+guild.getTradeBreakdown().getIncome()));
+				lore.add(StringFormatter.formatHex("§f - "+f.getName()+"#d4c9ae: #7fbd73"+guild.getTradeBreakdown().getIncomeByFaction(f)));
+			}
+			lore.add(StringFormatter.formatHex("#73adbfOther cashflows:"));
+			for(Faction f : FactionManager.factions) {
+				if(f.getId().equalsIgnoreCase(guild.getFaction().getId())) continue;
+				for(Guild g : f.getGuildHandler().getGuilds()) {
+					lore.add(StringFormatter.formatHex("§f - "+g.getName()+" §7["+g.getSize()+"§7]#d4c9ae: #7fbd73"+SimpleFactions.getInstance().getProvinceManager().getIncome(g)));
+				}
 			}
 			m.setLore(lore);
 			i.setItemMeta(m);

@@ -39,14 +39,14 @@ public class ProvinceManager {
     }
 
     public void recalculate() {
-        for (Faction f : FactionManager.factions) {
-            for (Guild g : f.getGuildHandler().getGuilds()) {
-                if (!g.hasCapital()) continue;
-                recalculateGuild(g);
-            }
+        for(Guild g : FactionManager.getAllGuilds()) {
+            if (!g.hasCapital()) continue;
+            recalculateGuild(g);
         }
         recalculateProsperity();
+        for(Guild guild : FactionManager.getAllGuilds()) getIncome(guild);
         FactionManager.getMap().exportProvinces();
+        FactionManager.getMap().exportGuilds();
     }
 
 
@@ -68,11 +68,12 @@ public class ProvinceManager {
         // 2) Recalculate trade graph
         Province capital = provinces.get(guild.getCapital());
         if (capital != null) {
-            capital.calculateTrade(this, guild, null);
+            capital.calculateTrade(this, guild, null, guild.getModifier(GuildModifier.TRADE_CARRY)+1);
         }
     }
 
     public double getIncome(Guild guild) {
+        guild.getTradeBreakdown().clear();
         double income = 0;
         String guildId = guild.getId();
         double trade = 0;
@@ -94,9 +95,9 @@ public class ProvinceManager {
             guild.getTradeBreakdown().registerIncome(owner, provinceIncome);
         }
 
-        double upkeep = getTotalTrade(guild)*guild.getModifier(GuildModifier.TRADE_UPKEEP);
+        double upkeep = trade*guild.getModifier(GuildModifier.TRADE_UPKEEP);
         guild.getTradeBreakdown().setUpkeep(upkeep);
-        guild.getTradeBreakdown().setIncome(upkeep);
+        guild.getTradeBreakdown().setIncome(income);
         guild.getTradeBreakdown().setTradePower(trade);
         income-=upkeep;
 

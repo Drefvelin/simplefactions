@@ -100,6 +100,9 @@ public class InventoryManager implements Listener{
 
 	//Guilds
 	GuildView guildView = new GuildView(this);
+	public void guildList(Player player) {
+		guildView.guildList(player);
+	}
 	public void guildView(Player player, Guild guild) {
 		guildView.guildView(player, guild);
 	}
@@ -257,6 +260,9 @@ public class InventoryManager implements Listener{
 					case FACTION_VIEW:
 						factionList(p);
 						break;
+					case GUILD_VIEW:
+						guildList(p);
+						break;
 					case MILITARY_VIEW:
 						factionView(p, f);
 						break;
@@ -300,7 +306,7 @@ public class InventoryManager implements Listener{
 			}
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Faction List") || e.getView().getTitle().equalsIgnoreCase("§7Faction View")) {
 			factionView.click(e, inv, p);
-		} else if(e.getView().getTitle().equalsIgnoreCase("§7Guild View")) {
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Guild List") ||e.getView().getTitle().equalsIgnoreCase("§7Guild View")) {
 			guildView.click(e, inv, p);
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Military View")) {
 			militaryView.click(e, inv, p);

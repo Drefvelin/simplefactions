@@ -38,19 +38,23 @@ public class TradeBreakdown {
     }
 
     public void setIncome(double d) {
-        income = d;
+        income = Math.round(d * 100.0) / 100.0;
     }
 
     public void setUpkeep(double d) {
-        upkeep = d;
+        upkeep = Math.round(d * 100.0) / 100.0;
     }
 
     public void setTradePower(double d) {
-        tradePower = d;
+        tradePower = Math.round(d * 100.0) / 100.0;
     }
 
     public Map<Faction, Double> getIncomes() {
         return incomeByFaction;
+    }
+
+    public double getNetIncome() {
+        return Math.round((income-upkeep) * 100.0) / 100.0;
     }
 
     public void registerIncome(Faction f, double d) {
@@ -62,7 +66,7 @@ public class TradeBreakdown {
     }
 
     public double getIncomeByFaction(Faction f) {
-        return incomeByFaction.getOrDefault(f, 0.0);
+        return Math.round(incomeByFaction.getOrDefault(f, 0.0) * 100.0) / 100.0;
     }
 
     public List<Faction> getFactionsByIncomeDesc() {

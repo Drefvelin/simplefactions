@@ -235,17 +235,19 @@ public class Guild {
 		for(Pattern p : b.getPatterns()) {
 			String colour = p.getColor().toString();
 			String pattern = p.getPattern().toString();
+			pattern = pattern.replace("tfmc:", "").toUpperCase();
 			this.bannerPatterns.add(colour+"."+pattern);
 		}
 		createBanner();
 	}
 	public List<String> getBannerPatterns() {
-		return bannerPatterns;
+		return isBase() ? host.getBannerPatterns() : bannerPatterns;
 	}
 	public void setBannerPatterns(List<String> bannerPatterns) {
 		this.bannerPatterns = bannerPatterns;
 		createBanner();
 	}
+    
     public ItemStack getBanner() {
         if(isBase()) return host.getBanner();
         return banner;
@@ -344,7 +346,6 @@ public class Guild {
         for(Branch b : branches.values()) {
             amount += b.getAmount(m);
         }
-        if(m.equals(GuildModifier.TRADE_CARRY)) amount = amount/100;
         return amount;
     }
 

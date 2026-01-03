@@ -52,16 +52,18 @@ public class Province {
     public void calculateTrade(
             ProvinceManager manager,
             Guild guild,
-            ProvinceDataEntry prev
+            ProvinceDataEntry prev,
+            double carry
     ) {
         double amount;
+        double factor = carry < 1 ? carry : 1.0;
 
         if (prev == null) {
             // Capital province
             amount = guild.getModifier(GuildModifier.TRADE_POWER);
         } else {
 
-            amount = prev.getTrade() * getTradeCarry();
+            amount = prev.getTrade() * getTradeCarry()*factor;
 
             // Hard cutoff
             if (amount < 1) return;
@@ -84,10 +86,12 @@ public class Province {
         entry.setTrade(amount);
         entry.setProduction(production);
 
+        if(carry < 1) return;
+
         for (Integer n : neighbours) {
             Province neighbour = manager.get(n);
             if (neighbour != null) {
-                neighbour.calculateTrade(manager, guild, entry);
+                neighbour.calculateTrade(manager, guild, entry, carry-(terrain.equals(Terrain.WATER) ? 0.3 : 1));
             }
         }
     }

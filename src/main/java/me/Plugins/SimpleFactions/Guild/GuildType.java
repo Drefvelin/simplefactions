@@ -2,6 +2,8 @@ package me.Plugins.SimpleFactions.Guild;
 
 import org.bukkit.configuration.ConfigurationSection;
 
+import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
+
 public class GuildType {
     private String id;
     private String name;
@@ -10,7 +12,7 @@ public class GuildType {
 
     public GuildType(String key, ConfigurationSection config) {
         id = key;
-        name = config.getString("name", id);
+        name = StringFormatter.formatHex(config.getString("name", id));
         base = config.getBoolean("base", false);
         defaultType = config.getBoolean("default", false);
     }

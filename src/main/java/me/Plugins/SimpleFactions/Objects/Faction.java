@@ -409,6 +409,7 @@ public class Faction {
 		for(Pattern p : b.getPatterns()) {
 			String colour = p.getColor().toString();
 			String pattern = p.getPattern().toString();
+			pattern = pattern.replace("tfmc:", "").toUpperCase();
 			this.bannerPatterns.add(colour+"."+pattern);
 		}
 		createBanner(bannerPatterns);
@@ -856,6 +857,6 @@ public class Faction {
 			if(province == null)  continue;
 			amount += province.getProsperity();
 		}
-		return amount;
+		return format.formatDouble(amount);
 	}
 }

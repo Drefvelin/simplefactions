@@ -15,6 +15,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Map.Provinces.ProvinceDataEntry;
@@ -94,6 +96,32 @@ public class Compiler {
 			}
 
 			o.add("trade", trade);
+
+			arr.add(o);
+		}
+
+		try (FileWriter w = new FileWriter(out)) {
+			new GsonBuilder().setPrettyPrinting().create().toJson(arr, w);
+		}
+	}
+
+	public void exportGuildsToJson(File out) throws Exception {
+		JsonArray arr = new JsonArray();
+
+		for (Guild g : FactionManager.getAllGuilds()) {
+			JsonObject o = new JsonObject();
+
+			o.addProperty("id", g.getId());
+			o.addProperty("name", g.getName());
+			o.addProperty("size", g.getSize());
+			o.addProperty("rgb", g.getRGB());
+			o.addProperty("trade_power", g.getTradeBreakdown().getTradePower());
+
+			JsonArray patterns = new JsonArray();
+			for (String p : g.getBannerPatterns()) {
+				patterns.add(p);
+			}
+			o.add("banner", patterns);
 
 			arr.add(o);
 		}

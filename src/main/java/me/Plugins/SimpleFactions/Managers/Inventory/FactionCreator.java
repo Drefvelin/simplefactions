@@ -43,7 +43,7 @@ public class FactionCreator {
 	public ItemStack createListItem(Player p, Faction f) {
 		ItemStack i = new ItemStack(f.getBanner());
 		ItemMeta meta = i.getItemMeta();
-		meta.setDisplayName(f.getName());
+		meta.setDisplayName("§f"+f.getName());
 		List<String> lore = new ArrayList<String>();
 		lore.add(f.getRank().getName());
 		if(f.getTitles().size() > 0) lore.add(StringFormatter.formatHex("#b84c44§lPrimary Title: #7a706a"+f.getHighestTitle().getName()));
@@ -106,24 +106,6 @@ public class FactionCreator {
 		meta.setLore(lore);
 		NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");
 		meta.getPersistentDataContainer().set(id, PersistentDataType.STRING, f.getId());
-		i.setItemMeta(meta);
-		return i;
-	}
-	
-	public ItemStack createRankButton(RankType t) {
-		ItemStack i = new ItemStack(Material.BLAZE_POWDER, 1);
-		if(t.equals(RankType.PRESTIGE)) {
-			i.setType(Material.DIAMOND);
-		} else if(t.equals(RankType.WEALTH)) {
-			i.setType(Material.GOLD_NUGGET);
-		} else {
-			i.setType(Material.PLAYER_HEAD);
-		}
-		ItemMeta meta = i.getItemMeta();
-		meta.setDisplayName("§aCurrently ranking based on §e"+t.toString());
-		List<String> lore = new ArrayList<String>();
-		lore.add("§7Click to change");
-		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;
 	}
