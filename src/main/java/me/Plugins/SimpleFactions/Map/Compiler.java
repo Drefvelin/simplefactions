@@ -113,6 +113,7 @@ public class Compiler {
 
 			o.addProperty("id", g.getId());
 			o.addProperty("name", g.getName());
+			o.addProperty("type", g.getType().getName());
 			o.addProperty("size", g.getSize());
 			o.addProperty("rgb", g.getRGB());
 			o.addProperty("trade_power", g.getTradeBreakdown().getTradePower());

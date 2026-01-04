@@ -46,6 +46,19 @@ public class MapSystem {
 		}
 		updateMap();
 	}
+
+	public void uploadAll() {
+		exportProvinces();
+		exportGuilds();
+		compiler.exportAllFactionsToNationJson();
+		RestServer.upload("nation", new File("plugins/SimpleFactions/MapAPI/nation.json"));
+		RestServer.upload("province_data", new File("plugins/SimpleFactions/MapAPI/province_data.json"));
+		RestServer.upload("guilds", new File("plugins/SimpleFactions/MapAPI/guilds.json"));
+		RestServer.upload("county", new File("plugins/SimpleFactions/Input/county.json"));
+		RestServer.upload("duchy", new File("plugins/SimpleFactions/Input/duchy.json"));
+		RestServer.upload("kingdom", new File("plugins/SimpleFactions/Input/kingdom.json"));
+		RestServer.upload("empire", new File("plugins/SimpleFactions/Input/empire.json"));
+	}
 	
 	public void updateMap() {
 		lastUpdate = 0;
@@ -55,12 +68,7 @@ public class MapSystem {
 		for(Faction fac : FactionManager.factions) {
 			db.saveFaction(fac);
 		}
-		compiler.exportAllFactionsToNationJson();
-		RestServer.upload("nation", new File("plugins/SimpleFactions/MapAPI/nation.json"));
-		RestServer.upload("county", new File("plugins/SimpleFactions/Input/county.json"));
-		RestServer.upload("duchy", new File("plugins/SimpleFactions/Input/duchy.json"));
-		RestServer.upload("kingdom", new File("plugins/SimpleFactions/Input/kingdom.json"));
-		RestServer.upload("empire", new File("plugins/SimpleFactions/Input/empire.json"));
+		uploadAll();
 		RestServer.commenceRegen("queued");
 		clear();
 	}
@@ -71,12 +79,7 @@ public class MapSystem {
 		for(Faction fac : FactionManager.factions) {
 			db.saveFaction(fac);
 		}
-		compiler.exportAllFactionsToNationJson();
-		RestServer.upload("nation", new File("plugins/SimpleFactions/MapAPI/nation.json"));
-		RestServer.upload("county", new File("plugins/SimpleFactions/Input/county.json"));
-		RestServer.upload("duchy", new File("plugins/SimpleFactions/Input/duchy.json"));
-		RestServer.upload("kingdom", new File("plugins/SimpleFactions/Input/kingdom.json"));
-		RestServer.upload("empire", new File("plugins/SimpleFactions/Input/empire.json"));
+		uploadAll();
 		RestServer.commenceRegen("fullregen");
 	}
 	
