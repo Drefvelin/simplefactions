@@ -20,6 +20,7 @@ import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.income.TradeBreakdown;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
@@ -142,6 +143,35 @@ public class Guild {
         createBanner();
     }
 
+    public void dummify(Player p) {
+        for(int i = 0; i<members.size(); i++) {
+            String member = members.get(i);
+            if(member.contains("dummy")) continue;
+            String dummy = "dummy_";
+            int x = 1;
+            while(FactionManager.getGuildByMember((dummy+x)) != null) {
+                x++;
+            }
+            dummy = dummy+x;
+            members.set(i, dummy);
+            p.sendMessage("§a"+dummy+" replaced "+member);
+            if(isLeader(member)) {
+                p.sendMessage("§a"+dummy+" became leader");
+                setLeader(dummy);
+            }
+        }
+    }
+    public void dummyLeader(Player p) {
+        String dummy = "dummy_";
+        int x = 1;
+        while(FactionManager.getGuildByMember((dummy+x)) != null) {
+            x++;
+        }
+        dummy = dummy+x;
+        addMember(dummy);
+        setLeader(dummy);
+        p.sendMessage("§a"+dummy+" became leader");
+    }
     public boolean isBase() { return type.isBase(); }
     public Faction getFaction() { return host; }
     public List<String> getInvites() { return invites; }

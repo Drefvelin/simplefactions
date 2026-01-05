@@ -94,6 +94,30 @@ public class CommandManager implements Listener, CommandExecutor{
 				f.getGuildHandler().addGuild(guild);
 				p.sendMessage("§aGuild "+guild.getName()+" §acreated!");
 				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("dummyLeader") && args.length == 1) {
+				Guild guild = FactionManager.getGuildByMember(p.getName());
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§cYou do not have access to this command");
+					return true;
+				}
+				if(guild == null) {
+					p.sendMessage("§cYou are not in a guild");
+					return true;
+				}
+				guild.dummyLeader(p);
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("dummify") && args.length == 1) {
+				Guild guild = FactionManager.getGuildByMember(p.getName());
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§cYou do not have access to this command");
+					return true;
+				}
+				if(guild == null) {
+					p.sendMessage("§cYou are not in a guild");
+					return true;
+				}
+				guild.dummify(p);
+				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("menu") && args.length == 1) {
 				Guild guild = FactionManager.getGuildByMember(p.getName());
 				if(guild == null) {
