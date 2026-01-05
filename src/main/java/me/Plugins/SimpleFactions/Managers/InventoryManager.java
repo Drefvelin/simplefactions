@@ -106,6 +106,9 @@ public class InventoryManager implements Listener{
 	public void guildView(Player player, Guild guild) {
 		guildView.guildView(player, guild);
 	}
+	public void guildView(Player player, Guild guild, Inventory i) {
+		guildView.guildView(player, guild, i);
+	}
 	
 	//Tiers
 	public TierTitleView tierTitleView = new TierTitleView(this);

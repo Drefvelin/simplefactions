@@ -830,6 +830,9 @@ public class Faction {
 			getBank().withdraw(armyCost);
 		}
 		provinceCap();
+		for(Guild guild : guildHandler.getGuilds()) {
+			guild.newDay();
+		}
     }
 
 	public void provinceCap() {

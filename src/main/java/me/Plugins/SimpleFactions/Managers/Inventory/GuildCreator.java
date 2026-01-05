@@ -3,8 +3,6 @@ package me.Plugins.SimpleFactions.Managers.Inventory;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.management.relation.Relation;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -121,11 +119,9 @@ public class GuildCreator {
 				lore.add(StringFormatter.formatHex("§f - "+f.getName()+"#d4c9ae: #7fbd73"+guild.getTradeBreakdown().getIncomeByFaction(f)));
 			}
 			lore.add(StringFormatter.formatHex("#73adbfOther cashflows:"));
-			for(Faction f : FactionManager.factions) {
-				if(f.getId().equalsIgnoreCase(guild.getFaction().getId())) continue;
-				for(Guild g : f.getGuildHandler().getGuilds()) {
-					lore.add(StringFormatter.formatHex("§f - "+g.getName()+" §7["+g.getSize()+"§7]#d4c9ae: #7fbd73"+SimpleFactions.getInstance().getProvinceManager().getIncome(g)));
-				}
+			for(Guild g : FactionManager.getAllGuilds()) {
+				if(g.getId().equalsIgnoreCase(guild.getId())) continue;
+				lore.add(StringFormatter.formatHex("§f - "+g.getName()+" §7["+g.getSize()+"§7]#d4c9ae: #7fbd73"+SimpleFactions.getInstance().getProvinceManager().getIncome(g)));
 			}
 			m.setLore(lore);
 			i.setItemMeta(m);

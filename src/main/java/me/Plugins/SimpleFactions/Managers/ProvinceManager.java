@@ -68,7 +68,7 @@ public class ProvinceManager {
         // 2) Recalculate trade graph
         Province capital = provinces.get(guild.getCapital());
         if (capital != null) {
-            capital.calculateTrade(this, guild, null, guild.getModifier(GuildModifier.TRADE_CARRY)+1);
+            capital.calculateTrade(this, guild, null, 0);
         }
     }
 
@@ -117,73 +117,20 @@ public class ProvinceManager {
         ProvinceManager live = this;
         ProvinceManager snap = SimpleFactions.getInstance().getProvinceSnapshot();
 
-        SimpleFactions.getInstance().getLogger().info(
-            "[PREVIEW DEBUG] ===== START PREVIEW ====="
-        );
-        SimpleFactions.getInstance().getLogger().info(
-            "[PREVIEW DEBUG] Guild=" + guild.getId()
-            + " | Branch=" + branch.getId()
-            + " | Level(before)=" + branch.getLevel()
-        );
-
-        // Baseline (live)
         double liveIncomeBefore = live.getIncome(guild);
-        SimpleFactions.getInstance().getLogger().info(
-            "[PREVIEW DEBUG] Live income BEFORE = " + liveIncomeBefore
-        );
 
-        // 1) Copy full world state
+        // Sync snapshot to live state
         snap.copyAllDataFrom(live);
 
-        double snapIncomeAfterCopy = snap.getIncome(guild);
-        SimpleFactions.getInstance().getLogger().info(
-            "[PREVIEW DEBUG] Snapshot income AFTER COPY (should match live) = "
-            + snapIncomeAfterCopy
-        );
-
-        // 2) Apply upgrade
+        // Apply upgrade in snapshot context
         branch.levelUp();
-        SimpleFactions.getInstance().getLogger().info(
-            "[PREVIEW DEBUG] Applied upgrade | Branch level(now)=" + branch.getLevel()
-        );
-
-        // 3) Recalculate snapshot
         snap.recalculate();
-
-        // 4) Measure snapshot
         double snapIncomeAfter = snap.getIncome(guild);
-        SimpleFactions.getInstance().getLogger().info(
-            "[PREVIEW DEBUG] Snapshot income AFTER RECALC = " + snapIncomeAfter
-        );
 
-        // 5) Revert upgrade
+        // Revert upgrade
         branch.levelDown();
-        SimpleFactions.getInstance().getLogger().info(
-            "[PREVIEW DEBUG] Reverted upgrade | Branch level(now)=" + branch.getLevel()
-        );
-
-        // Sanity check: live world unchanged
-        double liveIncomeAfter = live.getIncome(guild);
-        SimpleFactions.getInstance().getLogger().info(
-            "[PREVIEW DEBUG] Live income AFTER preview = " + liveIncomeAfter
-        );
-
-        if (Math.abs(liveIncomeBefore - liveIncomeAfter) > 0.001) {
-            SimpleFactions.getInstance().getLogger().warning(
-                "[PREVIEW DEBUG] ❌ LIVE WORLD MUTATED! Δ="
-                + (liveIncomeAfter - liveIncomeBefore)
-            );
-        }
 
         double delta = snapIncomeAfter - liveIncomeBefore;
-
-        SimpleFactions.getInstance().getLogger().info(
-            "[PREVIEW DEBUG] FINAL DELTA = " + delta
-        );
-        SimpleFactions.getInstance().getLogger().info(
-            "[PREVIEW DEBUG] ===== END PREVIEW ====="
-        );
-
         return Math.round(delta * 100.0) / 100.0;
     }
 

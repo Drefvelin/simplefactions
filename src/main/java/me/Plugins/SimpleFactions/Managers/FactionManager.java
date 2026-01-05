@@ -142,6 +142,12 @@ public class FactionManager implements Listener{
 
 	public void time() {
 		timer++;
+		if(timer%10 == 0) {
+			for(Guild guild : getAllGuilds()) {
+				if(guild.getLeader().contains("dummy")) continue;
+				guild.newDay();
+			}
+		}
 		if(timer%300 == 0) {
 			for(Faction f : factions) {
 				if(f.getProvinces().size() == 0) continue;

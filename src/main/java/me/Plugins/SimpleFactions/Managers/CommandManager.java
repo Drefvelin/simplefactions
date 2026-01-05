@@ -265,6 +265,32 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cYou need to be a guild leader to withdraw from the guild bank");
 				}
 				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("setcapital") && args.length == 1) {
+				Guild g = FactionManager.getGuildByLeader(p.getName());
+				if(g == null) {
+					p.sendMessage("§cYou must be the leader of a guild to set the capital");
+					return true;
+				}
+				if(g.hasCapital()) {
+					p.sendMessage("§cYour guild already has a capital");
+					return true;
+				}
+				int claim = RestServer.getProvince(p);
+				if(claim == -2) {
+					p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
+				} else {
+					if(claim == 0) {
+						p.sendMessage("§cThis location has no province!");
+						return true;
+					} else if(!g.getFaction().getProvinces().contains(claim)) {
+						p.sendMessage("§cYour host faction doesn't own this province!");
+						return true;
+					}
+				}
+				g.setCapital(claim);
+				p.sendMessage("§aCapital set!");
+				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				return true;
 			}
 			if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("create") && args.length == 2) {
 				if(FactionManager.getByMember(p.getName()) != null) {

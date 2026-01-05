@@ -88,49 +88,49 @@ public class RestServer {
 	}
 	
 	public static void upload(String mode, File file) {
-		if(!Cache.mapEnabled) return;
-	    String charset = "UTF-8";
-	    String uploadUrl = String.format(
-	    		apiURL + "/"+Cache.mapRef+"/data/upload/%s",
-	            mode
-	        );
+		if (!Cache.mapEnabled) return;
 
-	    try {
-	        // 1. Read and parse nation.json file
-	        BufferedReader reader = new BufferedReader(new FileReader(file));
-	        JsonObject payload = JsonParser.parseReader(reader).getAsJsonObject();
-	        reader.close();
+		String charset = "UTF-8";
+		String uploadUrl = apiURL + "/" + Cache.mapRef + "/data/upload/" + mode;
 
-	        // 3. Setup connection
-	        @SuppressWarnings("deprecation")
+		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+
+			// ✅ Parse without assuming object/array
+			var payload = JsonParser.parseReader(reader);
+
+			// Optional safety checks
+			if (mode.equals("nation") && !payload.isJsonObject())
+				throw new IllegalStateException("nation upload must be JSON object");
+
+			if ((mode.equals("provinces") || mode.equals("guilds")) && !payload.isJsonArray())
+				throw new IllegalStateException(mode + " upload must be JSON array");
+
+			@SuppressWarnings("deprecation")
 			URL url = new URL(uploadUrl);
-	        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-	        connection.setUseCaches(false);
-	        connection.setDoOutput(true);
-	        connection.setDoInput(true);
-	        connection.setRequestMethod("POST");
-	        connection.setRequestProperty("Content-Type", "application/json");
+			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			connection.setUseCaches(false);
+			connection.setDoOutput(true);
+			connection.setDoInput(true);
+			connection.setRequestMethod("POST");
+			connection.setRequestProperty("Content-Type", "application/json");
 
-	        // 4. Write modified JSON
-	        OutputStream os = connection.getOutputStream();
-	        byte[] input = payload.toString().getBytes(charset);
-	        os.write(input, 0, input.length);
-	        os.flush();
-	        os.close();
+			try (OutputStream os = connection.getOutputStream()) {
+				byte[] input = payload.toString().getBytes(charset);
+				os.write(input);
+			}
 
-	        // 5. Read response
-	        int responseCode = connection.getResponseCode();
-	        System.out.println("Upload + Regen Response: " + responseCode);
+			int responseCode = connection.getResponseCode();
+			System.out.println("Upload + Regen Response: " + responseCode);
 
-	        if (responseCode == HttpURLConnection.HTTP_OK) {
-	            System.out.println(mode+" data uploaded");
-	        } else {
-	            System.out.println("Server returned: " + responseCode);
-	        }
+			if (responseCode == HttpURLConnection.HTTP_OK) {
+				System.out.println(mode + " data uploaded");
+			} else {
+				System.out.println("Server returned: " + responseCode);
+			}
 
-	    } catch (IOException e) {
-	        e.printStackTrace();
-	    }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public static void commenceRegen(String regenType) {

@@ -19,6 +19,7 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
+import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Utils.FactionRanker;
@@ -106,6 +107,11 @@ public class GuildView {
 	}
 
     public void guildView(Player player, Guild guild, Inventory i) {
+		if(guild.hasCapital()) {
+			ProvinceManager manager = SimpleFactions.getInstance().getProvinceManager();
+			if(guild.getTradeBreakdown().getIncome() == 0) manager.recalculate();
+			manager.getIncome(guild);
+		}
 		i.clear();
 		if(guild.isMember(player)) i.setItem(1, creator.createMenuItem(player, guild, MenuItemType.BANNER_GET));
 		i.setItem(10, creator.createMenuItem(player, guild, MenuItemType.BANNER));

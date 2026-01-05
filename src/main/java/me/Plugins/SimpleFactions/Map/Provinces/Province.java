@@ -53,21 +53,20 @@ public class Province {
             ProvinceManager manager,
             Guild guild,
             ProvinceDataEntry prev,
-            double carry
+            int distance
     ) {
         double amount;
-        double factor = carry < 1 ? carry : 1.0;
+        double carry = guild.getModifier(GuildModifier.TRADE_CARRY);
+        double factor = Math.pow(getTradeCarry(), Math.max(0, distance-carry));
 
         if (prev == null) {
             // Capital province
             amount = guild.getModifier(GuildModifier.TRADE_POWER);
         } else {
-
-            amount = prev.getTrade() * getTradeCarry()*factor;
-
-            // Hard cutoff
-            if (amount < 1) return;
+            amount = prev.getTrade() *factor;
         }
+        double production = amount * guild.getModifier(GuildModifier.PRODUCTION);
+        if(production < 0.1) return;
 
         ProvinceDataEntry entry = data.get(guild.getId());
 
@@ -75,8 +74,6 @@ public class Province {
         if (entry != null && entry.getTrade() >= amount) {
             return;
         }
-
-        double production = amount * guild.getModifier(GuildModifier.PRODUCTION);
 
         if (entry == null) {
             entry = new ProvinceDataEntry(guild.getId());
@@ -86,12 +83,10 @@ public class Province {
         entry.setTrade(amount);
         entry.setProduction(production);
 
-        if(carry < 1) return;
-
         for (Integer n : neighbours) {
             Province neighbour = manager.get(n);
             if (neighbour != null) {
-                neighbour.calculateTrade(manager, guild, entry, carry-(terrain.equals(Terrain.WATER) ? 0.3 : 1));
+                neighbour.calculateTrade(manager, guild, entry, distance+1);
             }
         }
     }

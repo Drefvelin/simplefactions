@@ -157,7 +157,8 @@ public class Guild {
             p.sendMessage("§a"+dummy+" replaced "+member);
             if(isLeader(member)) {
                 p.sendMessage("§a"+dummy+" became leader");
-                setLeader(dummy);
+                if(isBase()) host.setLeader(dummy);
+                else setLeader(dummy);
             }
         }
     }
@@ -169,7 +170,8 @@ public class Guild {
         }
         dummy = dummy+x;
         addMember(dummy);
-        setLeader(dummy);
+        if(isBase()) host.setLeader(dummy);
+        else setLeader(dummy);
         p.sendMessage("§a"+dummy+" became leader");
     }
     public boolean isBase() { return type.isBase(); }
@@ -380,4 +382,10 @@ public class Guild {
     }
 
     public TradeBreakdown getTradeBreakdown() { return breakdown; }
+
+    public void newDay() {
+        if(bank != null) {
+            bank.deposit(breakdown.getIncome());
+        }
+    }
 }
