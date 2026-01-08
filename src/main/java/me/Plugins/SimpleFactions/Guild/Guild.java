@@ -219,6 +219,7 @@ public class Guild {
         return isBase() ? host.getCapital() : capital;
     }
     public boolean hasCapital() {
+        if(isBase()) return host.hasCapital();
 		return capital != -1;
 	}
     public void setCapital(int i) {

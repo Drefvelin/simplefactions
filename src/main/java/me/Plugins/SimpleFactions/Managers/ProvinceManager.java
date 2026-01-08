@@ -43,6 +43,10 @@ public class ProvinceManager {
             if (!g.hasCapital()) continue;
             recalculateGuild(g);
         }
+        for(Guild g : FactionManager.getAllGuilds()) {
+            if (!g.hasCapital()) continue;
+            recalculateProduction(g);
+        }
         recalculateProsperity();
         for(Guild guild : FactionManager.getAllGuilds()) getIncome(guild);
         FactionManager.getMap().exportProvinces();
@@ -56,6 +60,12 @@ public class ProvinceManager {
         }
     }
 
+    public void recalculateProduction(Guild guild) {
+        Province capital = provinces.get(guild.getCapital());
+        if (capital != null) {
+            capital.calculateProduction(this, guild, null, 0);
+        }
+    }
 
     public void recalculateGuild(Guild guild) {
         String guildId = guild.getId();
@@ -75,27 +85,22 @@ public class ProvinceManager {
     public double getIncome(Guild guild) {
         guild.getTradeBreakdown().clear();
         double income = 0;
-        String guildId = guild.getId();
+        double upkeep = 0;
         double trade = 0;
+        double upkeepFactor = guild.getModifier(GuildModifier.TRADE_UPKEEP);
 
         for (Province province : provinces.values()) {
             if(!province.getTerrain().generatesIncome()) continue;
-            double guildTrade = province.getGuildTrade(guildId);
-            if (guildTrade <= 0) continue;
-            trade += guildTrade;
-
-            double totalTrade = province.getTotalTrade();
-            if (totalTrade <= 0) continue;
-
-            double share = guildTrade / totalTrade;
-            double provinceIncome = share * province.getProsperity();
+            double provinceIncome = province.getIncome(guild);
+            if(provinceIncome == 0) continue;
+            //if(provinceIncome > guildTrade) provinceIncome = guildTrade;
+            upkeep += provinceIncome*province.getTradeFactor(guild)*upkeepFactor;
             income += provinceIncome;
             Faction owner = TitleManager.getByProvince(province.getId());
             if(owner == null) continue;
             guild.getTradeBreakdown().registerIncome(owner, provinceIncome);
+            trade += getTotalTrade(guild);
         }
-
-        double upkeep = trade*guild.getModifier(GuildModifier.TRADE_UPKEEP);
         guild.getTradeBreakdown().setUpkeep(upkeep);
         guild.getTradeBreakdown().setIncome(income);
         guild.getTradeBreakdown().setTradePower(trade);
