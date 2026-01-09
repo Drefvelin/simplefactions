@@ -66,6 +66,7 @@ public class Faction {
 	
 	private double taxRate = 5;
 	private double vassalTax = 100;
+	private double guildTax = 5;
 
 	private Tier tier;
 	
@@ -184,7 +185,7 @@ public class Faction {
 	public void setCapital(int i) {
 		if(!provinces.contains(i)) return;
 		capital = i;
-		SimpleFactions.getInstance().getProvinceManager().recalculate();
+		SimpleFactions.getInstance().getProvinceManager().recalculateForSingleGuild(getOrCreateMainGuild(), true);
 	}
 
 	public double getForeignTaxRate(Faction f) {

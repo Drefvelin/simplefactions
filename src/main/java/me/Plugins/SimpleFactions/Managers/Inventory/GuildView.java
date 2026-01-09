@@ -32,6 +32,7 @@ public class GuildView {
 	public InventoryManager inv;
 	
 	public GuildCreator creator = new GuildCreator();
+	private ProvinceManager manager;
 
 	public static HashMap<Player, RankType> currentRanking = new HashMap<>();
 	public static HashMap<Player, Integer> currentPage = new HashMap<>();
@@ -49,7 +50,11 @@ public class GuildView {
 
 	
 	public GuildView(InventoryManager inv) {
-		this.inv = inv;
+        this.inv = inv;
+    }
+
+	public void setProvinceManager(ProvinceManager manager) {
+		this.manager = manager;
 	}
 
 	public void guildList(Player p) {
@@ -107,11 +112,12 @@ public class GuildView {
 	}
 
     public void guildView(Player player, Guild guild, Inventory i) {
+		if(manager == null) setProvinceManager(SimpleFactions.getInstance().getProvinceManager());
 		if(guild.hasCapital()) {
-			ProvinceManager manager = SimpleFactions.getInstance().getProvinceManager();
 			if(guild.getTradeBreakdown().getIncome() == 0) manager.recalculate();
 			manager.getIncome(guild);
 		}
+		manager.recalculateIfNeeded();
 		i.clear();
 		if(guild.isMember(player)) i.setItem(1, creator.createMenuItem(player, guild, MenuItemType.BANNER_GET));
 		i.setItem(10, creator.createMenuItem(player, guild, MenuItemType.BANNER));
@@ -124,6 +130,10 @@ public class GuildView {
 			Branch b = guild.getBranch(group);
 			group++;
 			i.setItem(group+28, creator.createBranchItem(player, guild, b));
+			if(guild.isLeader(player)) {
+				i.setItem(group+19, creator.createBranchUpgradeItem(player, guild, b));
+				i.setItem(group+37, creator.createBranchDowngradeItem(player, guild, b));
+			}
 		}
 		i.setItem(13, creator.createMenuItem(player, guild, MenuItemType.TRADE_BREAKDOWN));
 		i.setItem(53, inv.createBackButton(SFGUI.GUILD_VIEW));
@@ -200,19 +210,29 @@ public class GuildView {
 			ItemMeta meta = item.getItemMeta();
 			String data = meta.getPersistentDataContainer().get(Keys.BRANCH_ID, PersistentDataType.STRING);
 			if(data != null ) {
+				Boolean upgrade = meta.getPersistentDataContainer().get(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN);
+				if(upgrade == null) return;
 				if(!guild.isLeader(p)) return;
 				Branch b = guild.getBranch(data);
-				double cost = guild.getExpansionCost();
-				if(guild.getBank().getWealth() < cost) {
-					p.sendMessage("§cCannot afford to upgrade");
-					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-					return;
+				if(!upgrade) {
+					if(b.getLevel() == 0) return;
+					guild.getBank().deposit(guild.getRefund());
+					b.levelDown();
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					p.sendMessage("§cDowngraded "+b.getName()+ "§c to level §e"+b.getLevel());
+				} else {
+					double cost = guild.getExpansionCost();
+					if(guild.getBank().getWealth() < cost) {
+						p.sendMessage("§cCannot afford to upgrade");
+						p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+						return;
+					}
+					b.levelUp();
+					p.sendMessage("§aUpgraded "+b.getName()+ "§a to level §e"+b.getLevel());
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					guild.getBank().withdraw(cost);
 				}
-				b.levelUp();
-				p.sendMessage("§aUpgraded "+b.getName()+ "§a to level §e"+b.getLevel());
-				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-				guild.getBank().withdraw(cost);
-				SimpleFactions.getInstance().getProvinceManager().recalculate();
+				manager.recalculateForSingleGuild(guild, true);
 				guildView(p, guild, inventory);
 			}
 		}

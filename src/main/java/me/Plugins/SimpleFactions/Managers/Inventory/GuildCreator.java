@@ -1,6 +1,7 @@
 package me.Plugins.SimpleFactions.Managers.Inventory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.bukkit.Bukkit;
@@ -23,6 +24,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Utils.FactionRanker;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
+import me.Plugins.SimpleFactions.enums.RankType;
 import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.TLibs.Enums.APIType;
 import me.Plugins.TLibs.Objects.API.ItemAPI;
@@ -116,12 +118,17 @@ public class GuildCreator {
 			for(Faction f : guild.getTradeBreakdown().getFactionsByIncomeDesc()) {
 				if(x == 10) break;
 				x++;
-				lore.add(StringFormatter.formatHex("§f - "+f.getName()+"#d4c9ae: #7fbd73"+guild.getTradeBreakdown().getIncomeByFaction(f)));
+				lore.add(StringFormatter.formatHex("§f - "+f.getName()+"#d4c9ae: #7fbd73"+guild.getTradeBreakdown().getIncomeByFaction(f)+"d/day"));
 			}
-			lore.add(StringFormatter.formatHex("#73adbfOther cashflows:"));
-			for(Guild g : FactionManager.getAllGuilds()) {
-				if(g.getId().equalsIgnoreCase(guild.getId())) continue;
-				lore.add(StringFormatter.formatHex("§f - "+g.getName()+" §7["+g.getSize()+"§7]#d4c9ae: #7fbd73"+SimpleFactions.getInstance().getProvinceManager().getIncome(g)));
+			lore.add("");
+			lore.add(StringFormatter.formatHex("#c95644Top 5 Guilds:"));
+			x = 0;
+			List<Guild> top = (new FactionRanker()).getRankedGuildList(RankType.INCOME);
+			Collections.reverse(top);
+			for(Guild g : top) {
+				x++;
+				lore.add(StringFormatter.formatHex("§f - §e"+x+". "+g.getName()+" §7["+g.getSize()+"§7]#d4c9ae: #7fbd73"+SimpleFactions.getInstance().getProvinceManager().getIncome(g)+"d/day"));
+				if(x > 4) break;
 			}
 			m.setLore(lore);
 			i.setItemMeta(m);
@@ -150,38 +157,115 @@ public class GuildCreator {
 		ItemStack i = branch.getIconItem();
 		ItemMeta meta = i.getItemMeta();
 		meta.setDisplayName(branch.getName());
-		List<String> lore = new ArrayList<String>();
-		lore.add(StringFormatter.formatHex("#575150[#d6cf69LVL "+branch.getLevel()+"#575150]"));
+
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#575150[#d6cf69LVL " + branch.getLevel() + "#575150]"));
 		lore.add("");
 		lore.addAll(branch.getDescription());
 		lore.add("");
 		lore.add(StringFormatter.formatHex("#a6c793Effects:"));
-		for(GuildModifier m : branch.getModifierKeys()) {
+
+		for (GuildModifier m : branch.getModifierKeys()) {
 			BranchModifier mod = branch.getModifier(m);
-			if(mod == null) continue;
-			lore.add(StringFormatter.formatHex("§f - "+m.getName()+"#d6cf69:"+(m.isPositive() ? " #4fd945" : " #cf493a")+(mod.getCurrent(branch.getLevel())+ " #575150("+(m.isPositive() ? "#4fd945" : "#cf493a")+mod.getPerLevel()+"#87807f/level#575150)")));
+			if (mod == null) continue;
+
+			lore.add(StringFormatter.formatHex(
+				"§f - " + m.getName()
+				+ "#d6cf69:"
+				+ (m.isPositive() ? " #4fd945" : " #cf493a")
+				+ (mod.getCurrent(branch.getLevel())
+				+ " #575150("
+				+ (m.isPositive() ? "#4fd945" : "#cf493a")
+				+ mod.getPerLevel()
+				+ "#87807f/level#575150)")
+			));
 		}
-		if(guild.isLeader(p)) {
+
+		meta.getPersistentDataContainer().set(Keys.BRANCH_ID, PersistentDataType.STRING, branch.getId());
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+	public ItemStack createBranchUpgradeItem(Player p, Guild guild, Branch branch) {
+		ItemStack i = TLibs.getItemAPI().getCreator().getItemsAdderItem("mcicons:icon_up_gray");
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex("#50e846§lUpgrade " + branch.getName()));
+
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#575150Current Level: #d6cf69" + branch.getLevel()));
+		lore.add("");
+
+		lore.add(StringFormatter.formatHex(
+			"#f2e5c2Upgrade Cost#d6cf69: #ccbb76" + guild.getExpansionCost() + "d"
+		));
+
+		double deltaIncome =
+			SimpleFactions.getInstance()
+			.getProvinceManager()
+			.previewUpgradeIncomeExact(guild, branch);
+
+		lore.add("");
+		lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Income: #7fbd73"+guild.getTradeBreakdown().getNetIncome()));
+		lore.add(StringFormatter.formatHex(
+			"#f2e5c2Estimated Income Change#d6cf69: "
+			+ (deltaIncome >= 0 ? "#4fd945+" : "#cf493a")
+			+ String.format("%.2f", deltaIncome)
+			+ "d/day"
+		));
+
+		lore.add("");
+		lore.add(StringFormatter.formatHex("#50e846§lClick to Upgrade"));
+
+		meta.getPersistentDataContainer().set(Keys.BRANCH_ID, PersistentDataType.STRING, branch.getId());
+		meta.getPersistentDataContainer().set(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN, true);
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+	public ItemStack createBranchDowngradeItem(Player p, Guild guild, Branch branch) {
+		ItemStack i = TLibs.getItemAPI().getCreator().getItemsAdderItem("mcicons:icon_down_gray");
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex("#cf493a§lDowngrade " + branch.getName()));
+
+		List<String> lore = new ArrayList<>();
+
+		// Lowest level guard
+		if (branch.getLevel() <= 0) {
+			lore.add(StringFormatter.formatHex("#575150Current Level: #d6cf69Lowest Level"));
 			lore.add("");
-			lore.add(StringFormatter.formatHex("#73adbfUpgrade Cost#d6cf69: #ccbb76"+guild.getExpansionCost()+"d"));
+			lore.add(StringFormatter.formatHex("#7a706aThis branch cannot be downgraded further."));
+		} else {
+			lore.add(StringFormatter.formatHex("#575150Current Level: #d6cf69" + branch.getLevel()));
+			lore.add("");
+
+			lore.add(StringFormatter.formatHex("#c95644Downgrade Effects:"));
+			lore.add(StringFormatter.formatHex("#7a706aStats will decrease by one level."));
 			lore.add("");
 
 			double deltaIncome =
-					SimpleFactions.getInstance()
-					.getProvinceManager()
-					.previewUpgradeIncomeExact(guild, branch);
-			lore.add("§aCurrent §6"+SimpleFactions.getInstance()
-					.getProvinceManager()
-					.getIncome(guild));
+				SimpleFactions.getInstance()
+				.getProvinceManager()
+				.previewDowngradeIncomeExact(guild, branch);
+			lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Income: #7fbd73"+guild.getTradeBreakdown().getNetIncome()));
 			lore.add(StringFormatter.formatHex(
-				"#73adbfEstimated Income#d6cf69: "
+				"#f2e5c2Estimated Income Change#d6cf69: "
 				+ (deltaIncome >= 0 ? "#4fd945+" : "#cf493a")
 				+ String.format("%.2f", deltaIncome)
 				+ "d/day"
 			));
-			lore.add(StringFormatter.formatHex("#50e846§lClick to Upgrade"));
+
+			lore.add("");
+
+			lore.add(StringFormatter.formatHex(
+				"#f2e5c2Refund#d6cf69: #ccbb76" + guild.getRefund() + "d"
+			));
+
+			lore.add("");
+			lore.add(StringFormatter.formatHex("#cf493a§lClick to Downgrade"));
 		}
+
 		meta.getPersistentDataContainer().set(Keys.BRANCH_ID, PersistentDataType.STRING, branch.getId());
+		meta.getPersistentDataContainer().set(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN, false);
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;

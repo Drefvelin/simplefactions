@@ -176,7 +176,7 @@ public class Province {
             }
         }
 
-        double exponent = 1 + Math.min(0.1, participants * 0.02);
+        double exponent = 1 + Math.min(0.1, participants * 0.005);
 
         total = Math.pow(total, exponent);
         total = Math.round(total * 100.0) / 100.0;

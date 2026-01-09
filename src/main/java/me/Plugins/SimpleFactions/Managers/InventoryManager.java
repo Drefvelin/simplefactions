@@ -50,6 +50,9 @@ public class InventoryManager implements Listener{
 	}
 
 	public void start() {
+		guildView.setProvinceManager(
+			SimpleFactions.getInstance().getProvinceManager()
+		);
 		new BukkitRunnable() {
 			@SuppressWarnings("unchecked")
 			@Override

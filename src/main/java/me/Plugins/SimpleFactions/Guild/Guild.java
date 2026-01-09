@@ -224,7 +224,7 @@ public class Guild {
 	}
     public void setCapital(int i) {
         capital = i;
-        SimpleFactions.getInstance().getProvinceManager().recalculate();
+        SimpleFactions.getInstance().getProvinceManager().recalculateForSingleGuild(this, true);
     }
     public String getRGB() {
         return isBase() ? host.getRGB() : rgb;
@@ -372,6 +372,13 @@ public class Guild {
 
         double total = baseCost * (Math.pow(r, size) - 1) / (r - 1);
         return Math.round(total * 100.0) / 100.0;
+    }
+
+    public double getRefund() {
+        int size = getSize()-1;
+        double baseCost = Cache.branchUpgradeCost;
+        double cost = baseCost*Math.pow(Cache.branchUpgradeExponent, size);
+        return Math.round(cost * 100.0) / 100.0;
     }
 
     public double getModifier(GuildModifier m) {

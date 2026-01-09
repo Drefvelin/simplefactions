@@ -45,6 +45,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final BranchLoader branchLoader = new BranchLoader();
 	private final GuildLoader guildLoader = new GuildLoader();
 	
+	private final ProvinceManager provinceManager = new ProvinceManager();
 	private final CommandManager commands = new CommandManager();
 	private final InventoryManager inventoryManager = new InventoryManager();
 	private final BankManager bankManager = new BankManager();
@@ -52,7 +53,6 @@ public class SimpleFactions extends JavaPlugin{
 	private final FactionManager factionManager = new FactionManager();
 	private final TitleManager titleManager = new TitleManager();
 	private final PlayerManager playerManager = new PlayerManager();
-	private final ProvinceManager provinceManager = new ProvinceManager();
 	private ProvinceManager provinceSnapshot = new ProvinceManager();
 	private final ProvinceLoader provinceLoader = new ProvinceLoader();
 	
@@ -85,9 +85,9 @@ public class SimpleFactions extends JavaPlugin{
 		factionManager.run();
 		RequestManager.start();
 		WarManager.start();
-		inventoryManager.start();
 		provinceSnapshot = provinceManager.createSnapshotShell();
 		provinceManager.recalculate();
+		inventoryManager.start();
 	}
 	@Override
 	public void onDisable() {

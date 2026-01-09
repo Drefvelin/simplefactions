@@ -15,6 +15,19 @@ import me.Plugins.SimpleFactions.enums.GuildModifier;
 
 public class ProvinceManager {
     private Map<Integer, Province> provinces = new HashMap<>();
+    private long stateVersion = 0;
+    private long lastCalculatedVersion = -1;
+
+    public void markDirty() {
+        stateVersion++;
+    }
+
+    public void recalculateIfNeeded() {
+        if (stateVersion == lastCalculatedVersion) return;
+
+        recalculate();
+        lastCalculatedVersion = stateVersion;
+    }
 
     public List<Province> getProvinces() { return new ArrayList<>(provinces.values()); }
 
@@ -49,25 +62,34 @@ public class ProvinceManager {
         }
         recalculateProsperity();
         for(Guild guild : FactionManager.getAllGuilds()) getIncome(guild);
-        FactionManager.getMap().exportProvinces();
-        FactionManager.getMap().exportGuilds();
     }
 
+    public void recalculateForSingleGuild(Guild g, boolean save) {
+        if (!g.hasCapital()) return;
+        recalculateGuild(g);
+        recalculateProduction(g);
+        if(save) {
+            for(Guild guild : FactionManager.getAllGuilds()) {
+                getIncome(guild);
+            }
+        }
+        recalculateProsperity();
+    }
 
-    public void recalculateProsperity() {
+    private void recalculateProsperity() {
         for (Province p : provinces.values()) {
             p.calculateProsperity();
         }
     }
 
-    public void recalculateProduction(Guild guild) {
+    private void recalculateProduction(Guild guild) {
         Province capital = provinces.get(guild.getCapital());
         if (capital != null) {
             capital.calculateProduction(this, guild, null, 0);
         }
     }
 
-    public void recalculateGuild(Guild guild) {
+    private void recalculateGuild(Guild guild) {
         String guildId = guild.getId();
 
         // 1) Clear only this guild’s data
@@ -82,8 +104,8 @@ public class ProvinceManager {
         }
     }
 
-    public double getIncome(Guild guild) {
-        guild.getTradeBreakdown().clear();
+    public double getIncome(Guild guild, boolean save) {
+        if(save) guild.getTradeBreakdown().clear();
         double income = 0;
         double upkeep = 0;
         double trade = 0;
@@ -98,16 +120,22 @@ public class ProvinceManager {
             income += provinceIncome;
             Faction owner = TitleManager.getByProvince(province.getId());
             if(owner == null) continue;
-            guild.getTradeBreakdown().registerIncome(owner, provinceIncome);
+            if(save) guild.getTradeBreakdown().registerIncome(owner, provinceIncome);
             trade += getTotalTrade(guild);
         }
-        guild.getTradeBreakdown().setUpkeep(upkeep);
-        guild.getTradeBreakdown().setIncome(income);
-        guild.getTradeBreakdown().setTradePower(trade);
+        if(save) {
+            guild.getTradeBreakdown().setUpkeep(upkeep);
+            guild.getTradeBreakdown().setIncome(income);
+            guild.getTradeBreakdown().setTradePower(trade);
+        }
         income-=upkeep;
 
         // Optional rounding for display
         return Math.round(income * 100.0) / 100.0;
+    }
+
+    public double getIncome(Guild guild) {
+        return getIncome(guild, true);
     }
 
     public double getTotalTrade(Guild guild) {
@@ -129,8 +157,8 @@ public class ProvinceManager {
 
         // Apply upgrade in snapshot context
         branch.levelUp();
-        snap.recalculate();
-        double snapIncomeAfter = snap.getIncome(guild);
+        snap.recalculateForSingleGuild(guild, false);
+        double snapIncomeAfter = snap.getIncome(guild, false);
 
         // Revert upgrade
         branch.levelDown();
@@ -139,6 +167,26 @@ public class ProvinceManager {
         return Math.round(delta * 100.0) / 100.0;
     }
 
+    public double previewDowngradeIncomeExact(Guild guild, Branch branch) {
+        ProvinceManager live = this;
+        ProvinceManager snap = SimpleFactions.getInstance().getProvinceSnapshot();
+
+        double liveIncomeBefore = live.getIncome(guild);
+
+        // Sync snapshot to live state
+        snap.copyAllDataFrom(live);
+
+        // Apply upgrade in snapshot context
+        branch.levelDown();
+        snap.recalculateForSingleGuild(guild, false);
+        double snapIncomeAfter = snap.getIncome(guild, false);
+
+        // Revert upgrade
+        branch.levelUp();
+
+        double delta = snapIncomeAfter - liveIncomeBefore;
+        return Math.round(delta * 100.0) / 100.0;
+    }
 
     //Simulation
     public void copyAllDataFrom(ProvinceManager source) {
