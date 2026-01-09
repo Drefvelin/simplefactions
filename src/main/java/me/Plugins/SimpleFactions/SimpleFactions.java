@@ -7,9 +7,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
-import me.Plugins.SimpleFactions.Loaders.CoinLoader;
 import me.Plugins.SimpleFactions.Loaders.ConfigLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
+import me.Plugins.SimpleFactions.Loaders.LawLoader;
 import me.Plugins.SimpleFactions.Loaders.ProvinceLoader;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.RegimentLoader;
@@ -33,9 +33,9 @@ import me.Plugins.SimpleFactions.War.War;
 public class SimpleFactions extends JavaPlugin{
 	public static FileConfiguration config;
 	public static SimpleFactions plugin;
-	//Classes
+	//Loaders
 	private final ConfigLoader configLoader = new ConfigLoader();
-	private final CoinLoader coinLoader = new CoinLoader();
+	//private final CoinLoader coinLoader = new CoinLoader(); No longer in use
 	private final RankLoader rankLoader = new RankLoader();
 	private final RegimentLoader regimentLoader = new RegimentLoader();
 	private final RelationLoader relationLoader = new RelationLoader();
@@ -44,7 +44,9 @@ public class SimpleFactions extends JavaPlugin{
 	private final WarGoalLoader goalLoader = new WarGoalLoader();
 	private final BranchLoader branchLoader = new BranchLoader();
 	private final GuildLoader guildLoader = new GuildLoader();
+	private final LawLoader lawLoader = new LawLoader();
 	
+	//Managers
 	private final ProvinceManager provinceManager = new ProvinceManager();
 	private final CommandManager commands = new CommandManager();
 	private final InventoryManager inventoryManager = new InventoryManager();
@@ -106,6 +108,7 @@ public class SimpleFactions extends JavaPlugin{
 		regimentLoader.loadRegiments(new File(getDataFolder(), "regiments.yml"));
 		relationLoader.loadRelationTypes(new File(getDataFolder(), "diplomacy.yml"));
 		relationLoader.loadAttitudes(new File(getDataFolder(), "diplomacy.yml"));
+		lawLoader.load(new File(getDataFolder(), "laws.yml"));
 		tierLoader.load(new File(getDataFolder(), "tiers.yml"));
 		goalLoader.load(new File(getDataFolder(), "wargoals.yml"));
 		guildLoader.load(new File(getDataFolder(), "Guilds/guild-types.yml"));
@@ -149,6 +152,7 @@ public class SimpleFactions extends JavaPlugin{
 				"ranks.yml",
 				"config.yml",
 				"tiers.yml",
+				"laws.yml",
 				"Guilds/guild-types.yml",
 				"Guilds/branches.yml",
 				};

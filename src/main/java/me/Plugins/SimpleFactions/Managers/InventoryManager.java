@@ -25,6 +25,7 @@ import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Inventory.FactionView;
 import me.Plugins.SimpleFactions.Managers.Inventory.GuildView;
 import me.Plugins.SimpleFactions.Managers.Inventory.InventoryUpdater;
+import me.Plugins.SimpleFactions.Managers.Inventory.LawView;
 import me.Plugins.SimpleFactions.Managers.Inventory.MilitaryView;
 import me.Plugins.SimpleFactions.Managers.Inventory.RelationView;
 import me.Plugins.SimpleFactions.Managers.Inventory.TaxChange;
@@ -111,6 +112,12 @@ public class InventoryManager implements Listener{
 	}
 	public void guildView(Player player, Guild guild, Inventory i) {
 		guildView.guildView(player, guild, i);
+	}
+
+	//Laws
+	LawView lawView = new LawView(this);
+	public void lawView(Player player, Faction f, Inventory i) {
+		lawView.lawView(player, f, i);
 	}
 	
 	//Tiers
@@ -283,6 +290,9 @@ public class InventoryManager implements Listener{
 						break;
 					case TITLE_TYPE_VIEW:
 						titleView(null, p, f, true);
+						break;
+					case LAW_VIEW:
+						factionView(p, f);
 						break;
 					default:
 						break;

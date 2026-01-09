@@ -105,6 +105,9 @@ public class FactionModifier {
 			case DE_JURE:
 				prefix = "#7bd481De Jure Requirement";
 				break;
+			case TRADE_POWER:
+				prefix = "#7bd481Trade Power";
+				break;
 			default:
 				prefix = "#c7b381Unknown Modifier";
 				break;
@@ -113,8 +116,13 @@ public class FactionModifier {
 	}
 	
 	private String suffix() {
-		String suffix = StringFormatter.formatHex("§7(#8bb36d"+amount+"%§7)");
-		return suffix;
+		String color = isBeneficial()
+				? "#87d65c"   // green
+				: "#d65c5c";  // red
+
+		return StringFormatter.formatHex(
+			"§7(" + color + amount + "%§7)"
+		);
 	}
 	
 	public String getString() {
@@ -140,7 +148,14 @@ public class FactionModifier {
 		return false;
 	}
 	
-	
+	private boolean isBeneficial() {
+		if (amount == 0) return true;
+
+		return type.isPositiveGood()
+				? amount > 0
+				: amount < 0;
+	}
+
 	@Override
 	public boolean equals(Object obj) {
 	    if (this == obj) return true;

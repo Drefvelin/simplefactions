@@ -736,7 +736,8 @@ public class Faction {
 		updatePrestige();
 	}
 
-	
+	//Laws
+	public LawHandler getLawHandler() { return lawHandler; }
 	
 	//Modifiers
 	

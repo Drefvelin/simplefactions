@@ -109,6 +109,7 @@ public class FactionView {
 		i.setItem(14, creator.createMenuItem(player, f, MenuItemType.MEMBERS));
 		i.setItem(16, creator.createMenuItem(player, f, MenuItemType.MODIFIERS));
 		i.setItem(25, creator.createMenuItem(player, f, MenuItemType.TAX));
+		i.setItem(28, creator.createMenuItem(player, f, MenuItemType.LAWS));
 		i.setItem(29, creator.createMenuItem(player, f, MenuItemType.MILITARY));
 		i.setItem(31, creator.createMenuItem(player, f, MenuItemType.DIPLOMACY));
 		i.setItem(33, creator.createMenuItem(player, f, MenuItemType.TIER));
@@ -183,7 +184,18 @@ public class FactionView {
 			}
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Faction View")) {
 			e.setCancelled(true);
-			if(e.getSlot() == 29) {
+			if(e.getSlot() == 28) {
+				ItemStack item = e.getCurrentItem();
+				ItemMeta m = item.getItemMeta();
+				NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");
+				String factionId = m.getPersistentDataContainer().get(id, PersistentDataType.STRING);
+				if(factionId == null) return;
+				Faction f = FactionManager.getByString(factionId);
+				if(f != null) {
+					inv.lawView(p, f, null);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				}
+			} else if(e.getSlot() == 29) {
 				ItemStack item = e.getCurrentItem();
 				ItemMeta m = item.getItemMeta();
 				NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");

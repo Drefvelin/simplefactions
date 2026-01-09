@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.laws;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.bukkit.configuration.ConfigurationSection;
@@ -14,6 +15,7 @@ public class LawGroup {
     private String name;
     private Law current;
     private Map<String, Law> laws = new LinkedHashMap<>();
+    private List<String> description = new ArrayList<>();
 
     public LawGroup(String key, ConfigurationSection config) {
         id = key;
@@ -21,11 +23,16 @@ public class LawGroup {
         for(String lawKey : config.getConfigurationSection("laws").getKeys(false)) {
             laws.put(lawKey, new Law(lawKey, config.getConfigurationSection("laws."+lawKey)));
         }
+        if(config.contains("description")) {
+            for(String s : config.getStringList("description")) 
+                description.add(StringFormatter.formatHex(s));
+        }
     }
 
     public LawGroup(Faction f, LawGroup another) {
         id = another.id;
         name = another.name;
+        description = another.description;
         for(Map.Entry<String, Law> entry : another.getLaws().entrySet()) {
             laws.put(entry.getKey(), entry.getValue());
         }
@@ -45,4 +52,6 @@ public class LawGroup {
     public String getName() { return name; }
     public Law getCurrent() { return current; }
     public Map<String, Law> getLaws() { return laws; }
+    public List<String> getDescription() { return description; }
+    public boolean hasDescription() { return !description.isEmpty(); }
 }
