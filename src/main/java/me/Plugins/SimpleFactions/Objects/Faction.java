@@ -33,6 +33,7 @@ import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Handler.GuildHandler;
+import me.Plugins.SimpleFactions.Objects.Handler.LawHandler;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
@@ -84,6 +85,9 @@ public class Faction {
 
 	//Guilds
 	private GuildHandler guildHandler = new GuildHandler();
+
+	//Laws
+	private final LawHandler lawHandler;
 	
 	public Faction(String id, String leader) {
 		this.id = format.formatId(id);
@@ -99,6 +103,7 @@ public class Faction {
 		this.prestige = 0.0;
 		this.extraNodeCapacity = 0;
 		this.rgb = RandomRGB.random();
+		this.lawHandler = new LawHandler(this);
 		while(!RandomRGB.isFree(rgb)) {
 			this.rgb = RandomRGB.random();
 		}
@@ -133,6 +138,7 @@ public class Faction {
 		this.military = new Military(this);
 		this.taxRate = taxRate;
 		this.vassalTax = vassalTax;
+		this.lawHandler = new LawHandler(this); //TODO persistence
 		init();
 		createBanner(bannerPatterns);
 		updateTier();

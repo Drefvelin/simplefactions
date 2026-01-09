@@ -1,0 +1,48 @@
+package me.Plugins.SimpleFactions.laws;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.bukkit.configuration.ConfigurationSection;
+
+import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
+
+public class LawGroup {
+    private String id;
+    private String name;
+    private Law current;
+    private Map<String, Law> laws = new LinkedHashMap<>();
+
+    public LawGroup(String key, ConfigurationSection config) {
+        id = key;
+        name = StringFormatter.formatHex(config.getString("name", id));
+        for(String lawKey : config.getConfigurationSection("laws").getKeys(false)) {
+            laws.put(lawKey, new Law(lawKey, config.getConfigurationSection("laws."+lawKey)));
+        }
+    }
+
+    public LawGroup(Faction f, LawGroup another) {
+        id = another.id;
+        name = another.name;
+        for(Map.Entry<String, Law> entry : another.getLaws().entrySet()) {
+            laws.put(entry.getKey(), entry.getValue());
+        }
+        current = getFirstAvailable(f);
+    }
+
+    public Law getFirstAvailable(Faction f) {
+        for(Law law : laws.values()) {
+            if(law.isAvailable(f)) {
+                return law;
+            }
+        }
+        return new ArrayList<>(laws.values()).get(0);
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public Law getCurrent() { return current; }
+    public Map<String, Law> getLaws() { return laws; }
+}
