@@ -31,8 +31,10 @@ import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
+import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Handler.GuildHandler;
 import me.Plugins.SimpleFactions.REST.RestServer;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
@@ -64,6 +66,7 @@ public class Faction {
 	
 	private double taxRate = 5;
 	private double vassalTax = 100;
+	private double guildTax = 5;
 
 	private Tier tier;
 	
@@ -181,8 +184,8 @@ public class Faction {
 
 	public void setCapital(int i) {
 		if(!provinces.contains(i)) return;
-		getOrCreateMainGuild().setCapital(i);
 		capital = i;
+		SimpleFactions.getInstance().getProvinceManager().recalculateForSingleGuild(getOrCreateMainGuild(), true);
 	}
 
 	public double getForeignTaxRate(Faction f) {
@@ -325,7 +328,7 @@ public class Faction {
 		for(Guild guild : guildHandler.getGuilds()) {
 			if(guild.isBase()) continue;
 			if(guild.getWealth() == 0) continue;
-			list.add(new Modifier(guild.getName()+" #a39ba8("+guild.getType().getName()+"#a39ba8)", guild.getWealth()));
+			list.add(new Modifier(guild.getName()+" #a39ba8("+guild.getType().getName()+"#a39ba8)", guild.getWealth(), false));
 		}
 		return list;
 	}
@@ -407,6 +410,7 @@ public class Faction {
 		for(Pattern p : b.getPatterns()) {
 			String colour = p.getColor().toString();
 			String pattern = p.getPattern().toString();
+			pattern = pattern.replace("tfmc:", "").toUpperCase();
 			this.bannerPatterns.add(colour+"."+pattern);
 		}
 		createBanner(bannerPatterns);
@@ -506,24 +510,24 @@ public class Faction {
 	}
 	public void updatePrestige() {
 		prestige = 0.0;
-		addPrestigeModifier(new Modifier("Members", format.formatDouble(Math.pow(guildHandler.getAllMembers().size()+4, 1.8)+5)));
+		addPrestigeModifier(new Modifier("Members", format.formatDouble(Math.pow(guildHandler.getAllMembers().size()+4, 1.8)+5), false));
 		if(wealth == 0) {
-			addPrestigeModifier(new Modifier("Wealth", 0.0));
+			addPrestigeModifier(new Modifier("Wealth", 0.0, false));
 		}
 		if(wealth > 0 && FactionManager.getGlobalWealth() > 0) {
 			Double amount = wealth/FactionManager.getGlobalWealth()*Cache.maxWealthPrestige;
 			if(amount > wealth) {
 				amount = wealth;
 			}
-			addPrestigeModifier(new Modifier("Wealth", format.formatDouble(amount)));
+			addPrestigeModifier(new Modifier("Wealth", format.formatDouble(amount), false));
 		}
 		int provincePrestige = TierLoader.getByString("province").getPrestige();
 		if(provinces.size() > 0 && provincePrestige > 0) {
-			addPrestigeModifier(new Modifier("Provinces", (double) (provincePrestige*provinces.size())));
+			addPrestigeModifier(new Modifier("Provinces", (double) (provincePrestige*provinces.size()), false));
 		}
 		if(titles.size() > 0) {
 			double titleAmount = getHighestTitle().getTier().getPrestige();
-			addPrestigeModifier(new Modifier("Titles", titleAmount));
+			addPrestigeModifier(new Modifier("Titles", titleAmount, false));
 		}
 		if(getModifier(FactionModifiers.PRESTIGE_BONUS).getAmount() > 0.0) {
 			double multiplier = getModifier(FactionModifiers.PRESTIGE_BONUS).getAmount()/100.0;
@@ -532,7 +536,7 @@ public class Faction {
 				extra += p.getAmount();
 			}
 			extra = format.formatDouble(extra*multiplier);
-			addPrestigeModifier(new Modifier(getModifier(FactionModifiers.PRESTIGE_BONUS).getAmount()+"% Bonus", extra));
+			addPrestigeModifier(new Modifier(getModifier(FactionModifiers.PRESTIGE_BONUS).getAmount()+"% Bonus", extra, false));
 		}
 		double fromSubjects = 0.0;
 		for(Faction s : RelationManager.getSubjects(this)) {
@@ -544,7 +548,7 @@ public class Faction {
 		}
 		if(fromSubjects > 0) {
 			fromSubjects = format.formatDouble(fromSubjects);
-			addPrestigeModifier(new Modifier("Subjects", fromSubjects));
+			addPrestigeModifier(new Modifier("Subjects", fromSubjects, false));
 		}
 		for(Modifier p : prestigeModifiers) {
 			prestige = prestige + p.getAmount();
@@ -827,6 +831,9 @@ public class Faction {
 			getBank().withdraw(armyCost);
 		}
 		provinceCap();
+		for(Guild guild : guildHandler.getGuilds()) {
+			guild.newDay();
+		}
     }
 
 	public void provinceCap() {
@@ -845,5 +852,15 @@ public class Faction {
 			if(p != null && p.isOnline()) count++;
 		}
 		return count;
+	}
+
+	public double getProsperity() {
+		double amount = 0;
+		for(int p : provinces) {
+			Province province = SimpleFactions.getInstance().getProvinceManager().get(p);
+			if(province == null)  continue;
+			amount += province.getProsperity();
+		}
+		return format.formatDouble(amount);
 	}
 }

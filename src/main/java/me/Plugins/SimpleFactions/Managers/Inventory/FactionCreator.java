@@ -43,7 +43,7 @@ public class FactionCreator {
 	public ItemStack createListItem(Player p, Faction f) {
 		ItemStack i = new ItemStack(f.getBanner());
 		ItemMeta meta = i.getItemMeta();
-		meta.setDisplayName(f.getName());
+		meta.setDisplayName("§f"+f.getName());
 		List<String> lore = new ArrayList<String>();
 		lore.add(f.getRank().getName());
 		if(f.getTitles().size() > 0) lore.add(StringFormatter.formatHex("#b84c44§lPrimary Title: #7a706a"+f.getHighestTitle().getName()));
@@ -60,6 +60,8 @@ public class FactionCreator {
 		lore.add(" ");
 		lore.add(StringFormatter.formatHex("#4793bfPrestige: #6eafba"+f.getPrestige()+" #7a706a("+r.getPrestigeRank(f)+")"));
 		lore.add(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+f.getWealth()+"d #7a706a("+r.getWealthRank(f)+")"));
+		double prosperity = f.getProsperity();
+		if(prosperity > 0) lore.add(StringFormatter.formatHex("#4bb244Prosperity: #4fd945"+f.getProsperity()));
 		if(!f.getMembers().contains(p.getName())) {
 			Faction origin = FactionManager.getByMember(p.getName());
 			if(origin != null) {
@@ -108,24 +110,6 @@ public class FactionCreator {
 		return i;
 	}
 	
-	public ItemStack createRankButton(RankType t) {
-		ItemStack i = new ItemStack(Material.BLAZE_POWDER, 1);
-		if(t.equals(RankType.PRESTIGE)) {
-			i.setType(Material.DIAMOND);
-		} else if(t.equals(RankType.WEALTH)) {
-			i.setType(Material.GOLD_NUGGET);
-		} else {
-			i.setType(Material.PLAYER_HEAD);
-		}
-		ItemMeta meta = i.getItemMeta();
-		meta.setDisplayName("§aCurrently ranking based on §e"+t.toString());
-		List<String> lore = new ArrayList<String>();
-		lore.add("§7Click to change");
-		meta.setLore(lore);
-		i.setItemMeta(meta);
-		return i;
-	}
-	
 	@SuppressWarnings("deprecation")
 	public ItemStack createMenuItem(Player p, Faction f, MenuItemType t) {
 		ItemStack i = new ItemStack(Material.DIRT, 1);
@@ -167,10 +151,10 @@ public class FactionCreator {
 		} else if(t.equals(MenuItemType.WEALTH)) {
 			i = new ItemStack(Material.GOLD_NUGGET, 1);
 			ItemMeta m = i.getItemMeta();
-			m.setDisplayName(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+f.getWealth()));
+			m.setDisplayName(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+f.getWealth()+"d"));
 			List<String> lore = new ArrayList<String>();
 			for(Modifier mod : f.getWealthModifiers()) {
-				lore.add(StringFormatter.formatHex("#93c9a7+"+mod.getAmount()+" from "+mod.getType()));
+				lore.add(StringFormatter.formatHex("#93c9a7+"+mod.getAmount()+"d from "+mod.getType()));
 			}
 			m.setLore(lore);
 			i.setItemMeta(m);

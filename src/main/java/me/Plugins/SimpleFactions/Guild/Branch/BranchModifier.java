@@ -12,6 +12,6 @@ public class BranchModifier {
     public double getBase() { return base; }
     public double getPerLevel() { return perLevel; }
     public double getCurrent(int lvl) {
-        return base + perLevel*lvl;
+        return Math.round((base + perLevel*lvl)*100.0)/100.0;
     }
 }

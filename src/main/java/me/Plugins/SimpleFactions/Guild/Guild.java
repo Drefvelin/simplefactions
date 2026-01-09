@@ -15,15 +15,20 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
+import me.Plugins.SimpleFactions.Guild.income.TradeBreakdown;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
+import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Guild {
@@ -51,6 +56,8 @@ public class Guild {
 
 	private List<Modifier> wealthModifiers = new ArrayList<>();
 
+    private TradeBreakdown breakdown = new TradeBreakdown();
+
     public Guild(Faction f) {
         host = f;
         id = f.getId();
@@ -67,7 +74,7 @@ public class Guild {
 		this.prestige = 0.0;
         int group = 0;
         while(BranchLoader.getByGroup(this, group) != null) {
-            branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 1));
+            branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 0));
             group++;
         }
         createBanner();
@@ -90,7 +97,7 @@ public class Guild {
 		this.prestige = 0.0;
         int group = 0;
         while(BranchLoader.getByGroup(this, group) != null) {
-            branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 1));
+            branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 0));
             group++;
         }
         f.getOrCreateMainGuild().kick(p.getName());
@@ -105,7 +112,7 @@ public class Guild {
         int capital,
         String type,
         List<String> members,
-        Map<Integer, Branch> branches,
+        List<Branch> branchList,
         List<String> patterns,
         List<Modifier> wealthModifiers,
         Faction host
@@ -118,12 +125,14 @@ public class Guild {
         this.rgb = rgb;
         this.capital = capital;
         this.members = members != null ? members : new ArrayList<>();
-        this.branches = branches != null ? branches : new HashMap<>();
+        for(Branch b : branchList) {
+            this.branches.put(b.getGroup(), b);
+        }
         int group = 0;
         while(group < 10) {
-            if(!branches.containsKey(group)) {
+            if(!this.branches.containsKey(group)) {
                 Branch b = BranchLoader.getByGroup(this, group);
-                if(b != null) branches.put(group, new Branch(b, 1));
+                if(b != null) this.branches.put(group, new Branch(b, 0));
             }
             group++;
         }
@@ -134,6 +143,37 @@ public class Guild {
         createBanner();
     }
 
+    public void dummify(Player p) {
+        for(int i = 0; i<members.size(); i++) {
+            String member = members.get(i);
+            if(member.contains("dummy")) continue;
+            String dummy = "dummy_";
+            int x = 1;
+            while(FactionManager.getGuildByMember((dummy+x)) != null) {
+                x++;
+            }
+            dummy = dummy+x;
+            members.set(i, dummy);
+            p.sendMessage("§a"+dummy+" replaced "+member);
+            if(isLeader(member)) {
+                p.sendMessage("§a"+dummy+" became leader");
+                if(isBase()) host.setLeader(dummy);
+                else setLeader(dummy);
+            }
+        }
+    }
+    public void dummyLeader(Player p) {
+        String dummy = "dummy_";
+        int x = 1;
+        while(FactionManager.getGuildByMember((dummy+x)) != null) {
+            x++;
+        }
+        dummy = dummy+x;
+        addMember(dummy);
+        if(isBase()) host.setLeader(dummy);
+        else setLeader(dummy);
+        p.sendMessage("§a"+dummy+" became leader");
+    }
     public boolean isBase() { return type.isBase(); }
     public Faction getFaction() { return host; }
     public List<String> getInvites() { return invites; }
@@ -168,12 +208,23 @@ public class Guild {
     public Branch getBranch(int i) {
         return branches.getOrDefault(i, null);
     }
+    public Branch getBranch(String id) {
+        for(Branch b : branches.values()) {
+            if(b.getId().equalsIgnoreCase(id)) return b;
+        }
+        return null;
+    }
     public GuildType getType() { return type; }
     public int getCapital() {
         return isBase() ? host.getCapital() : capital;
     }
+    public boolean hasCapital() {
+        if(isBase()) return host.hasCapital();
+		return capital != -1;
+	}
     public void setCapital(int i) {
         capital = i;
+        SimpleFactions.getInstance().getProvinceManager().recalculateForSingleGuild(this, true);
     }
     public String getRGB() {
         return isBase() ? host.getRGB() : rgb;
@@ -217,17 +268,19 @@ public class Guild {
 		for(Pattern p : b.getPatterns()) {
 			String colour = p.getColor().toString();
 			String pattern = p.getPattern().toString();
+			pattern = pattern.replace("tfmc:", "").toUpperCase();
 			this.bannerPatterns.add(colour+"."+pattern);
 		}
 		createBanner();
 	}
 	public List<String> getBannerPatterns() {
-		return bannerPatterns;
+		return isBase() ? host.getBannerPatterns() : bannerPatterns;
 	}
 	public void setBannerPatterns(List<String> bannerPatterns) {
 		this.bannerPatterns = bannerPatterns;
 		createBanner();
 	}
+    
     public ItemStack getBanner() {
         if(isBase()) return host.getBanner();
         return banner;
@@ -250,7 +303,9 @@ public class Guild {
     public void updateWealth() {
         if(bank == null) return;
 		wealth = 0.0;
-		addWealthModifier(new Modifier("Bank", bank.getWealth()));
+		addWealthModifier(new Modifier("Bank", bank.getWealth(), false));
+        double spent = getTotalExpansionSpent();
+        if(spent > 0) addWealthModifier(new Modifier("Expansions", spent, false));
 		for(Modifier p : wealthModifiers) {
 			wealth = wealth + p.getAmount();
 		}
@@ -292,4 +347,53 @@ public class Guild {
 			wealthModifiers.add(m);
 		}
 	}
+
+    public int getSize() {
+        int size = 0;
+        for(Branch b : branches.values()) {
+            size += b.getLevel();
+        }
+        return size;
+    }
+
+    public double getExpansionCost() {
+        int size = getSize();
+        double baseCost = Cache.branchUpgradeCost;
+        double cost = baseCost*Math.pow(Cache.branchUpgradeExponent, size);
+        return Math.round(cost * 100.0) / 100.0;
+    }
+
+    public double getTotalExpansionSpent() {
+        int size = getSize();
+        if (size <= 0) return 0.0;
+
+        double baseCost = Cache.branchUpgradeCost;
+        double r = Cache.branchUpgradeExponent;
+
+        double total = baseCost * (Math.pow(r, size) - 1) / (r - 1);
+        return Math.round(total * 100.0) / 100.0;
+    }
+
+    public double getRefund() {
+        int size = getSize()-1;
+        double baseCost = Cache.branchUpgradeCost;
+        double cost = baseCost*Math.pow(Cache.branchUpgradeExponent, size);
+        return Math.round(cost * 100.0) / 100.0;
+    }
+
+    public double getModifier(GuildModifier m) {
+        double amount = 0.0;
+        for(Branch b : branches.values()) {
+            amount += b.getAmount(m);
+        }
+        return amount;
+    }
+
+    public TradeBreakdown getTradeBreakdown() { return breakdown; }
+
+    public void newDay() {
+        if(bank != null) {
+            bank.deposit(breakdown.getIncome());
+        }
+    }
 }

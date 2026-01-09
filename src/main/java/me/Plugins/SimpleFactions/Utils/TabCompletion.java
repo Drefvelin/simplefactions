@@ -223,7 +223,7 @@ public class TabCompletion implements TabCompleter{
 				// Suggest faction names
 				for (Faction f : FactionManager.factions) {
 					if (f.getId().toLowerCase().startsWith(args[1].toLowerCase())) {
-						completions.add(f.getName());
+						completions.add(f.getId());
 					}
 				}
 				return completions;

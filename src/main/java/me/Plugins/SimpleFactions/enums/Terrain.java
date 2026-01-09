@@ -7,10 +7,22 @@ public enum Terrain {
     FOREST,
     HIGHLANDS,
     JUNGLE,
-    WATER,
-    SEA,
+    WATER(false),
+    SEA(false),
     BOG,
     MOUNTAIN,
     DRYLANDS,
-    UNKNOWN
+    UNKNOWN;
+
+    private boolean generatesIncome;
+
+    public boolean generatesIncome() { return generatesIncome; }
+
+    private Terrain() {
+        generatesIncome = true;
+    }
+
+    private Terrain(boolean i) {
+        generatesIncome = i;
+    }
 }

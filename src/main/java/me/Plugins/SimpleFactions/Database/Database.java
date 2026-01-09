@@ -141,12 +141,11 @@ public class Database {
                 if (data.guilds != null) {
                     for (GuildData gd : data.guilds) {
 
-                        Map<Integer, Branch> branches = new HashMap<>();
+                        List<Branch> branches = new ArrayList<>();
                         for (GuildBranchData bd : gd.branches) {
                             Branch base = BranchLoader.getByString(bd.id);
                             if (base != null) {
-                                branches.put(
-                                    bd.group.intValue(),
+                                branches.add(
                                     new Branch(base, bd.level.intValue())
                                 );
                             }
@@ -232,8 +231,10 @@ public class Database {
                             + rel.getAttitude().getId() + "." + rel.getOpinion() + ")"));
 
             // --- Modifiers ---
-            f.getPrestigeModifiers().forEach(m ->
-                    data.prestigeModifiers.add(m.getType() + "(" + m.getAmount() + ")"));
+            f.getPrestigeModifiers().forEach(m -> {
+                if(m.isPersistent())
+                    data.prestigeModifiers.add(m.getType() + "(" + m.getAmount() + ")");
+            });
 
             // --- Guild ---
             for (Guild g : f.getGuildHandler().getGuilds()) {
@@ -260,13 +261,14 @@ public class Database {
                     gd.bank = "false";
                 }
                 // --- Modifiers ---
-                g.getWealthModifiers().forEach(m ->
-                    gd.wealthModifiers.add(m.getType() + "(" + m.getAmount() + ")"));
+                g.getWealthModifiers().forEach(m -> {
+                    if(m.isPersistent())
+                        gd.wealthModifiers.add(m.getType() + "(" + m.getAmount() + ")");
+                });
 
                 for (Map.Entry<Integer, Branch> e : g.getBranches().entrySet()) {
                     Branch b = e.getValue();
                     GuildBranchData bd = new GuildBranchData();
-                    bd.group = e.getKey();
                     bd.id = b.getId();
                     bd.level = b.getLevel();
                     gd.branches.add(bd);
@@ -295,7 +297,7 @@ public class Database {
         for (String s : raw) {
             String type = s.substring(0, s.indexOf("("));
             double amt = Double.parseDouble(s.substring(s.indexOf("(") + 1, s.indexOf(")")));
-            list.add(new Modifier(type, amt));
+            list.add(new Modifier(type, amt, true));
         }
         return list;
     }

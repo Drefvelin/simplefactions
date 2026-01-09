@@ -12,7 +12,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Diplomacy.Attitude;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
@@ -24,6 +23,7 @@ import me.Plugins.SimpleFactions.Map.MapSystem;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Objects.PrestigeRank;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.Utils.Formatter;
@@ -142,6 +142,12 @@ public class FactionManager implements Listener{
 
 	public void time() {
 		timer++;
+		if(timer%10 == 0) {
+			for(Guild guild : getAllGuilds()) {
+				if(guild.getLeader().contains("dummy")) continue;
+				guild.newDay();
+			}
+		}
 		if(timer%300 == 0) {
 			for(Faction f : factions) {
 				if(f.getProvinces().size() == 0) continue;
@@ -215,6 +221,14 @@ public class FactionManager implements Listener{
 		}
 		return null;
 	}
+
+	public static List<Guild> getAllGuilds() {
+		List<Guild> guilds = new ArrayList<>();
+		for(Faction f : factions) {
+			guilds.addAll(f.getGuildHandler().getGuilds());
+		}
+		return guilds;
+	}
 	
 	public void start(List<Faction> l) {
 		factions = l;
@@ -280,6 +294,37 @@ public class FactionManager implements Listener{
 				if(m.getType().equalsIgnoreCase("bank")) {
 					amount = amount + m.getAmount();
 				}
+			}
+		}
+		return format.formatDouble(amount);
+	}
+	public static Double getTotalGuildIncome() {
+		Formatter format = new Formatter();
+		Double amount = 0.0;
+		for(Guild g : getAllGuilds()) {
+			amount+=g.getTradeBreakdown().getNetIncome();
+		}
+		return format.formatDouble(amount);
+	}
+	public static Double getGuildLiquidWealth() {
+		Formatter format = new Formatter();
+		Double amount = 0.0;
+		for(Guild g : getAllGuilds()) {
+			if(g.isBase()) continue;
+			for(Modifier m : g.getWealthModifiers()) {
+				if(m.getType().equalsIgnoreCase("bank")) {
+					amount = amount + m.getAmount();
+				}
+			}
+		}
+		return format.formatDouble(amount);
+	}
+	public static Double getGlobalGuildExpansions() {
+		Formatter format = new Formatter();
+		Double amount = 0.0;
+		for(Faction f : factions) {
+			for(Guild guild : f.getGuildHandler().getGuilds()) {
+				amount+=guild.getTotalExpansionSpent();
 			}
 		}
 		return format.formatDouble(amount);

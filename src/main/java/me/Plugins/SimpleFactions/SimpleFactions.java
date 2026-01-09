@@ -45,6 +45,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final BranchLoader branchLoader = new BranchLoader();
 	private final GuildLoader guildLoader = new GuildLoader();
 	
+	private final ProvinceManager provinceManager = new ProvinceManager();
 	private final CommandManager commands = new CommandManager();
 	private final InventoryManager inventoryManager = new InventoryManager();
 	private final BankManager bankManager = new BankManager();
@@ -52,7 +53,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final FactionManager factionManager = new FactionManager();
 	private final TitleManager titleManager = new TitleManager();
 	private final PlayerManager playerManager = new PlayerManager();
-	private final ProvinceManager provinceManager = new ProvinceManager();
+	private ProvinceManager provinceSnapshot = new ProvinceManager();
 	private final ProvinceLoader provinceLoader = new ProvinceLoader();
 	
 	@Override
@@ -84,6 +85,8 @@ public class SimpleFactions extends JavaPlugin{
 		factionManager.run();
 		RequestManager.start();
 		WarManager.start();
+		provinceSnapshot = provinceManager.createSnapshotShell();
+		provinceManager.recalculate();
 		inventoryManager.start();
 	}
 	@Override
@@ -98,7 +101,7 @@ public class SimpleFactions extends JavaPlugin{
 	}
 	public void loadConfigs() {
 		configLoader.loadConfig(new File(getDataFolder(), "config.yml"));
-		coinLoader.loadCoins(new File(getDataFolder(), "coins.yml"));
+		//coinLoader.loadCoins(new File(getDataFolder(), "coins.yml"));
 		rankLoader.loadRanks(new File(getDataFolder(), "ranks.yml"));
 		regimentLoader.loadRegiments(new File(getDataFolder(), "regiments.yml"));
 		relationLoader.loadRelationTypes(new File(getDataFolder(), "diplomacy.yml"));
@@ -141,7 +144,6 @@ public class SimpleFactions extends JavaPlugin{
 	}
 	public void createConfigs() {
 		String[] files = {
-				"coins.yml",
 				"regiments.yml",
 				"diplomacy.yml",
 				"ranks.yml",
@@ -169,5 +171,9 @@ public class SimpleFactions extends JavaPlugin{
 
 	public ProvinceManager getProvinceManager() {
 		return provinceManager;
+	}
+
+	public ProvinceManager getProvinceSnapshot() {
+		return provinceSnapshot;
 	}
 }

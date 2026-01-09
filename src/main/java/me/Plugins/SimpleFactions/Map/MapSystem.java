@@ -46,6 +46,19 @@ public class MapSystem {
 		}
 		updateMap();
 	}
+
+	public void uploadAll() {
+		exportProvinces();
+		exportGuilds();
+		compiler.exportAllFactionsToNationJson();
+		RestServer.upload("nation", new File("plugins/SimpleFactions/MapAPI/nation.json"));
+		RestServer.upload("province_data", new File("plugins/SimpleFactions/MapAPI/province_data.json"));
+		RestServer.upload("guilds", new File("plugins/SimpleFactions/MapAPI/guilds.json"));
+		RestServer.upload("county", new File("plugins/SimpleFactions/Input/county.json"));
+		RestServer.upload("duchy", new File("plugins/SimpleFactions/Input/duchy.json"));
+		RestServer.upload("kingdom", new File("plugins/SimpleFactions/Input/kingdom.json"));
+		RestServer.upload("empire", new File("plugins/SimpleFactions/Input/empire.json"));
+	}
 	
 	public void updateMap() {
 		lastUpdate = 0;
@@ -55,12 +68,7 @@ public class MapSystem {
 		for(Faction fac : FactionManager.factions) {
 			db.saveFaction(fac);
 		}
-		compiler.exportAllFactionsToNationJson();
-		RestServer.upload("nation", new File("plugins/SimpleFactions/MapAPI/nation.json"));
-		RestServer.upload("county", new File("plugins/SimpleFactions/Input/county.json"));
-		RestServer.upload("duchy", new File("plugins/SimpleFactions/Input/duchy.json"));
-		RestServer.upload("kingdom", new File("plugins/SimpleFactions/Input/kingdom.json"));
-		RestServer.upload("empire", new File("plugins/SimpleFactions/Input/empire.json"));
+		uploadAll();
 		RestServer.commenceRegen("queued");
 		clear();
 	}
@@ -71,12 +79,7 @@ public class MapSystem {
 		for(Faction fac : FactionManager.factions) {
 			db.saveFaction(fac);
 		}
-		compiler.exportAllFactionsToNationJson();
-		RestServer.upload("nation", new File("plugins/SimpleFactions/MapAPI/nation.json"));
-		RestServer.upload("county", new File("plugins/SimpleFactions/Input/county.json"));
-		RestServer.upload("duchy", new File("plugins/SimpleFactions/Input/duchy.json"));
-		RestServer.upload("kingdom", new File("plugins/SimpleFactions/Input/kingdom.json"));
-		RestServer.upload("empire", new File("plugins/SimpleFactions/Input/empire.json"));
+		uploadAll();
 		RestServer.commenceRegen("fullregen");
 	}
 	
@@ -162,5 +165,27 @@ public class MapSystem {
 			t.destroy(f, provinces, titles);
 		}
 		enqueue("nation", f.getRGB());
+	}
+
+	public void exportProvinces() {
+		try {
+			File out = new File("plugins/SimpleFactions/MapAPI/province_data.json");
+			compiler.exportProvincesToJson(out);
+			//RestServer.upload("provinces", out); not yet
+		} catch (Exception e) {
+			Bukkit.getLogger().severe("[SimpleFactions] Failed to export province_data.json");
+			e.printStackTrace();
+		}
+	}
+
+	public void exportGuilds() {
+		try {
+			File out = new File("plugins/SimpleFactions/MapAPI/guilds.json");
+			compiler.exportGuildsToJson(out);
+			//RestServer.upload("provinces", out); not yet
+		} catch (Exception e) {
+			Bukkit.getLogger().severe("[SimpleFactions] Failed to export guilds.json");
+			e.printStackTrace();
+		}
 	}
 }

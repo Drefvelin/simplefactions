@@ -4,12 +4,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
-import me.Plugins.SimpleFactions.Managers.InventoryManager;
-import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFCombinedInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
+import me.Plugins.SimpleFactions.Managers.InventoryManager;
+import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.enums.SFGUI;
@@ -27,12 +28,17 @@ public class InventoryUpdater {
 			Inventory i = p.getOpenInventory().getTopInventory();
 			if(i.getHolder() instanceof SFInventoryHolder) {
 				SFInventoryHolder h = (SFInventoryHolder) i.getHolder();
-				Faction f = FactionManager.getByString(h.getId());
-				if(f == null) continue;
-				if(h.getType().equals(SFGUI.MILITARY_VIEW)) {
-					inv.militaryView(i, p, f, false);
-				} else if(h.getType().equals(SFGUI.DIPLOMACY_VIEW)) {
-					inv.diplomacyView(i, p, f, false);
+				if(h.getType().equals(SFGUI.GUILD_VIEW)) {
+					Guild guild = FactionManager.getGuildByString(h.getId());
+					inv.guildView(p, guild, i);
+				} else {
+					Faction f = FactionManager.getByString(h.getId());
+					if(f == null) continue;
+					if(h.getType().equals(SFGUI.MILITARY_VIEW)) {
+						inv.militaryView(i, p, f, false);
+					} else if(h.getType().equals(SFGUI.DIPLOMACY_VIEW)) {
+						inv.diplomacyView(i, p, f, false);
+					}
 				}
 			} else if(i.getHolder() instanceof WarInventoryHolder) {
 				WarInventoryHolder h = (WarInventoryHolder) i.getHolder();

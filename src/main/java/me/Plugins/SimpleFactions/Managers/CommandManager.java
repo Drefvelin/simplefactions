@@ -94,8 +94,31 @@ public class CommandManager implements Listener, CommandExecutor{
 				f.getGuildHandler().addGuild(guild);
 				p.sendMessage("§aGuild "+guild.getName()+" §acreated!");
 				return true;
-			}
-			if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("menu") && args.length == 1) {
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("dummyLeader") && args.length == 1) {
+				Guild guild = FactionManager.getGuildByMember(p.getName());
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§cYou do not have access to this command");
+					return true;
+				}
+				if(guild == null) {
+					p.sendMessage("§cYou are not in a guild");
+					return true;
+				}
+				guild.dummyLeader(p);
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("dummify") && args.length == 1) {
+				Guild guild = FactionManager.getGuildByMember(p.getName());
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§cYou do not have access to this command");
+					return true;
+				}
+				if(guild == null) {
+					p.sendMessage("§cYou are not in a guild");
+					return true;
+				}
+				guild.dummify(p);
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("menu") && args.length == 1) {
 				Guild guild = FactionManager.getGuildByMember(p.getName());
 				if(guild == null) {
 					p.sendMessage("§cYou are not in a guild");
@@ -104,8 +127,11 @@ public class CommandManager implements Listener, CommandExecutor{
 				InventoryManager inv = new InventoryManager();
 				inv.guildView(p, guild);
 				return true;
-			}
-			if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("invite") && args.length == 2) {
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("list") && args.length == 1) {
+				InventoryManager i = new InventoryManager();
+				i.guildList(p);
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("invite") && args.length == 2) {
 				Guild guild = FactionManager.getGuildByLeader(p.getName());
 				if(guild == null) {
 					p.sendMessage("§cYou are not the leader of a guild");
@@ -238,6 +264,32 @@ public class CommandManager implements Listener, CommandExecutor{
 				} else {
 					p.sendMessage("§cYou need to be a guild leader to withdraw from the guild bank");
 				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("setcapital") && args.length == 1) {
+				Guild g = FactionManager.getGuildByLeader(p.getName());
+				if(g == null) {
+					p.sendMessage("§cYou must be the leader of a guild to set the capital");
+					return true;
+				}
+				if(g.hasCapital()) {
+					p.sendMessage("§cYour guild already has a capital");
+					return true;
+				}
+				int claim = RestServer.getProvince(p);
+				if(claim == -2) {
+					p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
+				} else {
+					if(claim == 0) {
+						p.sendMessage("§cThis location has no province!");
+						return true;
+					} else if(!g.getFaction().getProvinces().contains(claim)) {
+						p.sendMessage("§cYour host faction doesn't own this province!");
+						return true;
+					}
+				}
+				g.setCapital(claim);
+				p.sendMessage("§aCapital set!");
+				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 				return true;
 			}
 			if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("create") && args.length == 2) {
@@ -699,7 +751,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				String type = args[2];
 				Double amount = Double.parseDouble(args[3]);
-				Modifier m = new Modifier(type, amount);
+				Modifier m = new Modifier(type, amount, true);
 				f.addPersistentPrestigeModifier(m);
 				f.updatePrestige();
 				p.sendMessage("§aFaction prestige changed!");
@@ -875,14 +927,17 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
 					return true;
 				}
-				double globalWealth = FactionManager.getGlobalWealth()+FactionManager.getPouchWealth()+FactionManager.getBankWealth();
+				double globalWealth = format.formatDouble(FactionManager.getGlobalWealth()+FactionManager.getPouchWealth()+FactionManager.getBankWealth());
 				p.sendMessage("§f======================================");
 				p.sendMessage("§eGlobal Wealth: §6"+globalWealth+"d");
 				p.sendMessage("§aTaken up by Nodes: §6"+FactionManager.getGlobalNodeWealth()+"d");
 				p.sendMessage("§aLiquid Faction Capital: §6"+FactionManager.getGlobalLiquidWealth()+"d");
+				p.sendMessage("§aLiquid Guild Capital: §6"+FactionManager.getGuildLiquidWealth()+"d");
+				p.sendMessage("§aGuild Expansions: §6"+FactionManager.getGlobalGuildExpansions()+"d");
 				p.sendMessage("§aPersonal Pouches: §6"+FactionManager.getPouchWealth()+"d");
 				p.sendMessage("§aPersonal Banks: §6"+FactionManager.getBankWealth()+"d");
 				p.sendMessage("§aNode Percentage: §f"+Math.round((FactionManager.getGlobalNodeWealth()/globalWealth)*100)+"% §aof global wealth");
+				p.sendMessage("§bDaily Total Guild Income: §6"+FactionManager.getTotalGuildIncome()+"d§7/day");
 				p.sendMessage("§f======================================");
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("queueallnations") && args.length == 1) {
