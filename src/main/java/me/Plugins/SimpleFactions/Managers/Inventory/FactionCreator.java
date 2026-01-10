@@ -31,6 +31,7 @@ import me.Plugins.SimpleFactions.Utils.OpinionColourMapper;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
 import me.Plugins.SimpleFactions.enums.RankType;
+import me.Plugins.SimpleFactions.laws.LawGroup;
 import me.Plugins.TLibs.TLibs;
 import me.Plugins.TLibs.Enums.APIType;
 import me.Plugins.TLibs.Objects.API.ItemAPI;
@@ -285,6 +286,18 @@ public class FactionCreator {
 			if(f.getLeader().equalsIgnoreCase(p.getName())) {
 				lore.add("");
 				lore.add(StringFormatter.formatHex("§7Click to change #7a915eDomestic#d4c9ae/#6c93bdVassal §7tax rate"));
+			}
+			m.setLore(lore);
+			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
+			m.getPersistentDataContainer().set(key, PersistentDataType.STRING, f.getId());
+			i.setItemMeta(m);
+		} else if(t.equals(MenuItemType.LAWS)) {
+			i = new ItemStack(Material.WRITABLE_BOOK, 1);
+			ItemMeta m = i.getItemMeta();
+			m.setDisplayName(StringFormatter.formatHex("#9c64b0Laws"));
+			List<String> lore = new ArrayList<String>();
+			for(LawGroup group : f.getLawHandler().getGroupList()) {
+				lore.add(group.getName()+"§e: "+group.getCurrent().getName());
 			}
 			m.setLore(lore);
 			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");

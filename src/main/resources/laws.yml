@@ -1,0 +1,27 @@
+citizen_tax:
+  name: "#c9a74fCitizen Tax"
+  laws:
+    low:
+      name: "#7bc767Low"
+    medium:
+      name: "#bfc267Medium"
+    high:
+      name: "#d1775eHigh"
+vassal_tax:
+  name: "#5a90bfVassal Tax"
+  laws:
+    low:
+      name: "#7bc767Low"
+    medium:
+      name: "#bfc267Medium"
+    high:
+      name: "#d1775eHigh"
+guild_tax:
+  name: "#d6a04fGuild Tax"
+  laws:
+    low:
+      name: "#7bc767Low"
+    medium:
+      name: "#bfc267Medium"
+    high:
+      name: "#d1775eHigh"

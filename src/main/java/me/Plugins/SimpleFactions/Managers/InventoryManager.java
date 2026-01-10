@@ -25,6 +25,7 @@ import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Inventory.FactionView;
 import me.Plugins.SimpleFactions.Managers.Inventory.GuildView;
 import me.Plugins.SimpleFactions.Managers.Inventory.InventoryUpdater;
+import me.Plugins.SimpleFactions.Managers.Inventory.LawView;
 import me.Plugins.SimpleFactions.Managers.Inventory.MilitaryView;
 import me.Plugins.SimpleFactions.Managers.Inventory.RelationView;
 import me.Plugins.SimpleFactions.Managers.Inventory.TaxChange;
@@ -111,6 +112,12 @@ public class InventoryManager implements Listener{
 	}
 	public void guildView(Player player, Guild guild, Inventory i) {
 		guildView.guildView(player, guild, i);
+	}
+
+	//Laws
+	LawView lawView = new LawView(this);
+	public void lawView(Player player, Faction f, Inventory i) {
+		lawView.lawView(player, f, i);
 	}
 	
 	//Tiers
@@ -284,6 +291,12 @@ public class InventoryManager implements Listener{
 					case TITLE_TYPE_VIEW:
 						titleView(null, p, f, true);
 						break;
+					case LAW_VIEW:
+						factionView(p, f);
+						break;
+					case LAW_SELECT:
+						lawView(p, f, null);
+						break;
 					default:
 						break;
 				}
@@ -314,6 +327,8 @@ public class InventoryManager implements Listener{
 			factionView.click(e, inv, p);
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Guild List") ||e.getView().getTitle().equalsIgnoreCase("§7Guild View")) {
 			guildView.click(e, inv, p);
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Laws") ||e.getView().getTitle().equalsIgnoreCase("§7Select Law")) {
+			lawView.click(e, inv, p);
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Military View")) {
 			militaryView.click(e, inv, p);
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Diplomacy View") || e.getView().getTitle().equalsIgnoreCase("§7Change Attitude") || e.getView().getTitle().equalsIgnoreCase("§7Change Relation")) {

@@ -12,6 +12,8 @@ import me.Plugins.SimpleFactions.Map.Provinces.ProvinceDataEntry;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
+import me.Plugins.SimpleFactions.laws.Law;
+import me.Plugins.SimpleFactions.laws.LawGroup;
 
 public class ProvinceManager {
     private Map<Integer, Province> provinces = new HashMap<>();
@@ -100,7 +102,7 @@ public class ProvinceManager {
         // 2) Recalculate trade graph
         Province capital = provinces.get(guild.getCapital());
         if (capital != null) {
-            capital.calculateTrade(this, guild, null, 0);
+            capital.calculateTrade(this, guild, -1, 0);
         }
     }
 
@@ -141,9 +143,27 @@ public class ProvinceManager {
     public double getTotalTrade(Guild guild) {
         double total = 0;
         for(Province p : provinces.values()) {
-            total += p.getGuildTrade(guild.getId());
+            total += p.getGuildTrade(guild);
         }
         return total;
+    }
+
+    public Map<Guild, Double> previewLawIncomeExact(LawGroup group, Law law) {
+        ProvinceManager live = this;
+        ProvinceManager snap = SimpleFactions.getInstance().getProvinceSnapshot();
+        snap.copyAllDataFrom(live);
+        Law old = group.getCurrent();
+        group.setCurrent(law);
+        for(Province p : snap.getProvinces()) {
+            p.calculateProsperity();
+        }
+        Map<Guild, Double> map = new HashMap<>();
+        for(Guild guild : FactionManager.getAllGuilds()) {
+            double delta = snap.getIncome(guild, false)-guild.getTradeBreakdown().getNetIncome();
+            map.put(guild, Math.round(delta * 100.0) / 100.0);
+        }
+        group.setCurrent(old);
+        return map;
     }
 
     public double previewUpgradeIncomeExact(Guild guild, Branch branch) {

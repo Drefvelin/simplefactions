@@ -33,6 +33,7 @@ import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Handler.GuildHandler;
+import me.Plugins.SimpleFactions.Objects.Handler.LawHandler;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
@@ -40,6 +41,8 @@ import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
+import me.Plugins.SimpleFactions.enums.Region;
+import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Faction {
@@ -84,6 +87,9 @@ public class Faction {
 
 	//Guilds
 	private GuildHandler guildHandler = new GuildHandler();
+
+	//Laws
+	private final LawHandler lawHandler;
 	
 	public Faction(String id, String leader) {
 		this.id = format.formatId(id);
@@ -99,6 +105,7 @@ public class Faction {
 		this.prestige = 0.0;
 		this.extraNodeCapacity = 0;
 		this.rgb = RandomRGB.random();
+		this.lawHandler = new LawHandler(this);
 		while(!RandomRGB.isFree(rgb)) {
 			this.rgb = RandomRGB.random();
 		}
@@ -133,6 +140,7 @@ public class Faction {
 		this.military = new Military(this);
 		this.taxRate = taxRate;
 		this.vassalTax = vassalTax;
+		this.lawHandler = new LawHandler(this); //TODO persistence
 		init();
 		createBanner(bannerPatterns);
 		updateTier();
@@ -730,9 +738,14 @@ public class Faction {
 		updatePrestige();
 	}
 
-	
+	//Laws
+	public LawHandler getLawHandler() { return lawHandler; }
 	
 	//Modifiers
+
+	public List<FactionModifier> getModifiers(Scope scope, Region region) {
+		return lawHandler.getLawModifiers(scope, region);
+	}
 	
 	public void addModifiers(Faction from, List<FactionModifier> mods) {
 	    for (FactionModifier m : mods) {
