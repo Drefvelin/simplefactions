@@ -2,22 +2,29 @@ package me.Plugins.SimpleFactions.enums;
 
 public enum FactionModifiers {
 
-    TAX(false),
-    LEVY(false),
-    NODE_SPEED(true),
-    MILITARY_UPKEEP(false),
-    PRESTIGE(true),
-    PRESTIGE_BONUS(true),
-    DE_JURE(false),
-    TRADE_POWER(true);
+    TAX(false, false),
+    LEVY(false, false),
+    NODE_SPEED(true, false),
+    MILITARY_UPKEEP(false, false),
+    PRESTIGE(true, false),
+    PRESTIGE_BONUS(true, false),
+    DE_JURE(false, false),
+    TRADE_POWER(true, true),
+    PRODUCTION(true, true);
 
     private final boolean positiveIsGood;
+    private final boolean affectsEconomy;
 
-    FactionModifiers(boolean positiveIsGood) {
+    FactionModifiers(boolean positiveIsGood, boolean affectsEconomy) {
         this.positiveIsGood = positiveIsGood;
+        this.affectsEconomy = affectsEconomy;
     }
 
     public boolean isPositiveGood() {
         return positiveIsGood;
+    }
+
+    public boolean affectsEconomy() {
+        return affectsEconomy;
     }
 }

@@ -294,6 +294,9 @@ public class InventoryManager implements Listener{
 					case LAW_VIEW:
 						factionView(p, f);
 						break;
+					case LAW_SELECT:
+						lawView(p, f, null);
+						break;
 					default:
 						break;
 				}
@@ -324,6 +327,8 @@ public class InventoryManager implements Listener{
 			factionView.click(e, inv, p);
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Guild List") ||e.getView().getTitle().equalsIgnoreCase("§7Guild View")) {
 			guildView.click(e, inv, p);
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Laws") ||e.getView().getTitle().equalsIgnoreCase("§7Select Law")) {
+			lawView.click(e, inv, p);
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Military View")) {
 			militaryView.click(e, inv, p);
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Diplomacy View") || e.getView().getTitle().equalsIgnoreCase("§7Change Attitude") || e.getView().getTitle().equalsIgnoreCase("§7Change Relation")) {

@@ -41,6 +41,8 @@ import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
+import me.Plugins.SimpleFactions.enums.Region;
+import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Faction {
@@ -740,6 +742,10 @@ public class Faction {
 	public LawHandler getLawHandler() { return lawHandler; }
 	
 	//Modifiers
+
+	public List<FactionModifier> getModifiers(Scope scope, Region region) {
+		return lawHandler.getLawModifiers(scope, region);
+	}
 	
 	public void addModifiers(Faction from, List<FactionModifier> mods) {
 	    for (FactionModifier m : mods) {

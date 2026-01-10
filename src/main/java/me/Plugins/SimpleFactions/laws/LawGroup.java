@@ -54,4 +54,8 @@ public class LawGroup {
     public Map<String, Law> getLaws() { return laws; }
     public List<String> getDescription() { return description; }
     public boolean hasDescription() { return !description.isEmpty(); }
+    public void setCurrent(Law law) {
+        if(!laws.containsValue(law)) return;
+        current = law;
+    }
 }

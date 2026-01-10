@@ -8,15 +8,21 @@ import java.util.Map;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 
+import me.Plugins.SimpleFactions.Army.Regiment;
+import me.Plugins.SimpleFactions.Loaders.RegimentLoader;
+import me.Plugins.SimpleFactions.Objects.Bracket;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
+import me.Plugins.SimpleFactions.enums.Brackets;
 import me.Plugins.SimpleFactions.enums.Region;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Scope;
 
 public class LawEffect {
     private Map<Rules, Boolean> rules = new LinkedHashMap<>();
+    private Map<Regiment, Integer> regiments = new LinkedHashMap<>();
     private List<FactionModifier> globalModifiers = new ArrayList<>();
     private Map<Region, List<FactionModifier>> regionModifiers = new LinkedHashMap<>();
+    private Map<Brackets, Bracket> brackets = new LinkedHashMap<>();
     
     public LawEffect(Scope scope, ConfigurationSection config) {
 
@@ -32,6 +38,46 @@ public class LawEffect {
                 } catch (Exception e) {
                     Bukkit.getLogger().warning(
                         "[SimpleFactions] Invalid rule in " + config.getCurrentPath()
+                    );
+                }
+            }
+        }
+
+        // ---- Rules ----
+        if (config.contains("regiments")) {
+            for (String s : config.getStringList("regiments")) {
+                try {
+                    String[] args = s.split("\\s+");
+                    if (args.length != 2) continue;
+
+                    Regiment reg = RegimentLoader.getByString(args[0]);
+                    regiments.put(reg, Integer.parseInt(args[1]));
+                } catch (Exception e) {
+                    Bukkit.getLogger().warning(
+                        "[SimpleFactions] Invalid regiment in " + config.getCurrentPath()
+                    );
+                }
+            }
+        }
+
+        if (config.contains("brackets")) {
+            for (String key : config.getConfigurationSection("brackets").getKeys(false)) {
+                try {
+                    Brackets type = Brackets.valueOf(key.toUpperCase());
+                    String value = config.getString("brackets." + key);
+
+                    String[] split = value.split("-");
+                    if (split.length != 2) continue;
+
+                    double min = Double.parseDouble(split[0]);
+                    double max = Double.parseDouble(split[1]);
+
+                    brackets.put(type, new Bracket(min, max));
+
+                } catch (Exception e) {
+                    Bukkit.getLogger().warning(
+                        "[SimpleFactions] Invalid bracket: " + key +
+                        " at " + config.getCurrentPath()
                     );
                 }
             }
@@ -100,5 +146,33 @@ public class LawEffect {
 
     public boolean hasRules() {
         return !rules.isEmpty();
+    }
+
+    public boolean hasBrackets() {
+        return !brackets.isEmpty();
+    }
+
+    public Map<Brackets, Bracket> getBrackets() {
+        return brackets;
+    }
+
+    public boolean hasRegiments() {
+        return !regiments.isEmpty();
+    }
+
+    public Map<Regiment, Integer> getRegiments() {
+        return regiments;
+    }
+
+    public boolean affectsEconomy() {
+        for(FactionModifier mod : globalModifiers) {
+            if(mod.getType().affectsEconomy()) return true;
+        }
+        for(List<FactionModifier> list : regionModifiers.values()) {
+            for(FactionModifier mod : list) {
+                if(mod.getType().affectsEconomy()) return true;
+            }
+        }
+        return false;
     }
 }

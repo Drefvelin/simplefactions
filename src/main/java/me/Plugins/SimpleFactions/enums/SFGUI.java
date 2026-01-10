@@ -16,4 +16,5 @@ public enum SFGUI {
 	TAX_VIEW,
 	GUILD_VIEW,
 	LAW_VIEW,
+	LAW_SELECT,
 }

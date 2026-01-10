@@ -1,8 +1,10 @@
 package me.Plugins.SimpleFactions.Map.Provinces;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -10,7 +12,15 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
+import me.Plugins.SimpleFactions.Managers.TitleManager;
+import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Objects.FactionModifier;
+import me.Plugins.SimpleFactions.Utils.ModifierMerger;
+import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
+import me.Plugins.SimpleFactions.enums.Region;
+import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Terrain;
 
 public class Province {
@@ -56,19 +66,18 @@ public class Province {
     public void calculateTrade(
             ProvinceManager manager,
             Guild guild,
-            ProvinceDataEntry prev,
+            double prev,
             int distance
     ) {
         double amount;
         double carry = guild.getModifier(GuildModifier.TRADE_CARRY);
         double effectiveDistance = distance / Math.pow(carry, 1.1);
         double factor = Math.pow(getTradeCarry(), effectiveDistance);
-
-        if (prev == null) {
+        if (prev == -1) {
             // Capital province
             amount = guild.getModifier(GuildModifier.TRADE_POWER);
         } else {
-            amount = prev.getTrade() *factor;
+            amount = prev *factor;
         }
 
         if(amount < 0.1) return;
@@ -91,7 +100,7 @@ public class Province {
         for (Integer n : neighbours) {
             Province neighbour = manager.get(n);
             if (neighbour != null) {
-                neighbour.calculateTrade(manager, guild, entry, distance+1);
+                neighbour.calculateTrade(manager, guild, amount, distance+1);
             }
         }
     }
@@ -137,14 +146,14 @@ public class Province {
     }
 
     public double getTradeFactor(Guild guild) {
-        double trade = getGuildTrade(guild.getId());
+        double trade = getGuildTrade(guild);
         if(trade == 0) return 0.05;
         double K = 2.5 / Math.pow(getTradeCarry(), 0.5);
         return (trade / (trade + K));
     }
 
     public double getIncome(Guild guild) {
-        double trade = getGuildTrade(guild.getId());
+        double trade = getGuildTrade(guild);
         if (trade <= 0) return 0;
 
         double totalTrade = getTotalTrade();
@@ -162,16 +171,18 @@ public class Province {
         double total = 0;
         int participants = 0;
         for(ProvinceDataEntry entry : data.values()) {
+            List<FactionModifier> modifiers = getModifiersForGuild(entry.getGuild());
             double carry = entry.getGuild().getModifier(GuildModifier.TRADE_CARRY);
             double distance = entry.getDistance(); // ensure double
 
             double weight =
                 Math.max(0.0, 1.0 + carry * 0.2 - distance * 0.1);
             double productionWeight = Math.min(1.5, 1+entry.getProduction()/100.0);
+            double mod = getModifierForGuild(entry.getGuild(), FactionModifiers.PRODUCTION, modifiers);
 
-            total += entry.getProduction() * weight*productionWeight;
+            total += entry.getProduction()*mod* weight*productionWeight;
 
-            if (entry.getTrade() > 0.5) { // threshold
+            if (getGuildTrade(entry.getGuild()) > 0.5) { // threshold
                 participants++;
             }
         }
@@ -201,14 +212,14 @@ public class Province {
         return total;
     }
 
-    public double getGuildTrade(String guildId) {
-        ProvinceDataEntry entry = data.get(guildId);
-        return entry == null ? 0 : entry.getTrade();
+    public double getGuildTrade(Guild guild) {
+        ProvinceDataEntry entry = data.get(guild.getId());
+        return entry == null ? 0 : entry.getTrade()*getModifierForGuild(guild, FactionModifiers.TRADE_POWER, getModifiersForGuild(guild));
     }
 
-    public double getTradeShare(String guildId) {
-        if(!data.containsKey(guildId)) return 0;
-        return getGuildTrade(guildId)/getTotalTrade();
+    public double getTradeShare(Guild guild) {
+        if(!data.containsKey(guild.getId())) return 0;
+        return getGuildTrade(guild)/getTotalTrade();
     }
 
     public double getProsperity() {
@@ -231,5 +242,38 @@ public class Province {
 
     public void setProsperity(double p) {
         this.prosperity = p;
+    }
+
+    public Faction getOwner() {
+        return TitleManager.getByProvince(id);
+    }
+
+    public List<FactionModifier> getModifiersForGuild(Guild guild) {
+        List<FactionModifier> mods = new ArrayList<>();
+        Faction owner = getOwner();
+        Faction host = guild.getFaction();
+        if(owner == null) {
+            mods.addAll(host.getModifiers(Scope.DOMESTIC_GUILDS, Region.WILDERNESS));
+        } else if(!owner.getId().equalsIgnoreCase(host.getId())){
+            if(RelationManager.isOnOverlordPath(owner, host)) {
+                mods.addAll(host.getModifiers(Scope.DOMESTIC_GUILDS, Region.VASSAL_TERRITORY));
+                mods.addAll(owner.getModifiers(Scope.OVERLORD_GUILDS, Region.OUR_TERRITORY));
+            } else if(RelationManager.isOnOverlordPath(host, owner)) {
+                mods.addAll(owner.getModifiers(Scope.VASSAL_GUILDS, Region.OUR_TERRITORY));
+            } else {
+                mods.addAll(host.getModifiers(Scope.DOMESTIC_GUILDS, Region.FOREIGN_TERRITORY));
+                mods.addAll(owner.getModifiers(Scope.FOREIGN_GUILDS, Region.OUR_TERRITORY));
+            }
+        } else {
+            mods.addAll(host.getModifiers(Scope.DOMESTIC_GUILDS, Region.OUR_TERRITORY));
+        }
+        return ModifierMerger.merge(mods);
+    }
+
+    public double getModifierForGuild(Guild guild, FactionModifiers mod, List<FactionModifier> list) {
+        for(FactionModifier m : list) {
+            if(m.getType().equals(mod)) return Math.max(0, 1+(m.getAmount()/100.0));
+        }
+        return 1;
     }
 }

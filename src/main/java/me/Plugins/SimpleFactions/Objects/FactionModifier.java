@@ -106,7 +106,10 @@ public class FactionModifier {
 				prefix = "#7bd481De Jure Requirement";
 				break;
 			case TRADE_POWER:
-				prefix = "#7bd481Trade Power";
+				prefix = "#92d665Trade Power";
+				break;
+			case PRODUCTION:
+				prefix = "#f2c94cProduction";
 				break;
 			default:
 				prefix = "#c7b381Unknown Modifier";

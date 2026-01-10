@@ -10,7 +10,8 @@ public enum Scope {
     UNFAVOURED_GUILDS("Unfavoured Guilds"),
     DOMESTIC_GUILDS("Domestic Guilds"),
     FOREIGN_GUILDS("Foreign Guilds"),
-    VASSAL_GUILDS("Vassal Guilds");
+    VASSAL_GUILDS("Vassal Guilds"),
+    OVERLORD_GUILDS("Overlord Guilds");
 
     private final String display;
 
