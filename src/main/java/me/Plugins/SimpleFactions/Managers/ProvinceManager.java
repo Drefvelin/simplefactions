@@ -148,21 +148,22 @@ public class ProvinceManager {
         return total;
     }
 
-    public double previewLawIncomeExact(Guild guild, LawGroup group, Law law) {
+    public Map<Guild, Double> previewLawIncomeExact(LawGroup group, Law law) {
         ProvinceManager live = this;
         ProvinceManager snap = SimpleFactions.getInstance().getProvinceSnapshot();
-
-        double liveIncomeBefore = live.getIncome(guild);
         snap.copyAllDataFrom(live);
         Law old = group.getCurrent();
         group.setCurrent(law);
         for(Province p : snap.getProvinces()) {
             p.calculateProsperity();
         }
-        double snapIncomeAfter = snap.getIncome(guild, false);
+        Map<Guild, Double> map = new HashMap<>();
+        for(Guild guild : FactionManager.getAllGuilds()) {
+            double delta = snap.getIncome(guild, false)-guild.getTradeBreakdown().getNetIncome();
+            map.put(guild, Math.round(delta * 100.0) / 100.0);
+        }
         group.setCurrent(old);
-        double delta = snapIncomeAfter - liveIncomeBefore;
-        return Math.round(delta * 100.0) / 100.0;
+        return map;
     }
 
     public double previewUpgradeIncomeExact(Guild guild, Branch branch) {

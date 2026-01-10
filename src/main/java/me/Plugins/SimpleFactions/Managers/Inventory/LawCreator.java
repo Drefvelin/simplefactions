@@ -256,30 +256,53 @@ public class LawCreator {
 
 				lore.add("");
 			}
-		} else {
-			lore.add(StringFormatter.formatHex("#cfd6cbNo Effects"));
 		}
 
 		// ---- Economic preview ----
 		if (!isCurrent && affectsEconomy) {
-			Guild guild = FactionManager.getGuildByMember(p.getName());
-			if (guild != null) {
-				double delta =
+			Guild us = FactionManager.getGuildByMember(p.getName());
+			if (us != null) {
+
+				Map<Guild, Double> deltas =
 					SimpleFactions.getInstance()
 						.getProvinceManager()
-						.previewLawIncomeExact(guild, group, law);
+						.previewLawIncomeExact(group, law);
 
-				lore.add("");
-				lore.add(StringFormatter.formatHex("#a6c793Economic Impact:"));
+				lore.add(StringFormatter.formatHex("#a6c793Estimated Economic Impact:"));
 
-				if (delta != 0) {
+				boolean shownAny = false;
+
+				// ---- Our guild first ----
+				Double ourDelta = deltas.get(us);
+				if (ourDelta != null && Math.abs(ourDelta) > 0) {
 					lore.add(StringFormatter.formatHex(
-							"  " +
-							(delta > 0 ? "#87d65c+" : "#d65c5c") +
-							String.format("%.2f", delta) +
-							"d/day"
+						"  " + us.getName() + "§7: " +
+						(ourDelta > 0 ? "#87d65c+" : "#d65c5c") +
+						String.format("%.2f", ourDelta) +
+						"d/day"
 					));
-				} else {
+					shownAny = true;
+				}
+				lore.add("");
+				lore.add(StringFormatter.formatHex("#78856dOther Notable Impacts:"));
+				// ---- Other most impacted guilds ----
+				deltas.entrySet().stream()
+					.filter(e -> !e.getKey().equals(us))
+					.filter(e -> Math.abs(e.getValue()) > 0)
+					.sorted((a, b) ->
+						Double.compare(Math.abs(b.getValue()), Math.abs(a.getValue()))
+					)
+					.limit(5)
+					.forEach(e -> {
+						lore.add(StringFormatter.formatHex(
+							"  " + e.getKey().getName() + " §7("+e.getKey().getFaction().getName()+"§7): " +
+							(e.getValue() > 0 ? "#87d65c+" : "#d65c5c") +
+							String.format("%.2f", e.getValue()) +
+							"d/day"
+						));
+					});
+
+				if (!shownAny && deltas.values().stream().allMatch(v -> Math.abs(v) == 0)) {
 					lore.add(StringFormatter.formatHex("  #9cb68cNo economic change"));
 				}
 			}
