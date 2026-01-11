@@ -19,8 +19,13 @@ public class LawHandler {
     private Faction f;
     private Map<String, LawGroup> laws = new LinkedHashMap<>();
 
-    public List<LawGroup> getGroups() {
-        return new ArrayList<>(laws.values());
+    public List<Law> getCurrentLaws() {
+        List<Law> lawList = new ArrayList<>();
+        for(LawGroup group : getGroupList()) {
+            if(group.getCurrent() == null) continue;
+            lawList.add(group.getCurrent());
+        }
+        return lawList;
     }
 
     public LawHandler(Faction f) {

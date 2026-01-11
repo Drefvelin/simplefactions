@@ -42,7 +42,10 @@ import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.Region;
+import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Scope;
+import me.Plugins.SimpleFactions.laws.Law;
+import me.Plugins.SimpleFactions.laws.LawEffect;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Faction {
@@ -740,6 +743,63 @@ public class Faction {
 
 	//Laws
 	public LawHandler getLawHandler() { return lawHandler; }
+
+	public int getCouncilSize() {
+		if(!hasFactionRule(Rules.HAS_COUNCIL)) return 0;
+		for (Law law : lawHandler.getCurrentLaws()) {
+
+			// Law does not define this scope → ignore
+			if (!law.getScopedEffects().containsKey(Scope.FACTION)) continue;
+
+			LawEffect effect = law.getScopedEffects().get(Scope.FACTION);
+			if(effect.affectsCouncilSize()) return effect.getCouncilSize();
+		}
+		return 4;
+	}
+
+	//Rules
+	public boolean hasFactionRule(Rules rule) {
+		if(hasRule(Scope.FACTION, rule)) return true;
+		String o = RelationManager.getOverlord(this);
+		if(o != null) {
+			Faction overlord = FactionManager.getByString(o);
+			if(overlord.hasRule(Scope.VASSALS, rule)) return true;
+		}
+		return false;
+	}
+	public boolean hasRule(Scope scope, Rules rule) {
+		boolean foundExplicitTrue = false;
+		boolean foundExplicitFalse = false;
+
+		for (Law law : lawHandler.getCurrentLaws()) {
+
+			// Law does not define this scope → ignore
+			if (!law.getScopedEffects().containsKey(scope)) continue;
+
+			var effect = law.getScopedEffects().get(scope);
+
+			// Law defines scope but no rules → ignore
+			if (!effect.hasRules()) continue;
+
+			// Law does not mention this rule → ignore
+			if (!effect.getRules().containsKey(rule)) continue;
+
+			boolean value = effect.getRules().get(rule);
+
+			if (!value) {
+				foundExplicitFalse = true;
+				break; // FALSE always wins
+			}
+
+			foundExplicitTrue = true;
+		}
+
+		if (foundExplicitFalse) return false;
+		if (foundExplicitTrue) return true;
+
+		return rule.trueIfAbsent();
+	}
+
 	
 	//Modifiers
 

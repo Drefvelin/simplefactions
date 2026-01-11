@@ -23,9 +23,11 @@ public class LawEffect {
     private List<FactionModifier> globalModifiers = new ArrayList<>();
     private Map<Region, List<FactionModifier>> regionModifiers = new LinkedHashMap<>();
     private Map<Brackets, Bracket> brackets = new LinkedHashMap<>();
+    private int councilSize;
     
     public LawEffect(Scope scope, ConfigurationSection config) {
 
+        councilSize = config.getInt("council-size", -1);
         // ---- Rules ----
         if (config.contains("rules")) {
             for (String s : config.getStringList("rules")) {
@@ -116,6 +118,14 @@ public class LawEffect {
                 // Not a region key → safe to ignore
             }
         }
+    }
+
+    public boolean affectsCouncilSize() {
+        return councilSize != -1;
+    }
+
+    public int getCouncilSize() {
+        return councilSize;
     }
 
     public void addModifier(Region region, FactionModifier mod) {
