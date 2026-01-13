@@ -179,6 +179,8 @@ public class FactionCreator {
 				lore.add(StringFormatter.formatHex("#b8ae61Has Council: #c74d32✖"));
 			}
 			m.setLore(lore);
+			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
+			m.getPersistentDataContainer().set(key, PersistentDataType.STRING, f.getId());
 			i.setItemMeta(m);
 		} else if(t.equals(MenuItemType.WEALTH)) {
 			i = new ItemStack(Material.GOLD_NUGGET, 1);

@@ -217,6 +217,17 @@ public class FactionView {
 					inv.diplomacyView(null, p, f, true);
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				}
+			} else if(e.getSlot() == 11) {
+				ItemStack item = e.getCurrentItem();
+				ItemMeta m = item.getItemMeta();
+				NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");
+				String factionId = m.getPersistentDataContainer().get(id, PersistentDataType.STRING);
+				if(factionId == null) return;
+				Faction f = FactionManager.getByString(factionId);
+				if(f != null) {
+					inv.governmentView(p, f, null);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				}
 			} else if(e.getSlot() == 33) {
 				ItemStack item = e.getCurrentItem();
 				ItemMeta m = item.getItemMeta();

@@ -28,6 +28,7 @@ import me.Plugins.SimpleFactions.War.Participant;
 import me.Plugins.SimpleFactions.War.Side;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.WarGoal;
+import me.Plugins.SimpleFactions.enums.Stance;
 
 public class Database {
 
@@ -162,7 +163,8 @@ public class Database {
                             branches,
                             gd.banner,
                             loadModifiers(gd.wealthModifiers),
-                            f
+                            f,
+                            Stance.NEUTRAL
                         );
 
                         // --- Bank ---

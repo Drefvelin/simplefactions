@@ -29,6 +29,7 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
+import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Guild {
@@ -58,10 +59,13 @@ public class Guild {
 
     private TradeBreakdown breakdown = new TradeBreakdown();
 
+    private Stance stance;
+
     public Guild(Faction f) {
         host = f;
         id = f.getId();
         rgb = RandomRGB.similarButDistinct(f.getRGB());
+        stance = Stance.NEUTRAL;
         while(!RandomRGB.isFree(rgb)) {
             rgb = RandomRGB.similarButDistinct(f.getRGB());
         }
@@ -86,6 +90,7 @@ public class Guild {
 		this.name = StringFormatter.formatHex(format.formatName(id));
         this.leader = p.getName();
         rgb = RandomRGB.random();
+        stance = Stance.NEUTRAL;
         while(!RandomRGB.isFree(rgb)) {
             rgb = RandomRGB.random();
         }
@@ -115,7 +120,8 @@ public class Guild {
         List<Branch> branchList,
         List<String> patterns,
         List<Modifier> wealthModifiers,
-        Faction host
+        Faction host,
+        Stance stance
     ) {
         this.type = GuildLoader.getByString(type);
         this.host = host;
@@ -124,6 +130,7 @@ public class Guild {
         this.leader = leader;
         this.rgb = rgb;
         this.capital = capital;
+        this.stance = stance;
         this.members = members != null ? members : new ArrayList<>();
         for(Branch b : branchList) {
             this.branches.put(b.getGroup(), b);
@@ -394,6 +401,53 @@ public class Guild {
     public void newDay() {
         if(bank != null) {
             bank.deposit(breakdown.getIncome());
+        }
+    }
+
+    public double getMemberPercentage() {
+        return (double)members.size()/(double)host.getMembers().size();
+    }
+
+    public double getStabilityEffect() {
+        double effect = 0;
+        double percentage = getMemberPercentage();
+        effect += 30*Math.min(percentage, 1.0);
+        double wealthPercentage = wealth / host.getWealth();
+        effect += 20*Math.min(wealthPercentage, 1.0);
+        double tradePercentage = breakdown.getTradePower() / host.getGuildHandler().getTotalTradePower();
+        effect += 40*Math.min(tradePercentage, 1.0);
+        return effect;
+    }
+
+    public double getStabilityModifier() {
+        double stability = getStabilityEffect();
+        if(isBase()) return stability;
+        if(stance == Stance.NEUTRAL) {
+            stability *= 0.35;
+        } else if(stance == Stance.OPPOSE) {
+            stability *= -1;
+        }
+        return stability;
+    }
+
+    public Stance getStance() {
+        if(isBase()) {
+            return Stance.SUPPORT;
+        }
+        return stance;
+    }
+
+    public void switchStance() {
+        switch (stance) {
+            case OPPOSE:
+                stance = Stance.NEUTRAL;
+                break;
+            case NEUTRAL:
+                stance = Stance.SUPPORT;
+                break;
+            case SUPPORT:
+                stance = Stance.OPPOSE;
+                break;
         }
     }
 }

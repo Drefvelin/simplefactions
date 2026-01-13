@@ -4,14 +4,14 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 public class Formatter {
-    String[] codes = {
+    static String[] codes = {
         "&0", "&1", "&2", "&3", "&4", "&5", "&6", "&7",
         "&8", "&9", "&a", "&b", "&c", "&d", "&e", "&f",
         "&k", "&l", "&m", "&n", "&o", "&r"
     };
 
     // Removes all color codes including hex for ID use
-    public String formatId(String i) {
+    public static String formatId(String i) {
         String s = new String(i);
 
         // Remove legacy color codes (&x-style)
@@ -33,7 +33,7 @@ public class Formatter {
 
 
     // Formats name for Minecraft display
-    public String formatName(String i) {
+    public static String formatName(String i) {
         String s = i;
 
         // If it doesn't start with a color code, add default color
@@ -50,14 +50,14 @@ public class Formatter {
         System.out.println(s);
         return s;
     }
-    public Double formatDouble(Double d) {
+    public static Double formatDouble(Double d) {
         if (d == null || d.isNaN() || d.isInfinite()) {
             return 0.0; // or any default value you'd prefer
         }
         return round(d, 2);
     }
 
-    private double round(double value, int places) {
+    private static double round(double value, int places) {
         if (places < 0) throw new IllegalArgumentException();
         BigDecimal bd = BigDecimal.valueOf(value);
         bd = bd.setScale(places, RoundingMode.HALF_UP);

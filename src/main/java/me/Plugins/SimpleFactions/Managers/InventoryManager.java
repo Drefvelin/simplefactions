@@ -23,6 +23,7 @@ import me.Plugins.SimpleFactions.Managers.Holder.SFCombinedInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Inventory.FactionView;
+import me.Plugins.SimpleFactions.Managers.Inventory.GovernmentView;
 import me.Plugins.SimpleFactions.Managers.Inventory.GuildView;
 import me.Plugins.SimpleFactions.Managers.Inventory.InventoryUpdater;
 import me.Plugins.SimpleFactions.Managers.Inventory.LawView;
@@ -118,6 +119,12 @@ public class InventoryManager implements Listener{
 	LawView lawView = new LawView(this);
 	public void lawView(Player player, Faction f, Inventory i) {
 		lawView.lawView(player, f, i);
+	}
+
+	//Government
+	GovernmentView governmentView = new GovernmentView(this);
+	public void governmentView(Player player, Faction f, Inventory i) {
+		governmentView.governmentView(player, f, i);
 	}
 	
 	//Tiers
@@ -331,6 +338,8 @@ public class InventoryManager implements Listener{
 			lawView.click(e, inv, p);
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Military View")) {
 			militaryView.click(e, inv, p);
+		} else if(e.getView().getTitle().equalsIgnoreCase("§7Government View")) {
+			governmentView.click(e, inv, p);
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Diplomacy View") || e.getView().getTitle().equalsIgnoreCase("§7Change Attitude") || e.getView().getTitle().equalsIgnoreCase("§7Change Relation")) {
 			relationView.click(e, inv, p);
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Tier View") 

@@ -57,4 +57,12 @@ public class GuildHandler {
         Collections.sort(members);
         return members;
     }
+
+    public double getTotalTradePower() {
+        double total = 0;
+        for(Guild g : guilds.values()) {
+            total += g.getTradeBreakdown().getTradePower();
+        }
+        return total;
+    }
 }

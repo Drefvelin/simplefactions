@@ -2,7 +2,9 @@ package me.Plugins.SimpleFactions.government;
 
 import java.util.List;
 
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
@@ -53,15 +55,20 @@ public class Government {
     }
 
     public double getStability() {
-        double stability = 50.0;
+        double stability = 25.0;
         if(f.getGuildHandler().getGuilds().size() == 1) {
             stability = 100.0;
+        }
+        for(Guild guild : f.getGuildHandler().getGuilds()) {
+            stability += guild.getStabilityModifier();
         }
         if(council.couldBeBigger()) {
             double fillPercentage = council.fillPercentage();
             stability -= (1.0 - fillPercentage) * 50.0;
         }
-        return stability;
+        if(stability < 0) stability = 0;
+        if(stability > 100) stability = 100;
+        return Formatter.formatDouble(stability);
     }
 
     public double getMaxPower() {
