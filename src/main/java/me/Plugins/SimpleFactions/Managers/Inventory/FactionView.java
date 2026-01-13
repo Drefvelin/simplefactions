@@ -103,7 +103,7 @@ public class FactionView {
 		if(f.getMembers().contains(player.getName())) i.setItem(1, creator.createMenuItem(player, f, MenuItemType.BANNER_GET));
 		i.setItem(10, creator.createMenuItem(player, f, MenuItemType.BANNER));
 		/*if(f.getLeader().equalsIgnoreCase(player.getName())) */i.setItem(19, creator.createMenuItem(player, f, MenuItemType.BANNER_RANDOM));
-		i.setItem(11, creator.createMenuItem(player, f, MenuItemType.LEADER));
+		i.setItem(11, creator.createMenuItem(player, f, MenuItemType.GOVERNMENT));
 		i.setItem(12, creator.createMenuItem(player, f, MenuItemType.WEALTH));
 		i.setItem(13, creator.createMenuItem(player, f, MenuItemType.PRESTIGE));
 		i.setItem(14, creator.createMenuItem(player, f, MenuItemType.MEMBERS));

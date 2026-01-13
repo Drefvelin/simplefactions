@@ -44,6 +44,7 @@ import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.Region;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Scope;
+import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawEffect;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -53,7 +54,7 @@ public class Faction {
 	private String id;
 	private String name;
 	private PrestigeRank rank;
-	private String government;
+	private String governmentType;
 	private String culture;
 	private String religion;
 	private String rgb;
@@ -89,7 +90,10 @@ public class Faction {
 	private HashMap<FactionModifiers, List<FactionModifier>> modifiers = new HashMap<>();
 
 	//Guilds
-	private GuildHandler guildHandler = new GuildHandler();
+	private GuildHandler guildHandler;
+
+	//Government
+	private final Government government;
 
 	//Laws
 	private final LawHandler lawHandler;
@@ -101,7 +105,7 @@ public class Faction {
 		this.rulerTitle = "Leader";
 		this.bannerPatterns = RestServer.fetchBannerList();
 		this.rank = RankLoader.getLowest();
-		this.government = "Homestead";
+		this.governmentType = "Community";
 		this.culture = "Multicultural";
 		this.religion = "Religious Diversity";
 		this.wealth = 0.0;
@@ -113,20 +117,22 @@ public class Faction {
 			this.rgb = RandomRGB.random();
 		}
 		this.military = new Military(this);
+		this.government = new Government(this);
+		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(new Guild(this));
 		init();
 		createBanner(bannerPatterns);
 		updatePrestige();
 		updateTier();
 	}
-	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> patterns, String government, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, double taxRate, double vassalTax, int capital) {
+	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> patterns, String governmentType, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, double taxRate, double vassalTax, int capital) {
 		this.id = id;
 		this.name = name;
 		this.leader = leader;
 		this.rulerTitle = rulerTitle;
 		this.bannerPatterns = patterns;
 		this.rank = RankLoader.getLowest();
-		this.government = government;
+		this.governmentType = governmentType;
 		this.culture = culture;
 		this.religion = religion;
 		this.wealth = 0.0;
@@ -143,7 +149,9 @@ public class Faction {
 		this.military = new Military(this);
 		this.taxRate = taxRate;
 		this.vassalTax = vassalTax;
+		this.guildHandler = new GuildHandler(this);
 		this.lawHandler = new LawHandler(this); //TODO persistence
+		this.government = new Government(this); //TODO persistence
 		init();
 		createBanner(bannerPatterns);
 		updateTier();
@@ -367,11 +375,11 @@ public class Faction {
 			addModifiers(null, rank.getModifiers());
 		}
 	}
-	public String getGovernment() {
-		return government;
+	public String getGovernmentString() {
+		return governmentType;
 	}
-	public void setGovernment(String government) {
-		this.government = government;
+	public void setGovernment(String governmentType) {
+		this.governmentType = governmentType;
 	}
 	public String getCulture() {
 		return culture;
@@ -741,6 +749,16 @@ public class Faction {
 		updatePrestige();
 	}
 
+	//Government
+
+	public Government getGovernment() {
+		return government;
+	}
+
+	public void ping() {
+		government.ping();
+	}
+
 	//Laws
 	public LawHandler getLawHandler() { return lawHandler; }
 
@@ -755,6 +773,16 @@ public class Faction {
 			if(effect.affectsCouncilSize()) return effect.getCouncilSize();
 		}
 		return 4;
+	}
+
+	public Rules getCouncilType() {
+		if(!hasFactionRule(Rules.HAS_COUNCIL)) return Rules.NO_COUNCIL;
+		for (Law law : lawHandler.getCurrentLaws()) {
+			if (!law.getScopedEffects().containsKey(Scope.FACTION)) continue;
+			LawEffect effect = law.getScopedEffects().get(Scope.FACTION);
+			if(effect.affectsCouncilType()) return effect.getCouncilType();
+		}
+		return Rules.NO_COUNCIL;
 	}
 
 	//Rules

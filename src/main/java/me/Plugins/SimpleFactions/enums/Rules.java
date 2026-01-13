@@ -5,7 +5,6 @@ public enum Rules {
     CAN_MAKE_FEDERATION("Can Form Federation", false),
     LEADER_CAN_BE_ON_COUNCIL("Leader can be Councilmember", true),
     LEADER_ELECTIONS("Leader Elections", false),
-    COUNCIL_ELECTIONS("Council Elections", false),
     HAS_COUNCIL("Has Council", false),
     APPOINTED_COUNCIL("Leader Appoints Council", false),
     WEALTH_BASED_COUNCIL("Wealth-Based Council", false),
@@ -14,7 +13,8 @@ public enum Rules {
     VASSAL_TAX("Can Collect Vassal Taxes", true),
     GUILD_TAX("Can Collect Guild Taxes", true),
     DIVIDEND_TAX("Can Collect Dividend Taxes", true),
-    CAN_RECRUIT_PROFESSIONAL_ARMY("Can Recruit Professional Army", true);
+    CAN_RECRUIT_PROFESSIONAL_ARMY("Can Recruit Professional Army", true),
+    NO_COUNCIL("No Council", false);
 
     private final String display;
     private final boolean absentTrue;

@@ -200,7 +200,7 @@ public class Database {
             data.rgb = f.getRGB();
             data.leader = f.getLeader();
             data.rulerTitle = f.getRulerTitle();
-            data.government = f.getGovernment();
+            data.government = f.getGovernmentString();
             data.culture = f.getCulture();
             data.religion = f.getReligion();
 

@@ -13,4 +13,8 @@ public class ProposalHandler {
     public boolean canPropose(String member) {
         return proposals.getOrDefault(member, new ArrayList<>()).size() < 2;
     }
+
+    public void clearProposals() {
+        proposals.clear();
+    }
 }

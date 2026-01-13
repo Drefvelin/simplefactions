@@ -175,6 +175,7 @@ public class FactionManager implements Listener{
 		for(Faction f : factions) {
 			f.updatePrestige();
 			f.countyCheck();
+			f.ping();
 		}
 		fixRelations();
 	}

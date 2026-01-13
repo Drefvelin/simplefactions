@@ -7,9 +7,15 @@ import java.util.List;
 import java.util.Map;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Objects.Faction;
 
 public class GuildHandler {
+    private Faction f;
     private Map<String, Guild> guilds = new HashMap<>();
+
+    public GuildHandler(Faction f) {
+        this.f = f;
+    }
 
     public List<Guild> getGuilds() {
         return new ArrayList<>(guilds.values());
