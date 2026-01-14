@@ -2,10 +2,14 @@ package me.Plugins.SimpleFactions.government;
 
 import java.util.List;
 
+import org.bukkit.entity.Player;
+
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.Rules;
+import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Government {
@@ -14,9 +18,11 @@ public class Government {
     private double power;
     private double powerGain;
 
+    public final double STABILITY_BASE = 25.0;
+
     public Government(Faction f) {
         this.f = f;
-        this.council = new Council(f);
+        this.council = new Council(this, f);
         this.power = -1;
         this.powerGain = -1;
     }
@@ -25,6 +31,45 @@ public class Government {
         this.council.reorganize();
         if(power == -1) this.power = f.getMembers().size() * 10;
         if(powerGain == -1) this.powerGain = 1;
+    }
+
+    public boolean isCouncilMember(Player p) {
+        String name = p.getName();
+        return council.isMember(name) || f.getLeader().equalsIgnoreCase(name);
+    }
+
+    public boolean canProposeOrStartMovement(Player p) {
+        String name = p.getName();
+        if(isCouncilMember(p)) {
+            return council.getProposalHandler().canPropose(name);
+        }
+        Guild guild = FactionManager.getGuildByMember(name);
+        if(guild != null) {
+            if(guild.getFaction().getId().equalsIgnoreCase(f.getId())) {
+                if(guild.isBase()) return true; //Member of the base guild in the faction
+                if(guild.getLeader().equalsIgnoreCase(name))return true; //Guild leader of a guild in the faction
+            }
+        }
+        return false;
+    }
+
+    public Faction getFaction() {
+        return f;
+    }
+
+    public boolean canPropose(Player p) {
+        String name = p.getName();
+        if(name.equalsIgnoreCase(f.getLeader())) return true;
+        if(council.canPropose(name)) return true;
+        return false;
+    }
+
+    public void propose(Proposal proposal) {
+        council.getProposalHandler().propose(proposal);
+    }
+
+    public boolean canBeProposed(Proposal proposal) {
+        return council.canBeProposed(proposal);
     }
 
     public Council getCouncil() {
@@ -55,7 +100,7 @@ public class Government {
     }
 
     public double getStability() {
-        double stability = 25.0;
+        double stability = STABILITY_BASE;
         if(f.getGuildHandler().getGuilds().size() == 1) {
             stability = 100.0;
         }

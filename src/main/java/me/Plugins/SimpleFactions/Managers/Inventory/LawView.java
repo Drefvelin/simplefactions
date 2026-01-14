@@ -45,11 +45,11 @@ public class LawView {
 	}
 
 	public void lawSelect(Player player, Faction f, LawGroup group, Inventory i) {
-		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.LAW_SELECT), 27, "§7Select Law");
+		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.LAW_SELECT), 27, "§7Law View");
 		i.clear();
 		int slot = 0;
 		for(Law law : group.getLaws().values()) {
-			i.setItem(slot, creator.createLawItem(player, f, group, law));
+			i.setItem(slot, creator.createLawItem(player, f, group, law, false));
 			slot++;
 		}
 		player.openInventory(i);

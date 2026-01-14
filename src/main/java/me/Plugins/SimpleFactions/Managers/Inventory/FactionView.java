@@ -75,7 +75,7 @@ public class FactionView {
 		int endIndex = Math.min(startIndex + factionsPerPage, factions.size());
 
 		Inventory inv = SimpleFactions.plugin.getServer()
-				.createInventory(null, INVENTORY_SIZE, "§7Faction List");
+				.createInventory(new SFInventoryHolder(null, SFGUI.FACTION_LIST), INVENTORY_SIZE, "§7Faction List");
 
 		// Populate factions
 		for (int i = startIndex; i < endIndex; i++) {

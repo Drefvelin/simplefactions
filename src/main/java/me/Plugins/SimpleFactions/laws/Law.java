@@ -64,4 +64,10 @@ public class Law {
         if(requirements.isEmpty()) return true;
         return true; //TODO add requirements
     }
+    public boolean affectsEconomy() {
+        for(LawEffect effect : scopedEffects.values()) {
+            if(effect.affectsEconomy()) return true;
+        }
+        return false;
+    }
 }

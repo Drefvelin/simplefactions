@@ -69,7 +69,7 @@ public class GuildView {
 		Collections.reverse(guilds);
 
 		Inventory inv = SimpleFactions.plugin.getServer()
-				.createInventory(null, INVENTORY_SIZE, "§7Guild List");
+				.createInventory(new SFInventoryHolder(null, SFGUI.GUILD_LIST), INVENTORY_SIZE, "§7Guild List");
 
 		// Build usable slots
 		List<Integer> usableSlots = new ArrayList<>();

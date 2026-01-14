@@ -304,9 +304,52 @@ public class InventoryManager implements Listener{
 					case LAW_SELECT:
 						lawView(p, f, null);
 						break;
+					case GOVERNMENT_VIEW:
+						factionView(p, f);
+						break;
+					case PROPOSAL_VIEW:
+						governmentView(p, f, null);
+						break;
+					case LAW_PROPOSAL_VIEW:
+						governmentView.proposalView(p, f, null);
+						break;
+					case LAW_PROPOSAL_SELECT:
+						governmentView.lawProposalView(p, f, null);
+						break;
+					case PROPOSALS:
+						governmentView(p, f, null);
+						break;
 					default:
 						break;
 				}
+			}
+			if(h.getType() == SFGUI.FACTION_LIST || h.getType() == SFGUI.FACTION_VIEW) {
+				factionView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.GUILD_LIST || h.getType() == SFGUI.GUILD_VIEW) {
+				guildView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.LAW_VIEW || h.getType() == SFGUI.LAW_SELECT) {
+				lawView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.MILITARY_VIEW) {
+				militaryView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.GOVERNMENT_VIEW 
+				|| h.getType() == SFGUI.PROPOSAL_VIEW
+				|| h.getType() == SFGUI.PROPOSALS
+				|| h.getType() == SFGUI.LAW_PROPOSAL_VIEW
+				|| h.getType() == SFGUI.LAW_PROPOSAL_SELECT) {
+				governmentView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.DIPLOMACY_VIEW || h.getType() == SFGUI.ATTITUDE_VIEW || h.getType() == SFGUI.RELATION_VIEW) {
+				relationView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.TIER_VIEW 
+					|| h.getType() == SFGUI.TITLE_VIEW
+					|| (inv.getHolder() instanceof SFInventoryHolder && ((SFInventoryHolder) inv.getHolder()).getType().equals(SFGUI.TITLE_TYPE_VIEW))) {
+				tierTitleView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.WAR_LIST
+					|| (inv.getHolder() instanceof WarInventoryHolder && ((WarInventoryHolder) inv.getHolder()).getType().equals(SFGUI.WAR_VIEW))
+					|| (inv.getHolder() instanceof SFCombinedInventoryHolder && ((SFCombinedInventoryHolder) inv.getHolder()).getType().equals(SFGUI.PARTICIPANT_VIEW))
+					|| (inv.getHolder() instanceof SFCombinedInventoryHolder && ((SFCombinedInventoryHolder) inv.getHolder()).getType().equals(SFGUI.WARGOAL_VIEW))) {
+				warView.click(e, inv, p);
+			} else if(inv.getHolder() instanceof SFInventoryHolder && ((SFInventoryHolder) inv.getHolder()).getType().equals(SFGUI.TAX_VIEW)) {
+				taxView.click(e, inv, p);
 			}
 		}
 		if(e.getView().getTitle().equalsIgnoreCase("§7Confirm Action")) {
@@ -330,29 +373,6 @@ public class InventoryManager implements Listener{
 				militaryView(null, p, f, true);
 				return;
 			}
-		} else if(e.getView().getTitle().equalsIgnoreCase("§7Faction List") || e.getView().getTitle().equalsIgnoreCase("§7Faction View")) {
-			factionView.click(e, inv, p);
-		} else if(e.getView().getTitle().equalsIgnoreCase("§7Guild List") ||e.getView().getTitle().equalsIgnoreCase("§7Guild View")) {
-			guildView.click(e, inv, p);
-		} else if(e.getView().getTitle().equalsIgnoreCase("§7Laws") ||e.getView().getTitle().equalsIgnoreCase("§7Select Law")) {
-			lawView.click(e, inv, p);
-		} else if(e.getView().getTitle().equalsIgnoreCase("§7Military View")) {
-			militaryView.click(e, inv, p);
-		} else if(e.getView().getTitle().equalsIgnoreCase("§7Government View")) {
-			governmentView.click(e, inv, p);
-		} else if(e.getView().getTitle().equalsIgnoreCase("§7Diplomacy View") || e.getView().getTitle().equalsIgnoreCase("§7Change Attitude") || e.getView().getTitle().equalsIgnoreCase("§7Change Relation")) {
-			relationView.click(e, inv, p);
-		} else if(e.getView().getTitle().equalsIgnoreCase("§7Tier View") 
-				|| e.getView().getTitle().equalsIgnoreCase("§7Title View")
-				|| (inv.getHolder() instanceof SFInventoryHolder && ((SFInventoryHolder) inv.getHolder()).getType().equals(SFGUI.TITLE_TYPE_VIEW))) {
-			tierTitleView.click(e, inv, p);
-		} else if(e.getView().getTitle().equalsIgnoreCase("§7War List")
-				|| (inv.getHolder() instanceof WarInventoryHolder && ((WarInventoryHolder) inv.getHolder()).getType().equals(SFGUI.WAR_VIEW))
-				|| (inv.getHolder() instanceof SFCombinedInventoryHolder && ((SFCombinedInventoryHolder) inv.getHolder()).getType().equals(SFGUI.PARTICIPANT_VIEW))
-				|| (inv.getHolder() instanceof SFCombinedInventoryHolder && ((SFCombinedInventoryHolder) inv.getHolder()).getType().equals(SFGUI.WARGOAL_VIEW))) {
-			warView.click(e, inv, p);
-		} else if(inv.getHolder() instanceof SFInventoryHolder && ((SFInventoryHolder) inv.getHolder()).getType().equals(SFGUI.TAX_VIEW)) {
-			taxView.click(e, inv, p);
 		}
 	}
 }

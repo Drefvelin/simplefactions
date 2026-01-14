@@ -43,6 +43,24 @@ public class LawHandler {
         return laws.getOrDefault(id, null);
     }
 
+    public LawGroup getGroupByLaw(String law) {
+        for(LawGroup group : laws.values()) {
+            if(group.getLaws().containsKey(law)) {
+                return group;
+            }
+        }
+        return null;
+    }
+
+    public Law getLaw(String law) {
+        for(LawGroup group : laws.values()) {
+            if(group.getLaws().containsKey(law)) {
+                return group.getLaws().get(law);
+            }
+        }
+        return null;
+    }
+
     public List<FactionModifier> getLawModifiers(Scope scope, Region region) {
         List<FactionModifier> result = new ArrayList<>();
 

@@ -9,6 +9,8 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Wealth;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.government.handler.ProposalHandler;
+import me.Plugins.SimpleFactions.government.proposal.Proposal;
+import me.Plugins.SimpleFactions.laws.LawGroup;
 
 public class Council {
     private Faction f;
@@ -16,10 +18,11 @@ public class Council {
     private Rules type;
     private int size;
 
-    private ProposalHandler proposalHandler = new ProposalHandler();
+    private ProposalHandler proposalHandler;
 
-    public Council(Faction f) {
+    public Council(Government gov, Faction f) {
         this.f = f;
+        this.proposalHandler = new ProposalHandler(gov);
         this.size = f.getCouncilSize();
         this.type = f.getCouncilType();
     }
@@ -82,6 +85,22 @@ public class Council {
 
     public void addMember(String member) {
         if(members.size() < size) members.add(member);
+    }
+
+    public boolean isMember(String name) {
+        return members.contains(name);
+    }
+
+    public int getCurrentProposals(String member) {
+        return proposalHandler.getProposalsByProposer(member).size();
+    }
+
+    public boolean canBeProposed(Proposal proposal) {
+        return proposalHandler.canBeProposed(proposal);
+    }
+
+    public ProposalHandler getProposalHandler() {
+        return proposalHandler;
     }
 
     public List<String> getMembers() {
