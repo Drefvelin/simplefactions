@@ -21,6 +21,7 @@ import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
+import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawGroup;
@@ -102,6 +103,24 @@ public class GovernmentCreator {
         lore.add(StringFormatter.formatHex("#28ed70Click to change"));
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, guild.getId());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createTaxTypeItem(Faction f, TaxTarget target) {
+        ItemStack item = new ItemStack(Material.GOLD_INGOT);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#93c9a7"+target.getDisplayName()));
+        List<String> lore = new ArrayList<String>();
+        if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID) {
+            lore.add(StringFormatter.formatHex("#28ed70Click to view options"));
+        } else {
+            lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+f.getTaxRate(target)+"%"));
+            lore.add(StringFormatter.formatHex("#b8ae61Create a proposal to change"));
+            lore.add(StringFormatter.formatHex("#b8ae61the rate for #62ca43"+target.getDisplayName()+"."));
+        }
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, target.name());
         item.setItemMeta(m);
         return item;
     }

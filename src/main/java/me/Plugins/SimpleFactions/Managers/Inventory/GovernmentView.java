@@ -19,6 +19,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
+import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawGroup;
@@ -72,6 +73,19 @@ public class GovernmentView {
 		i.setItem(0, creator.createProposalTypeItem("law"));
 		i.setItem(1, creator.createProposalTypeItem("tax"));
 		i.setItem(8, inv.createBackButton(SFGUI.PROPOSAL_VIEW));
+		if(open) player.openInventory(i);
+	}
+
+	public void taxProposalView(Player player, Faction f, Inventory i) {
+		boolean open = i == null;
+		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TAX_PROPOSAL_VIEW), 9, "§7Select Proposal Type");
+		i.clear();
+		int x = 0;
+		for(TaxTarget target : TaxTarget.values()) {
+			i.setItem(x, creator.createTaxTypeItem(f, target));
+			x++;
+		}
+		i.setItem(8, inv.createBackButton(SFGUI.TAX_PROPOSAL_VIEW));
 		if(open) player.openInventory(i);
 	}
 
@@ -133,6 +147,9 @@ public class GovernmentView {
 			Faction f = FactionManager.getByString(((SFInventoryHolder)e.getInventory().getHolder()).getId());
 			if(slot == 0) {
 				lawProposalView(p, f, null);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			} else if(slot == 1) {
+				taxProposalView(p, f, null);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			}
 		} else if (h.getType() == SFGUI.LAW_PROPOSAL_VIEW) {

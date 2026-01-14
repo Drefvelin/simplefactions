@@ -45,6 +45,7 @@ import me.Plugins.SimpleFactions.enums.Region;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.government.Government;
+import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawEffect;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -74,6 +75,7 @@ public class Faction {
 	private double taxRate = 5;
 	private double vassalTax = 100;
 	private double guildTax = 5;
+	private double dividendTax = 5;
 
 	private Tier tier;
 	
@@ -205,6 +207,28 @@ public class Faction {
 		if(!provinces.contains(i)) return;
 		capital = i;
 		SimpleFactions.getInstance().getProvinceManager().recalculateForSingleGuild(getOrCreateMainGuild(), true);
+	}
+
+	public double getTaxRate(TaxTarget target) {
+		double rate = 0;
+		switch(target) {
+			case CITIZENS:
+				rate = taxRate;
+				break;
+			case GUILDS:
+				rate = guildTax;
+				break;
+			case VASSALS:
+				rate = vassalTax;
+				break;
+			case DIVIDENDS:
+				rate = dividendTax;
+				break;
+			default:
+				rate = 0;
+				break;
+		}
+		return rate;
 	}
 
 	public double getForeignTaxRate(Faction f) {

@@ -316,6 +316,9 @@ public class InventoryManager implements Listener{
 					case LAW_PROPOSAL_SELECT:
 						governmentView.lawProposalView(p, f, null);
 						break;
+					case TAX_PROPOSAL_VIEW:
+						governmentView.proposalView(p, f, null);
+						break;
 					case PROPOSALS:
 						governmentView(p, f, null);
 						break;
@@ -335,7 +338,8 @@ public class InventoryManager implements Listener{
 				|| h.getType() == SFGUI.PROPOSAL_VIEW
 				|| h.getType() == SFGUI.PROPOSALS
 				|| h.getType() == SFGUI.LAW_PROPOSAL_VIEW
-				|| h.getType() == SFGUI.LAW_PROPOSAL_SELECT) {
+				|| h.getType() == SFGUI.LAW_PROPOSAL_SELECT
+				|| h.getType() == SFGUI.TAX_PROPOSAL_VIEW) {
 				governmentView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.DIPLOMACY_VIEW || h.getType() == SFGUI.ATTITUDE_VIEW || h.getType() == SFGUI.RELATION_VIEW) {
 				relationView.click(e, inv, p);
