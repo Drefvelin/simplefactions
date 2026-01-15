@@ -49,7 +49,7 @@ public class GuildCreator {
 		lore.add(" ");
 		if(guild.hasCapital()) {
 			lore.add(StringFormatter.formatHex("#41b541§lTrade Power: #a4bc5c"+guild.getTradeBreakdown().getTradePower()));
-			lore.add(StringFormatter.formatHex("#74ba74Estimated Income: #5cbc5c"+guild.getTradeBreakdown().getNetIncome()));
+			lore.add(StringFormatter.formatHex("#74ba74Estimated Income: #5cbc5c"+guild.getLedger().getNetIncome()));
 		}
 		lore.add(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+guild.getWealth()+"d #7a706a("+r.getWealthRank(guild)+")"));
 		meta.setLore(lore);
@@ -205,7 +205,7 @@ public class GuildCreator {
 			.previewUpgradeIncomeExact(guild, branch);
 
 		lore.add("");
-		lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Income: #7fbd73"+guild.getTradeBreakdown().getNetIncome()));
+		lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Trade Income: #7fbd73"+guild.getTradeBreakdown().getNetTradeIncome()));
 		lore.add(StringFormatter.formatHex(
 			"#f2e5c2Estimated Income Change#d6cf69: "
 			+ (deltaIncome >= 0 ? "#4fd945+" : "#cf493a")
@@ -246,7 +246,7 @@ public class GuildCreator {
 				SimpleFactions.getInstance()
 				.getProvinceManager()
 				.previewDowngradeIncomeExact(guild, branch);
-			lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Income: #7fbd73"+guild.getTradeBreakdown().getNetIncome()));
+			lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Trade Income: #7fbd73"+guild.getTradeBreakdown().getNetTradeIncome()));
 			lore.add(StringFormatter.formatHex(
 				"#f2e5c2Estimated Income Change#d6cf69: "
 				+ (deltaIncome >= 0 ? "#4fd945+" : "#cf493a")

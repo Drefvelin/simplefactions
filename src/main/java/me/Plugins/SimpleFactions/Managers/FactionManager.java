@@ -303,7 +303,7 @@ public class FactionManager implements Listener{
 		Formatter format = new Formatter();
 		Double amount = 0.0;
 		for(Guild g : getAllGuilds()) {
-			amount+=g.getTradeBreakdown().getNetIncome();
+			amount+=g.getLedger().getInflationDelta();
 		}
 		return format.formatDouble(amount);
 	}

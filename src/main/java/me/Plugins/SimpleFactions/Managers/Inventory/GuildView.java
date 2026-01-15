@@ -124,7 +124,7 @@ public class GuildView {
 		if(/*guild.isLeader(player) && */!guild.isBase()) i.setItem(19, creator.createMenuItem(player, guild, MenuItemType.BANNER_RANDOM));
 		i.setItem(11, creator.createMenuItem(player, guild, MenuItemType.LEADER));
 		i.setItem(12, creator.createMenuItem(player, guild, MenuItemType.WEALTH));
-		i.setItem(14, creator.createMenuItem(player, guild, MenuItemType.MEMBERS));
+		i.setItem(15, creator.createMenuItem(player, guild, MenuItemType.MEMBERS));
 		int group = 0;
 		while(guild.getBranch(group) != null || group > 10) {
 			Branch b = guild.getBranch(group);
@@ -136,6 +136,7 @@ public class GuildView {
 			}
 		}
 		i.setItem(13, creator.createMenuItem(player, guild, MenuItemType.TRADE_BREAKDOWN));
+		i.setItem(14, creator.createMenuItem(player, guild, MenuItemType.LEDGER));
 		i.setItem(53, inv.createBackButton(SFGUI.GUILD_VIEW));
 	}
 

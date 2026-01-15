@@ -53,7 +53,7 @@ public class TradeBreakdown {
         return incomeByFaction;
     }
 
-    public double getNetIncome() {
+    public double getNetTradeIncome() {
         return Math.round((income-upkeep) * 100.0) / 100.0;
     }
 

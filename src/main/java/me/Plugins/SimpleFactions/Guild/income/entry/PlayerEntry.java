@@ -1,17 +1,15 @@
 package me.Plugins.SimpleFactions.Guild.income.entry;
 
-import me.Plugins.SimpleFactions.Objects.Faction;
-
-public class FactionEntry {
-    private Faction origin;
+public class PlayerEntry {
+    private String origin;
     private double amount;
 
-    public FactionEntry(Faction f, double a) {
+    public PlayerEntry(String f, double a) {
         origin = f;
         amount = a;
     }
 
-    public Faction getOrigin() {
+    public String getOrigin() {
         return origin;
     }
 

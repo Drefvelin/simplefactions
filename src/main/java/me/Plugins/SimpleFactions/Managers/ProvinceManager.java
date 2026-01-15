@@ -159,7 +159,7 @@ public class ProvinceManager {
         }
         Map<Guild, Double> map = new HashMap<>();
         for(Guild guild : FactionManager.getAllGuilds()) {
-            double delta = snap.getIncome(guild, false)-guild.getTradeBreakdown().getNetIncome();
+            double delta = snap.getIncome(guild, false)-guild.getTradeBreakdown().getNetTradeIncome();
             map.put(guild, Math.round(delta * 100.0) / 100.0);
         }
         group.setCurrent(old);
