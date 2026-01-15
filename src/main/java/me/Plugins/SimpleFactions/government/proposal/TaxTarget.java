@@ -5,7 +5,6 @@ public enum TaxTarget {
     GUILDS("Guilds"),
     VASSALS("Vassals"),
     DIVIDENDS("Dividends"),
-    TRIBUTARIES("Tributaries"),
     GUILD_ID("Guild Specific"),
     VASSAL_ID("Vassal Specific");
 
