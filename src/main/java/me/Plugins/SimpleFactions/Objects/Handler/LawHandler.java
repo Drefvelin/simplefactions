@@ -19,8 +19,13 @@ public class LawHandler {
     private Faction f;
     private Map<String, LawGroup> laws = new LinkedHashMap<>();
 
-    public List<LawGroup> getGroups() {
-        return new ArrayList<>(laws.values());
+    public List<Law> getCurrentLaws() {
+        List<Law> lawList = new ArrayList<>();
+        for(LawGroup group : getGroupList()) {
+            if(group.getCurrent() == null) continue;
+            lawList.add(group.getCurrent());
+        }
+        return lawList;
     }
 
     public LawHandler(Faction f) {
@@ -36,6 +41,24 @@ public class LawHandler {
 
     public LawGroup getGroup(String id) {
         return laws.getOrDefault(id, null);
+    }
+
+    public LawGroup getGroupByLaw(String law) {
+        for(LawGroup group : laws.values()) {
+            if(group.getLaws().containsKey(law)) {
+                return group;
+            }
+        }
+        return null;
+    }
+
+    public Law getLaw(String law) {
+        for(LawGroup group : laws.values()) {
+            if(group.getLaws().containsKey(law)) {
+                return group.getLaws().get(law);
+            }
+        }
+        return null;
     }
 
     public List<FactionModifier> getLawModifiers(Scope scope, Region region) {

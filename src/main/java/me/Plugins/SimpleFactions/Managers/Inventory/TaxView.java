@@ -49,20 +49,6 @@ public class TaxView {
             inv.factionView(p, f);
             p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
             return;
-        } else if(e.getSlot() == 0) {
-            if(inv.isChanging(p)) {
-                return;
-            }
-            inv.setChanging(p, true);
-            p.sendTitle("", StringFormatter.formatHex("#74ccb3Type the new rate in chat"), 10, 60, 10);
-            p.closeInventory();
-        } else if(e.getSlot() == 1) {
-            if(inv.isChanging(p)) {
-                return;
-            }
-            inv.setChanging(p, false);
-            p.sendTitle("", StringFormatter.formatHex("#74ccb3Type the new rate in chat"), 10, 60, 10);
-            p.closeInventory();
         }
 	}
 }

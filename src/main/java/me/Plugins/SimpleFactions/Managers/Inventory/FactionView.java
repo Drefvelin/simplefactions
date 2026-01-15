@@ -75,7 +75,7 @@ public class FactionView {
 		int endIndex = Math.min(startIndex + factionsPerPage, factions.size());
 
 		Inventory inv = SimpleFactions.plugin.getServer()
-				.createInventory(null, INVENTORY_SIZE, "§7Faction List");
+				.createInventory(new SFInventoryHolder(null, SFGUI.FACTION_LIST), INVENTORY_SIZE, "§7Faction List");
 
 		// Populate factions
 		for (int i = startIndex; i < endIndex; i++) {
@@ -103,7 +103,7 @@ public class FactionView {
 		if(f.getMembers().contains(player.getName())) i.setItem(1, creator.createMenuItem(player, f, MenuItemType.BANNER_GET));
 		i.setItem(10, creator.createMenuItem(player, f, MenuItemType.BANNER));
 		/*if(f.getLeader().equalsIgnoreCase(player.getName())) */i.setItem(19, creator.createMenuItem(player, f, MenuItemType.BANNER_RANDOM));
-		i.setItem(11, creator.createMenuItem(player, f, MenuItemType.LEADER));
+		i.setItem(11, creator.createMenuItem(player, f, MenuItemType.GOVERNMENT));
 		i.setItem(12, creator.createMenuItem(player, f, MenuItemType.WEALTH));
 		i.setItem(13, creator.createMenuItem(player, f, MenuItemType.PRESTIGE));
 		i.setItem(14, creator.createMenuItem(player, f, MenuItemType.MEMBERS));
@@ -215,6 +215,17 @@ public class FactionView {
 				Faction f = FactionManager.getByString(factionId);
 				if(f != null) {
 					inv.diplomacyView(null, p, f, true);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				}
+			} else if(e.getSlot() == 11) {
+				ItemStack item = e.getCurrentItem();
+				ItemMeta m = item.getItemMeta();
+				NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");
+				String factionId = m.getPersistentDataContainer().get(id, PersistentDataType.STRING);
+				if(factionId == null) return;
+				Faction f = FactionManager.getByString(factionId);
+				if(f != null) {
+					inv.governmentView(p, f, null);
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				}
 			} else if(e.getSlot() == 33) {

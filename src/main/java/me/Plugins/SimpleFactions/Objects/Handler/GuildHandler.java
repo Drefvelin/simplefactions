@@ -7,9 +7,15 @@ import java.util.List;
 import java.util.Map;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Objects.Faction;
 
 public class GuildHandler {
+    private Faction f;
     private Map<String, Guild> guilds = new HashMap<>();
+
+    public GuildHandler(Faction f) {
+        this.f = f;
+    }
 
     public List<Guild> getGuilds() {
         return new ArrayList<>(guilds.values());
@@ -50,5 +56,13 @@ public class GuildHandler {
         }
         Collections.sort(members);
         return members;
+    }
+
+    public double getTotalTradePower() {
+        double total = 0;
+        for(Guild g : guilds.values()) {
+            total += g.getTradeBreakdown().getTradePower();
+        }
+        return total;
     }
 }

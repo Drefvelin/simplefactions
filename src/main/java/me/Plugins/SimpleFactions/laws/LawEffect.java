@@ -23,9 +23,11 @@ public class LawEffect {
     private List<FactionModifier> globalModifiers = new ArrayList<>();
     private Map<Region, List<FactionModifier>> regionModifiers = new LinkedHashMap<>();
     private Map<Brackets, Bracket> brackets = new LinkedHashMap<>();
+    private int councilSize;
     
     public LawEffect(Scope scope, ConfigurationSection config) {
 
+        councilSize = config.getInt("council-size", -1);
         // ---- Rules ----
         if (config.contains("rules")) {
             for (String s : config.getStringList("rules")) {
@@ -116,6 +118,42 @@ public class LawEffect {
                 // Not a region key → safe to ignore
             }
         }
+    }
+
+    public boolean affectsCouncilSize() {
+        return councilSize != -1;
+    }
+
+    public boolean affectsCouncilType() {
+        for(Rules rule : rules.keySet()) {
+            if(rule == Rules.HAS_COUNCIL
+            || rule == Rules.APPOINTED_COUNCIL
+            || rule == Rules.WEALTH_BASED_COUNCIL
+            || rule == Rules.ELECTED_COUNCIL) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    public Rules getCouncilType() {
+        if(rules.containsKey(Rules.APPOINTED_COUNCIL)
+        && rules.get(Rules.APPOINTED_COUNCIL)) {
+            return Rules.APPOINTED_COUNCIL;
+        }
+        if(rules.containsKey(Rules.WEALTH_BASED_COUNCIL)
+        && rules.get(Rules.WEALTH_BASED_COUNCIL)) {
+            return Rules.WEALTH_BASED_COUNCIL;
+        }
+        if(rules.containsKey(Rules.ELECTED_COUNCIL)
+        && rules.get(Rules.ELECTED_COUNCIL)) {
+            return Rules.ELECTED_COUNCIL;
+        }
+        return Rules.NO_COUNCIL;
+    }
+
+    public int getCouncilSize() {
+        return councilSize;
     }
 
     public void addModifier(Region region, FactionModifier mod) {

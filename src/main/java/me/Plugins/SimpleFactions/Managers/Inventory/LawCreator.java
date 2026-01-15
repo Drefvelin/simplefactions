@@ -20,6 +20,8 @@ import me.Plugins.SimpleFactions.enums.Brackets;
 import me.Plugins.SimpleFactions.enums.Region;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Scope;
+import me.Plugins.SimpleFactions.government.Government;
+import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawEffect;
@@ -150,7 +152,7 @@ public class LawCreator {
 		return i;
 	}
 
-	public ItemStack createLawItem(Player p, Faction f, LawGroup group, Law law) {
+	public ItemStack createLawItem(Player p, Faction f, LawGroup group, Law law, boolean forProposal) {
 		ItemStack i = law.getIcon();
 		ItemMeta meta = i.getItemMeta();
 		meta.setDisplayName(law.getName());
@@ -307,10 +309,11 @@ public class LawCreator {
 				}
 			}
 		}
-
-		// Trim trailing blank lines
-		while (!lore.isEmpty() && lore.get(lore.size() - 1).isEmpty()) {
-			lore.remove(lore.size() - 1);
+		Government gov = f.getGovernment();
+		Proposal proposal = new Proposal("console", gov);
+		proposal.setLawProposal(law);
+		if(!gov.canBeProposed(proposal) && gov.canPropose(p)) {
+			lore.add(StringFormatter.formatHex("#d65c5cThere is already a proposal in this law group."));
 		}
 
 		meta.setLore(lore);

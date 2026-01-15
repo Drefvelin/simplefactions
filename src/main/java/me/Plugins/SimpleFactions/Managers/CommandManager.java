@@ -617,7 +617,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				String s = args[1].replace("_", " ");
 				f.setGovernment(s);
-				p.sendMessage("§aFaction ruling system changed to "+f.getGovernment());
+				p.sendMessage("§aFaction ruling system changed to "+f.getGovernmentString());
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setculture") && args.length == 2) {
 				Faction f = FactionManager.getByLeader(p.getName());

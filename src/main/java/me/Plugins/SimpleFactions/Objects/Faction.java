@@ -34,6 +34,7 @@ import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Handler.GuildHandler;
 import me.Plugins.SimpleFactions.Objects.Handler.LawHandler;
+import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
@@ -42,7 +43,12 @@ import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.Region;
+import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Scope;
+import me.Plugins.SimpleFactions.government.Government;
+import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
+import me.Plugins.SimpleFactions.laws.Law;
+import me.Plugins.SimpleFactions.laws.LawEffect;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Faction {
@@ -50,7 +56,7 @@ public class Faction {
 	private String id;
 	private String name;
 	private PrestigeRank rank;
-	private String government;
+	private String governmentType;
 	private String culture;
 	private String religion;
 	private String rgb;
@@ -67,9 +73,7 @@ public class Faction {
 
 	private int capital = -1;
 	
-	private double taxRate = 5;
-	private double vassalTax = 100;
-	private double guildTax = 5;
+	private TaxHandler taxHandler;
 
 	private Tier tier;
 	
@@ -86,7 +90,10 @@ public class Faction {
 	private HashMap<FactionModifiers, List<FactionModifier>> modifiers = new HashMap<>();
 
 	//Guilds
-	private GuildHandler guildHandler = new GuildHandler();
+	private GuildHandler guildHandler;
+
+	//Government
+	private final Government government;
 
 	//Laws
 	private final LawHandler lawHandler;
@@ -98,7 +105,7 @@ public class Faction {
 		this.rulerTitle = "Leader";
 		this.bannerPatterns = RestServer.fetchBannerList();
 		this.rank = RankLoader.getLowest();
-		this.government = "Homestead";
+		this.governmentType = "Community";
 		this.culture = "Multicultural";
 		this.religion = "Religious Diversity";
 		this.wealth = 0.0;
@@ -110,20 +117,23 @@ public class Faction {
 			this.rgb = RandomRGB.random();
 		}
 		this.military = new Military(this);
+		this.government = new Government(this);
+		this.taxHandler = new TaxHandler(5, 5, 100, 5);
+		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(new Guild(this));
 		init();
 		createBanner(bannerPatterns);
 		updatePrestige();
 		updateTier();
 	}
-	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> patterns, String government, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, double taxRate, double vassalTax, int capital) {
+	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> patterns, String governmentType, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, double taxRate, double vassalTax, int capital) {
 		this.id = id;
 		this.name = name;
 		this.leader = leader;
 		this.rulerTitle = rulerTitle;
 		this.bannerPatterns = patterns;
 		this.rank = RankLoader.getLowest();
-		this.government = government;
+		this.governmentType = governmentType;
 		this.culture = culture;
 		this.religion = religion;
 		this.wealth = 0.0;
@@ -138,9 +148,10 @@ public class Faction {
 		}
 		this.titles = titles;
 		this.military = new Military(this);
-		this.taxRate = taxRate;
-		this.vassalTax = vassalTax;
+		this.taxHandler = new TaxHandler(taxRate, 5, vassalTax, 5); //TODO persistence
+		this.guildHandler = new GuildHandler(this);
 		this.lawHandler = new LawHandler(this); //TODO persistence
+		this.government = new Government(this); //TODO persistence
 		init();
 		createBanner(bannerPatterns);
 		updateTier();
@@ -196,20 +207,27 @@ public class Faction {
 		SimpleFactions.getInstance().getProvinceManager().recalculateForSingleGuild(getOrCreateMainGuild(), true);
 	}
 
-	public double getForeignTaxRate(Faction f) {
+	public double getTaxRate(TaxTarget target) {
+		return taxHandler.getTaxRate(target, null);
+	}
+
+	public double getTaxRate(TaxTarget target, String id) {
+		return taxHandler.getTaxRate(target, id);
+	}
+
+	public double getOverlordTaxRate(Faction f) {
 		double taxRate = 0;
+		Faction overlord = getOverlord();
+		if(overlord == null) return taxRate;
+		if(overlord.getTaxHandler().hasSpecificTax(id)) {
+			taxRate = overlord.getTaxRate(TaxTarget.VASSAL_ID, id);
+		} else {
+			taxRate = overlord.getTaxRate(TaxTarget.VASSALS);
+		}
 		for(FactionModifier mod : getModifiers()) {
-			if(mod.getFrom() == null) continue;
-			if(!mod.getFrom().getId().equalsIgnoreCase(f.getId())) continue;
-			if(!mod.getType().equals(FactionModifiers.TAX)) continue;
-			double tax = mod.getAmount();
-			String overlord = RelationManager.getOverlord(this);
-			if(overlord != null && overlord.equalsIgnoreCase(mod.getFrom().getId())) {
-				tax = mod.getFrom().getVassalTaxRate()/100.0*tax;
-			}
-			Faction from = mod.getFrom();
-			if(from.getBank() == null) continue;
-			taxRate += tax;
+			if(!mod.getType().equals(FactionModifiers.TAX_MULTIPLIER)) continue;
+			double mult = 1+mod.getAmount()/100.0;
+			taxRate *= mult;
 		}
 		return taxRate;
 	}
@@ -218,8 +236,9 @@ public class Faction {
 		double taxRate = 0;
 		for(FactionModifier mod : getModifiers()) {
 			if(mod.getFrom() == null) continue;
-			if(!mod.getType().equals(FactionModifiers.TAX)) continue;
-			taxRate+=getForeignTaxRate(mod.getFrom());
+			if(mod.getFrom().getBank() == null) continue;
+			if(!mod.getType().equals(FactionModifiers.TRIBUTE)) continue;
+			taxRate+=mod.getAmount();
 		}
 		return taxRate;
 	}
@@ -233,18 +252,24 @@ public class Faction {
 
 		double paidTax = 0;
 
+		Faction overlord = getOverlord();
+		if(overlord != null) {
+			if(overlord.getBank() != null) {
+				double tax = getOverlordTaxRate(overlord);
+				if(tax > 0) {
+					paidTax+=tax;
+					amount-=tax;
+					overlord.giveTax(amount, visitedFactions);
+				}
+			}
+		}
+
 		for (FactionModifier mod : getModifiers()) {
 			if (paidTax >= amount) break;
-			if (mod.getFrom() == null || !mod.getType().equals(FactionModifiers.TAX)) continue;
+			if (mod.getFrom() == null || !mod.getType().equals(FactionModifiers.TRIBUTE)) continue;
 
 			double tax = mod.getAmount() / 100.0 * amount;
 			Faction from = mod.getFrom();
-
-			String overlordId = RelationManager.getOverlord(this);
-			if (overlordId != null && overlordId.equalsIgnoreCase(from.getId())) {
-				tax = from.getVassalTaxRate() / 100.0 * tax;
-			}
-
 			if (from.getBank() == null) continue;
 			paidTax += tax;
 			from.giveTax(tax, visitedFactions);
@@ -255,22 +280,20 @@ public class Faction {
 	}
 
 	public double setTaxRate(double d) {
-		double totalForeignTax = getTotalForeignTaxRate();
-		if(d+totalForeignTax > 100) d = 100-totalForeignTax;
-		taxRate = Math.min(60, d);
-		return taxRate;
+		taxHandler.setCitizenTax(d);
+		return d;
 	}
 	
 	public double getTaxRate() {
-		return taxRate;
+		return taxHandler.getCitizenTax();
 	}
 
 	public void setVassalTaxRate(double d) {
-		vassalTax = Math.max(20, Math.min(100, d));
+		taxHandler.setVassalTax(Math.max(20, Math.min(100, d)));
 	}
 
 	public double getVassalTaxRate() {
-		return vassalTax;
+		return taxHandler.getVassalTax();
 	}
 	
 	public void init() {
@@ -289,11 +312,15 @@ public class Faction {
 	public Military getMilitary() {
 		return military;
 	}
+
+	public TaxHandler getTaxHandler() {
+		return taxHandler;
+	}
 	
 	public void tick() {
 		//taxation fix, doubt this will be neccesary
 		double tax = getTotalForeignTaxRate();
-		if(taxRate + tax > 100) taxRate = 100-tax;
+		if(getTaxRate() + tax > 100) setTaxRate(100-tax);
 		
 		military.tick();
 		for(FactionModifier m : getModifiers()) {
@@ -364,11 +391,11 @@ public class Faction {
 			addModifiers(null, rank.getModifiers());
 		}
 	}
-	public String getGovernment() {
-		return government;
+	public String getGovernmentString() {
+		return governmentType;
 	}
-	public void setGovernment(String government) {
-		this.government = government;
+	public void setGovernment(String governmentType) {
+		this.governmentType = governmentType;
 	}
 	public String getCulture() {
 		return culture;
@@ -738,8 +765,85 @@ public class Faction {
 		updatePrestige();
 	}
 
+	//Government
+
+	public Government getGovernment() {
+		return government;
+	}
+
+	public void ping() {
+		government.ping();
+	}
+
 	//Laws
 	public LawHandler getLawHandler() { return lawHandler; }
+
+	public int getCouncilSize() {
+		if(!hasFactionRule(Rules.HAS_COUNCIL)) return 0;
+		for (Law law : lawHandler.getCurrentLaws()) {
+
+			// Law does not define this scope → ignore
+			if (!law.getScopedEffects().containsKey(Scope.FACTION)) continue;
+
+			LawEffect effect = law.getScopedEffects().get(Scope.FACTION);
+			if(effect.affectsCouncilSize()) return effect.getCouncilSize();
+		}
+		return 4;
+	}
+
+	public Rules getCouncilType() {
+		if(!hasFactionRule(Rules.HAS_COUNCIL)) return Rules.NO_COUNCIL;
+		for (Law law : lawHandler.getCurrentLaws()) {
+			if (!law.getScopedEffects().containsKey(Scope.FACTION)) continue;
+			LawEffect effect = law.getScopedEffects().get(Scope.FACTION);
+			if(effect.affectsCouncilType()) return effect.getCouncilType();
+		}
+		return Rules.NO_COUNCIL;
+	}
+
+	//Rules
+	public boolean hasFactionRule(Rules rule) {
+		if(hasRule(Scope.FACTION, rule)) return true;
+		String o = RelationManager.getOverlord(this);
+		if(o != null) {
+			Faction overlord = FactionManager.getByString(o);
+			if(overlord.hasRule(Scope.VASSALS, rule)) return true;
+		}
+		return false;
+	}
+	public boolean hasRule(Scope scope, Rules rule) {
+		boolean foundExplicitTrue = false;
+		boolean foundExplicitFalse = false;
+
+		for (Law law : lawHandler.getCurrentLaws()) {
+
+			// Law does not define this scope → ignore
+			if (!law.getScopedEffects().containsKey(scope)) continue;
+
+			var effect = law.getScopedEffects().get(scope);
+
+			// Law defines scope but no rules → ignore
+			if (!effect.hasRules()) continue;
+
+			// Law does not mention this rule → ignore
+			if (!effect.getRules().containsKey(rule)) continue;
+
+			boolean value = effect.getRules().get(rule);
+
+			if (!value) {
+				foundExplicitFalse = true;
+				break; // FALSE always wins
+			}
+
+			foundExplicitTrue = true;
+		}
+
+		if (foundExplicitFalse) return false;
+		if (foundExplicitTrue) return true;
+
+		return rule.trueIfAbsent();
+	}
+
 	
 	//Modifiers
 
@@ -780,11 +884,22 @@ public class Faction {
             }
         }
 	}
+
+	public Faction getOverlord() {
+		String id = RelationManager.getOverlord(this);
+		if(id == null) return null;
+		return FactionManager.getByString(id);
+	}
 	
 	public Collection<FactionModifier> getModifiers() {
 	    List<FactionModifier> all = new ArrayList<>();
 	    for (List<FactionModifier> list : modifiers.values()) {
 	        all.addAll(list);
+			all.addAll(getModifiers(Scope.FACTION, null));
+			Faction overlord = getOverlord();
+			if(overlord != null) {
+				all.addAll(overlord.getModifiers(Scope.VASSALS, null));
+			}
 	    }
 	    return all;
 	}

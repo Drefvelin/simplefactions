@@ -15,5 +15,6 @@ public enum MenuItemType {
 	MODIFIERS,
 	TAX,
 	TRADE_BREAKDOWN,
-	LAWS
+	LAWS,
+	GOVERNMENT
 }

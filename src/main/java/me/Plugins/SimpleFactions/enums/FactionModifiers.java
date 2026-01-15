@@ -2,7 +2,8 @@ package me.Plugins.SimpleFactions.enums;
 
 public enum FactionModifiers {
 
-    TAX(false, false),
+    TRIBUTE(false, false),
+    TAX_MULTIPLIER(false, false),
     LEVY(false, false),
     NODE_SPEED(true, false),
     MILITARY_UPKEEP(false, false),

@@ -31,6 +31,7 @@ import me.Plugins.SimpleFactions.Utils.OpinionColourMapper;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
 import me.Plugins.SimpleFactions.enums.RankType;
+import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.laws.LawGroup;
 import me.Plugins.TLibs.TLibs;
 import me.Plugins.TLibs.Enums.APIType;
@@ -54,7 +55,7 @@ public class FactionCreator {
 		else if(realmSize > 0) lore.add(StringFormatter.formatHex("#d4c9aeRealm Size: #7a706a"+realmSize));
 		lore.add(" ");
 		lore.add(StringFormatter.formatHex("#9c9775"+f.getRulerTitle()+": #c2bea7"+f.getLeader()));
-		lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernment()));
+		lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernmentString()));
 		lore.add(StringFormatter.formatHex("#b8ae61Culture: #d4c9ae"+f.getCulture()));
 		lore.add(StringFormatter.formatHex("#b8ae61Religion: #d4c9ae"+f.getReligion()));
 		lore.add(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+f.getMembers().size()));
@@ -146,8 +147,40 @@ public class FactionCreator {
 			m.setDisplayName(StringFormatter.formatHex("#9c9775§l"+f.getRulerTitle()+": #c2bea7"+f.getLeader()));
 			m.setOwningPlayer(Bukkit.getOfflinePlayer(f.getLeader()));
 			List<String> lore = new ArrayList<String>();
-			lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernment()));
+			lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernmentString()));
 			m.setLore(lore);
+			i.setItemMeta(m);
+		} else if(t.equals(MenuItemType.GOVERNMENT)) {
+			i = new ItemStack(Material.PLAYER_HEAD, 1);
+			SkullMeta m = (SkullMeta) i.getItemMeta();
+			m.setDisplayName(StringFormatter.formatHex("#93c9a7Government:"));
+			m.setOwningPlayer(Bukkit.getOfflinePlayer(f.getLeader()));
+			List<String> lore = new ArrayList<String>();
+			Government gov = f.getGovernment();
+			lore.add(StringFormatter.formatHex("#9c9775§l"+f.getRulerTitle()+": #c2bea7"+f.getLeader()));
+			lore.add(StringFormatter.formatHex("#85c265Administrative Power§7: §e"+format.formatDouble(gov.getPower())+"/"+format.formatDouble(gov.getMaxPower())+" §7(§e+"
+					+format.formatDouble(gov.getPowerGain())+"§7/day)"));
+			lore.add(StringFormatter.formatHex("#85c265Stability§7: §e"+gov.getStabilityString()+"%"));
+			lore.add(" ");
+			lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernmentString()));
+			lore.add(StringFormatter.formatHex("#b8ae61Leader Elections: "+(gov.hasLeaderElections() ? "#45afc4✔" : "#c74d32✖")));
+			if(gov.hasCouncil()) {
+				lore.add(StringFormatter.formatHex("#b8ae61Council Size: #d4c9ae"+gov.getCouncil().getCurrentSize()+"/"+gov.getCouncil().getMaxSize()));
+				lore.add(StringFormatter.formatHex("#b8ae61Council Elections: "+(gov.hasCouncilElections() ? "#45afc4✔" : "#c74d32✖")));
+				lore.add(StringFormatter.formatHex("#45c46f"+gov.getCouncil().getType().getDisplay()));
+				if(gov.getCouncil().getCurrentSize() > 0) {
+					lore.add(StringFormatter.formatHex("#93c9a7Members:"));
+					for(String member : gov.getCouncilMembers()) {
+						if(member.equalsIgnoreCase(f.getLeader())) continue;
+						lore.add(StringFormatter.formatHex("#d4bb98- "+member));
+					}
+				}
+			} else {
+				lore.add(StringFormatter.formatHex("#b8ae61Has Council: #c74d32✖"));
+			}
+			m.setLore(lore);
+			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
+			m.getPersistentDataContainer().set(key, PersistentDataType.STRING, f.getId());
 			i.setItemMeta(m);
 		} else if(t.equals(MenuItemType.WEALTH)) {
 			i = new ItemStack(Material.GOLD_NUGGET, 1);
