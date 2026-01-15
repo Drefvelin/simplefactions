@@ -34,6 +34,7 @@ import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Handler.GuildHandler;
 import me.Plugins.SimpleFactions.Objects.Handler.LawHandler;
+import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
@@ -72,10 +73,7 @@ public class Faction {
 
 	private int capital = -1;
 	
-	private double taxRate = 5;
-	private double vassalTax = 100;
-	private double guildTax = 5;
-	private double dividendTax = 5;
+	private TaxHandler taxHandler;
 
 	private Tier tier;
 	
@@ -120,6 +118,7 @@ public class Faction {
 		}
 		this.military = new Military(this);
 		this.government = new Government(this);
+		this.taxHandler = new TaxHandler(5, 5, 100, 5);
 		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(new Guild(this));
 		init();
@@ -149,8 +148,7 @@ public class Faction {
 		}
 		this.titles = titles;
 		this.military = new Military(this);
-		this.taxRate = taxRate;
-		this.vassalTax = vassalTax;
+		this.taxHandler = new TaxHandler(taxRate, 5, vassalTax, 5); //TODO persistence
 		this.guildHandler = new GuildHandler(this);
 		this.lawHandler = new LawHandler(this); //TODO persistence
 		this.government = new Government(this); //TODO persistence
@@ -210,25 +208,11 @@ public class Faction {
 	}
 
 	public double getTaxRate(TaxTarget target) {
-		double rate = 0;
-		switch(target) {
-			case CITIZENS:
-				rate = taxRate;
-				break;
-			case GUILDS:
-				rate = guildTax;
-				break;
-			case VASSALS:
-				rate = vassalTax;
-				break;
-			case DIVIDENDS:
-				rate = dividendTax;
-				break;
-			default:
-				rate = 0;
-				break;
-		}
-		return rate;
+		return taxHandler.getTaxRate(target, null);
+	}
+
+	public double getTaxRate(TaxTarget target, String id) {
+		return taxHandler.getTaxRate(target, id);
 	}
 
 	public double getForeignTaxRate(Faction f) {
@@ -292,20 +276,21 @@ public class Faction {
 	public double setTaxRate(double d) {
 		double totalForeignTax = getTotalForeignTaxRate();
 		if(d+totalForeignTax > 100) d = 100-totalForeignTax;
-		taxRate = Math.min(60, d);
-		return taxRate;
+		double rate = Math.min(60, d);
+		taxHandler.setCitizenTax(rate);
+		return rate;
 	}
 	
 	public double getTaxRate() {
-		return taxRate;
+		return taxHandler.getCitizenTax();
 	}
 
 	public void setVassalTaxRate(double d) {
-		vassalTax = Math.max(20, Math.min(100, d));
+		taxHandler.setVassalTax(Math.max(20, Math.min(100, d)));
 	}
 
 	public double getVassalTaxRate() {
-		return vassalTax;
+		return taxHandler.getVassalTax();
 	}
 	
 	public void init() {
@@ -324,11 +309,15 @@ public class Faction {
 	public Military getMilitary() {
 		return military;
 	}
+
+	public TaxHandler getTaxHandler() {
+		return taxHandler;
+	}
 	
 	public void tick() {
 		//taxation fix, doubt this will be neccesary
 		double tax = getTotalForeignTaxRate();
-		if(taxRate + tax > 100) taxRate = 100-tax;
+		if(getTaxRate() + tax > 100) setTaxRate(100-tax);
 		
 		military.tick();
 		for(FactionModifier m : getModifiers()) {

@@ -39,6 +39,10 @@ import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.War.Participant;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.enums.SFGUI;
+import me.Plugins.SimpleFactions.government.Government;
+import me.Plugins.SimpleFactions.government.proposal.Proposal;
+import me.Plugins.SimpleFactions.government.proposal.TaxLawChange;
+import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class InventoryManager implements Listener{
@@ -172,8 +176,8 @@ public class InventoryManager implements Listener{
 		return taxChange.containsKey(p);
 	}
 
-	public void setChanging(Player p, boolean b) {
-		taxChange.put(p, new TaxChange(b));
+	public void setChanging(Faction faction, Player p, TaxTarget target, String id) {
+		taxChange.put(p, new TaxChange(faction, target, id));
 	}
 
 	@EventHandler
@@ -184,7 +188,8 @@ public class InventoryManager implements Listener{
 		new BukkitRunnable() {
 			@Override
 			public void run() {
-				Faction f = FactionManager.getByLeader(p.getName());
+				if(!taxChange.containsKey(p)) return;
+				Faction f = taxChange.get(p).getFaction();
 				if(f == null) {
 					taxChange.remove(p);
 					return;
@@ -199,17 +204,31 @@ public class InventoryManager implements Listener{
 				}
 				amount = Math.round(amount*100.0)/100.0;
 				amount = Math.min(100.0, amount);
-				if(change.isDomestic()) {
-					double tax = f.setTaxRate(amount);
-					p.sendMessage(StringFormatter.formatHex("§7Set #7a915eDomestic §7tax rate to #a39a84"+tax+"%"));
-					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				Government gov = f.getGovernment();
+				Proposal proposal = new Proposal(p.getName(), gov);
+				TaxLawChange tax = new TaxLawChange(change.getTarget(), change.getId(), amount);
+				proposal.setTaxProposal(tax);
+				if(gov.canBeProposed(proposal)) {
+					if(gov.canPropose(p)) {
+						gov.propose(proposal);
+						p.sendTitle("", "§aProposal Added", 20, 80, 20);
+						p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+					} else if(gov.canProposeOrStartMovement(p)) {
+						//movement start
+						p.sendTitle("", "§cMovement Started", 20, 80, 20);
+					} else {
+						p.sendMessage("§cYou can no longer propose this change.");
+						taxChange.remove(p);
+						return;
+					}
 				} else {
-					f.setVassalTaxRate(amount);
-					p.sendMessage(StringFormatter.formatHex("§7Set #6c93bdVassal §7tax rate to #a39a84"+f.getVassalTaxRate()+"%"));
-					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+					p.sendMessage("§cThere is already a proposal active for this target.");
+					taxChange.remove(p);
+					return;
 				}
+				//something changed so you cant do anything anymore :)
 				taxChange.remove(p);
-				taxView.taxView(p);
+				governmentView.governmentView(p, f, null);
 			}
 		}.runTask(SimpleFactions.plugin);
 	}
@@ -319,6 +338,9 @@ public class InventoryManager implements Listener{
 					case TAX_PROPOSAL_VIEW:
 						governmentView.proposalView(p, f, null);
 						break;
+					case SPECIFIC_TAX_PROPOSAL_VIEW:
+						governmentView.taxProposalView(p, f, null);
+						break;
 					case PROPOSALS:
 						governmentView(p, f, null);
 						break;
@@ -339,7 +361,8 @@ public class InventoryManager implements Listener{
 				|| h.getType() == SFGUI.PROPOSALS
 				|| h.getType() == SFGUI.LAW_PROPOSAL_VIEW
 				|| h.getType() == SFGUI.LAW_PROPOSAL_SELECT
-				|| h.getType() == SFGUI.TAX_PROPOSAL_VIEW) {
+				|| h.getType() == SFGUI.TAX_PROPOSAL_VIEW
+				|| h.getType() == SFGUI.SPECIFIC_TAX_PROPOSAL_VIEW) {
 				governmentView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.DIPLOMACY_VIEW || h.getType() == SFGUI.ATTITUDE_VIEW || h.getType() == SFGUI.RELATION_VIEW) {
 				relationView.click(e, inv, p);

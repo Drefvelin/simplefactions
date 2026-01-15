@@ -17,10 +17,12 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
+import me.Plugins.SimpleFactions.government.proposal.TaxLawChange;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.SimpleFactions.laws.Law;
@@ -107,7 +109,7 @@ public class GovernmentCreator {
         return item;
     }
 
-    public ItemStack createTaxTypeItem(Faction f, TaxTarget target) {
+    public ItemStack createTaxTypeItem(Player p, Faction f, TaxTarget target) {
         ItemStack item = new ItemStack(Material.GOLD_INGOT);
         ItemMeta m = item.getItemMeta();
         m.setDisplayName(StringFormatter.formatHex("#93c9a7"+target.getDisplayName()));
@@ -115,12 +117,55 @@ public class GovernmentCreator {
         if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID) {
             lore.add(StringFormatter.formatHex("#28ed70Click to view options"));
         } else {
-            lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+f.getTaxRate(target)+"%"));
-            lore.add(StringFormatter.formatHex("#b8ae61Create a proposal to change"));
-            lore.add(StringFormatter.formatHex("#b8ae61the rate for #62ca43"+target.getDisplayName()+"."));
+            Government gov = f.getGovernment();
+            Proposal proposal = new Proposal(p.getName(), gov);
+            proposal.setTaxProposal(new TaxLawChange(target, "all", 50));
+            if(gov.canProposeOrStartMovement(p) && gov.canBeProposed(proposal)) {
+                lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+f.getTaxRate(target)+"%"));
+                lore.add(StringFormatter.formatHex("#b8ae61Create a proposal to change"));
+                lore.add(StringFormatter.formatHex("#b8ae61the rate for #62ca43"+target.getDisplayName()+"."));
+            }
+            else lore.add(StringFormatter.formatHex("#89504eAnother proposal is active for this target."));
         }
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, target.name());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createSpecificTaxItem(Player p, Faction f, String id, boolean isGuild) {
+        String name = "";
+        ItemStack item = new ItemStack(Material.GOLD_INGOT);
+        if(isGuild) {
+            Guild g = FactionManager.getGuildByString(id);
+            if(g == null) return null;
+            name = g.getName();
+            item = g.getBanner().clone();
+        } else {
+            Faction vassal = FactionManager.getByString(id);
+            if(vassal == null) return null;
+            name = vassal.getName();
+            item = vassal.getBanner().clone();
+        }
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex(name));
+        List<String> lore = new ArrayList<String>();
+        TaxHandler taxHandler = f.getTaxHandler();
+        if(taxHandler.hasSpecificTax(id)) {
+            lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+taxHandler.getSpecificTax(id)+"%"));
+            lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+(isGuild ? taxHandler.getGuildTax() : taxHandler.getVassalTax())+"%#3f4040)"));
+        } else {
+            lore.add(StringFormatter.formatHex("#812222No specific tax set."));
+            lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+(isGuild ? taxHandler.getGuildTax() : taxHandler.getVassalTax())+"%#3f4040)"));
+        }
+        Government gov = f.getGovernment();
+        Proposal proposal = new Proposal(p.getName(), gov);
+        proposal.setTaxProposal(new TaxLawChange(isGuild ? TaxTarget.GUILD_ID : TaxTarget.VASSAL_ID, id, 50));
+        if(gov.canProposeOrStartMovement(p) && gov.canBeProposed(proposal)) lore.add(StringFormatter.formatHex("#28ed70Click to propose a change"));
+        else lore.add(StringFormatter.formatHex("#89504eAnother proposal is active for this target."));
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, id);
+        m.getPersistentDataContainer().set(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN, isGuild);
         item.setItemMeta(m);
         return item;
     }
@@ -224,8 +269,36 @@ public class GovernmentCreator {
                 }
             }
         } else if(proposal.isTaxProposal()) {
-            lore.add(StringFormatter.formatHex("#b8ae61Target: #c2bea7"+proposal.getTaxChange().getTarget()));
-            //lore.add(StringFormatter.formatHex("#b8ae61Change: #c2bea7"+proposal.getTaxChange().getOldRate()+"% §7-> "+proposal.getTaxChange().getNewRate()+"%"));
+            TaxLawChange taxChange = proposal.getTaxChange();
+            TaxTarget target = taxChange.getTarget();
+            String name = "";
+            String type = "";
+            if(target == TaxTarget.GUILD_ID) {
+                Guild guild = FactionManager.getGuildByString(taxChange.getId());
+                name = guild.getName();
+                type = guild.getType().getName();
+            } else if(target == TaxTarget.VASSAL_ID) {
+                name = FactionManager.getByString(taxChange.getId()).getName();
+                type = "#4269a8Vassal";
+            } else {
+                name = target.getDisplayName();
+            }
+            boolean isGuild = target == TaxTarget.GUILD_ID;
+            String oldRate = "";
+            if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID) {
+                double rate = f.getTaxRate(target, taxChange.getId());
+                if(rate == -1.0) {
+                    oldRate = String.valueOf(isGuild ? f.getTaxHandler().getGuildTax() : f.getTaxHandler().getVassalTax());
+                } else {
+                    oldRate = String.valueOf(rate);
+                }
+            } else {
+                oldRate = String.valueOf(f.getTaxRate(target));
+            }
+            lore.add(StringFormatter.formatHex("#b8ae61Target: #c2bea7"+name+" §7("+type+"§7)"));
+            lore.add(StringFormatter.formatHex("#b8ae61Change: #c2bea7"+oldRate+"% §7-> #c2bea7"+taxChange.getNewTax()+"%"));
+            if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID)
+                lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+(isGuild ? f.getTaxHandler().getGuildTax() : f.getTaxHandler().getVassalTax())+"%#3f4040)"));
         }
         m.setLore(lore);
         item.setItemMeta(m);

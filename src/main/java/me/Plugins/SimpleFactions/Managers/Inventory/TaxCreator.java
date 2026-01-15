@@ -24,9 +24,7 @@ public class TaxCreator {
 			lore.add(StringFormatter.formatHex("#ccac41§oInfo: #4c5250§oIf a vassal has 5% tax from their relation"));
 			lore.add(StringFormatter.formatHex("#4c5250§oand the overlord has a 50% vassal tax rate"));
 			lore.add(StringFormatter.formatHex("#4c5250§othe vassal has a 2.5% effective tax rate"));
-            lore.add("");
         }
-		lore.add("§7Click to change");
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;
