@@ -215,20 +215,19 @@ public class Faction {
 		return taxHandler.getTaxRate(target, id);
 	}
 
-	public double getForeignTaxRate(Faction f) {
+	public double getOverlordTaxRate(Faction f) {
 		double taxRate = 0;
+		Faction overlord = getOverlord();
+		if(overlord == null) return taxRate;
+		if(overlord.getTaxHandler().hasSpecificTax(id)) {
+			taxRate = overlord.getTaxRate(TaxTarget.VASSAL_ID, id);
+		} else {
+			taxRate = overlord.getTaxRate(TaxTarget.VASSALS);
+		}
 		for(FactionModifier mod : getModifiers()) {
-			if(mod.getFrom() == null) continue;
-			if(!mod.getFrom().getId().equalsIgnoreCase(f.getId())) continue;
-			if(!mod.getType().equals(FactionModifiers.TAX)) continue;
-			double tax = mod.getAmount();
-			String overlord = RelationManager.getOverlord(this);
-			if(overlord != null && overlord.equalsIgnoreCase(mod.getFrom().getId())) {
-				tax = mod.getFrom().getVassalTaxRate()/100.0*tax;
-			}
-			Faction from = mod.getFrom();
-			if(from.getBank() == null) continue;
-			taxRate += tax;
+			if(!mod.getType().equals(FactionModifiers.TAX_MULTIPLIER)) continue;
+			double mult = 1+mod.getAmount()/100.0;
+			taxRate *= mult;
 		}
 		return taxRate;
 	}
@@ -237,8 +236,9 @@ public class Faction {
 		double taxRate = 0;
 		for(FactionModifier mod : getModifiers()) {
 			if(mod.getFrom() == null) continue;
-			if(!mod.getType().equals(FactionModifiers.TAX)) continue;
-			taxRate+=getForeignTaxRate(mod.getFrom());
+			if(mod.getFrom().getBank() == null) continue;
+			if(!mod.getType().equals(FactionModifiers.TRIBUTE)) continue;
+			taxRate+=mod.getAmount();
 		}
 		return taxRate;
 	}
@@ -252,18 +252,24 @@ public class Faction {
 
 		double paidTax = 0;
 
+		Faction overlord = getOverlord();
+		if(overlord != null) {
+			if(overlord.getBank() != null) {
+				double tax = getOverlordTaxRate(overlord);
+				if(tax > 0) {
+					paidTax+=tax;
+					amount-=tax;
+					overlord.giveTax(amount, visitedFactions);
+				}
+			}
+		}
+
 		for (FactionModifier mod : getModifiers()) {
 			if (paidTax >= amount) break;
-			if (mod.getFrom() == null || !mod.getType().equals(FactionModifiers.TAX)) continue;
+			if (mod.getFrom() == null || !mod.getType().equals(FactionModifiers.TRIBUTE)) continue;
 
 			double tax = mod.getAmount() / 100.0 * amount;
 			Faction from = mod.getFrom();
-
-			String overlordId = RelationManager.getOverlord(this);
-			if (overlordId != null && overlordId.equalsIgnoreCase(from.getId())) {
-				tax = from.getVassalTaxRate() / 100.0 * tax;
-			}
-
 			if (from.getBank() == null) continue;
 			paidTax += tax;
 			from.giveTax(tax, visitedFactions);
@@ -274,11 +280,8 @@ public class Faction {
 	}
 
 	public double setTaxRate(double d) {
-		double totalForeignTax = getTotalForeignTaxRate();
-		if(d+totalForeignTax > 100) d = 100-totalForeignTax;
-		double rate = Math.min(60, d);
-		taxHandler.setCitizenTax(rate);
-		return rate;
+		taxHandler.setCitizenTax(d);
+		return d;
 	}
 	
 	public double getTaxRate() {
@@ -881,11 +884,22 @@ public class Faction {
             }
         }
 	}
+
+	public Faction getOverlord() {
+		String id = RelationManager.getOverlord(this);
+		if(id == null) return null;
+		return FactionManager.getByString(id);
+	}
 	
 	public Collection<FactionModifier> getModifiers() {
 	    List<FactionModifier> all = new ArrayList<>();
 	    for (List<FactionModifier> list : modifiers.values()) {
 	        all.addAll(list);
+			all.addAll(getModifiers(Scope.FACTION, null));
+			Faction overlord = getOverlord();
+			if(overlord != null) {
+				all.addAll(overlord.getModifiers(Scope.VASSALS, null));
+			}
 	    }
 	    return all;
 	}

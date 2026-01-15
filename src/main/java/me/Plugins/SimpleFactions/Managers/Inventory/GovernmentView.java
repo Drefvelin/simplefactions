@@ -83,6 +83,7 @@ public class GovernmentView {
 		i.clear();
 		int x = 0;
 		for(TaxTarget target : TaxTarget.values()) {
+			if(target == TaxTarget.TRIBUTARIES) continue;
 			i.setItem(x, creator.createTaxTypeItem(player, f, target));
 			x++;
 		}

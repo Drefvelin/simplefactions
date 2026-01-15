@@ -99,8 +99,11 @@ public class FactionModifier {
 			case PRESTIGE_BONUS:
 				prefix = "#409dc2Prestige Bonus";
 				break;
-			case TAX:
-				prefix = "#d49024Tax Contribution";
+			case TRIBUTE:
+				prefix = "#d49024Tribute";
+				break;
+			case TAX_MULTIPLIER:
+				prefix = "#5acca2Tax Multiplier";
 				break;
 			case DE_JURE:
 				prefix = "#7bd481De Jure Requirement";
@@ -119,13 +122,18 @@ public class FactionModifier {
 	}
 	
 	private String suffix() {
-		String color = isBeneficial()
-				? "#87d65c"   // green
-				: "#d65c5c";  // red
+		String color = isBeneficial() ? "#87d65c" : "#d65c5c";
 
 		return StringFormatter.formatHex(
-			"§7(" + color + amount + "%§7)"
+			"§7(" + color
+			+ (isMultiplier() && amount > 0 ? "+" : "")
+			+ amount + "%§7)"
 		);
+	}
+
+
+	public boolean isMultiplier() {
+		return type == FactionModifiers.TAX_MULTIPLIER;
 	}
 	
 	public String getString() {
@@ -152,11 +160,9 @@ public class FactionModifier {
 	}
 	
 	private boolean isBeneficial() {
-		if (amount == 0) return true;
-
-		return type.isPositiveGood()
-				? amount > 0
-				: amount < 0;
+		boolean positive = amount > 0;
+		boolean goodOutcome = type.isPositiveGood() ? positive : !positive;
+		return goodOutcome;
 	}
 
 	@Override
