@@ -16,6 +16,7 @@ import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
+import me.Plugins.SimpleFactions.Utils.DailyGuildTransfers;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
@@ -87,6 +88,7 @@ public class Ledger {
                 //TODO implement
                 break;
             case OVERLORD_TAX:
+                if(!guild.isBase()) return 0;
                 Faction f = guild.getFaction();
                 if(f.getOverlord() == null) return 0;
                 amount = -getOverlordTax();
@@ -192,5 +194,92 @@ public class Ledger {
 
     public void clearDailyIncome() {
         citizenTaxes.clear();
+    }
+
+    public void populateDailyTransfers(DailyGuildTransfers buffer) {
+        for (Cashflow cf : Cashflow.values()) {
+            applySettlementFor(cf, buffer);
+        }
+    }
+
+    private void applySettlementFor(Cashflow cf, DailyGuildTransfers buffer) {
+
+        switch (cf) {
+
+            // --------- INTERNAL (single guild) ----------
+            // These should NOT be computed by reading getIncome() from some other guild.
+            // They are simply added to this guild's daily delta.
+            case TRADE:
+            case TRADE_UPKEEP:
+            case FORTS:
+            case WAR_REPARATIONS:
+            case WAR_REPARATIONS_PAYMENT:
+            case TARIFF_PAYMENTS:
+            case DIVIDEND_PAYOUT:
+                buffer.addExternalDelta(guild, getIncome(cf));
+                return;
+
+            // --------- TRANSFERS (guild -> guild) ----------
+            case GUILD_PAYMENTS: {
+                if (guild.isBase()) return; // base doesn't pay guild tax
+                Guild capital = guild.getFaction().getOrCreateMainGuild();
+                double amount = Math.abs(getIncome(Cashflow.GUILD_PAYMENTS));
+                buffer.add(guild, capital, amount);
+                return;
+            }
+
+            case OVERLORD_TAX: {
+                if (!guild.isBase()) return; //only base pays
+                Faction overlord = guild.getFaction().getOverlord();
+                if (overlord == null) return;
+                Guild overlordCapital = overlord.getOrCreateMainGuild();
+                double amount = Math.abs(getIncome(Cashflow.OVERLORD_TAX));
+                buffer.add(guild, overlordCapital, amount);
+                return;
+            }
+
+            case TRIBUTE_PAYMENTS: {
+                Faction f = guild.getFaction();
+                double base = getGrossTaxableIncome();
+
+                for (FactionModifier mod : f.getModifiers()) {
+                    if (mod.getFrom() == null) continue;
+                    if (!mod.getType().equals(FactionModifiers.TRIBUTE)) continue;
+
+                    Faction receiverFaction = mod.getFrom();
+                    Guild receiverGuild = receiverFaction.getOrCreateMainGuild();
+
+                    double amount = base * (mod.getAmount() / 100.0);
+                    if (amount <= 0) continue;
+
+                    buffer.add(guild, receiverGuild, amount);
+                }
+                return;
+            }
+
+            case TARIFFS: {
+                // IMPORTANT: Don't settle tariffs by iterating every base guild,
+                // or you'll double-charge. Settle tariffs from the payer side only:
+                //
+                // payer guild knows "who it owes tariffs to" (trade routes have destinations)
+                // If your TradeBreakdown can expose recipients, do it here.
+                //
+                // With current API (getTariffsByFaction), you can only compute "earned by faction",
+                // which is receiver-side and not safe to distribute without double counting.
+                //
+                // So: do NOT settle TARIFFS here until you have payer->receiver breakdown.
+                return;
+            }
+
+            // --------- AGGREGATES / DISPLAY ONLY ----------
+            // These are not real settlement events themselves.
+            case GUILDS:
+            case VASSALS:
+            case CITIZENS:
+            case DIVIDENDS:
+            case TRIBUTES:
+            default:
+                return;
+        }
     }
 }

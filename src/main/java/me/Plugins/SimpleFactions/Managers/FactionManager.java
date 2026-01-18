@@ -25,6 +25,7 @@ import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Objects.PrestigeRank;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.Utils.DailyGuildTransfers;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
@@ -164,9 +165,50 @@ public class FactionManager implements Listener{
 				f.newDay();
 			}
 			FactionCleanup.kickInactiveMembers(factions);
+			settleIncome();
 			timer = 0;
 		}
 	}
+
+	public void settleIncome() {
+		DailyGuildTransfers buffer = new DailyGuildTransfers();
+
+		// Phase 1: collect transfers & external deltas
+		for (Guild g : getAllGuilds()) {
+			g.getLedger().populateDailyTransfers(buffer);
+		}
+
+		// Phase 2: compute net deltas
+		Map<Guild, Double> deltas = new HashMap<>();
+
+		// Guild -> Guild transfers
+		for (var fromEntry : buffer.getTransfers().entrySet()) {
+			Guild from = fromEntry.getKey();
+			for (var toEntry : fromEntry.getValue().entrySet()) {
+				Guild to = toEntry.getKey();
+				double amount = toEntry.getValue();
+
+				deltas.merge(from, -amount, Double::sum);
+				deltas.merge(to, amount, Double::sum);
+			}
+		}
+
+		// External deposits / withdrawals
+		for (var entry : buffer.getExternalDeltas().entrySet()) {
+			Guild guild = entry.getKey();
+			double delta = entry.getValue();
+
+			deltas.merge(guild, delta, Double::sum);
+		}
+
+		// Phase 3: apply atomically
+		for (var entry : deltas.entrySet()) {
+			entry.getKey().getBank().deposit(entry.getValue());
+		}
+
+		buffer.clear();
+	}
+
 	
 	public void run() {
 		timer = (new Database()).getTimer();	
