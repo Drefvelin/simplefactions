@@ -31,6 +31,7 @@ public class FactionView {
 	public InventoryManager inv;
 	
 	public FactionCreator creator = new FactionCreator();
+	public GuildCreator guildCreator = new GuildCreator();
 	
 	FactionRanker r = new FactionRanker();
 	public static HashMap<Player, RankType> currentRanking = new HashMap<>();
@@ -107,6 +108,7 @@ public class FactionView {
 		i.setItem(12, creator.createMenuItem(player, f, MenuItemType.WEALTH));
 		i.setItem(13, creator.createMenuItem(player, f, MenuItemType.PRESTIGE));
 		i.setItem(14, creator.createMenuItem(player, f, MenuItemType.MEMBERS));
+		i.setItem(15, guildCreator.createLedgerItem(player, f.getOrCreateMainGuild()));
 		i.setItem(16, creator.createMenuItem(player, f, MenuItemType.MODIFIERS));
 		i.setItem(25, creator.createMenuItem(player, f, MenuItemType.TAX));
 		i.setItem(28, creator.createMenuItem(player, f, MenuItemType.LAWS));

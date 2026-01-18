@@ -25,6 +25,12 @@ import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Guild.income.Cashflow;
+import me.Plugins.SimpleFactions.Guild.income.Ledger;
+import me.Plugins.SimpleFactions.Guild.income.entry.FactionEntry;
+import me.Plugins.SimpleFactions.Guild.income.entry.GuildEntry;
+import me.Plugins.SimpleFactions.Guild.income.entry.PlayerEntry;
+import me.Plugins.SimpleFactions.Guild.income.entry.TaxEntry;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.TierLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
@@ -41,6 +47,7 @@ import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
+import me.Plugins.SimpleFactions.enums.Brackets;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.Region;
 import me.Plugins.SimpleFactions.enums.Rules;
@@ -118,7 +125,7 @@ public class Faction {
 		}
 		this.military = new Military(this);
 		this.government = new Government(this);
-		this.taxHandler = new TaxHandler(5, 5, 100, 5);
+		this.taxHandler = new TaxHandler(5, 5, 5, 5, 5);
 		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(new Guild(this));
 		init();
@@ -148,7 +155,7 @@ public class Faction {
 		}
 		this.titles = titles;
 		this.military = new Military(this);
-		this.taxHandler = new TaxHandler(taxRate, 5, vassalTax, 5); //TODO persistence
+		this.taxHandler = new TaxHandler(taxRate, 5, vassalTax, 5, 5); //TODO persistence
 		this.guildHandler = new GuildHandler(this);
 		this.lawHandler = new LawHandler(this); //TODO persistence
 		this.government = new Government(this); //TODO persistence
@@ -219,17 +226,13 @@ public class Faction {
 		double taxRate = 0;
 		Faction overlord = getOverlord();
 		if(overlord == null) return taxRate;
-		if(overlord.getTaxHandler().hasSpecificTax(id)) {
-			taxRate = overlord.getTaxRate(TaxTarget.VASSAL_ID, id);
-		} else {
-			taxRate = overlord.getTaxRate(TaxTarget.VASSALS);
-		}
+		taxRate = overlord.getTaxRate(TaxTarget.VASSALS, id);
 		for(FactionModifier mod : getModifiers()) {
 			if(!mod.getType().equals(FactionModifiers.TAX_MULTIPLIER)) continue;
 			double mult = 1+mod.getAmount()/100.0;
 			taxRate *= mult;
 		}
-		return taxRate;
+		return taxRate/100.0;
 	}
 
 	public double getTotalForeignTaxRate() {
@@ -243,40 +246,12 @@ public class Faction {
 		return taxRate;
 	}
 
-	public void giveTax(double amount) {
-    	giveTax(amount, new HashSet<>());
+	public Bracket getBracket(Brackets bracket) {
+		return null;
 	}
 
-	private void giveTax(double amount, Set<String> visitedFactions) {
-		if (!visitedFactions.add(this.getId())) return; // prevent recursion loops
-
-		double paidTax = 0;
-
-		Faction overlord = getOverlord();
-		if(overlord != null) {
-			if(overlord.getBank() != null) {
-				double tax = getOverlordTaxRate(overlord);
-				if(tax > 0) {
-					paidTax+=tax;
-					amount-=tax;
-					overlord.giveTax(amount, visitedFactions);
-				}
-			}
-		}
-
-		for (FactionModifier mod : getModifiers()) {
-			if (paidTax >= amount) break;
-			if (mod.getFrom() == null || !mod.getType().equals(FactionModifiers.TRIBUTE)) continue;
-
-			double tax = mod.getAmount() / 100.0 * amount;
-			Faction from = mod.getFrom();
-			if (from.getBank() == null) continue;
-			paidTax += tax;
-			from.giveTax(tax, visitedFactions);
-		}
-
-		amount -= paidTax;
-		getBank().deposit(amount);
+	public void giveTax(String player, double amount) {
+    	getOrCreateMainGuild().getLedger().addCitizenTaxEntry(player, amount);
 	}
 
 	public double setTaxRate(double d) {

@@ -1,6 +1,6 @@
 package me.Plugins.SimpleFactions.Guild.income.entry;
 
-public class PlayerEntry {
+public class PlayerEntry implements TaxEntry {
     private String origin;
     private double amount;
 
@@ -15,5 +15,9 @@ public class PlayerEntry {
 
     public double getAmount() {
         return amount;
+    }
+
+    public void setAmount(double d) {
+        amount = d;
     }
 }

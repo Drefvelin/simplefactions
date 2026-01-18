@@ -13,6 +13,7 @@ public enum Rules {
     VASSAL_TAX("Can Collect Vassal Taxes", true),
     GUILD_TAX("Can Collect Guild Taxes", true),
     DIVIDEND_TAX("Can Collect Dividend Taxes", true),
+    TARIFFS("Can Impose Tariffs", true),
     CAN_RECRUIT_PROFESSIONAL_ARMY("Can Recruit Professional Army", true),
     NO_COUNCIL("No Council", false);
 

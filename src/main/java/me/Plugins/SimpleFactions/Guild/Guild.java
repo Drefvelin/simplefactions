@@ -402,6 +402,7 @@ public class Guild {
     }
 
     public TradeBreakdown getTradeBreakdown() { return breakdown; }
+    public void setTradeBreakdown(TradeBreakdown breakdown) { this.breakdown = breakdown; }
 
     public void newDay() {
         if(bank != null) {

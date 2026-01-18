@@ -68,7 +68,7 @@ public class FactionRanker {
 				Collections.sort(guilds, new Comparator<Guild>() {
 					@Override
 					public int compare(Guild f1, Guild f2) {
-						return Double.compare(f1.getTradeBreakdown().getNetIncome(), f2.getTradeBreakdown().getNetIncome());
+						return Double.compare(f1.getLedger().getNetIncome(), f2.getLedger().getNetIncome());
 					}
 				});
 				break;

@@ -2,7 +2,7 @@ package me.Plugins.SimpleFactions.Guild.income.entry;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
 
-public class FactionEntry {
+public class FactionEntry implements TaxEntry{
     private Faction origin;
     private double amount;
 
@@ -17,5 +17,9 @@ public class FactionEntry {
 
     public double getAmount() {
         return amount;
+    }
+
+    public void setAmount(double d) {
+        amount = d;
     }
 }

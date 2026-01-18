@@ -12,19 +12,24 @@ public class TradeBreakdown {
     private double income;
     private double upkeep;
     private double tradePower;
+    private double tariffs;
     private final Map<Faction, Double> incomeByFaction = new HashMap<>();
+    private final Map<Faction, Double> tariffsByFaction = new HashMap<>();
 
     public void clear() {
         income = 0;
         upkeep = 0;
         tradePower = 0;
+        tariffs = 0;
         incomeByFaction.clear();
+        tariffsByFaction.clear();
     }
 
     public TradeBreakdown() {
         income = 0;
         upkeep = 0;
         tradePower = 0;
+        tariffs = 0;
     }
 
     public double getIncome() {
@@ -35,6 +40,14 @@ public class TradeBreakdown {
     }
     public double getTradePower() {
         return tradePower;
+    }
+
+    public void setTariffs(double d) {
+        tariffs = Math.round(d * 100.0) / 100.0;
+    }
+
+    public double getTariffs() {
+        return tariffs;
     }
 
     public void setIncome(double d) {
@@ -54,7 +67,7 @@ public class TradeBreakdown {
     }
 
     public double getNetTradeIncome() {
-        return Math.round((income-upkeep) * 100.0) / 100.0;
+        return Math.round((income-upkeep-tariffs) * 100.0) / 100.0;
     }
 
     public void registerIncome(Faction f, double d) {
@@ -65,8 +78,20 @@ public class TradeBreakdown {
         incomeByFaction.put(f, d);
     }
 
+    public void registerTariffs(Faction f, double d) {
+        if(tariffsByFaction.containsKey(f)) {
+            tariffsByFaction.put(f, tariffsByFaction.get(f)+d);
+            return;
+        }
+        tariffsByFaction.put(f, d);
+    }
+
     public double getIncomeByFaction(Faction f) {
         return Math.round(incomeByFaction.getOrDefault(f, 0.0) * 100.0) / 100.0;
+    }
+
+    public double getTariffsByFaction(Faction f) {
+        return Math.round(tariffsByFaction.getOrDefault(f, 0.0) * 100.0) / 100.0;
     }
 
     public List<Faction> getFactionsByIncomeDesc() {

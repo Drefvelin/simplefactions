@@ -136,7 +136,7 @@ public class GuildView {
 			}
 		}
 		i.setItem(13, creator.createMenuItem(player, guild, MenuItemType.TRADE_BREAKDOWN));
-		i.setItem(14, creator.createMenuItem(player, guild, MenuItemType.LEDGER));
+		i.setItem(14, creator.createLedgerItem(player, guild));
 		i.setItem(53, inv.createBackButton(SFGUI.GUILD_VIEW));
 	}
 

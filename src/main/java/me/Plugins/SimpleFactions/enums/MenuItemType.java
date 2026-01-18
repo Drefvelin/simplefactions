@@ -16,6 +16,5 @@ public enum MenuItemType {
 	TAX,
 	TRADE_BREAKDOWN,
 	LAWS,
-	GOVERNMENT,
-	LEDGER
+	GOVERNMENT
 }

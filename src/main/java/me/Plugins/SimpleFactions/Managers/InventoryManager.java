@@ -43,7 +43,6 @@ import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxLawChange;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
-import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class InventoryManager implements Listener{
 	public HashMap<Player, Faction> confirming = new HashMap<>();
