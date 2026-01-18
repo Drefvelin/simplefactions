@@ -58,6 +58,19 @@ public class RelationManager {
 		if(overlord == null) return false;
 		return overlord.equalsIgnoreCase(target.getId());
 	}
+
+	public static boolean sameRealm(Faction a, Faction b) {
+		if (a == null || b == null) return false;
+		if (a.getId().equalsIgnoreCase(b.getId())) return true;
+
+		// Is A under B?
+		if (isOnOverlordPath(a, b)) return true;
+
+		// Is B under A?
+		if (isOnOverlordPath(b, a)) return true;
+
+		return false;
+	}
 	
 	public static void setRelation(Player p, RelationType r, Faction target, Faction origin, boolean check) {
 		Relation relation = new Relation(origin.getRelation(target.getId()));

@@ -5,7 +5,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bukkit.Bukkit;
+
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
+import me.Plugins.SimpleFactions.Guild.income.Cashflow;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Map.Provinces.ProvinceDataEntry;
@@ -126,8 +129,8 @@ public class ProvinceManager {
             Faction owner = TitleManager.getByProvince(province.getId());
             if(owner != null) {
                 if(save) guild.getTradeBreakdown().registerIncome(owner, provinceIncome);
-                if(owner.getTaxHandler().hasTariffs()){
-                    double provinceTariffs = provinceIncome*0.05;
+                if(owner.getTaxHandler().hasTariffs() && !RelationManager.sameRealm(owner, guild.getFaction())){
+                    double provinceTariffs = provinceIncome*owner.getTaxRate(TaxTarget.TARIFFS)/100.0;
                     tariffs+=provinceTariffs;
                     if(save) {
                         guild.getTradeBreakdown().registerTariffs(owner, provinceTariffs);
@@ -179,10 +182,9 @@ public class ProvinceManager {
         // Apply law change to snapshot
         snap.copyAllDataFrom(live);
         Law old = group.getCurrent();
-        group.setCurrent(law);
         TaxHandler tax = f.getTaxHandler();
         tax.saveState();
-        tax.applyBracket(TaxTarget.TARIFFS, new Bracket(50, 75));
+        f.applyLaw(law, group);
         // Full recalculation - resolves all interdependencies
         snap.recalculate();
         
@@ -193,9 +195,9 @@ public class ProvinceManager {
             double delta = guild.getLedger().getNetIncome() - originalNetIncomes.get(guild.getId());
             map.put(guild, Math.round(delta * 100.0) / 100.0);
         }
-        tax.restoreState();
         // Restore original state
         group.setCurrent(old);
+        tax.restoreState();
         snap.recalculate(); // Recalculate snapshot back to live state
         
         return map;

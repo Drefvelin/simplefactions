@@ -8,6 +8,8 @@ import java.util.Map;
 import org.bukkit.configuration.ConfigurationSection;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
+import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class LawGroup {

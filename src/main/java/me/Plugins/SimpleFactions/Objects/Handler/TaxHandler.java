@@ -82,6 +82,9 @@ public class TaxHandler {
 			case DIVIDENDS:
 				rate = dividendTax;
 				break;
+            case TARIFFS:
+				rate = tariffs;
+				break;
             case GUILD_ID:
                 if(id != null && hasSpecificTax(target, id)) rate = getSpecificTax(target, id);
 				else rate = guildTax;
@@ -133,6 +136,10 @@ public class TaxHandler {
 
             case DIVIDENDS:
                 dividendTax = applyBracket(dividendTax, bracket);
+                break;
+
+            case TARIFFS:
+                tariffs = applyBracket(tariffs, bracket);
                 break;
 
             default:

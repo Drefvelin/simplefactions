@@ -45,6 +45,7 @@ import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.Utils.BracketToTaxTarget;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.Brackets;
@@ -56,6 +57,7 @@ import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawEffect;
+import me.Plugins.SimpleFactions.laws.LawGroup;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Faction {
@@ -752,6 +754,16 @@ public class Faction {
 
 	//Laws
 	public LawHandler getLawHandler() { return lawHandler; }
+
+	public void applyLaw(Law law, LawGroup group) {
+		group.setCurrent(law);
+		LawEffect effect = law.getScopedEffects().get(Scope.FACTION);
+        if(effect.hasBrackets()) {
+            for(Map.Entry<Brackets, Bracket> entry : effect.getBrackets().entrySet()) {
+				taxHandler.applyBracket(BracketToTaxTarget.convert(entry.getKey()), entry.getValue());
+			}
+        }
+	}
 
 	public int getCouncilSize() {
 		if(!hasFactionRule(Rules.HAS_COUNCIL)) return 0;
