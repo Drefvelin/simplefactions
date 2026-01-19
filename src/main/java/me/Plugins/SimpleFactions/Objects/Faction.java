@@ -25,12 +25,6 @@ import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Guild.Guild;
-import me.Plugins.SimpleFactions.Guild.income.Cashflow;
-import me.Plugins.SimpleFactions.Guild.income.Ledger;
-import me.Plugins.SimpleFactions.Guild.income.entry.FactionEntry;
-import me.Plugins.SimpleFactions.Guild.income.entry.GuildEntry;
-import me.Plugins.SimpleFactions.Guild.income.entry.PlayerEntry;
-import me.Plugins.SimpleFactions.Guild.income.entry.TaxEntry;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.TierLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
@@ -449,6 +443,13 @@ public class Faction {
 	public List<String> getMembers() {
 		return guildHandler.getAllMembers();
 	}
+	public List<String> getVassalMembers() {
+		List<String> members = new ArrayList<>();
+		for(Faction vassal : RelationManager.getSubjects(this)) {
+			members.addAll(vassal.getMembers());
+		}
+		return members;
+	}
 	public void addMember(String m) {
 		getOrCreateMainGuild().addMember(m);
 	}
@@ -479,6 +480,21 @@ public class Faction {
 	}
 	public Double getWealth() {
 		return wealth;
+	}
+	public double getVassalWealth() {
+		double total = 0.0;
+		for(Faction vassal : RelationManager.getSubjects(this)) {
+			total += vassal.getWealth();
+		}
+		return Formatter.formatDouble(total);
+	}
+
+	public double getVassalTradePower() {
+		double total = 0.0;
+		for(Faction vassal : RelationManager.getSubjects(this)) {
+			total += vassal.getGuildHandler().getTotalTradePower();
+		}
+		return Formatter.formatDouble(total);
 	}
 	public void setWealth(Double wealth) {
 		this.wealth = wealth;

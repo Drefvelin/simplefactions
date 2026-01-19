@@ -14,6 +14,7 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
 import net.tfminecraft.DenarEconomy.Enum.Accounts;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
 
 public class Wealth {
     public static double wealth(String player) {
@@ -35,12 +36,19 @@ public class Wealth {
         return wealth;
     }
 
-    public static List<String> topWealth(Faction faction) {
+    public static List<String> topWealth(Faction faction, boolean includeVassals) {
         List<String> top = new ArrayList<>();
         Map<String, Double> wealthMap = new HashMap<>();
         for(String player : faction.getMembers()) {
             double wealth = wealth(player);
             wealthMap.put(player, wealth);
+        }
+        for(Faction vassal : RelationManager.getSubjects(faction)) {
+            if(!includeVassals) break;
+            for(String player : vassal.getMembers()) {
+                double wealth = wealth(player);
+                wealthMap.put(player, wealth);
+            }
         }
         wealthMap.entrySet().stream()
             .sorted(Map.Entry.<String, Double>comparingByValue().reversed())

@@ -27,6 +27,7 @@ import me.Plugins.SimpleFactions.Objects.PrestigeRank;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.FactionRanker;
 import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.Utils.Represents;
 import me.Plugins.SimpleFactions.Utils.OpinionColourMapper;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
@@ -171,8 +172,7 @@ public class FactionCreator {
 				if(gov.getCouncil().getCurrentSize() > 0) {
 					lore.add(StringFormatter.formatHex("#93c9a7Members:"));
 					for(String member : gov.getCouncilMembers()) {
-						if(member.equalsIgnoreCase(f.getLeader())) continue;
-						lore.add(StringFormatter.formatHex("#d4bb98- "+member));
+						lore.add(StringFormatter.formatHex("#d4bb98- "+member + " §7("+Represents.represents(f, member)+")"));
 					}
 				}
 			} else {

@@ -411,33 +411,34 @@ public class Guild {
     }
 
     public double getMemberPercentage() {
-        return (double)members.size()/(double)host.getMembers().size();
+        return (double)members.size()/(double)(host.getMembers().size()+host.getVassalMembers().size());
     }
 
     public double getStabilityEffect() {
         double effect = 0;
         double percentage = getMemberPercentage();
         effect += 30*Math.min(percentage, 1.0);
-        double wealthPercentage = wealth / host.getWealth();
+        double wealthPercentage = wealth / (host.getWealth()+host.getVassalWealth());
         effect += 20*Math.min(wealthPercentage, 1.0);
-        double tradePercentage = breakdown.getTradePower() / host.getGuildHandler().getTotalTradePower();
+        double tradePercentage = breakdown.getTradePower() / (host.getGuildHandler().getTotalTradePower()+host.getVassalTradePower());
         effect += 40*Math.min(tradePercentage, 1.0);
         return effect;
     }
 
-    public double getStabilityModifier() {
+    public double getStabilityModifier(Faction f) {
         double stability = getStabilityEffect();
-        if(isBase()) return stability;
+        if(f.getId().equalsIgnoreCase(host.getId()) && isBase()) return stability;
         if(stance == Stance.NEUTRAL) {
             stability *= 0.35;
         } else if(stance == Stance.OPPOSE) {
             stability *= -1;
         }
+        if(isBase()) stability *= (host.getGovernment().getStability()/100.0);
         return stability;
     }
 
-    public Stance getStance() {
-        if(isBase()) {
+    public Stance getStance(Faction f) {
+        if(f.getId().equalsIgnoreCase(host.getId()) && isBase()) {
             return Stance.SUPPORT;
         }
         return stance;

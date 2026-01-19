@@ -188,6 +188,12 @@ public class LawCreator {
 					lore.add(StringFormatter.formatHex("  " + GRAY + scope.getDisplay() + ":"));
 				}
 
+				if(effect.affectsCouncilSize()) {
+					lore.add(StringFormatter.formatHex(
+						indent + LIGHT_GRAY + "Council Size§7: " + GREEN + effect.getCouncilSize()
+					));
+				}
+
 				// ---- Rules ----
 				if (effect.hasRules()) {
 					for (Map.Entry<Rules, Boolean> ruleEntry : effect.getRules().entrySet()) {

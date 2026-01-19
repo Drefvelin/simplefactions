@@ -114,6 +114,9 @@ public class FactionModifier {
 			case PRODUCTION:
 				prefix = "#f2c94cProduction";
 				break;
+			case DIPLOMATIC_CAPACITY_MULTIPLIER:
+				prefix = "#56ccf2Diplomatic Capacity Multiplier";
+				break;
 			default:
 				prefix = "#c7b381Unknown Modifier";
 				break;

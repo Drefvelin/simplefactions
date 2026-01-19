@@ -3,14 +3,13 @@ package me.Plugins.SimpleFactions.government;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.bukkit.Bukkit;
-
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Wealth;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.government.handler.ProposalHandler;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
-import me.Plugins.SimpleFactions.laws.LawGroup;
+import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
 
 public class Council {
     private Faction f;
@@ -58,10 +57,10 @@ public class Council {
                 //Implement election record to take from
                 break;
             case WEALTH_BASED_COUNCIL:
-                List<String> sortedByWealth = Wealth.topWealth(f);
+                List<String> sortedByWealth = Wealth.topWealth(f, true);
                 while(getCurrentSize() < getMaxSize() && sortedByWealth.size() > 0) {
                     String richest = sortedByWealth.remove(0);
-                    if(!members.contains(richest) && !f.getLeader().equalsIgnoreCase(richest)) {
+                    if(canBeMember(richest)) {
                         members.add(richest);
                     }
                 }
@@ -81,6 +80,20 @@ public class Council {
 
     public void setCouncilSize(int size) {
         this.size = size;
+    }
+
+    public boolean canBeMember(String name) {
+        if(members.contains(name)) return false;
+        if(f.getLeader().equalsIgnoreCase(name)) return false;
+        if(getCurrentSize() >= getMaxSize()) return false;
+        if(f.getOrCreateMainGuild().isMember(name)) return true;
+        for(Faction vassal : RelationManager.getSubjects(f)) {
+            if(vassal.isLeader(name)) return true;
+        }
+        for(Guild guild : f.getGuildHandler().getGuilds()) {
+            if(guild.isLeader(name)) return true;
+        }
+        return true;
     }
 
     public void addMember(String member) {

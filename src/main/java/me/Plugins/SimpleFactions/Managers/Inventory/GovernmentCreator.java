@@ -19,11 +19,16 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.Utils.Represents;
+import me.Plugins.SimpleFactions.Utils.Wealth;
+import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Stance;
+import me.Plugins.SimpleFactions.government.Council;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxLawChange;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawGroup;
@@ -61,8 +66,7 @@ public class GovernmentCreator {
         if(gov.getCouncil().getCurrentSize() > 0) {
             lore.add(StringFormatter.formatHex("#93c9a7Members:"));
             for(String member : gov.getCouncilMembers()) {
-                if(member.equalsIgnoreCase(f.getLeader())) continue;
-                lore.add(StringFormatter.formatHex("#d4bb98- "+member));
+                lore.add(StringFormatter.formatHex("#d4bb98- "+member + " §7("+Represents.represents(f, member)+")"));
             }
         }
         m.setLore(lore);
@@ -78,13 +82,21 @@ public class GovernmentCreator {
         m.setDisplayName(StringFormatter.formatHex("#85c265Stability§7: §e"+gov.getStabilityString()+"%"));
         List<String> lore = new ArrayList<String>();
         lore.add(StringFormatter.formatHex("#b8ae61Base: #45c46f+"+Formatter.formatDouble(gov.STABILITY_BASE)+"%"));
-        double effect = f.getOrCreateMainGuild().getStabilityModifier();
+        double effect = f.getOrCreateMainGuild().getStabilityModifier(f);
         lore.add(StringFormatter.formatHex("#b8ae61From State: " + ( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"));
-        lore.add(StringFormatter.formatHex("#93c9a7Guild Effects:"));
+        if(gov.getStabilityMalusFromCouncil() > 0) {
+            lore.add(StringFormatter.formatHex("#b8ae61Council too small: #d13530-"+Formatter.formatDouble(gov.getStabilityMalusFromCouncil())+"%"));
+        }
+        lore.add(StringFormatter.formatHex("#93c9a7Stances:"));
         for(Guild guild : f.getGuildHandler().getGuilds()) {
             if(guild.isBase()) continue;
-            effect = guild.getStabilityModifier();
-            lore.add(StringFormatter.formatHex(" #d4bb98- "+guild.getName()+" §7("+guild.getType().getName()+"§7): "+guild.getStance().getDisplay()+" §7("+( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"+"§7)"));
+            effect = guild.getStabilityModifier(f);
+            lore.add(StringFormatter.formatHex(" #d4bb98- "+guild.getName()+" §7("+guild.getType().getName()+"§7): "+guild.getStance(f).getDisplay()+" §7("+( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"+"§7)"));
+        }
+        for(Faction v : RelationManager.getSubjects(f)) {
+            Guild guild = v.getOrCreateMainGuild();
+            effect = guild.getStabilityModifier(f);
+            lore.add(StringFormatter.formatHex(" #d4bb98- "+guild.getName()+" §7(#4269a8Vassal§7): "+guild.getStance(f).getDisplay()+" §7("+( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"+"§7)"));
         }
         m.setLore(lore);
         item.setItemMeta(m);
@@ -92,14 +104,14 @@ public class GovernmentCreator {
     }
 
     public ItemStack createStanceItem(Faction f, Guild guild) {
-        Stance stance = guild.getStance();
+        Stance stance = guild.getStance(f);
         ItemStack item = new ItemStack(Material.YELLOW_CONCRETE);
         if(stance == Stance.OPPOSE) item = new ItemStack(Material.RED_CONCRETE);
         else if(stance == Stance.SUPPORT) item = new ItemStack(Material.GREEN_CONCRETE);
         ItemMeta m = item.getItemMeta();
         m.setDisplayName(StringFormatter.formatHex(stance.getDisplay()));
         List<String> lore = new ArrayList<String>();
-        double effect = guild.getStabilityModifier();
+        double effect = guild.getStabilityModifier(f);
         lore.add(StringFormatter.formatHex("#b8ae61Stability Effect: "+( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"));
         lore.add("");
         lore.add(StringFormatter.formatHex("#28ed70Click to change"));
@@ -211,6 +223,87 @@ public class GovernmentCreator {
         lore.add("");
         lore.add(StringFormatter.formatHex("#28ed70Click to view"));
         m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createCouncilMemberItem(Player player, Faction f, int slot) {
+        Council council = f.getGovernment().getCouncil();
+        List<String> members = council.getMembers();
+        
+        String memberName = slot < members.size() ? members.get(slot) : null;
+        boolean isEmpty = memberName == null;
+        boolean isLeader = player.getName().equalsIgnoreCase(f.getLeader());
+        boolean canModify = isLeader && (
+            council.getType().equals(Rules.APPOINTED_COUNCIL) ||
+            council.getType().equals(Rules.WEALTH_BASED_COUNCIL) ||
+            council.getType().equals(Rules.ELECTED_COUNCIL)
+        );
+        
+        ItemStack item;
+        if(isEmpty) {
+            item = canModify ? 
+                new ItemStack(Material.GREEN_CONCRETE) : 
+                new ItemStack(Material.YELLOW_CONCRETE);
+        } else {
+            item = new ItemStack(Material.PLAYER_HEAD);
+            ItemMeta skullMeta = item.getItemMeta();
+            if(skullMeta instanceof org.bukkit.inventory.meta.SkullMeta) {
+                ((org.bukkit.inventory.meta.SkullMeta) skullMeta).setOwner(memberName);
+            }
+            item.setItemMeta(skullMeta);
+        }
+        
+        ItemMeta m = item.getItemMeta();
+        
+        if(isEmpty) {
+            m.setDisplayName(StringFormatter.formatHex("#89504eEmpty Seat"));
+            List<String> lore = new ArrayList<>();
+            if(canModify) {
+                lore.add(StringFormatter.formatHex("#28ed70Click to appoint a member"));
+            } else {
+                lore.add(StringFormatter.formatHex("#525d5dWaiting for appointment"));
+            }
+            m.setLore(lore);
+        } else {
+            m.setDisplayName(StringFormatter.formatHex("#93c9a7" + memberName));
+            List<String> lore = new ArrayList<>();
+            
+            // Display wealth and ranking
+            double wealth = Wealth.wealth(memberName);
+            List<String> topByWealth = Wealth.topWealth(f, true);
+            int ranking = topByWealth.indexOf(memberName) + 1;
+            lore.add(StringFormatter.formatHex("#499eccRepresents§7: "+Represents.represents(f, memberName)));
+            lore.add(StringFormatter.formatHex("#85c265Wealth§7: #ccbb76" + Formatter.formatDouble(wealth)+"d"));
+            lore.add(StringFormatter.formatHex("#85c265Ranking§7: #7a706a" + ranking + "/" + f.getMembers().size()));
+            lore.add("");
+            
+            // Display why they have their seat
+            Rules councilType = council.getType();
+            if(councilType.equals(Rules.APPOINTED_COUNCIL)) {
+                lore.add(StringFormatter.formatHex("#b8ae61Appointed Member"));
+            } else if(councilType.equals(Rules.WEALTH_BASED_COUNCIL)) {
+                lore.add(StringFormatter.formatHex("#b8ae61Wealth-Based Selection"));
+            } else if(councilType.equals(Rules.ELECTED_COUNCIL)) {
+                lore.add(StringFormatter.formatHex("#b8ae61Elected Member"));
+            }
+            
+            lore.add("");
+            
+            // Add modify option if leader
+            if(canModify) {
+                lore.add(StringFormatter.formatHex("#28ed70Click to replace"));
+            }
+            
+            m.setLore(lore);
+        }
+        
+        // Store member name and slot in persistent data
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, 
+            memberName != null ? memberName : "");
+        m.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, 
+            String.valueOf(slot));
+        
         item.setItemMeta(m);
         return item;
     }
