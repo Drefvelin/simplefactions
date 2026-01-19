@@ -240,11 +240,19 @@ public class GovernmentCreator {
             council.getType().equals(Rules.ELECTED_COUNCIL)
         );
         
+        // Check if this slot can be appointed to (only next empty slot)
+        boolean isNextEmpty = slot == members.size();
+        boolean isOccupied = !isEmpty;
+        boolean canAppoint = canModify && (isNextEmpty || isOccupied);
+        
         ItemStack item;
         if(isEmpty) {
-            item = canModify ? 
-                new ItemStack(Material.GREEN_CONCRETE) : 
-                new ItemStack(Material.YELLOW_CONCRETE);
+            if(canAppoint) {
+                item = new ItemStack(Material.GREEN_CONCRETE);
+            } else {
+                // Can't appoint yet - not next in order
+                item = new ItemStack(Material.RED_CONCRETE);
+            }
         } else {
             item = new ItemStack(Material.PLAYER_HEAD);
             ItemMeta skullMeta = item.getItemMeta();
@@ -259,10 +267,10 @@ public class GovernmentCreator {
         if(isEmpty) {
             m.setDisplayName(StringFormatter.formatHex("#89504eEmpty Seat"));
             List<String> lore = new ArrayList<>();
-            if(canModify) {
+            if(canAppoint) {
                 lore.add(StringFormatter.formatHex("#28ed70Click to appoint a member"));
             } else {
-                lore.add(StringFormatter.formatHex("#525d5dWaiting for appointment"));
+                lore.add(StringFormatter.formatHex("#c74d32Must fill seats in order"));
             }
             m.setLore(lore);
         } else {
@@ -301,8 +309,43 @@ public class GovernmentCreator {
         // Store member name and slot in persistent data
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, 
             memberName != null ? memberName : "");
-        m.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, 
-            String.valueOf(slot));
+        m.getPersistentDataContainer().set(Keys.INT, PersistentDataType.INTEGER, slot);
+        
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createPotentialMemberItem(Player player, Faction f, String member, int slot) {
+        
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta skullMeta = item.getItemMeta();
+        if(skullMeta instanceof org.bukkit.inventory.meta.SkullMeta) {
+            ((org.bukkit.inventory.meta.SkullMeta) skullMeta).setOwner(member);
+        }
+        item.setItemMeta(skullMeta);
+        
+        
+        ItemMeta m = item.getItemMeta();
+
+        m.setDisplayName(StringFormatter.formatHex("#93c9a7" + member));
+        List<String> lore = new ArrayList<>();
+        
+        // Display wealth and ranking
+        double wealth = Wealth.wealth(member);
+        List<String> topByWealth = Wealth.topWealth(f, true);
+        int ranking = topByWealth.indexOf(member) + 1;
+        lore.add(StringFormatter.formatHex("#499eccRepresents§7: "+Represents.represents(f, member)));
+        lore.add(StringFormatter.formatHex("#85c265Wealth§7: #ccbb76" + Formatter.formatDouble(wealth)+"d"));
+        lore.add(StringFormatter.formatHex("#85c265Ranking§7: #7a706a" + ranking + "/" + f.getMembers().size()));
+        lore.add("");
+
+        lore.add(StringFormatter.formatHex("#28ed70Click to replace"));
+        
+        m.setLore(lore);
+        
+        // Store member name and slot in persistent data
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, member);
+        m.getPersistentDataContainer().set(Keys.INT, PersistentDataType.INTEGER, slot);
         
         item.setItemMeta(m);
         return item;

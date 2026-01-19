@@ -60,7 +60,7 @@ public class Council {
                 List<String> sortedByWealth = Wealth.topWealth(f, true);
                 while(getCurrentSize() < getMaxSize() && sortedByWealth.size() > 0) {
                     String richest = sortedByWealth.remove(0);
-                    if(canBeMember(richest)) {
+                    if(canBeMember(richest, false)) {
                         members.add(richest);
                     }
                 }
@@ -82,10 +82,10 @@ public class Council {
         this.size = size;
     }
 
-    public boolean canBeMember(String name) {
+    public boolean canBeMember(String name, boolean ignoreSize) {
         if(members.contains(name)) return false;
         if(f.getLeader().equalsIgnoreCase(name)) return false;
-        if(getCurrentSize() >= getMaxSize()) return false;
+        if(!ignoreSize && getCurrentSize() >= getMaxSize()) return false;
         if(f.getOrCreateMainGuild().isMember(name)) return true;
         for(Faction vassal : RelationManager.getSubjects(f)) {
             if(vassal.isLeader(name)) return true;
@@ -98,6 +98,12 @@ public class Council {
 
     public void addMember(String member) {
         if(members.size() < size) members.add(member);
+    }
+
+    public void replaceMember(int slot, String newMember) {
+        if(slot >= 0 && slot < members.size()) {
+            members.set(slot, newMember);
+        }
     }
 
     public boolean isMember(String name) {

@@ -65,11 +65,28 @@ public class GovernmentView {
 		i.clear();
 		int x = 0;
 		for(int slot : SLOTS) {
-			if(x >= f.getGovernment().getCouncil().getMembers().size()) break;
+			if(x >= f.getGovernment().getCouncil().getMaxSize()) break;
 			i.setItem(slot, creator.createCouncilMemberItem(player, f, x));
 			x++;
 		}
 		i.setItem(53, inv.createBackButton(SFGUI.COUNCIL_VIEW));
+        if(open) player.openInventory(i);
+	}
+	public void councilSelect(Player player, Faction f, Inventory i, int slot) {
+        boolean open = i == null;
+		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.COUNCIL_SELECT), 54, "§7Select Member");
+		i.clear();
+		int x = 0;
+		List<String> members = f.getMembers();
+		Council council = f.getGovernment().getCouncil();
+		members.removeAll(f.getGovernment().getCouncil().getMembers());
+		members.addAll(f.getVassalMembers());
+		for(String member : members) {
+			if(!council.canBeMember(member, true)) continue;
+			i.setItem(x, creator.createPotentialMemberItem(player, f, member, slot));
+			x++;
+		}
+		i.setItem(53, inv.createBackButton(SFGUI.COUNCIL_SELECT));
         if(open) player.openInventory(i);
 	}
 
@@ -312,9 +329,56 @@ public class GovernmentView {
 			// Handle council member click for replace/appoint
 			ItemMeta meta = item.getItemMeta();
 			if(meta == null) return;
-			String slotStr = meta.getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
-			if(slotStr == null) return;
-			// TODO: Handle member selection/replacement
+			Integer s = meta.getPersistentDataContainer().get(Keys.INT, PersistentDataType.INTEGER);
+			if(s == null) return;
+			
+			Council council = f.getGovernment().getCouncil();
+			List<String> members = council.getMembers();
+			boolean isOccupied = s < members.size() && members.get(s) != null && !members.get(s).isEmpty();
+			boolean isNextEmpty = s == members.size();
+			
+			if(!isOccupied && !isNextEmpty) {
+				p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				p.sendMessage("§cYou must fill council seats in order!");
+				return;
+			}
+			
+			councilSelect(p, f, null, s);
+			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+		} else if (h.getType() == SFGUI.COUNCIL_SELECT) {
+			e.setCancelled(true);
+			ItemStack item = e.getCurrentItem();
+			if(item == null) return;
+			Faction f = FactionManager.getByString(((SFInventoryHolder)e.getInventory().getHolder()).getId());
+			if(f == null) return;
+			boolean isLeader = p.getName().equalsIgnoreCase(f.getLeader());
+			if(!isLeader) return;
+			// Handle council member click for replace/appoint
+			ItemMeta meta = item.getItemMeta();
+			if(meta == null) return;
+			String member = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+			if(member == null) return;
+			Integer s = meta.getPersistentDataContainer().get(Keys.INT, PersistentDataType.INTEGER);
+			if(s == null) return;
+			Council council = f.getGovernment().getCouncil();
+			
+			// Verify slot can be appointed/modified
+			List<String> members = council.getMembers();
+			boolean isOccupied = s < members.size() && members.get(s) != null && !members.get(s).isEmpty();
+			boolean isNextEmpty = s == members.size();
+			
+			if(!isOccupied && !isNextEmpty) {
+				p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				p.sendMessage("§cYou must fill council seats in order!");
+				return;
+			}
+			
+			if(isOccupied) {
+				council.replaceMember(s, member);
+			} else {
+				council.addMember(member);
+			}
+			councilView(p, f, null);
 			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 		}
 	}
