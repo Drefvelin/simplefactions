@@ -43,7 +43,6 @@ import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxLawChange;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
-import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class InventoryManager implements Listener{
 	public HashMap<Player, Faction> confirming = new HashMap<>();
@@ -287,6 +286,7 @@ public class InventoryManager implements Listener{
 			e.setCancelled(true);
 			SFInventoryHolder h = (SFInventoryHolder) inv.getHolder();
 			Faction f = FactionManager.getByString(h.getId());
+			Guild g = FactionManager.getGuildByString(h.getId());
 			if(e.getCurrentItem().getType().equals(Material.BARRIER)) {
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				switch(h.getType()) {
@@ -343,6 +343,9 @@ public class InventoryManager implements Listener{
 						break;
 					case PROPOSALS:
 						governmentView(p, f, null);
+						break;
+					case LEDGER_VIEW:
+						factionView(p, f);
 						break;
 					default:
 						break;

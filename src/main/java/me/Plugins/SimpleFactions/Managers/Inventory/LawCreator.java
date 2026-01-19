@@ -268,7 +268,7 @@ public class LawCreator {
 				Map<Guild, Double> deltas =
 					SimpleFactions.getInstance()
 						.getProvinceManager()
-						.previewLawIncomeExact(group, law);
+						.previewLawIncomeExact(f, group, law);
 
 				lore.add(StringFormatter.formatHex("#a6c793Estimated Economic Impact:"));
 

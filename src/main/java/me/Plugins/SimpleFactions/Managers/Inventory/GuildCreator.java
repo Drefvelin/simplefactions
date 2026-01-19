@@ -2,7 +2,9 @@ package me.Plugins.SimpleFactions.Managers.Inventory;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -13,14 +15,19 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.Branch.BranchModifier;
+import me.Plugins.SimpleFactions.Guild.income.Cashflow;
+import me.Plugins.SimpleFactions.Guild.income.Ledger;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Utils.FactionRanker;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
@@ -49,7 +56,7 @@ public class GuildCreator {
 		lore.add(" ");
 		if(guild.hasCapital()) {
 			lore.add(StringFormatter.formatHex("#41b541§lTrade Power: #a4bc5c"+guild.getTradeBreakdown().getTradePower()));
-			lore.add(StringFormatter.formatHex("#74ba74Estimated Income: #5cbc5c"+guild.getTradeBreakdown().getNetIncome()));
+			lore.add(StringFormatter.formatHex("#74ba74Estimated Income: #5cbc5c"+guild.getLedger().getNetIncome()));
 		}
 		lore.add(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+guild.getWealth()+"d #7a706a("+r.getWealthRank(guild)+")"));
 		meta.setLore(lore);
@@ -111,6 +118,7 @@ public class GuildCreator {
 			List<String> lore = new ArrayList<String>();
 			lore.add(StringFormatter.formatHex("#d4c9aeIncome from trade: #7fbd73"+guild.getTradeBreakdown().getIncome()));
 			lore.add(StringFormatter.formatHex("#d4c9aeUpkeep from trade: #cb5b4f"+guild.getTradeBreakdown().getUpkeep()));
+			lore.add(StringFormatter.formatHex("#d4c9aeTariffs Paid: #b23c2f"+guild.getTradeBreakdown().getTariffs()));
 			lore.add(StringFormatter.formatHex("#d4c9aeTotal Trade Power: #a4bc5c"+guild.getTradeBreakdown().getTradePower()));
 			lore.add("");
 			lore.add(StringFormatter.formatHex("#73adbfIncome Contributors:"));
@@ -118,7 +126,9 @@ public class GuildCreator {
 			for(Faction f : guild.getTradeBreakdown().getFactionsByIncomeDesc()) {
 				if(x == 10) break;
 				x++;
-				lore.add(StringFormatter.formatHex("§f - "+f.getName()+"#d4c9ae: #7fbd73"+guild.getTradeBreakdown().getIncomeByFaction(f)+"d/day"));
+				double tariffs = guild.getTradeBreakdown().getTariffsByFaction(f);
+				String tariffString = tariffs > 0 ? " §7(#b23c2f"+tariffs+" #575150in Tariffs§7)" : "";
+				lore.add(StringFormatter.formatHex("§f - "+f.getName()+"#d4c9ae: #7fbd73"+guild.getTradeBreakdown().getIncomeByFaction(f)+"d/day"+tariffString));
 			}
 			lore.add("");
 			lore.add(StringFormatter.formatHex("#c95644Top 5 Guilds:"));
@@ -127,6 +137,7 @@ public class GuildCreator {
 			Collections.reverse(top);
 			for(Guild g : top) {
 				x++;
+				
 				lore.add(StringFormatter.formatHex("§f - §e"+x+". "+g.getName()+" §7["+g.getSize()+"§7]#d4c9ae: #7fbd73"+SimpleFactions.getInstance().getProvinceManager().getIncome(g)+"d/day"));
 				if(x > 4) break;
 			}
@@ -205,7 +216,7 @@ public class GuildCreator {
 			.previewUpgradeIncomeExact(guild, branch);
 
 		lore.add("");
-		lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Income: #7fbd73"+guild.getTradeBreakdown().getNetIncome()));
+		lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Trade Income: #7fbd73"+guild.getTradeBreakdown().getNetTradeIncome()));
 		lore.add(StringFormatter.formatHex(
 			"#f2e5c2Estimated Income Change#d6cf69: "
 			+ (deltaIncome >= 0 ? "#4fd945+" : "#cf493a")
@@ -246,7 +257,7 @@ public class GuildCreator {
 				SimpleFactions.getInstance()
 				.getProvinceManager()
 				.previewDowngradeIncomeExact(guild, branch);
-			lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Income: #7fbd73"+guild.getTradeBreakdown().getNetIncome()));
+			lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Trade Income: #7fbd73"+guild.getTradeBreakdown().getNetTradeIncome()));
 			lore.add(StringFormatter.formatHex(
 				"#f2e5c2Estimated Income Change#d6cf69: "
 				+ (deltaIncome >= 0 ? "#4fd945+" : "#cf493a")
@@ -268,6 +279,254 @@ public class GuildCreator {
 		meta.getPersistentDataContainer().set(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN, false);
 		meta.setLore(lore);
 		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createLedgerItem(Player p, Guild g) {
+		Ledger ledger = g.getLedger();
+		ItemStack i = new ItemStack(Material.WRITABLE_BOOK, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex("#d6cf69Ledger"));
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#4c5250§oAdded to the bank at the"));
+		lore.add(StringFormatter.formatHex("#4c5250§ostart of a new day"));
+		lore.add("");
+		lore.add(StringFormatter.formatHex("#4fd945Income"));
+		lore.add(StringFormatter.formatHex("#2f3b2f────────────"));
+		boolean hasIncome = false;
+		for (Cashflow cf : Cashflow.values()) {
+			double value = ledger.getIncome(cf);
+			if (value <= 0) continue;
+
+			hasIncome = true;
+			lore.add(StringFormatter.formatHex(
+				"#cfc7a2• "
+				+ cf.getDisplay()
+				+ "#d6cf69: #7fbd73"
+				+ String.format("+%.2f", value)
+				+ "d"
+			));
+		}
+		if (!hasIncome) lore.add(StringFormatter.formatHex("#7a706aNo income sources."));
+		lore.add("");
+		lore.add(StringFormatter.formatHex("#cf493aExpenses"));
+		lore.add(StringFormatter.formatHex("#3b2f2f────────────"));
+		boolean hasExpenses = false;
+		for (Cashflow cf : Cashflow.values()) {
+			double value = ledger.getIncome(cf);
+			if (value >= 0) continue;
+
+			hasExpenses = true;
+			lore.add(StringFormatter.formatHex(
+				"#cfc7a2• "
+				+ cf.getDisplay()
+				+ "#d6cf69: #cf493a"
+				+ String.format("%.2f", value)
+				+ "d"
+			));
+		}
+		if (!hasExpenses) {
+			lore.add(StringFormatter.formatHex("#7a706aNo expenses."));
+		}
+		lore.add("");
+		double net = ledger.getNetIncome();		String netColor = net >= 0 ? "#4fd945" : "#cf493a";
+
+		lore.add(StringFormatter.formatHex("#f2e5c2Net Income"));
+		lore.add(StringFormatter.formatHex(
+			"#d6cf69Total#7a706a: "
+			+ netColor
+			+ String.format("%+.2f", net)
+			+ "d"
+		));
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createLedgerCitizensItem(Guild g) {
+		Ledger ledger = g.getLedger();
+
+		ItemStack i = new ItemStack(Material.PLAYER_HEAD);
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(StringFormatter.formatHex("#94b572Citizens"));
+
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#7a706aTop contributors"));
+		lore.add("");
+
+		int count = 0;
+		for (var entry : ledger.getCitizenTaxEntriesDescending()) {
+			if (count++ >= 5) break;
+			lore.add(StringFormatter.formatHex(
+				"#d4c9ae" + entry.getKey()
+				+ "#7a706a: #7fbd73+"
+				+ String.format("%.2f", entry.getValue()) + "d"
+			));
+		}
+
+		if (count == 0)
+			lore.add(StringFormatter.formatHex("#7a706aNo citizen taxes."));
+
+		m.setLore(lore);
+		i.setItemMeta(m);
+		return i;
+	}
+
+	public ItemStack createLedgerGuildsItem(Guild g) {
+		ItemStack i = new ItemStack(Material.BARREL);
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(StringFormatter.formatHex("#b89448Guild Taxes"));
+
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#7a706aPaying guilds"));
+		lore.add("");
+
+		int count = 0;
+		for (Guild sub : g.getFaction().getGuildHandler().getGuilds()) {
+			if (sub.isBase()) continue;
+
+			double paid = Math.abs(sub.getLedger().getIncome(Cashflow.GUILD_PAYMENTS));
+			if (paid <= 0) continue;
+
+			lore.add(StringFormatter.formatHex(
+				"#d4c9ae" + sub.getName()
+				+ "#7a706a: #7fbd73+"
+				+ String.format("%.2f", paid) + "d"
+			));
+
+			if (++count >= 5) break;
+		}
+
+		if (count == 0)
+			lore.add(StringFormatter.formatHex("#7a706aNo guild taxes."));
+
+		m.setLore(lore);
+		i.setItemMeta(m);
+		return i;
+	}
+
+	public ItemStack createLedgerVassalsItem(Guild g) {
+		ItemStack i = new ItemStack(Material.IRON_INGOT);
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(StringFormatter.formatHex("#7299b5Vassals"));
+
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#7a706aSubject contributions"));
+		lore.add("");
+
+		int count = 0;
+		for (Faction v : RelationManager.getSubjects(g.getFaction())) {
+			Guild vg = v.getOrCreateMainGuild();
+			double paid = Math.abs(vg.getLedger().getIncome(Cashflow.OVERLORD_TAX));
+			if (paid <= 0) continue;
+
+			lore.add(StringFormatter.formatHex(
+				"#d4c9ae" + v.getName()
+				+ "#7a706a: #7fbd73+"
+				+ String.format("%.2f", paid) + "d"
+			));
+
+			if (++count >= 5) break;
+		}
+
+		if (count == 0)
+			lore.add(StringFormatter.formatHex("#7a706aNo vassal income."));
+
+		m.setLore(lore);
+		i.setItemMeta(m);
+		return i;
+	}
+
+	public ItemStack createLedgerTributesItem(Guild g) {
+		Faction receiver = g.getFaction();
+
+		ItemStack i = new ItemStack(Material.GOLD_INGOT);
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(StringFormatter.formatHex("#ab8568Tributes"));
+
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#7a706aTop tribute payers"));
+		lore.add("");
+
+		// payerFaction -> amount
+		HashMap<Faction, Double> received = new HashMap<>();
+
+		for (Faction payer : FactionManager.getCopy()) { // or FactionManager.factions if you prefer
+			if (payer == null) continue;
+			if (payer.getId().equalsIgnoreCase(receiver.getId())) continue;
+
+			Guild payerGuild = payer.getOrCreateMainGuild();
+			if (payerGuild == null) continue;
+
+			double base = payerGuild.getLedger().getGrossTaxableIncome();
+			if (base <= 0) continue;
+
+			double totalFromPayer = 0.0;
+
+			for (FactionModifier mod : payer.getModifiers()) {
+				if (mod.getFrom() == null) continue;
+				if (!mod.getType().equals(FactionModifiers.TRIBUTE)) continue;
+				if (!mod.getFrom().getId().equalsIgnoreCase(receiver.getId())) continue;
+
+				totalFromPayer += base * (mod.getAmount() / 100.0);
+			}
+
+			if (totalFromPayer > 0) {
+				received.put(payer, totalFromPayer);
+			}
+		}
+
+		// sort by value desc
+		List<Map.Entry<Faction, Double>> top = new ArrayList<>(received.entrySet());
+		top.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
+
+		int shown = 0;
+		for (var e : top) {
+			lore.add(StringFormatter.formatHex(
+				"#d4c9ae" + e.getKey().getName()
+				+ "#7a706a: #7fbd73+"
+				+ String.format("%.2f", e.getValue()) + "d"
+			));
+			if (++shown >= 5) break;
+		}
+
+		if (shown == 0) {
+			lore.add(StringFormatter.formatHex("#7a706aNo tributes received."));
+		}
+
+		m.setLore(lore);
+		i.setItemMeta(m);
+		return i;
+	}
+
+	public ItemStack createLedgerTariffsItem(Guild g) {
+		ItemStack i = new ItemStack(Material.EMERALD);
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(StringFormatter.formatHex("#5cc46aTariffs"));
+
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#7a706aTop tariff payers"));
+		lore.add("");
+
+		int count = 0;
+		for (Faction f : g.getTradeBreakdown().getFactionsByIncomeDesc()) {
+			double paid = g.getTradeBreakdown().getTariffsByFaction(f);
+			if (paid <= 0) continue;
+
+			lore.add(StringFormatter.formatHex(
+				"#d4c9ae" + f.getName()
+				+ "#7a706a: #7fbd73+"
+				+ String.format("%.2f", paid) + "d"
+			));
+
+			if (++count >= 5) break;
+		}
+
+		if (count == 0)
+			lore.add(StringFormatter.formatHex("#7a706aNo tariff income."));
+
+		m.setLore(lore);
+		i.setItemMeta(m);
 		return i;
 	}
 }

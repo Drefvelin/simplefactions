@@ -4,8 +4,9 @@ public enum Brackets {
 
     CITIZEN_TAX("Citizen Tax"),
     GUILD_TAX("Guild Tax"),
-    VASSAL_TAX("Vassal Tax (% of Max)"),
-    DIVIDEND_TAX("Dividend Tax");
+    VASSAL_TAX("Vassal Tax"),
+    DIVIDEND_TAX("Dividend Tax"),
+    TARIFFS("Tariffs");
 
     private final String display;
 

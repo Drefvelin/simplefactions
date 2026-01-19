@@ -5,13 +5,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bukkit.Bukkit;
+
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
+import me.Plugins.SimpleFactions.Guild.income.Cashflow;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Map.Provinces.ProvinceDataEntry;
+import me.Plugins.SimpleFactions.Objects.Bracket;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
+import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawGroup;
 
@@ -112,6 +118,7 @@ public class ProvinceManager {
         double upkeep = 0;
         double trade = 0;
         double upkeepFactor = guild.getModifier(GuildModifier.TRADE_UPKEEP);
+        double tariffs = 0;
 
         for (Province province : provinces.values()) {
             if(!province.getTerrain().generatesIncome()) continue;
@@ -119,13 +126,25 @@ public class ProvinceManager {
             if(provinceIncome == 0) continue;
             //if(provinceIncome > guildTrade) provinceIncome = guildTrade;
             upkeep += provinceIncome*province.getTradeFactor(guild)*upkeepFactor;
-            income += provinceIncome;
             Faction owner = TitleManager.getByProvince(province.getId());
+            if(owner != null) {
+                if(save) guild.getTradeBreakdown().registerIncome(owner, provinceIncome);
+                if(owner.getTaxHandler().hasTariffs() && !RelationManager.sameRealm(owner, guild.getFaction())){
+                    double provinceTariffs = provinceIncome*owner.getTaxRate(TaxTarget.TARIFFS)/100.0;
+                    tariffs+=provinceTariffs;
+                    if(save) {
+                        guild.getTradeBreakdown().registerTariffs(owner, provinceTariffs);
+                    }
+                }
+            }
+            income += provinceIncome;
+            
             if(owner == null) continue;
-            if(save) guild.getTradeBreakdown().registerIncome(owner, provinceIncome);
+            
             trade += getTotalTrade(guild);
         }
         if(save) {
+            guild.getTradeBreakdown().setTariffs(tariffs);
             guild.getTradeBreakdown().setUpkeep(upkeep);
             guild.getTradeBreakdown().setIncome(income);
             guild.getTradeBreakdown().setTradePower(trade);
@@ -148,21 +167,39 @@ public class ProvinceManager {
         return total;
     }
 
-    public Map<Guild, Double> previewLawIncomeExact(LawGroup group, Law law) {
+    public Map<Guild, Double> previewLawIncomeExact(Faction f, LawGroup group, Law law) {
         ProvinceManager live = this;
         ProvinceManager snap = SimpleFactions.getInstance().getProvinceSnapshot();
+        
+        // Save original ledger states before preview
+        Map<String, Double> originalNetIncomes = new HashMap<>();
+        for(Guild guild : FactionManager.getAllGuilds()) {
+            if (guild.hasCapital()) {
+                originalNetIncomes.put(guild.getId(), guild.getLedger().getNetIncome());
+            }
+        }
+        
+        // Apply law change to snapshot
         snap.copyAllDataFrom(live);
         Law old = group.getCurrent();
-        group.setCurrent(law);
-        for(Province p : snap.getProvinces()) {
-            p.calculateProsperity();
-        }
+        TaxHandler tax = f.getTaxHandler();
+        tax.saveState();
+        f.applyLaw(law, group);
+        // Full recalculation - resolves all interdependencies
+        snap.recalculate();
+        
+        // Collect deltas
         Map<Guild, Double> map = new HashMap<>();
         for(Guild guild : FactionManager.getAllGuilds()) {
-            double delta = snap.getIncome(guild, false)-guild.getTradeBreakdown().getNetIncome();
+            if (!guild.hasCapital()) continue;
+            double delta = guild.getLedger().getNetIncome() - originalNetIncomes.get(guild.getId());
             map.put(guild, Math.round(delta * 100.0) / 100.0);
         }
+        // Restore original state
         group.setCurrent(old);
+        tax.restoreState();
+        snap.recalculate(); // Recalculate snapshot back to live state
+        
         return map;
     }
 
@@ -170,21 +207,23 @@ public class ProvinceManager {
         ProvinceManager live = this;
         ProvinceManager snap = SimpleFactions.getInstance().getProvinceSnapshot();
 
-        double liveIncomeBefore = live.getIncome(guild);
+        double liveIncomeBefore = live.getIncome(guild, false);
 
-        // Sync snapshot to live state
         snap.copyAllDataFrom(live);
-
-        // Apply upgrade in snapshot context
         branch.levelUp();
         snap.recalculateForSingleGuild(guild, false);
-        double snapIncomeAfter = snap.getIncome(guild, false);
+        
+        double snapTradeAfter = snap.getIncome(guild, false);
+        double tradeIncomeChange = snapTradeAfter - liveIncomeBefore;
+        
+        // Apply the same tax rate to the income change to estimate net impact
+        Faction f = guild.getFaction();
+        double guildTaxRate = f.getTaxRate(TaxTarget.GUILDS, guild.getId()) / 100.0;
+        double estimatedNetChange = tradeIncomeChange * (1.0 - guildTaxRate);
 
-        // Revert upgrade
         branch.levelDown();
-
-        double delta = snapIncomeAfter - liveIncomeBefore;
-        return Math.round(delta * 100.0) / 100.0;
+        
+        return Math.round(estimatedNetChange * 100.0) / 100.0;
     }
 
     public double previewDowngradeIncomeExact(Guild guild, Branch branch) {
@@ -200,12 +239,17 @@ public class ProvinceManager {
         branch.levelDown();
         snap.recalculateForSingleGuild(guild, false);
         double snapIncomeAfter = snap.getIncome(guild, false);
+        double tradeIncomeChange = snapIncomeAfter - liveIncomeBefore;
+        
+        // Apply the same tax rate to the income change to estimate net impact
+        Faction f = guild.getFaction();
+        double guildTaxRate = f.getTaxRate(TaxTarget.GUILDS, guild.getId()) / 100.0;
+        double estimatedNetChange = tradeIncomeChange * (1.0 - guildTaxRate);
 
         // Revert upgrade
         branch.levelUp();
 
-        double delta = snapIncomeAfter - liveIncomeBefore;
-        return Math.round(delta * 100.0) / 100.0;
+        return Math.round(estimatedNetChange * 100.0) / 100.0;
     }
 
     //Simulation

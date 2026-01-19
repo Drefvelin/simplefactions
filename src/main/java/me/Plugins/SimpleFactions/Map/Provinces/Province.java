@@ -63,6 +63,7 @@ public class Province {
     public void clearGuildData(String guildId) {
         data.remove(guildId);
     }
+
     public void calculateTrade(
             ProvinceManager manager,
             Guild guild,
@@ -166,6 +167,9 @@ public class Province {
         return reserved;
     }
 
+    public void calculateTariffs() {
+
+    }
 
     public void calculateProsperity() {
         double total = 0;

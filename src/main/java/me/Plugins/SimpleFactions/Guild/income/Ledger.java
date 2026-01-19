@@ -1,11 +1,312 @@
 package me.Plugins.SimpleFactions.Guild.income;
 
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.bukkit.Bukkit;
+
+import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Guild.income.entry.PlayerEntry;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
+import me.Plugins.SimpleFactions.Map.Provinces.Province;
+import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Objects.FactionModifier;
+import me.Plugins.SimpleFactions.Utils.DailyGuildTransfers;
+import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 
 public class Ledger {
-    private Map<TaxTarget, Double> taxes = new LinkedHashMap<>();
+    private Guild guild;
+
+    private final Map<String, Double> citizenTaxes = new HashMap<>();
+
+    public Ledger(Guild guild) {
+        this.guild = guild;
+    }
+
+    public void addCitizenTaxEntry(String p, Double tax) {
+        if(citizenTaxes.containsKey(p)) {
+            citizenTaxes.put(p, citizenTaxes.get(p)+tax);
+        } else {
+            citizenTaxes.put(p, tax);
+        }
+    }
+
+    public double getIncome(Cashflow cashflow) {
+        double amount = 0;
+        switch (cashflow) {
+            case GUILDS:
+                if(!guild.isBase()) return 0;
+                for(Guild g : guild.getFaction().getGuildHandler().getGuilds()) {
+                    if(g.isBase()) continue;
+                    amount += Math.abs(g.getLedger().getIncome(Cashflow.GUILD_PAYMENTS));
+                }
+                break;
+            case GUILD_PAYMENTS:
+                if(guild.isBase()) return 0;
+                amount = -getGrossTaxableIncome();
+                amount *= guild.getFaction().getTaxRate(TaxTarget.GUILDS, guild.getId())/100.0;
+                break;
+            case DIVIDENDS:
+                if(!guild.isBase()) return 0;
+                //TODO implement
+                break;
+            case DIVIDEND_PAYMENT:
+                //TODO implement
+                break;
+            case DIVIDEND_PAYOUT:
+                //TODO implement
+                break;
+            case VASSALS:
+                if(!guild.isBase()) return 0;
+                for(Faction vassal : RelationManager.getSubjects(guild.getFaction())) {
+                    amount += Math.abs(vassal.getOrCreateMainGuild().getLedger().getIncome(Cashflow.OVERLORD_TAX));
+                }
+                break;
+            case CITIZENS:
+                if(!guild.isBase()) return 0;
+                amount = getAggregatedCitizenTax();
+                break;
+            case TARIFFS:
+                if(!guild.isBase()) return 0;
+                amount = getTotalTariffsEarned();
+                break;
+            case TARIFF_PAYMENTS:
+                amount = -guild.getTradeBreakdown().getTariffs();
+                break;
+            case TRIBUTE_PAYMENTS:
+                if(!guild.isBase()) return 0;
+                amount = -getTributeTax();
+                break;
+            case TRIBUTES:
+                //TODO implement
+                break;
+            case OVERLORD_TAX:
+                if(!guild.isBase()) return 0;
+                Faction f = guild.getFaction();
+                if(f.getOverlord() == null) return 0;
+                amount = -getOverlordTax();
+                break;
+            case WAR_REPARATIONS:
+                //TODO implement
+                break;
+            case WAR_REPARATIONS_PAYMENT:
+                //TODO implement
+                break;
+            case TRADE:
+                amount = guild.getTradeBreakdown().getIncome();
+                break;
+            case TRADE_UPKEEP:
+                amount = -guild.getTradeBreakdown().getUpkeep();
+                break;
+            case FORTS:
+                //TODO implement
+                break;
+            default:
+                break;
+        }
+        return Formatter.formatDouble(amount);
+    }
+
+    public double getTotalTariffsEarned() {
+        double total = 0;
+        for(Guild g : FactionManager.getAllGuilds()) {
+            total += g.getTradeBreakdown().getTariffsByFaction(guild.getFaction());
+        }
+        return total;
+    }
+
+    public List<Map.Entry<String, Double>> getCitizenTaxEntriesDescending() {
+        return citizenTaxes.entrySet().stream()
+            .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+            .toList();
+    }
+
+
+    private double getAggregatedCitizenTax() {
+        double total = 0;
+        for(Double d : citizenTaxes.values()) {
+            total+=d;
+        }
+        return total;
+    }
+
+    public double getNetIncome() {
+        double net = 0.0;
+
+        for (Cashflow cf : Cashflow.values()) {
+            switch (cf) {
+
+                // -------- POSITIVE / INCOME --------
+                case TRADE:
+                case CITIZENS:
+                case TARIFFS:
+                case GUILDS:
+                case VASSALS:
+                case TRIBUTES:
+                case DIVIDENDS:
+                case WAR_REPARATIONS:
+                    net += getIncome(cf);
+                    break;
+
+                // -------- NEGATIVE / COSTS --------
+                case TRADE_UPKEEP:
+                case FORTS:
+                case GUILD_PAYMENTS:
+                case OVERLORD_TAX:
+                case TRIBUTE_PAYMENTS:
+                case TARIFF_PAYMENTS:
+                case DIVIDEND_PAYOUT:
+                case WAR_REPARATIONS_PAYMENT:
+                    net += getIncome(cf); // already negative
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        return Formatter.formatDouble(net);
+    }
     
+    public double getInflationDelta() {
+        double delta = 0.0;
+
+        for (Cashflow cashflow : Cashflow.values()) {
+            if (!cashflow.affectsInflation()) continue;
+
+            delta += getIncome(cashflow);
+        }
+
+        return delta;
+    }
+
+    //Taxes
+    public double getOverlordTax() {
+        Faction f = guild.getFaction();
+        Faction overlord = f.getOverlord();
+        if (overlord == null) return 0.0;
+
+        double base = getGrossTaxableIncome();
+        return base * f.getOverlordTaxRate(overlord);
+    }
+
+    public double getTributeTax() {
+        Faction f = guild.getFaction();
+        double base = getGrossTaxableIncome();
+        double paid = 0.0;
+
+        for (FactionModifier mod : f.getModifiers()) {
+            if (mod.getFrom() == null) continue;
+            if (!mod.getType().equals(FactionModifiers.TRIBUTE)) continue;
+            paid += base * (mod.getAmount() / 100.0);
+        }
+        return paid;
+    }
+
+    public double getGrossTaxableIncome() {
+        double total = 0.0;
+        for (Cashflow cf : Cashflow.values()) {
+            if(!cf.isGrossCounted()) continue;
+            double amount = getIncome(cf);
+            if(amount <= 0) continue;
+            total += amount;
+        }
+        return total;
+    }
+
+    public void clearDailyIncome() {
+        citizenTaxes.clear();
+    }
+
+    public void populateDailyTransfers(DailyGuildTransfers buffer) {
+        for (Cashflow cf : Cashflow.values()) {
+            applySettlementFor(cf, buffer);
+        }
+    }
+
+    private void applySettlementFor(Cashflow cf, DailyGuildTransfers buffer) {
+
+        switch (cf) {
+            // --------- INTERNAL (single guild) ----------
+            // These should NOT be computed by reading getIncome() from some other guild.
+            // They are simply added to this guild's daily delta.
+            case TRADE:
+            case TRADE_UPKEEP:
+            case FORTS:
+            case CITIZENS:
+                buffer.addExternalDelta(guild, getIncome(cf));
+                return;
+
+            // --------- TRANSFERS (guild -> guild) ----------
+            case GUILD_PAYMENTS: {
+                if (guild.isBase()) return; // base doesn't pay guild tax
+                Guild capital = guild.getFaction().getOrCreateMainGuild();
+                double amount = Math.abs(getIncome(Cashflow.GUILD_PAYMENTS));
+                buffer.add(guild, capital, amount);
+                return;
+            }
+
+            case OVERLORD_TAX: {
+                if (!guild.isBase()) return; //only base pays
+                Faction overlord = guild.getFaction().getOverlord();
+                if (overlord == null) return;
+                Guild overlordCapital = overlord.getOrCreateMainGuild();
+                double amount = Math.abs(getIncome(Cashflow.OVERLORD_TAX));
+                buffer.add(guild, overlordCapital, amount);
+                return;
+            }
+
+            case TRIBUTE_PAYMENTS: {
+                if(!guild.isBase()) return; //only base pays
+                Faction f = guild.getFaction();
+                double base = getGrossTaxableIncome();
+
+                for (FactionModifier mod : f.getModifiers()) {
+                    if (mod.getFrom() == null) continue;
+                    if (!mod.getType().equals(FactionModifiers.TRIBUTE)) continue;
+
+                    Faction receiverFaction = mod.getFrom();
+                    Guild receiverGuild = receiverFaction.getOrCreateMainGuild();
+
+                    double amount = base * (mod.getAmount() / 100.0);
+                    if (amount <= 0) continue;
+
+                    buffer.add(guild, receiverGuild, amount);
+                }
+                return;
+            }
+
+            //Taxes and Tariffs
+            case TARIFF_PAYMENTS: {
+                for(Map.Entry<Faction, Double> entry : guild.getTradeBreakdown().getTariffsByFactionMap().entrySet()) {
+                    Faction receiverFaction = entry.getKey();
+                    Guild receiverGuild = receiverFaction.getOrCreateMainGuild();
+                    double amount = entry.getValue();
+                    if(amount <= 0) continue;
+                    buffer.add(guild, receiverGuild, amount);
+                }
+            }
+
+            //To be implemented
+            case WAR_REPARATIONS_PAYMENT:
+            case DIVIDEND_PAYOUT:
+            
+            //Display only
+            case GUILDS:
+            case VASSALS:
+            case DIVIDENDS:
+            case TRIBUTES:
+            case TARIFFS:
+            case WAR_REPARATIONS:
+            default:
+                return;
+        }
+    }
 }

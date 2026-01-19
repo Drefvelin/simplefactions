@@ -151,8 +151,9 @@ public class GovernmentCreator {
         m.setDisplayName(StringFormatter.formatHex(name));
         List<String> lore = new ArrayList<String>();
         TaxHandler taxHandler = f.getTaxHandler();
-        if(taxHandler.hasSpecificTax(id)) {
-            lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+taxHandler.getSpecificTax(id)+"%"));
+        TaxTarget target = isGuild ? TaxTarget.GUILDS : TaxTarget.VASSALS;
+        if(taxHandler.hasSpecificTax(target, id)) {
+            lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+taxHandler.getSpecificTax(target, id)+"%"));
             lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+(isGuild ? taxHandler.getGuildTax() : taxHandler.getVassalTax())+"%#3f4040)"));
         } else {
             lore.add(StringFormatter.formatHex("#812222No specific tax set."));
@@ -227,7 +228,7 @@ public class GovernmentCreator {
                     Map<Guild, Double> deltas =
                         SimpleFactions.getInstance()
                             .getProvinceManager()
-                            .previewLawIncomeExact(group, law);
+                            .previewLawIncomeExact(f, group, law);
                     lore.add("");
                     lore.add(StringFormatter.formatHex("#a6c793Estimated Economic Impact:"));
 

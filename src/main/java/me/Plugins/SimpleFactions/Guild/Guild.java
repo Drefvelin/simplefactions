@@ -17,6 +17,7 @@ import org.bukkit.inventory.meta.BannerMeta;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
+import me.Plugins.SimpleFactions.Guild.income.Ledger;
 import me.Plugins.SimpleFactions.Guild.income.TradeBreakdown;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
@@ -47,8 +48,9 @@ public class Guild {
     private Map<Integer, Branch> branches = new HashMap<>();
     private Bank bank;
 
+    private Ledger ledger;
+
     private Double wealth;
-	private Double prestige;
 
     private ItemStack banner;
 	private List<String> bannerPatterns = new ArrayList<>();
@@ -75,12 +77,12 @@ public class Guild {
         members.add(leader);
         type = GuildLoader.getBaseType();
         this.wealth = 0.0;
-		this.prestige = 0.0;
         int group = 0;
         while(BranchLoader.getByGroup(this, group) != null) {
             branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 0));
             group++;
         }
+        this.ledger = new Ledger(this);
         createBanner();
     }
 
@@ -99,13 +101,13 @@ public class Guild {
         this.type = GuildLoader.getDefaultType();
         this.capital = province;
         this.wealth = 0.0;
-		this.prestige = 0.0;
         int group = 0;
         while(BranchLoader.getByGroup(this, group) != null) {
             branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 0));
             group++;
         }
-        f.getOrCreateMainGuild().kick(p.getName());
+        f.getOrCreateMainGuild().kick(p.getName()); //remove from main guild
+        this.ledger = new Ledger(this);
         createBanner();
     }
 
@@ -145,9 +147,12 @@ public class Guild {
         }
         this.bannerPatterns = patterns;
         this.wealth = 0.0;
-		this.prestige = 0.0;
         this.wealthModifiers = wealthModifiers;
+        this.ledger = new Ledger(this);
         createBanner();
+    }
+    public Ledger getLedger() {
+        return ledger;
     }
 
     public void dummify(Player p) {
@@ -397,6 +402,7 @@ public class Guild {
     }
 
     public TradeBreakdown getTradeBreakdown() { return breakdown; }
+    public void setTradeBreakdown(TradeBreakdown breakdown) { this.breakdown = breakdown; }
 
     public void newDay() {
         if(bank != null) {

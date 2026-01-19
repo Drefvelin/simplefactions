@@ -4,8 +4,8 @@ public enum TaxTarget {
     CITIZENS("Citizens"),
     GUILDS("Guilds"),
     VASSALS("Vassals"),
+    TARIFFS("Tariffs"),
     DIVIDENDS("Dividends"),
-    TRIBUTARIES("Tributaries"),
     GUILD_ID("Guild Specific"),
     VASSAL_ID("Vassal Specific");
 

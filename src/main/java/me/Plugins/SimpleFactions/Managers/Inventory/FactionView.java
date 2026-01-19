@@ -22,6 +22,7 @@ import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Utils.FactionRanker;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
 import me.Plugins.SimpleFactions.enums.RankType;
@@ -31,6 +32,7 @@ public class FactionView {
 	public InventoryManager inv;
 	
 	public FactionCreator creator = new FactionCreator();
+	public GuildCreator guildCreator = new GuildCreator();
 	
 	FactionRanker r = new FactionRanker();
 	public static HashMap<Player, RankType> currentRanking = new HashMap<>();
@@ -107,6 +109,7 @@ public class FactionView {
 		i.setItem(12, creator.createMenuItem(player, f, MenuItemType.WEALTH));
 		i.setItem(13, creator.createMenuItem(player, f, MenuItemType.PRESTIGE));
 		i.setItem(14, creator.createMenuItem(player, f, MenuItemType.MEMBERS));
+		i.setItem(15, guildCreator.createLedgerItem(player, f.getOrCreateMainGuild()));
 		i.setItem(16, creator.createMenuItem(player, f, MenuItemType.MODIFIERS));
 		i.setItem(25, creator.createMenuItem(player, f, MenuItemType.TAX));
 		i.setItem(28, creator.createMenuItem(player, f, MenuItemType.LAWS));
@@ -116,6 +119,19 @@ public class FactionView {
 		i.setItem(34, creator.createMenuItem(player, f, MenuItemType.TITLES));
 		i.setItem(53, inv.createBackButton(SFGUI.FACTION_VIEW));
 		player.openInventory(i);
+	}
+
+	public void ledgerView(Player player, Guild guild, Inventory i) {
+		boolean open = i == null;
+		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(guild.getId(), SFGUI.LEDGER_VIEW), 27, "§7Ledger for "+guild.getName());
+		i.clear();
+		i.setItem(10, guildCreator.createLedgerCitizensItem(guild));
+		i.setItem(11, guildCreator.createLedgerGuildsItem(guild));
+		i.setItem(12, guildCreator.createLedgerVassalsItem(guild));
+		i.setItem(13, guildCreator.createLedgerTributesItem(guild));
+		i.setItem(14, guildCreator.createLedgerTariffsItem(guild));
+		i.setItem(26, inv.createBackButton(SFGUI.LEDGER_VIEW));
+		if(open) player.openInventory(i);
 	}
 	
 	public void clickPreventions(InventoryClickEvent e, Inventory inventory, Player p) {
@@ -195,6 +211,12 @@ public class FactionView {
 					inv.lawView(p, f, null);
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				}
+			} else if(e.getSlot() == 15) {
+				if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
+				Faction f = FactionManager.getByString(((SFInventoryHolder) inventory.getHolder()).getId());
+				if(f == null) return;
+				ledgerView(p, f.getOrCreateMainGuild(), null);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			} else if(e.getSlot() == 29) {
 				ItemStack item = e.getCurrentItem();
 				ItemMeta m = item.getItemMeta();
