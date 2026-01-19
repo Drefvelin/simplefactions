@@ -14,6 +14,7 @@ public class RelationType {
 	private String name;
 	private String prefix;
 	private int target;
+	private int limit;
 	
 	private boolean visible;
 	private boolean def;
@@ -38,6 +39,7 @@ public class RelationType {
 		name = StringFormatter.formatHex(config.getString("name", "None"));
 		prefix = StringFormatter.formatHex(config.getString("prefix", "#a89977Our "));
 		target = config.getInt("target", 0);
+		limit = config.getInt("limit", -1);
 		def = config.getBoolean("default", false);
 		visible = config.getBoolean("visible", true);
 		settable = config.getBoolean("settable", true);
@@ -159,5 +161,13 @@ public class RelationType {
 	
 	public RelationType getLink() {
 		return RelationLoader.getType(link);
+	}
+
+	public boolean hasLimit() {
+		return limit >= 0;
+	}
+
+	public int getLimit() {
+		return limit;
 	}
 }

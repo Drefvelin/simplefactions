@@ -127,7 +127,7 @@ public class Faction {
 		}
 		this.military = new Military(this);
 		this.government = new Government(this);
-		this.taxHandler = new TaxHandler(5, 5, 5, 5, 5);
+		this.taxHandler = new TaxHandler(this, 5, 5, 5, 5, 5);
 		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(new Guild(this));
 		init();
@@ -157,7 +157,7 @@ public class Faction {
 		}
 		this.titles = titles;
 		this.military = new Military(this);
-		this.taxHandler = new TaxHandler(taxRate, 5, 5, 5, 5); //TODO persistence
+		this.taxHandler = new TaxHandler(this, taxRate, 5, 5, 5, 5); //TODO persistence
 		this.guildHandler = new GuildHandler(this);
 		this.lawHandler = new LawHandler(this); //TODO persistence
 		this.government = new Government(this); //TODO persistence

@@ -110,6 +110,9 @@ public class RelationCreator {
 		ItemMeta m = i.getItemMeta();
 		m.setDisplayName(StringFormatter.formatHex("#d4bb98§lRelation: "+t.getName()));
 		List<String> lore = new ArrayList<String>();
+		if(t.hasLimit()) {
+			lore.add(StringFormatter.formatHex("#a89977Current: #59795f"+RelationManager.getRelationCount(origin, t)+"/"+t.getLimit()));
+		}
 		if(t.isVisible()) {
 			lore.add(" ");
 			if(t.getTarget() > 0) {

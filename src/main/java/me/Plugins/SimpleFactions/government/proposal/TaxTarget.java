@@ -4,10 +4,12 @@ public enum TaxTarget {
     CITIZENS("Citizens"),
     GUILDS("Guilds"),
     VASSALS("Vassals"),
-    TARIFFS("Tariffs"),
     DIVIDENDS("Dividends"),
+    TARIFFS("Tariffs"),
+    TARIFF_ID("Faction Specific Tariffs"),
     GUILD_ID("Guild Specific"),
     VASSAL_ID("Vassal Specific");
+    
 
     private String displayName;
 

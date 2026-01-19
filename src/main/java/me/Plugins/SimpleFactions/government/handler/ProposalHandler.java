@@ -30,6 +30,7 @@ public class ProposalHandler {
         if(proposal.isLawProposal()) {
             LawGroup group = gov.getFaction().getLawHandler().getGroupByLaw(proposal.getLaw().getId());
             for(Proposal p : proposals) {
+                if(!p.isLawProposal()) continue;
                 LawGroup g = gov.getFaction().getLawHandler().getGroupByLaw(p.getLaw().getId());
                 if(g.getId().equalsIgnoreCase(group.getId())) return false;
             }

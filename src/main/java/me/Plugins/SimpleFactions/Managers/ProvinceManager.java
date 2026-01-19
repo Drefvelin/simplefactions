@@ -130,7 +130,7 @@ public class ProvinceManager {
             if(owner != null) {
                 if(save) guild.getTradeBreakdown().registerIncome(owner, provinceIncome);
                 if(owner.getTaxHandler().hasTariffs() && !RelationManager.sameRealm(owner, guild.getFaction())){
-                    double provinceTariffs = provinceIncome*owner.getTaxRate(TaxTarget.TARIFFS)/100.0;
+                    double provinceTariffs = provinceIncome*owner.getTaxRate(TaxTarget.TARIFFS, guild.getFaction().getId())/100.0;
                     tariffs+=provinceTariffs;
                     if(save) {
                         guild.getTradeBreakdown().registerTariffs(owner, provinceTariffs);

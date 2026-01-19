@@ -114,7 +114,7 @@ public class GovernmentCreator {
         ItemMeta m = item.getItemMeta();
         m.setDisplayName(StringFormatter.formatHex("#93c9a7"+target.getDisplayName()));
         List<String> lore = new ArrayList<String>();
-        if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID) {
+        if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) {
             lore.add(StringFormatter.formatHex("#28ed70Click to view options"));
         } else {
             Government gov = f.getGovernment();
@@ -133,40 +133,45 @@ public class GovernmentCreator {
         return item;
     }
 
-    public ItemStack createSpecificTaxItem(Player p, Faction f, String id, boolean isGuild) {
+    public ItemStack createSpecificTaxItem(Player p, Faction f, String id, TaxTarget target) {
         String name = "";
         ItemStack item = new ItemStack(Material.GOLD_INGOT);
-        if(isGuild) {
+        if(target == TaxTarget.GUILD_ID) {
             Guild g = FactionManager.getGuildByString(id);
             if(g == null) return null;
             name = g.getName();
             item = g.getBanner().clone();
-        } else {
+        } else if(target == TaxTarget.VASSAL_ID) {
             Faction vassal = FactionManager.getByString(id);
             if(vassal == null) return null;
             name = vassal.getName();
             item = vassal.getBanner().clone();
+        } else if(target == TaxTarget.TARIFF_ID) {
+            Faction faction = FactionManager.getByString(id);
+            if(faction == null) return null;
+            name = faction.getName();
+            item = faction.getBanner().clone();
         }
         ItemMeta m = item.getItemMeta();
         m.setDisplayName(StringFormatter.formatHex(name));
         List<String> lore = new ArrayList<String>();
         TaxHandler taxHandler = f.getTaxHandler();
-        TaxTarget target = isGuild ? TaxTarget.GUILDS : TaxTarget.VASSALS;
-        if(taxHandler.hasSpecificTax(target, id)) {
+        double taxRate = taxHandler.getTaxRate(target, id);
+        if(taxHandler.hasSpecificTax(target, null)) {
             lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+taxHandler.getSpecificTax(target, id)+"%"));
-            lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+(isGuild ? taxHandler.getGuildTax() : taxHandler.getVassalTax())+"%#3f4040)"));
+            lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+taxRate+"%#3f4040)"));
         } else {
-            lore.add(StringFormatter.formatHex("#812222No specific tax set."));
-            lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+(isGuild ? taxHandler.getGuildTax() : taxHandler.getVassalTax())+"%#3f4040)"));
+            lore.add(StringFormatter.formatHex("#812222No specific "+(target == TaxTarget.TARIFF_ID ? "tariff" : "tax")+" set."));
+            lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+taxRate+"%#3f4040)"));
         }
         Government gov = f.getGovernment();
         Proposal proposal = new Proposal(p.getName(), gov);
-        proposal.setTaxProposal(new TaxLawChange(isGuild ? TaxTarget.GUILD_ID : TaxTarget.VASSAL_ID, id, 50));
+        proposal.setTaxProposal(new TaxLawChange(target, id, 50));
         if(gov.canProposeOrStartMovement(p) && gov.canBeProposed(proposal)) lore.add(StringFormatter.formatHex("#28ed70Click to propose a change"));
         else lore.add(StringFormatter.formatHex("#89504eAnother proposal is active for this target."));
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, id);
-        m.getPersistentDataContainer().set(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN, isGuild);
+        m.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, target.name());
         item.setItemMeta(m);
         return item;
     }
@@ -281,25 +286,30 @@ public class GovernmentCreator {
             } else if(target == TaxTarget.VASSAL_ID) {
                 name = FactionManager.getByString(taxChange.getId()).getName();
                 type = "#4269a8Vassal";
-            } else {
+            } else if(target == TaxTarget.TARIFF_ID) {
+                name = FactionManager.getByString(taxChange.getId()).getName();
+                type = "#79bf6dTariff";
+            } else{
                 name = target.getDisplayName();
             }
-            boolean isGuild = target == TaxTarget.GUILD_ID;
             String oldRate = "";
-            if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID) {
+            if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) {
                 double rate = f.getTaxRate(target, taxChange.getId());
                 if(rate == -1.0) {
-                    oldRate = String.valueOf(isGuild ? f.getTaxHandler().getGuildTax() : f.getTaxHandler().getVassalTax());
+                    oldRate = String.valueOf(f.getTaxRate(target, null));
                 } else {
                     oldRate = String.valueOf(rate);
                 }
             } else {
                 oldRate = String.valueOf(f.getTaxRate(target));
             }
-            lore.add(StringFormatter.formatHex("#b8ae61Target: #c2bea7"+name+" §7("+type+"§7)"));
+            double baseRate = f.getTaxRate(target, null);
+            lore.add(StringFormatter.formatHex("#b8ae61Target: #c2bea7"+name+
+                (type.isEmpty() ? "" : " §7("+type+"§7)")));
             lore.add(StringFormatter.formatHex("#b8ae61Change: #c2bea7"+oldRate+"% §7-> #c2bea7"+taxChange.getNewTax()+"%"));
-            if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID)
-                lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+(isGuild ? f.getTaxHandler().getGuildTax() : f.getTaxHandler().getVassalTax())+"%#3f4040)"));
+            if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) {
+                lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+baseRate+"%#3f4040)"));
+            }
         }
         m.setLore(lore);
         item.setItemMeta(m);

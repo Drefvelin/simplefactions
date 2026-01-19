@@ -33,6 +33,16 @@ public class LawHandler {
         for(Map.Entry<String, LawGroup> entry : LawLoader.get().entrySet()) {
             laws.put(entry.getKey(), new LawGroup(f, entry.getValue()));
         }
+        apply();
+    }
+
+    public void apply() {
+        for(LawGroup group : laws.values()) {
+            Law current = group.getCurrent();
+            if(current != null) {
+                f.applyLaw(current, group);
+            }
+        }
     }
 
     public List<LawGroup> getGroupList() {

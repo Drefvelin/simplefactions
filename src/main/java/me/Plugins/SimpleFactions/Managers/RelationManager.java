@@ -71,6 +71,23 @@ public class RelationManager {
 
 		return false;
 	}
+
+	public static boolean atLimit(Faction f, RelationType r) {
+		if(!r.hasLimit()) return false;
+		int count = 0;
+		for(Map.Entry<String, Relation> entry : f.getRelations().entrySet()) {
+			if(entry.getValue().getType().getId().equalsIgnoreCase(r.getId())) count++;
+		}
+		return count >= r.getLimit();
+	}
+
+	public static int getRelationCount(Faction f, RelationType r) {
+		int count = 0;
+		for(Map.Entry<String, Relation> entry : f.getRelations().entrySet()) {
+			if(entry.getValue().getType().getId().equalsIgnoreCase(r.getId())) count++;
+		}
+		return count;
+	}
 	
 	public static void setRelation(Player p, RelationType r, Faction target, Faction origin, boolean check) {
 		Relation relation = new Relation(origin.getRelation(target.getId()));
@@ -90,6 +107,10 @@ public class RelationManager {
 				if(p != null) p.sendMessage("§cThis relation would cause a loop");
 				return;
 			}
+		}
+		if(atLimit(origin, r)) {
+			if(p != null) p.sendMessage("§cYou have reached the limit for this relation type");
+			return;
 		}
 		if(r.hasThreshold()) {
 			Threshold h = r.getThreshold();

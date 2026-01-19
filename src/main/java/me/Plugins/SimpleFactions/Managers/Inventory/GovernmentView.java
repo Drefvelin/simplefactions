@@ -83,6 +83,7 @@ public class GovernmentView {
 		i.clear();
 		int x = 0;
 		for(TaxTarget target : TaxTarget.values()) {
+			if(!f.getTaxHandler().canCollectTax(target)) continue;
 			i.setItem(x, creator.createTaxTypeItem(player, f, target));
 			x++;
 		}
@@ -90,20 +91,30 @@ public class GovernmentView {
 		if(open) player.openInventory(i);
 	}
 
-	public void specificTaxProposalView(Player player, Faction f, Inventory i, boolean isGuild) {
+	public void specificTaxProposalView(Player player, Faction f, Inventory i, TaxTarget target) {
 		boolean open = i == null;
 		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.SPECIFIC_TAX_PROPOSAL_VIEW), 54, "§7Select Target");
 		i.clear();
 		int x = 0;
-		if(isGuild) {
+		if(target == TaxTarget.GUILD_ID) {
 			for(Guild g : f.getGuildHandler().getGuilds()) {
 				if(g.isBase()) continue;
-				i.setItem(x, creator.createSpecificTaxItem(player, f, g.getId(), isGuild));
+				i.setItem(x, creator.createSpecificTaxItem(player, f, g.getId(), target));
+				if(x >= 53) break;
 				x++;
 			}
-		} else {
+		} else if(target == TaxTarget.VASSAL_ID) {
 			for(Faction s : RelationManager.getSubjects(f)) {
-				i.setItem(x, creator.createSpecificTaxItem(player, f, s.getId(), isGuild));
+				i.setItem(x, creator.createSpecificTaxItem(player, f, s.getId(), target));
+				if(x >= 53) break;
+				x++;
+			}
+		} else if(target == TaxTarget.TARIFF_ID) {
+			for(Faction fac : FactionManager.factions) {
+				if(fac.getId().equalsIgnoreCase(f.getId())) continue;
+				if(RelationManager.sameRealm(fac, f)) continue;
+				if(x >= 53) break;
+				i.setItem(x, creator.createSpecificTaxItem(player, f, fac.getId(), target));
 				x++;
 			}
 		}
@@ -187,11 +198,15 @@ public class GovernmentView {
 			try {
 				TaxTarget target = TaxTarget.valueOf(id);
 				if(target == TaxTarget.GUILD_ID) {
-					specificTaxProposalView(p, f, null, true);
+					specificTaxProposalView(p, f, null, TaxTarget.GUILD_ID);
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 					return;
 				} else if(target == TaxTarget.VASSAL_ID) {
-					specificTaxProposalView(p, f, null, false);
+					specificTaxProposalView(p, f, null, TaxTarget.VASSAL_ID);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					return;
+				} else if(target == TaxTarget.TARIFF_ID) {
+					specificTaxProposalView(p, f, null, TaxTarget.TARIFF_ID);
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 					return;
 				}
@@ -213,10 +228,10 @@ public class GovernmentView {
 			String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
 			if(id == null) return;
 
-			Boolean isGuild = meta.getPersistentDataContainer().get(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN);
-			if(isGuild == null) return;
-			String name = isGuild ? FactionManager.getGuildByString(id).getName() : FactionManager.getByString(id).getName();
-			TaxTarget target = isGuild ? TaxTarget.GUILD_ID : TaxTarget.VASSAL_ID;
+			String t = meta.getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+			if(t == null) return;
+			TaxTarget target = TaxTarget.valueOf(t);
+			String name = target == TaxTarget.GUILD_ID ? FactionManager.getGuildByString(id).getName() : FactionManager.getByString(id).getName();
 			inv.setChanging(f, p, target, id);
 			p.sendTitle("§aTax Change", "§eType a new tax for "+name+" §ein chat.", 20, 40, 20);
 			p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);

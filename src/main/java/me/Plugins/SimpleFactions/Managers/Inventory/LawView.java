@@ -57,12 +57,12 @@ public class LawView {
 	}
 
 	public void click(InventoryClickEvent e, Inventory inventory, Player p) {
-		if (e.getView().getTitle().equalsIgnoreCase("§7Laws")) {
+		if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
+		SFInventoryHolder holder = (SFInventoryHolder) inventory.getHolder();
+		if (holder.getType() == SFGUI.LAW_VIEW) {
 			e.setCancelled(true);
 			ItemStack item = e.getCurrentItem();
 			ItemMeta meta = item.getItemMeta();
-			if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
-			SFInventoryHolder holder = (SFInventoryHolder) inventory.getHolder();
 			Faction f = FactionManager.getByString(holder.getId());
 			if(f == null) return;
 			String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);

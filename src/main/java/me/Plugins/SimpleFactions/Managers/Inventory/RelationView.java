@@ -154,7 +154,6 @@ public class RelationView {
 				p.sendMessage("§cYou are not allowed to change your relationship with "+f.getName()+"§c!");
 				return;
 			}
-			
 			if(r.isVassalage()) {
 				Tier ot = origin.getTier();
 				Tier tt = f.getTier();
@@ -163,6 +162,11 @@ public class RelationView {
 					p.sendMessage("§cYour tier must be equal to or higher than the target tier to vassalise them!");
 					return;
 				}
+			}
+
+			if(RelationManager.atLimit(origin, r)) {
+				p.sendMessage("§cYou have reached the limit for this relation type");
+				return;
 			}
 			
 			RelationManager.setRelation(p, r, f, origin, true);

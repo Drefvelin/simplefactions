@@ -34,6 +34,7 @@ import me.Plugins.SimpleFactions.Managers.Inventory.TaxView;
 import me.Plugins.SimpleFactions.Managers.Inventory.TierTitleView;
 import me.Plugins.SimpleFactions.Managers.Inventory.WarView;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.War.Participant;
@@ -193,16 +194,33 @@ public class InventoryManager implements Listener{
 					taxChange.remove(p);
 					return;
 				}
+				if(e.getMessage().equalsIgnoreCase("cancel")) {
+					p.sendMessage("§cTax change cancelled.");
+					taxChange.remove(p);
+					governmentView.governmentView(p, f, null);
+					return;
+				}
 				TaxChange change = taxChange.get(p);
 				double amount = 0;
 				try {
 					amount = Double.parseDouble(e.getMessage());
 				} catch (Exception e) {
 					p.sendMessage("§cError inputting the amount, use the format §e15.67 §cfor 15.67% tax (example)");
+					p.sendMessage("§4Type 'cancel' to cancel.");
 					return;
 				}
 				amount = Math.round(amount*100.0)/100.0;
 				amount = Math.min(100.0, amount);
+				TaxHandler handler = f.getTaxHandler();
+				if(amount > handler.getMax(change.getTarget())) {
+					p.sendMessage("§cThe maximum tax rate you can set for "+change.getTarget().getDisplayName()+" is §e"+handler.getMax(change.getTarget())+"%");
+					p.sendMessage("§4Type 'cancel' to cancel.");
+					return;
+				} else if(amount < handler.getMin(change.getTarget())) {
+					p.sendMessage("§cThe minimum tax rate you can set for "+change.getTarget().getDisplayName()+" is §e"+handler.getMin(change.getTarget())+"%");
+					p.sendMessage("§4Type 'cancel' to cancel.");
+					return;
+				}
 				Government gov = f.getGovernment();
 				Proposal proposal = new Proposal(p.getName(), gov);
 				TaxLawChange tax = new TaxLawChange(change.getTarget(), change.getId(), amount);
