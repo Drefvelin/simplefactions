@@ -94,6 +94,10 @@ public class TradeBreakdown {
         return Math.round(tariffsByFaction.getOrDefault(f, 0.0) * 100.0) / 100.0;
     }
 
+    public Map<Faction, Double> getTariffsByFactionMap() {
+        return tariffsByFaction;
+    }
+
     public List<Faction> getFactionsByIncomeDesc() {
         return incomeByFaction.entrySet()
                 .stream()

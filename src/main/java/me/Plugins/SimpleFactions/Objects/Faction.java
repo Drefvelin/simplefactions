@@ -157,7 +157,7 @@ public class Faction {
 		}
 		this.titles = titles;
 		this.military = new Military(this);
-		this.taxHandler = new TaxHandler(taxRate, 5, vassalTax, 5, 5); //TODO persistence
+		this.taxHandler = new TaxHandler(taxRate, 5, 5, 5, 5); //TODO persistence
 		this.guildHandler = new GuildHandler(this);
 		this.lawHandler = new LawHandler(this); //TODO persistence
 		this.government = new Government(this); //TODO persistence
@@ -763,6 +763,31 @@ public class Faction {
 				taxHandler.applyBracket(BracketToTaxTarget.convert(entry.getKey()), entry.getValue());
 			}
         }
+		if(effect.hasRules()) {
+			for(Map.Entry<Rules, Boolean> entry : effect.getRules().entrySet()) {
+				Rules rule = entry.getKey();
+				Boolean value = entry.getValue();
+				switch(rule) {
+					case CITIZEN_TAX:
+						if(!value) taxHandler.applyBracket(TaxTarget.CITIZENS, new Bracket(0, 0));
+						break;
+					case VASSAL_TAX:
+						if(!value) taxHandler.applyBracket(TaxTarget.VASSALS, new Bracket(0, 0));
+						break;
+					case GUILD_TAX:
+						if(!value) taxHandler.applyBracket(TaxTarget.GUILDS, new Bracket(0, 0));
+						break;
+					case DIVIDEND_TAX:
+						if(!value) taxHandler.applyBracket(TaxTarget.DIVIDENDS, new Bracket(0, 0));
+						break;
+					case TARIFFS:
+						if(!value) taxHandler.applyBracket(TaxTarget.TARIFFS, new Bracket(0, 0));
+						break;
+					default:
+						break;
+				}
+			}
+		}
 	}
 
 	public int getCouncilSize() {

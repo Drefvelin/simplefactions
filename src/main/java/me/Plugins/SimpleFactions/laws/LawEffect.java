@@ -203,6 +203,21 @@ public class LawEffect {
     }
 
     public boolean affectsEconomy() {
+        if(hasBrackets()) {
+            for(Brackets b : brackets.keySet()) {
+                if(b == Brackets.CITIZEN_TAX || b == Brackets.DIVIDEND_TAX) continue;
+                return true;
+            }
+        }
+        if(hasRules()) {
+            for(Rules r : rules.keySet()) {
+                if(r == Rules.VASSAL_TAX
+                || r == Rules.GUILD_TAX
+                || r == Rules.TARIFFS) {
+                    return true;
+                }
+            }
+        }
         for(FactionModifier mod : globalModifiers) {
             if(mod.getType().affectsEconomy()) return true;
         }

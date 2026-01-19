@@ -147,14 +147,46 @@ public class TaxHandler {
         }
     }
 
+    public void setSpecificTax(TaxTarget target, String id, double rate) {
+        double defaultRate = getDefaultRate(target);
+
+        if (Double.compare(rate, defaultRate) == 0) {
+            // Not specific anymore
+            HashMap<String, Double> map = specificTaxes.get(target);
+            if (map != null) {
+                map.remove(id);
+                if (map.isEmpty()) specificTaxes.remove(target);
+            }
+            return;
+        }
+
+        specificTaxes
+            .computeIfAbsent(target, k -> new HashMap<>())
+            .put(id, rate);
+    }
+
     private void applySpecificBracket(TaxTarget target, Bracket bracket) {
         if (!specificTaxes.containsKey(target)) return;
 
         HashMap<String, Double> map = specificTaxes.get(target);
+        double defaultRate = getDefaultRate(target);
 
-        for (var entry : map.entrySet()) {
-            double newValue = applyBracket(entry.getValue(), bracket);
-            map.put(entry.getKey(), newValue);
+        map.entrySet().removeIf(entry -> {
+            double clamped = applyBracket(entry.getValue(), bracket);
+
+            // If equal to default, remove the override
+            if (Double.compare(clamped, defaultRate) == 0) {
+                return true;
+            }
+
+            // Otherwise update value
+            entry.setValue(clamped);
+            return false;
+        });
+
+        // Clean up empty maps
+        if (map.isEmpty()) {
+            specificTaxes.remove(target);
         }
     }
 
@@ -198,5 +230,16 @@ public class TaxHandler {
         }
 
         savedSnapshot = null; // optional: prevent double restore
+    }
+
+    private double getDefaultRate(TaxTarget target) {
+        return switch (target) {
+            case CITIZENS -> citizenTax;
+            case GUILDS, GUILD_ID -> guildTax;
+            case VASSALS, VASSAL_ID -> vassalTax;
+            case DIVIDENDS -> dividendTax;
+            case TARIFFS -> tariffs;
+            default -> 0.0;
+        };
     }
 }

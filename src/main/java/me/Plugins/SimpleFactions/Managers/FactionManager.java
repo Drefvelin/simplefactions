@@ -143,12 +143,6 @@ public class FactionManager implements Listener{
 
 	public void time() {
 		timer++;
-		if(timer%10 == 0) {
-			for(Guild guild : getAllGuilds()) {
-				if(guild.getLeader().contains("dummy")) continue;
-				guild.newDay();
-			}
-		}
 		if(timer%300 == 0) {
 			for(Faction f : factions) {
 				if(f.getProvinces().size() == 0) continue;
@@ -203,7 +197,9 @@ public class FactionManager implements Listener{
 
 		// Phase 3: apply atomically
 		for (var entry : deltas.entrySet()) {
-			entry.getKey().getBank().deposit(entry.getValue());
+			double amount = Formatter.formatDouble(entry.getValue());
+			if (amount == 0.0) continue;
+			entry.getKey().getBank().deposit(amount);
 		}
 
 		buffer.clear();

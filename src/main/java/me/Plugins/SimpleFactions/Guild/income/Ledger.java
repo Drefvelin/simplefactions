@@ -138,13 +138,42 @@ public class Ledger {
     }
 
     public double getNetIncome() {
-        double gross = getGrossTaxableIncome();
-        if(guild.isBase()) gross += getOverlordTax();
-        if(guild.isBase()) gross += getTributeTax();
-        if(!guild.isBase()) gross += getIncome(Cashflow.GUILD_PAYMENTS);
-        return gross;
-    }
+        double net = 0.0;
 
+        for (Cashflow cf : Cashflow.values()) {
+            switch (cf) {
+
+                // -------- POSITIVE / INCOME --------
+                case TRADE:
+                case CITIZENS:
+                case TARIFFS:
+                case GUILDS:
+                case VASSALS:
+                case TRIBUTES:
+                case DIVIDENDS:
+                case WAR_REPARATIONS:
+                    net += getIncome(cf);
+                    break;
+
+                // -------- NEGATIVE / COSTS --------
+                case TRADE_UPKEEP:
+                case FORTS:
+                case GUILD_PAYMENTS:
+                case OVERLORD_TAX:
+                case TRIBUTE_PAYMENTS:
+                case TARIFF_PAYMENTS:
+                case DIVIDEND_PAYOUT:
+                case WAR_REPARATIONS_PAYMENT:
+                    net += getIncome(cf); // already negative
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        return Formatter.formatDouble(net);
+    }
     
     public double getInflationDelta() {
         double delta = 0.0;
@@ -165,7 +194,7 @@ public class Ledger {
         if (overlord == null) return 0.0;
 
         double base = getGrossTaxableIncome();
-        return base * f.getOverlordTaxRate(overlord)/100.0;
+        return base * f.getOverlordTaxRate(overlord);
     }
 
     public double getTributeTax() {
@@ -205,17 +234,13 @@ public class Ledger {
     private void applySettlementFor(Cashflow cf, DailyGuildTransfers buffer) {
 
         switch (cf) {
-
             // --------- INTERNAL (single guild) ----------
             // These should NOT be computed by reading getIncome() from some other guild.
             // They are simply added to this guild's daily delta.
             case TRADE:
             case TRADE_UPKEEP:
             case FORTS:
-            case WAR_REPARATIONS:
-            case WAR_REPARATIONS_PAYMENT:
-            case TARIFF_PAYMENTS:
-            case DIVIDEND_PAYOUT:
+            case CITIZENS:
                 buffer.addExternalDelta(guild, getIncome(cf));
                 return;
 
@@ -239,6 +264,7 @@ public class Ledger {
             }
 
             case TRIBUTE_PAYMENTS: {
+                if(!guild.isBase()) return; //only base pays
                 Faction f = guild.getFaction();
                 double base = getGrossTaxableIncome();
 
@@ -257,27 +283,28 @@ public class Ledger {
                 return;
             }
 
-            case TARIFFS: {
-                // IMPORTANT: Don't settle tariffs by iterating every base guild,
-                // or you'll double-charge. Settle tariffs from the payer side only:
-                //
-                // payer guild knows "who it owes tariffs to" (trade routes have destinations)
-                // If your TradeBreakdown can expose recipients, do it here.
-                //
-                // With current API (getTariffsByFaction), you can only compute "earned by faction",
-                // which is receiver-side and not safe to distribute without double counting.
-                //
-                // So: do NOT settle TARIFFS here until you have payer->receiver breakdown.
-                return;
+            //Taxes and Tariffs
+            case TARIFF_PAYMENTS: {
+                for(Map.Entry<Faction, Double> entry : guild.getTradeBreakdown().getTariffsByFactionMap().entrySet()) {
+                    Faction receiverFaction = entry.getKey();
+                    Guild receiverGuild = receiverFaction.getOrCreateMainGuild();
+                    double amount = entry.getValue();
+                    if(amount <= 0) continue;
+                    buffer.add(guild, receiverGuild, amount);
+                }
             }
 
-            // --------- AGGREGATES / DISPLAY ONLY ----------
-            // These are not real settlement events themselves.
+            //To be implemented
+            case WAR_REPARATIONS_PAYMENT:
+            case DIVIDEND_PAYOUT:
+            
+            //Display only
             case GUILDS:
             case VASSALS:
-            case CITIZENS:
             case DIVIDENDS:
             case TRIBUTES:
+            case TARIFFS:
+            case WAR_REPARATIONS:
             default:
                 return;
         }
