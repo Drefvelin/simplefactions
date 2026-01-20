@@ -50,6 +50,9 @@ public class GovernmentView {
 		i.setItem(15, creator.createProposalItem(player, f));
 		i.setItem(24, creator.createProposalListItem(player, f));
 		Government gov = f.getGovernment();
+		if(gov.getCouncil().canHostSession() && f.getLeader().equalsIgnoreCase(player.getName())) {
+			i.setItem(23, creator.createStartCouncilButton(player, f));
+		}
 		
 		Guild g = FactionManager.getGuildByMember(player.getName());
 		if(g != null && gov.canAffectStability(g)) {
@@ -207,6 +210,10 @@ public class GovernmentView {
 			} else if(slot == 24) {
 				proposalList(p, f, null);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			} else if(slot == 23) {
+				SimpleFactions.plugin.getSessionManager().newSession(p, f);
+				p.closeInventory();
+				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 			} else if(slot == 12) {
 				Government gov = f.getGovernment();
 				if(!gov.hasCouncil()) return;
@@ -299,7 +306,9 @@ public class GovernmentView {
 			if(f == null) return;
 			String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
 			if(id == null) return;
-			Law law = f.getLawHandler().getLaw(id);
+			String group = meta.getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+			if(group == null) return;
+			Law law = f.getLawHandler().getLaw(group, id);
 			if(law == null) return;
 			Government gov = f.getGovernment();
 			Proposal proposal = new Proposal(p.getName(), gov);

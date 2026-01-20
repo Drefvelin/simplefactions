@@ -1,7 +1,10 @@
 package me.Plugins.SimpleFactions.Objects.Handler;
 
 import java.util.HashMap;
+import java.util.Map;
 
+import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Bracket;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -69,6 +72,45 @@ public class TaxHandler {
     }
     public double getDividendTax() {
         return dividendTax;
+    }
+
+    public void setTaxRate(TaxTarget target, String id, double rate) {
+        switch (target) {
+            case CITIZENS:
+                citizenTax = rate;
+                break;
+
+            case GUILDS:
+                guildTax = rate;
+                break;
+
+            case VASSALS:
+                vassalTax = rate;
+                break;
+
+            case DIVIDENDS:
+                dividendTax = rate;
+                break;
+
+            case TARIFFS:
+                tariffs = rate;
+                break;
+
+            case GUILD_ID:
+                setSpecificTax(TaxTarget.GUILDS, id, rate);
+                break;
+
+            case VASSAL_ID:
+                setSpecificTax(TaxTarget.VASSALS, id, rate);
+                break;
+
+            case TARIFF_ID:
+                setSpecificTax(TaxTarget.TARIFFS, id, rate);
+                break;
+
+            default:
+                break;
+        }
     }
 
     public double getTaxRate(TaxTarget target, String id) {
@@ -277,5 +319,20 @@ public class TaxHandler {
             case TARIFFS, TARIFF_ID -> tariffs;
             default -> 0.0;
         };
+    }
+
+    public Map<Guild, Double> getTaxChangeEffects(TaxTarget target, String id, double newRate) {
+        Map<Guild, Double> effects = new HashMap<>();
+        for(Guild g : FactionManager.getAllGuilds()) {
+            effects.put(g, g.getLedger().getNetIncome());
+        }
+        saveState();
+        setTaxRate(target, id, newRate);
+        for(Guild g : FactionManager.getAllGuilds()) {
+            double newIncome = g.getLedger().getNetIncome();
+            effects.put(g, newIncome - effects.get(g));
+        }
+        restoreState();
+        return effects;
     }
 }

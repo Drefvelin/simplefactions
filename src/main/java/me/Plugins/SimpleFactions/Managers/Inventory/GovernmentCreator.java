@@ -18,6 +18,7 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
+import me.Plugins.SimpleFactions.Utils.EconomicImpact;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Represents;
 import me.Plugins.SimpleFactions.Utils.Wealth;
@@ -351,6 +352,17 @@ public class GovernmentCreator {
         return item;
     }
 
+    public ItemStack createStartCouncilButton(Player p, Faction f) {
+        ItemStack item = new ItemStack(Material.EMERALD);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#85c265Start Council Meeting"));
+        List<String> lore = new ArrayList<String>();
+        lore.add(StringFormatter.formatHex("#49c96bClick to start"));
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
     public ItemStack createCurrentProposalItem(Player p, Faction f, Proposal proposal) {
         ItemStack item = new ItemStack(Material.BOOK);
         ItemMeta m = item.getItemMeta();
@@ -359,56 +371,12 @@ public class GovernmentCreator {
         lore.add(StringFormatter.formatHex("#85c265Proposed by: #c2bea7"+proposal.getProposer()));
         if(proposal.isLawProposal()) {
             Law law = proposal.getLaw();
-            LawGroup group = f.getLawHandler().getGroupByLaw(law.getId());
+            LawGroup group = f.getLawHandler().getGroup(law.getGroup());
             lore.add(StringFormatter.formatHex("#b8ae61Group: #c2bea7"+group.getName()));
             lore.add(StringFormatter.formatHex(group.getCurrent().getName()+" §7-> "+law.getName()));
             // ---- Economic preview ----
             if (law.affectsEconomy()) {
-                Guild us = FactionManager.getGuildByMember(p.getName());
-                if (us != null) {
-                    Map<Guild, Double> deltas =
-                        SimpleFactions.getInstance()
-                            .getProvinceManager()
-                            .previewLawIncomeExact(f, group, law);
-                    lore.add("");
-                    lore.add(StringFormatter.formatHex("#a6c793Estimated Economic Impact:"));
-
-                    boolean shownAny = false;
-
-                    // ---- Our guild first ----
-                    Double ourDelta = deltas.get(us);
-                    if (ourDelta != null && Math.abs(ourDelta) > 0) {
-                        lore.add(StringFormatter.formatHex(
-                            "  " + us.getName() + "§7: " +
-                            (ourDelta > 0 ? "#87d65c+" : "#d65c5c") +
-                            String.format("%.2f", ourDelta) +
-                            "d/day"
-                        ));
-                        shownAny = true;
-                    }
-                    lore.add("");
-                    lore.add(StringFormatter.formatHex("#78856dOther Notable Impacts:"));
-                    // ---- Other most impacted guilds ----
-                    deltas.entrySet().stream()
-                        .filter(e -> !e.getKey().equals(us))
-                        .filter(e -> Math.abs(e.getValue()) > 0)
-                        .sorted((a, b) ->
-                            Double.compare(Math.abs(b.getValue()), Math.abs(a.getValue()))
-                        )
-                        .limit(5)
-                        .forEach(e -> {
-                            lore.add(StringFormatter.formatHex(
-                                "  " + e.getKey().getName() + " §7("+e.getKey().getFaction().getName()+"§7): " +
-                                (e.getValue() > 0 ? "#87d65c+" : "#d65c5c") +
-                                String.format("%.2f", e.getValue()) +
-                                "d/day"
-                            ));
-                        });
-
-                    if (!shownAny && deltas.values().stream().allMatch(v -> Math.abs(v) == 0)) {
-                        lore.add(StringFormatter.formatHex("  #9cb68cNo economic change"));
-                    }
-                }
+                EconomicImpact.applyEconomicChange(lore, p, f, group, law);
             }
         } else if(proposal.isTaxProposal()) {
             TaxLawChange taxChange = proposal.getTaxChange();
@@ -445,6 +413,11 @@ public class GovernmentCreator {
             lore.add(StringFormatter.formatHex("#b8ae61Change: #c2bea7"+oldRate+"% §7-> #c2bea7"+taxChange.getNewTax()+"%"));
             if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) {
                 lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+baseRate+"%#3f4040)"));
+            }
+            if(target == TaxTarget.TARIFFS || target == TaxTarget.TARIFF_ID) {
+                EconomicImpact.applyTariffImpact(lore, p, f, taxChange.getNewTax());
+            } else {
+                EconomicImpact.applyTaxImpact(lore, p, f, target, taxChange.getId(), taxChange.getNewTax());
             }
         }
         m.setLore(lore);

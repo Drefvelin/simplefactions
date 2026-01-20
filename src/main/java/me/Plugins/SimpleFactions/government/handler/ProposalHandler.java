@@ -26,12 +26,21 @@ public class ProposalHandler {
         return proposals.stream().filter(p -> p.getProposer().equals(member)).count() < 2;
     }
 
+    public boolean hasProposals() {
+        return !proposals.isEmpty();
+    }
+
+    public Proposal pop() {
+        if(proposals.isEmpty()) return null;
+        return proposals.remove(0);
+    }
+
     public boolean canBeProposed(Proposal proposal) {
         if(proposal.isLawProposal()) {
-            LawGroup group = gov.getFaction().getLawHandler().getGroupByLaw(proposal.getLaw().getId());
+            LawGroup group = gov.getFaction().getLawHandler().getGroup(proposal.getLaw().getGroup());
             for(Proposal p : proposals) {
                 if(!p.isLawProposal()) continue;
-                LawGroup g = gov.getFaction().getLawHandler().getGroupByLaw(p.getLaw().getId());
+                LawGroup g = gov.getFaction().getLawHandler().getGroup(p.getLaw().getGroup());
                 if(g.getId().equalsIgnoreCase(group.getId())) return false;
             }
         } else if(proposal.isTaxProposal()) {

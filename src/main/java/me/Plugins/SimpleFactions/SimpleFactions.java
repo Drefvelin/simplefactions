@@ -24,6 +24,7 @@ import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.PlayerManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Managers.RequestManager;
+import me.Plugins.SimpleFactions.Managers.SessionManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -45,6 +46,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final BranchLoader branchLoader = new BranchLoader();
 	private final GuildLoader guildLoader = new GuildLoader();
 	private final LawLoader lawLoader = new LawLoader();
+	private final ProvinceLoader provinceLoader = new ProvinceLoader();
 	
 	//Managers
 	private final ProvinceManager provinceManager = new ProvinceManager();
@@ -55,8 +57,8 @@ public class SimpleFactions extends JavaPlugin{
 	private final FactionManager factionManager = new FactionManager();
 	private final TitleManager titleManager = new TitleManager();
 	private final PlayerManager playerManager = new PlayerManager();
+	private final SessionManager sessionManager = new SessionManager();
 	private ProvinceManager provinceSnapshot = new ProvinceManager();
-	private final ProvinceLoader provinceLoader = new ProvinceLoader();
 	
 	@Override
 	public void onEnable() {
@@ -87,6 +89,7 @@ public class SimpleFactions extends JavaPlugin{
 		factionManager.run();
 		RequestManager.start();
 		WarManager.start();
+		sessionManager.start();
 		provinceSnapshot = provinceManager.createSnapshotShell();
 		provinceManager.recalculate();
 		inventoryManager.start();
@@ -121,6 +124,7 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(bankManager, this);
 		getServer().getPluginManager().registerEvents(titleManager, this);
 		getServer().getPluginManager().registerEvents(playerManager, this);
+		getServer().getPluginManager().registerEvents(sessionManager, this);
 	}
 	public void createFolders() {
 		File dataFolder = getDataFolder();
@@ -179,5 +183,9 @@ public class SimpleFactions extends JavaPlugin{
 
 	public ProvinceManager getProvinceSnapshot() {
 		return provinceSnapshot;
+	}
+
+	public SessionManager getSessionManager() {
+		return sessionManager;
 	}
 }

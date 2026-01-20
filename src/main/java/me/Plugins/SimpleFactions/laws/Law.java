@@ -15,6 +15,7 @@ import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import me.Plugins.TLibs.TLibs;
 
 public class Law {
+    private String group;
     private String id;
     private String name;
     private String icon;
@@ -24,7 +25,8 @@ public class Law {
     //Effects
     private Map<Scope, LawEffect> scopedEffects = new LinkedHashMap<>();
 
-    public Law(String key, ConfigurationSection config) {
+    public Law(String group, String key, ConfigurationSection config) {
+        this.group = group;
         id = key;
         icon = config.getString("icon", "v.book");
         name = StringFormatter.formatHex(config.getString("name", key));
@@ -49,6 +51,7 @@ public class Law {
         }
     }
 
+    public String getGroup() { return group; }
     public String getId() { return id; }
     public String getName() { return name; }
     public String getIconString() { return icon; }

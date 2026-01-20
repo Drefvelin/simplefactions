@@ -8,6 +8,8 @@ import me.Plugins.SimpleFactions.Utils.Wealth;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.government.handler.ProposalHandler;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
+import me.Plugins.SimpleFactions.government.session.Session;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 
@@ -68,6 +70,22 @@ public class Council {
             default:
                 break;
         }
+    }
+
+    public boolean hasSession() {
+        return SimpleFactions.getInstance().getSessionManager().hasSession(this);
+    }
+
+    public Session getSession() {
+        return SimpleFactions.getInstance().getSessionManager().getSession(this);
+    }
+
+    public boolean canHostSession() {
+        return proposalHandler.hasProposals() && !hasSession();
+    }
+
+    public boolean hasProposals() {
+        return proposalHandler.hasProposals();
     }
 
     public Rules getType() {
