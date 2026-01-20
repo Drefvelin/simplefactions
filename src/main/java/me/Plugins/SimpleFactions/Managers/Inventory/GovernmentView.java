@@ -211,6 +211,12 @@ public class GovernmentView {
 				proposalList(p, f, null);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			} else if(slot == 23) {
+				if(!f.getGovernment().hasCouncil()) return;
+				if(!f.getGovernment().getCouncil().hasEnoughValidVoters()) {
+					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					p.sendMessage("§cNot enough council members online! At least 75% must be present.");
+					return;
+				}
 				SimpleFactions.plugin.getSessionManager().newSession(p, f);
 				p.closeInventory();
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);

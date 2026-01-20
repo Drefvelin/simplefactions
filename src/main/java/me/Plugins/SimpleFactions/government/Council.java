@@ -1,7 +1,12 @@
 package me.Plugins.SimpleFactions.government;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Wealth;
@@ -157,5 +162,32 @@ public class Council {
 
     public double fillPercentage() {
         return (double)members.size()/(double)size;
+    }
+
+    public boolean isDummyAccount(String name) {
+        return name.toLowerCase().startsWith("dummy_");
+    }
+
+    public Set<String> getEligibleVoters() {
+        Set<String> eligibleVoters = new HashSet<>();
+        eligibleVoters.addAll(members);
+        eligibleVoters.add(f.getLeader());
+        return eligibleVoters;
+    }
+    
+    public boolean hasEnoughValidVoters() {
+        if(getEligibleVoters().isEmpty()) return false;
+        int total = getEligibleVoters().size();
+        int validCount = 0;
+        
+        for (String voterName : getEligibleVoters()) {
+            Player voterPlayer = Bukkit.getPlayer(voterName);
+            if ((voterPlayer != null && voterPlayer.isOnline()) || isDummyAccount(voterName)) {
+                validCount++;
+            }
+        }
+        
+        // At least 75% of eligible voters must be valid
+        return (validCount * 100) / total >= 75;
     }
 }

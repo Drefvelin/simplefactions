@@ -35,6 +35,7 @@ public class ConfigLoader {
 
 		Cache.branchUpgradeCost = config.getDouble("branch-upgrade-cost", 100.0);
 		Cache.branchUpgradeExponent = config.getDouble("branch-upgrade-exponent", 1.1);
+		Cache.year = config.getString("starting-year", "372 AE");
 
 		if(config.contains("terrain-modifiers")) {
 			for(String s : config.getStringList("terrain-modifiers")) {

@@ -46,6 +46,7 @@ public class ProposalHandler {
         } else if(proposal.isTaxProposal()) {
             TaxLawChange change = proposal.getTaxChange();
             for(Proposal p : proposals) {
+                if(!p.isLawProposal()) continue;
                 TaxLawChange c = p.getTaxChange();
                 if(c.getTarget().equals(change.getTarget()) && c.getId().equalsIgnoreCase(change.getId())) return false;
             }

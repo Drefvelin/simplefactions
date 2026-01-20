@@ -14,6 +14,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
@@ -135,6 +136,12 @@ public class SessionManager implements Listener{
         Session session = getSession(council);
         
         if (session != null && session.isStarted()) {
+            // Check if player is within 10 blocks of the lantern
+            if (session.getLantern() != null && player.getLocation().distance(session.getLantern().getLocation()) > 10) {
+                player.sendMessage("§cYou must be within 10 blocks of the lantern to vote!");
+                return;
+            }
+            
             if (session.recordVote(playerName, vote)) {
                 //event.setCancelled(true); cooler if you actually say it in chat
                 player.sendMessage("§aYour vote (" + vote.getDisplay() + ") has been recorded!");
@@ -160,6 +167,20 @@ public class SessionManager implements Listener{
                         player.swingMainHand();
                     }
                 }.runTask(SimpleFactions.getInstance());
+            }
+        }
+    }
+    
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        String playerName = player.getName();
+        
+        // Check if this player is a session leader
+        for (Session session : sessions.values()) {
+            if (session.getLeader().getName().equals(playerName)) {
+                session.end();
+                return;
             }
         }
     }

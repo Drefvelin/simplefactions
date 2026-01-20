@@ -11,6 +11,7 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -177,6 +178,12 @@ public class Session {
     }
     
     public void start() {
+        if (!c.hasEnoughValidVoters()) {
+            leader.sendMessage("§cNot enough council members online! At least 75% must be present.");
+            cancel();
+            return;
+        }
+        
         leader.sendTitle("§aSession Started!", "§7The §eLantern §7will show proposals and count votes", 20, 80, 20);
         leader.playSound(leader, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
         hologram = new SessionHologram(lantern);
@@ -187,7 +194,7 @@ public class Session {
 
     public void end() {
         // Create session report
-        SessionReport report = new SessionReport();
+        SessionReport report = new SessionReport(leader.getName(), f);
         
         // Gather all results
         for(Proposal p : proposals.keySet()) {
@@ -197,9 +204,20 @@ public class Session {
                 // For now we'll get them from the last counts when the proposal was decided
                 int[] counts = getVoteCounts();
                 report.addResult(p, result, counts[0], counts[1], counts[2]);
-                if (result.equals(VoteResult.PASSED)) {
-                    p.apply();
-                }
+            }
+        }
+
+        ItemStack book;
+        if(leader != null && leader.isOnline()) {
+            book = report.generateReportBook();
+        } else {
+            book = null;
+        }
+
+        for(Proposal p : proposals.keySet()) {
+            VoteResult result = proposals.get(p);
+            if (result.equals(VoteResult.PASSED)) {
+                p.apply();
             }
         }
         
@@ -213,7 +231,7 @@ public class Session {
         
         // Give leader the report book
         if (leader != null && leader.isOnline()) {
-            leader.getInventory().addItem(report.generateReportBook());
+            leader.getInventory().addItem(book);
             leader.sendMessage("§aSession report added to your inventory!");
         }
         
