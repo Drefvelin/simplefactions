@@ -128,13 +128,13 @@ public class Proposal {
         if (affectsEconomy() && p != null && f != null) {
             if (isLawProposal() && law != null) {
                 LawGroup group = f.getLawHandler().getGroup(law.getGroup());
-                EconomicImpact.applyEconomicChange(econ, p, f, group, law);
+                EconomicImpact.applyEconomicChange(econ, p, f, group, law, true);
             } else if (isTaxProposal() && tax != null) {
                 TaxTarget target = tax.getTarget();
                 if (target == TaxTarget.TARIFFS || target == TaxTarget.TARIFF_ID) {
-                    EconomicImpact.applyTariffImpact(econ, p, f, tax.getNewTax());
+                    EconomicImpact.applyTariffImpact(econ, p, f, tax.getNewTax(), true);
                 } else {
-                    EconomicImpact.applyTaxImpact(econ, p, f, target, tax.getId(), tax.getNewTax());
+                    EconomicImpact.applyTaxImpact(econ, p, f, target, tax.getId(), tax.getNewTax(), true);
                 }
             }
         } else if (affectsEconomy()) {

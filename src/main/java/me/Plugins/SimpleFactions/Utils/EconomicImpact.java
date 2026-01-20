@@ -15,7 +15,12 @@ import me.Plugins.SimpleFactions.laws.LawGroup;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class EconomicImpact {
+
     public static void applyEconomicChange(List<String> lore, Player p, Faction f, LawGroup group, Law law) {
+        applyEconomicChange(lore, p, f, group, law, false);
+    }
+
+    public static void applyEconomicChange(List<String> lore, Player p, Faction f, LawGroup group, Law law, boolean shortForm) {
         Guild us = FactionManager.getGuildByMember(p.getName());
         if (us != null) {
 
@@ -24,22 +29,30 @@ public class EconomicImpact {
                     .getProvinceManager()
                     .previewLawIncomeExact(f, group, law);
 
-            write(lore, deltas, us);
+            write(lore, deltas, us, shortForm);
         }
     }
 
     public static void applyTaxImpact(List<String> lore, Player p, Faction f, TaxTarget target, String id, double rate) {
+        applyTaxImpact(lore, p, f, target, id, rate, false);
+    }
+
+    public static void applyTaxImpact(List<String> lore, Player p, Faction f, TaxTarget target, String id, double rate, boolean shortForm) {
         Guild us = FactionManager.getGuildByMember(p.getName());
         if (us != null) {
 
             Map<Guild, Double> deltas =
                 f.getTaxHandler().getTaxChangeEffects(target, id, rate);
 
-            write(lore, deltas, us);
+            write(lore, deltas, us, shortForm);
         }
     }
 
     public static void applyTariffImpact(List<String> lore, Player p, Faction f, double newTariffRate) {
+        applyTariffImpact(lore, p, f, newTariffRate, false);
+    }
+
+    public static void applyTariffImpact(List<String> lore, Player p, Faction f, double newTariffRate, boolean shortForm) {
         Guild us = FactionManager.getGuildByMember(p.getName());
         if (us != null) {
 
@@ -48,29 +61,30 @@ public class EconomicImpact {
                     .getProvinceManager()
                     .previewTariffRateChange(f, newTariffRate);
 
-            write(lore, deltas, us);
+            write(lore, deltas, us, shortForm);
         }
     }
 
-
-    private static void write(List<String> lore, Map<Guild, Double> deltas, Guild us) {
-        lore.add(StringFormatter.formatHex("#a6c793Estimated Economic Impact:"));
+    private static void write(List<String> lore, Map<Guild, Double> deltas, Guild us, boolean shortForm) {
+        lore.add(StringFormatter.formatHex(shortForm ? "#78856dImpacts:" : "#78856dEstimated Economic Impacts:"));
 
         boolean shownAny = false;
 
+        String indent = shortForm ? "" : "  ";
+        String denominator = shortForm ? "d" : "d/day";
         // ---- Our guild first ----
         Double ourDelta = deltas.get(us);
         if (ourDelta != null && Math.abs(ourDelta) > 0) {
             lore.add(StringFormatter.formatHex(
-                "  " + us.getName() + "§7: " +
+                indent + us.getName() + "§7: " +
                 (ourDelta > 0 ? "#87d65c+" : "#d65c5c") +
                 String.format("%.2f", ourDelta) +
-                "d/day"
+                denominator
             ));
             shownAny = true;
         }
         lore.add("");
-        lore.add(StringFormatter.formatHex("#78856dOther Notable Impacts:"));
+        lore.add(StringFormatter.formatHex(shortForm ? "#78856dOther impacts:" : "#78856dOther Notable Impacts:"));
         // ---- Other most impacted guilds ----
         deltas.entrySet().stream()
             .filter(e -> !e.getKey().equals(us))
@@ -80,16 +94,17 @@ public class EconomicImpact {
             )
             .limit(5)
             .forEach(e -> {
+                String represents = shortForm ? "" : " §7("+e.getKey().getFaction().getName()+"§7)";
                 lore.add(StringFormatter.formatHex(
-                    "  " + e.getKey().getName() + " §7("+e.getKey().getFaction().getName()+"§7): " +
+                    indent + e.getKey().getName() + represents + "§7: " +
                     (e.getValue() > 0 ? "#87d65c+" : "#d65c5c") +
                     String.format("%.2f", e.getValue()) +
-                    "d/day"
+                    denominator
                 ));
             });
 
         if (!shownAny && deltas.values().stream().allMatch(v -> Math.abs(v) == 0)) {
-            lore.add(StringFormatter.formatHex("  #9cb68cNo economic change"));
+            lore.add(StringFormatter.formatHex(shortForm ? indent + "#93c9a7No Change" : indent + "#93c9a7No Economic Change"));
         }
     }
 }

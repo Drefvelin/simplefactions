@@ -22,6 +22,7 @@ public class Session {
     private int time = 0;
 
     private Map<Proposal, VoteResult> proposals = new LinkedHashMap<>();
+    private SessionHologram hologram;
     
     public Session(Player leader, Faction f) {
         this.leader = leader;
@@ -52,9 +53,11 @@ public class Session {
         Proposal proposal = c.getProposalHandler().pop();
         if (proposal == null) {
             //End Session
+            endSession();
             return;
         }
         proposals.put(proposal, VoteResult.IN_PROGRESS);
+        updateHologram();
     }
 
     public Proposal getCurrentProposal() {
@@ -69,16 +72,38 @@ public class Session {
     public void start() {
         leader.sendTitle("§aSession Started!", "§7The §eLantern §7will show proposals and count votes", 20, 80, 20);
         leader.playSound(leader, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+        hologram = new SessionHologram(lantern);
+        hologram.create();
         nextProposal();
         started = true;
+    }
+
+    public void end() {
+        endSession();
+    }
+    
+    private void updateHologram() {
+        if (hologram == null) return;
+        int current = proposals.size();
+        int total = current; // This would need to be adjusted if you know total proposal count
+        hologram.updateProposalInfo(current, total);
+        // Vote counts would be updated based on actual votes cast
+        hologram.updateVotes(0, 0, 0);
+    }
+    
+    private void endSession() {
+        if (hologram != null) {
+            hologram.destroy();
+        }
+        SessionManager sessionManager = SimpleFactions.getInstance().getSessionManager();
+        sessionManager.endSession(f.getGovernment().getCouncil());
     }
     
     private void cancel() {
         if (leader != null) {
             leader.sendMessage("§cSession cancelled: No lantern selected within 60 seconds.");
         }
-        SessionManager sessionManager = SimpleFactions.getInstance().getSessionManager();
-        sessionManager.endSession(f.getGovernment().getCouncil());
+        endSession();
     }
     
     public Player getLeader() {

@@ -4,11 +4,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -24,6 +26,12 @@ public class SessionManager implements Listener{
 
     public void start() {
         tickCycle();
+    }
+
+    public void end() {
+        for(Session session : sessions.values()) {
+            session.end();
+        }
     }
 
     public void tickCycle() {
@@ -76,12 +84,31 @@ public class SessionManager implements Listener{
                     return;
                 }
                 player.openBook(currentProposal.getAsBook(player));
+                player.getWorld().playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 1f, 1f);
+                player.swingMainHand();
                 return;
             } else if(session.isStarted() && !clickedBlock.equals(session.getLantern())) {
                 return;
             }
             event.setCancelled(true);
             session.onLanternClick(clickedBlock);
+        }
+    }
+    
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
+        Block brokenBlock = event.getBlock();
+        if (!brokenBlock.getType().equals(Material.LANTERN)) return;
+        
+        // Check if this lantern is part of any active session
+        for (Session session : sessions.values()) {
+            if (session.getLantern() != null && session.getLantern().equals(brokenBlock)) {
+                if (event.getPlayer() != null) {
+                    event.getPlayer().sendMessage("§cSession ended!");
+                }
+                session.end();
+                return;
+            }
         }
     }
 }
