@@ -33,7 +33,6 @@ public class LawHandler {
         for(Map.Entry<String, LawGroup> entry : LawLoader.get().entrySet()) {
             laws.put(entry.getKey(), new LawGroup(f, entry.getValue()));
         }
-        apply();
     }
 
     public void apply() {

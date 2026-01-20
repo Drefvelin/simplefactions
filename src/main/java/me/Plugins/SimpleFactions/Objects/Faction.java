@@ -121,6 +121,7 @@ public class Faction {
 		}
 		this.military = new Military(this);
 		this.government = new Government(this);
+		lawHandler.apply();
 		this.taxHandler = new TaxHandler(this, 5, 5, 5, 5, 5);
 		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(new Guild(this));
@@ -155,6 +156,7 @@ public class Faction {
 		this.guildHandler = new GuildHandler(this);
 		this.lawHandler = new LawHandler(this); //TODO persistence
 		this.government = new Government(this); //TODO persistence
+		lawHandler.apply();
 		init();
 		createBanner(bannerPatterns);
 		updateTier();
@@ -803,6 +805,9 @@ public class Faction {
 						break;
 				}
 			}
+		}
+		if(effect.affectsCouncilSize() || effect.affectsCouncilType()) {
+			government.getCouncil().reorganize();
 		}
 	}
 

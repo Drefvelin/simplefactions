@@ -96,6 +96,7 @@ public class SimpleFactions extends JavaPlugin{
 	}
 	@Override
 	public void onDisable() {
+		sessionManager.end();
 		db.saveTimer(FactionManager.getTimer());
 		for(Faction f : FactionManager.factions) {
 			db.saveFaction(f);

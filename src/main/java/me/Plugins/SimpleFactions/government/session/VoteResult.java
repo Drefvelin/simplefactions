@@ -1,8 +1,8 @@
 package me.Plugins.SimpleFactions.government.session;
 
 public enum VoteResult {
-    PASS,
-    FAIL,
+    PASSED,
+    FAILED,
     TIE,
     IN_PROGRESS
 }

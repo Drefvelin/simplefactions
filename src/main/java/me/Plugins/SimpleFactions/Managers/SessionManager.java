@@ -3,6 +3,7 @@ package me.Plugins.SimpleFactions.Managers;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
@@ -12,6 +13,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
@@ -19,6 +21,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.government.Council;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.session.Session;
+import me.Plugins.SimpleFactions.government.session.Vote;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 
 public class SessionManager implements Listener{
@@ -75,7 +78,6 @@ public class SessionManager implements Listener{
         
         Council council = faction.getGovernment().getCouncil();
         Session session = getSession(council);
-        player.sendMessage("aaaa");
         if (session != null && session.getLeader().equals(player)) {
             if(session.isStarted() && clickedBlock.equals(session.getLantern())) {
                 event.setCancelled(true);
@@ -108,6 +110,56 @@ public class SessionManager implements Listener{
                 }
                 session.end();
                 return;
+            }
+        }
+    }
+    
+    @EventHandler
+    public void onPlayerChat(AsyncPlayerChatEvent event) {
+        String message = event.getMessage().trim();
+        Vote vote = Vote.fromString(message);
+        
+        if (vote == null) return; // Not a vote command
+        
+        Player player = event.getPlayer();
+        String playerName = player.getName();
+        
+        Faction faction = FactionManager.getByLeader(playerName);
+        if (faction == null) {
+            // Try getting by member
+            faction = FactionManager.getByMember(playerName);
+        }
+        if (faction == null) return;
+        
+        Council council = faction.getGovernment().getCouncil();
+        Session session = getSession(council);
+        
+        if (session != null && session.isStarted()) {
+            if (session.recordVote(playerName, vote)) {
+                //event.setCancelled(true); cooler if you actually say it in chat
+                player.sendMessage("§aYour vote (" + vote.getDisplay() + ") has been recorded!");
+                Sound sound;
+                switch (vote) {
+                    case YAY:
+                        sound = Sound.BLOCK_NOTE_BLOCK_CHIME;
+                        break;
+                    case NAY:
+                        sound = Sound.BLOCK_NOTE_BLOCK_BASS;
+                        break;
+                    case ABSTAIN:
+                        sound = Sound.ITEM_BOOK_PAGE_TURN;
+                        break;
+                    default:
+                        sound = Sound.ITEM_BOOK_PAGE_TURN;
+                        break;
+                }
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        player.getWorld().playSound(player.getLocation(), sound, 1f, 1f);
+                        player.swingMainHand();
+                    }
+                }.runTask(SimpleFactions.getInstance());
             }
         }
     }

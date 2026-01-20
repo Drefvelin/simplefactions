@@ -3,6 +3,9 @@ package me.Plugins.SimpleFactions.government.session;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.TextDisplay;
+
+import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
+
 import org.bukkit.entity.EntityType;
 
 public class SessionHologram {
@@ -28,7 +31,7 @@ public class SessionHologram {
         
         // Line 2: "Click to view proposal"
         line2 = (TextDisplay) lantern.getWorld().spawnEntity(baseLoc.clone().add(0, 0.3, 0), EntityType.TEXT_DISPLAY);
-        line2.setText("§7Click to view proposal");
+        line2.setText(StringFormatter.formatHex("#5ca3bdClick to view proposal"));
         line2.setAlignment(org.bukkit.entity.TextDisplay.TextAlignment.CENTER);
         line2.setBillboard(org.bukkit.entity.TextDisplay.Billboard.CENTER);
         
@@ -41,13 +44,13 @@ public class SessionHologram {
     
     public void updateProposalInfo(int current, int total) {
         if (line1 != null) {
-            line1.setText("§bProposal " + current + "/" + total);
+            line1.setText(StringFormatter.formatHex("#57c274Proposal #c7b89d" + current + "/" + total));
         }
     }
     
     public void updateVotes(int yay, int nay, int abstain) {
         if (line3 != null) {
-            line3.setText("§a" + yay + " §aYay  §c" + nay + " §cNay  §7" + abstain + " §7Abstain");
+            line3.setText("§a" + yay + " Yay  §c" + nay + " Nay  §e" + abstain + " Abstain");
         }
     }
     

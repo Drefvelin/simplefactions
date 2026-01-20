@@ -40,8 +40,7 @@ public class Council {
             members = members.subList(0, newSize); //Trim council if size reduced
         }
         if(newType != type) {
-            if(newType.equals(Rules.APPOINTED_COUNCIL)) members.clear(); //Leader appoints new council
-            else if(newType.equals(Rules.WEALTH_BASED_COUNCIL)) members.clear(); //Wealth based council needs to be reselected
+            if(newType.equals(Rules.WEALTH_BASED_COUNCIL)) members.clear(); //Wealth based council needs to be reselected
             //Elected council gets to keep members until the next election.
             proposalHandler.clearProposals(); //Council change always clears proposals
         }

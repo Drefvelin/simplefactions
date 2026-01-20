@@ -32,6 +32,16 @@ public class Proposal {
         return proposer;
     }
 
+    public void apply() {
+        if (isLawProposal()) {
+            LawGroup group = gov.getFaction().getLawHandler().getGroup(law.getGroup());
+            gov.getFaction().applyLaw(law, group);
+        } else if (isTaxProposal()) {
+            TaxTarget target = tax.getTarget();
+            gov.getFaction().getTaxHandler().setTaxRate(target, tax.getId(), tax.getNewTax());
+        }
+    }
+
     public boolean isLawProposal() {
         return law != null;
     }
