@@ -809,6 +809,23 @@ public class Faction {
 		if(effect.affectsCouncilSize() || effect.affectsCouncilType()) {
 			government.getCouncil().reorganize();
 		}
+		if(effect.prohibitsVassals() && hasVassals()) {
+			for(Faction vassal : getVassals()) {
+				RelationManager.endVassalage(vassal, this, false);
+			}
+		}
+	}
+
+	public boolean hasVassals() {
+		return RelationManager.getSubjects(this).size() > 0;
+	}
+
+	public List<Faction> getVassals() {
+		return RelationManager.getSubjects(this);
+	}
+
+	public boolean canHaveVassals() {
+		return hasFactionRule(Rules.CAN_HAVE_VASSALS);
 	}
 
 	public int getCouncilSize() {

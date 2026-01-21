@@ -155,6 +155,10 @@ public class RelationView {
 				return;
 			}
 			if(r.isVassalage()) {
+				if(!origin.canHaveVassals()) {
+					p.sendMessage("§cYour faction cannot have vassals!");
+					return;
+				}
 				Tier ot = origin.getTier();
 				Tier tt = f.getTier();
 				if(ot.getTier() < tt.getTier()) {

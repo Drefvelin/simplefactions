@@ -228,4 +228,15 @@ public class LawEffect {
         }
         return false;
     }
+
+    public boolean prohibitsVassals() {
+        if(hasRules()) {
+            for(Rules r : rules.keySet()) {
+                if(r == Rules.CAN_HAVE_VASSALS && !rules.get(r)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }
