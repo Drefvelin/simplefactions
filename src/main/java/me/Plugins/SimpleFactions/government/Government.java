@@ -11,6 +11,7 @@ import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
 
 public class Government {
     private Faction f;
@@ -99,17 +100,34 @@ public class Government {
         return powerGain;
     }
 
-    public double getStability() {
-        double stability = STABILITY_BASE;
-        if(f.getGuildHandler().getGuilds().size() == 1) {
-            stability = 100.0;
+    public boolean canAffectStability(Guild guild) {
+        if(guild.getFaction().getId().equalsIgnoreCase(f.getId()) && !guild.isBase()) return true;
+        for(Faction vassal : RelationManager.getSubjects(f)) {
+            if(vassal.getId().equalsIgnoreCase(guild.getId())) {
+                return true;
+            }
         }
-        for(Guild guild : f.getGuildHandler().getGuilds()) {
-            stability += guild.getStabilityModifier();
-        }
+        return false;
+    }
+
+    public double getStabilityMalusFromCouncil() {
         if(council.couldBeBigger()) {
             double fillPercentage = council.fillPercentage();
-            stability -= (1.0 - fillPercentage) * 50.0;
+            return (1.0 - fillPercentage) * 50.0;
+        }
+        return 0;
+    }
+
+    public double getStability() {
+        double stability = STABILITY_BASE;
+        for(Guild guild : f.getGuildHandler().getGuilds()) {
+            stability += guild.getStabilityModifier(f);
+        }
+        for(Faction vassal : RelationManager.getSubjects(f)) {
+            stability += vassal.getOrCreateMainGuild().getStabilityModifier(f);
+        }
+        if(council.couldBeBigger()) {
+            stability -= getStabilityMalusFromCouncil();
         }
         if(stability < 0) stability = 0;
         if(stability > 100) stability = 100;

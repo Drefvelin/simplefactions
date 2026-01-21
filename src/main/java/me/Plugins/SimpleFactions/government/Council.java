@@ -1,16 +1,22 @@
 package me.Plugins.SimpleFactions.government;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Wealth;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.government.handler.ProposalHandler;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
-import me.Plugins.SimpleFactions.laws.LawGroup;
+import me.Plugins.SimpleFactions.government.session.Session;
+import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
 
 public class Council {
     private Faction f;
@@ -39,8 +45,7 @@ public class Council {
             members = members.subList(0, newSize); //Trim council if size reduced
         }
         if(newType != type) {
-            if(newType.equals(Rules.APPOINTED_COUNCIL)) members.clear(); //Leader appoints new council
-            else if(newType.equals(Rules.WEALTH_BASED_COUNCIL)) members.clear(); //Wealth based council needs to be reselected
+            if(newType.equals(Rules.WEALTH_BASED_COUNCIL)) members.clear(); //Wealth based council needs to be reselected
             //Elected council gets to keep members until the next election.
             proposalHandler.clearProposals(); //Council change always clears proposals
         }
@@ -58,10 +63,10 @@ public class Council {
                 //Implement election record to take from
                 break;
             case WEALTH_BASED_COUNCIL:
-                List<String> sortedByWealth = Wealth.topWealth(f);
+                List<String> sortedByWealth = Wealth.topWealth(f, true);
                 while(getCurrentSize() < getMaxSize() && sortedByWealth.size() > 0) {
                     String richest = sortedByWealth.remove(0);
-                    if(!members.contains(richest) && !f.getLeader().equalsIgnoreCase(richest)) {
+                    if(canBeMember(richest, false)) {
                         members.add(richest);
                     }
                 }
@@ -69,6 +74,22 @@ public class Council {
             default:
                 break;
         }
+    }
+
+    public boolean hasSession() {
+        return SimpleFactions.getInstance().getSessionManager().hasSession(this);
+    }
+
+    public Session getSession() {
+        return SimpleFactions.getInstance().getSessionManager().getSession(this);
+    }
+
+    public boolean canHostSession() {
+        return proposalHandler.hasProposals() && !hasSession();
+    }
+
+    public boolean hasProposals() {
+        return proposalHandler.hasProposals();
     }
 
     public Rules getType() {
@@ -83,8 +104,28 @@ public class Council {
         this.size = size;
     }
 
+    public boolean canBeMember(String name, boolean ignoreSize) {
+        if(members.contains(name)) return false;
+        if(f.getLeader().equalsIgnoreCase(name)) return false;
+        if(!ignoreSize && getCurrentSize() >= getMaxSize()) return false;
+        if(f.getOrCreateMainGuild().isMember(name)) return true;
+        for(Faction vassal : RelationManager.getSubjects(f)) {
+            if(vassal.isLeader(name)) return true;
+        }
+        for(Guild guild : f.getGuildHandler().getGuilds()) {
+            if(guild.isLeader(name)) return true;
+        }
+        return true;
+    }
+
     public void addMember(String member) {
         if(members.size() < size) members.add(member);
+    }
+
+    public void replaceMember(int slot, String newMember) {
+        if(slot >= 0 && slot < members.size()) {
+            members.set(slot, newMember);
+        }
     }
 
     public boolean isMember(String name) {
@@ -121,5 +162,32 @@ public class Council {
 
     public double fillPercentage() {
         return (double)members.size()/(double)size;
+    }
+
+    public boolean isDummyAccount(String name) {
+        return name.toLowerCase().startsWith("dummy_");
+    }
+
+    public Set<String> getEligibleVoters() {
+        Set<String> eligibleVoters = new HashSet<>();
+        eligibleVoters.addAll(members);
+        eligibleVoters.add(f.getLeader());
+        return eligibleVoters;
+    }
+    
+    public boolean hasEnoughValidVoters() {
+        if(getEligibleVoters().isEmpty()) return false;
+        int total = getEligibleVoters().size();
+        int validCount = 0;
+        
+        for (String voterName : getEligibleVoters()) {
+            Player voterPlayer = Bukkit.getPlayer(voterName);
+            if ((voterPlayer != null && voterPlayer.isOnline()) || isDummyAccount(voterName)) {
+                validCount++;
+            }
+        }
+        
+        // At least 75% of eligible voters must be valid
+        return (validCount * 100) / total >= 75;
     }
 }

@@ -81,7 +81,7 @@ public class Province {
             amount = prev *factor;
         }
 
-        if(amount < 0.1) return;
+        if(amount < 0.5) return;
 
         ProvinceDataEntry entry = data.get(guild.getId());
 

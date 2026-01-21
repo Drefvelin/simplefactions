@@ -23,7 +23,7 @@ public class LawGroup {
         id = key;
         name = StringFormatter.formatHex(config.getString("name", id));
         for(String lawKey : config.getConfigurationSection("laws").getKeys(false)) {
-            laws.put(lawKey, new Law(lawKey, config.getConfigurationSection("laws."+lawKey)));
+            laws.put(lawKey, new Law(id, lawKey, config.getConfigurationSection("laws."+lawKey)));
         }
         if(config.contains("description")) {
             for(String s : config.getStringList("description")) 

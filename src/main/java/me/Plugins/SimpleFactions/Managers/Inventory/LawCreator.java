@@ -15,6 +15,7 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Bracket;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
+import me.Plugins.SimpleFactions.Utils.EconomicImpact;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.enums.Brackets;
 import me.Plugins.SimpleFactions.enums.Region;
@@ -188,6 +189,12 @@ public class LawCreator {
 					lore.add(StringFormatter.formatHex("  " + GRAY + scope.getDisplay() + ":"));
 				}
 
+				if(effect.affectsCouncilSize()) {
+					lore.add(StringFormatter.formatHex(
+						indent + LIGHT_GRAY + "Council Size§7: " + GREEN + effect.getCouncilSize()
+					));
+				}
+
 				// ---- Rules ----
 				if (effect.hasRules()) {
 					for (Map.Entry<Rules, Boolean> ruleEntry : effect.getRules().entrySet()) {
@@ -262,52 +269,7 @@ public class LawCreator {
 
 		// ---- Economic preview ----
 		if (!isCurrent && affectsEconomy) {
-			Guild us = FactionManager.getGuildByMember(p.getName());
-			if (us != null) {
-
-				Map<Guild, Double> deltas =
-					SimpleFactions.getInstance()
-						.getProvinceManager()
-						.previewLawIncomeExact(f, group, law);
-
-				lore.add(StringFormatter.formatHex("#a6c793Estimated Economic Impact:"));
-
-				boolean shownAny = false;
-
-				// ---- Our guild first ----
-				Double ourDelta = deltas.get(us);
-				if (ourDelta != null && Math.abs(ourDelta) > 0) {
-					lore.add(StringFormatter.formatHex(
-						"  " + us.getName() + "§7: " +
-						(ourDelta > 0 ? "#87d65c+" : "#d65c5c") +
-						String.format("%.2f", ourDelta) +
-						"d/day"
-					));
-					shownAny = true;
-				}
-				lore.add("");
-				lore.add(StringFormatter.formatHex("#78856dOther Notable Impacts:"));
-				// ---- Other most impacted guilds ----
-				deltas.entrySet().stream()
-					.filter(e -> !e.getKey().equals(us))
-					.filter(e -> Math.abs(e.getValue()) > 0)
-					.sorted((a, b) ->
-						Double.compare(Math.abs(b.getValue()), Math.abs(a.getValue()))
-					)
-					.limit(5)
-					.forEach(e -> {
-						lore.add(StringFormatter.formatHex(
-							"  " + e.getKey().getName() + " §7("+e.getKey().getFaction().getName()+"§7): " +
-							(e.getValue() > 0 ? "#87d65c+" : "#d65c5c") +
-							String.format("%.2f", e.getValue()) +
-							"d/day"
-						));
-					});
-
-				if (!shownAny && deltas.values().stream().allMatch(v -> Math.abs(v) == 0)) {
-					lore.add(StringFormatter.formatHex("  #9cb68cNo economic change"));
-				}
-			}
+			EconomicImpact.applyEconomicChange(lore, p, f, group, law);
 		}
 		Government gov = f.getGovernment();
 		Proposal proposal = new Proposal("console", gov);
@@ -318,6 +280,7 @@ public class LawCreator {
 
 		meta.setLore(lore);
 		meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, law.getId());
+		meta.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, law.getGroup());
 		i.setItemMeta(meta);
 		return i;
 	}

@@ -10,6 +10,7 @@ public class Cache {
 
 	public static int maxMembers;
 	public static int maxWealthPrestige;
+	public static String year;
 	public static String bankBlock;
 
 	public static int maxExtraNodeCapacity;

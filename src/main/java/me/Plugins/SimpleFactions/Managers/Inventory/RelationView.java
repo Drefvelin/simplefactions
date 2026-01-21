@@ -154,8 +154,11 @@ public class RelationView {
 				p.sendMessage("§cYou are not allowed to change your relationship with "+f.getName()+"§c!");
 				return;
 			}
-			
 			if(r.isVassalage()) {
+				if(!origin.canHaveVassals()) {
+					p.sendMessage("§cYour faction cannot have vassals!");
+					return;
+				}
 				Tier ot = origin.getTier();
 				Tier tt = f.getTier();
 				if(ot.getTier() < tt.getTier()) {
@@ -163,6 +166,11 @@ public class RelationView {
 					p.sendMessage("§cYour tier must be equal to or higher than the target tier to vassalise them!");
 					return;
 				}
+			}
+
+			if(RelationManager.atLimit(origin, r)) {
+				p.sendMessage("§cYou have reached the limit for this relation type");
+				return;
 			}
 			
 			RelationManager.setRelation(p, r, f, origin, true);

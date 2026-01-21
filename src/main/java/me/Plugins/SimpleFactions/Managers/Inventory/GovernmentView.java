@@ -18,6 +18,7 @@ import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.enums.SFGUI;
+import me.Plugins.SimpleFactions.government.Council;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
@@ -31,7 +32,7 @@ public class GovernmentView {
 	public GovernmentCreator creator = new GovernmentCreator();
 	public LawCreator lawCreator = new LawCreator();
 
-	private static final List<Integer> LAW_SLOTS = List.of(
+	private static final List<Integer> SLOTS = List.of(
 		10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25
 	);
 	
@@ -48,11 +49,47 @@ public class GovernmentView {
 		i.setItem(12, creator.createCouncilItem(f));
 		i.setItem(15, creator.createProposalItem(player, f));
 		i.setItem(24, creator.createProposalListItem(player, f));
+		Government gov = f.getGovernment();
+		if(gov.getCouncil().canHostSession() && f.getLeader().equalsIgnoreCase(player.getName())) {
+			i.setItem(23, creator.createStartCouncilButton(player, f));
+		}
+		
 		Guild g = FactionManager.getGuildByMember(player.getName());
-		if(g != null && !g.isBase()) {
+		if(g != null && gov.canAffectStability(g)) {
 			i.setItem(28, creator.createStanceItem(f, g));
 		}
 		i.setItem(53, inv.createBackButton(SFGUI.GOVERNMENT_VIEW));
+        if(open) player.openInventory(i);
+	}
+
+	public void councilView(Player player, Faction f, Inventory i) {
+        boolean open = i == null;
+		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.COUNCIL_VIEW), 54, "§7Council");
+		i.clear();
+		int x = 0;
+		for(int slot : SLOTS) {
+			if(x >= f.getGovernment().getCouncil().getMaxSize()) break;
+			i.setItem(slot, creator.createCouncilMemberItem(player, f, x));
+			x++;
+		}
+		i.setItem(53, inv.createBackButton(SFGUI.COUNCIL_VIEW));
+        if(open) player.openInventory(i);
+	}
+	public void councilSelect(Player player, Faction f, Inventory i, int slot) {
+        boolean open = i == null;
+		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.COUNCIL_SELECT), 54, "§7Select Member");
+		i.clear();
+		int x = 0;
+		List<String> members = f.getMembers();
+		Council council = f.getGovernment().getCouncil();
+		members.removeAll(f.getGovernment().getCouncil().getMembers());
+		members.addAll(f.getVassalMembers());
+		for(String member : members) {
+			if(!council.canBeMember(member, true)) continue;
+			i.setItem(x, creator.createPotentialMemberItem(player, f, member, slot));
+			x++;
+		}
+		i.setItem(53, inv.createBackButton(SFGUI.COUNCIL_SELECT));
         if(open) player.openInventory(i);
 	}
 
@@ -83,6 +120,7 @@ public class GovernmentView {
 		i.clear();
 		int x = 0;
 		for(TaxTarget target : TaxTarget.values()) {
+			if(!f.getTaxHandler().canCollectTax(target)) continue;
 			i.setItem(x, creator.createTaxTypeItem(player, f, target));
 			x++;
 		}
@@ -90,20 +128,30 @@ public class GovernmentView {
 		if(open) player.openInventory(i);
 	}
 
-	public void specificTaxProposalView(Player player, Faction f, Inventory i, boolean isGuild) {
+	public void specificTaxProposalView(Player player, Faction f, Inventory i, TaxTarget target) {
 		boolean open = i == null;
 		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.SPECIFIC_TAX_PROPOSAL_VIEW), 54, "§7Select Target");
 		i.clear();
 		int x = 0;
-		if(isGuild) {
+		if(target == TaxTarget.GUILD_ID) {
 			for(Guild g : f.getGuildHandler().getGuilds()) {
 				if(g.isBase()) continue;
-				i.setItem(x, creator.createSpecificTaxItem(player, f, g.getId(), isGuild));
+				i.setItem(x, creator.createSpecificTaxItem(player, f, g.getId(), target));
+				if(x >= 53) break;
 				x++;
 			}
-		} else {
+		} else if(target == TaxTarget.VASSAL_ID) {
 			for(Faction s : RelationManager.getSubjects(f)) {
-				i.setItem(x, creator.createSpecificTaxItem(player, f, s.getId(), isGuild));
+				i.setItem(x, creator.createSpecificTaxItem(player, f, s.getId(), target));
+				if(x >= 53) break;
+				x++;
+			}
+		} else if(target == TaxTarget.TARIFF_ID) {
+			for(Faction fac : FactionManager.factions) {
+				if(fac.getId().equalsIgnoreCase(f.getId())) continue;
+				if(RelationManager.sameRealm(fac, f)) continue;
+				if(x >= 53) break;
+				i.setItem(x, creator.createSpecificTaxItem(player, f, fac.getId(), target));
 				x++;
 			}
 		}
@@ -116,7 +164,7 @@ public class GovernmentView {
 		i.clear();
 		for(int x = 0; x<f.getLawHandler().getGroupList().size(); x++) {
 			LawGroup group = f.getLawHandler().getGroupList().get(x);
-			i.setItem(LAW_SLOTS.get(x), lawCreator.createLawGroupItem(player, f, group));
+			i.setItem(SLOTS.get(x), lawCreator.createLawGroupItem(player, f, group));
 		}
 		player.openInventory(i);
 		i.setItem(53, inv.createBackButton(SFGUI.LAW_PROPOSAL_VIEW));
@@ -162,6 +210,21 @@ public class GovernmentView {
 			} else if(slot == 24) {
 				proposalList(p, f, null);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			} else if(slot == 23) {
+				if(!f.getGovernment().hasCouncil()) return;
+				if(!f.getGovernment().getCouncil().hasEnoughValidVoters()) {
+					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					p.sendMessage("§cNot enough council members online! At least 75% must be present.");
+					return;
+				}
+				SimpleFactions.plugin.getSessionManager().newSession(p, f);
+				p.closeInventory();
+				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+			} else if(slot == 12) {
+				Government gov = f.getGovernment();
+				if(!gov.hasCouncil()) return;
+				councilView(p, f, null);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			}
 		} else if (h.getType() == SFGUI.PROPOSAL_VIEW) {
 			e.setCancelled(true);
@@ -187,11 +250,15 @@ public class GovernmentView {
 			try {
 				TaxTarget target = TaxTarget.valueOf(id);
 				if(target == TaxTarget.GUILD_ID) {
-					specificTaxProposalView(p, f, null, true);
+					specificTaxProposalView(p, f, null, TaxTarget.GUILD_ID);
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 					return;
 				} else if(target == TaxTarget.VASSAL_ID) {
-					specificTaxProposalView(p, f, null, false);
+					specificTaxProposalView(p, f, null, TaxTarget.VASSAL_ID);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					return;
+				} else if(target == TaxTarget.TARIFF_ID) {
+					specificTaxProposalView(p, f, null, TaxTarget.TARIFF_ID);
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 					return;
 				}
@@ -213,10 +280,10 @@ public class GovernmentView {
 			String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
 			if(id == null) return;
 
-			Boolean isGuild = meta.getPersistentDataContainer().get(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN);
-			if(isGuild == null) return;
-			String name = isGuild ? FactionManager.getGuildByString(id).getName() : FactionManager.getByString(id).getName();
-			TaxTarget target = isGuild ? TaxTarget.GUILD_ID : TaxTarget.VASSAL_ID;
+			String t = meta.getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+			if(t == null) return;
+			TaxTarget target = TaxTarget.valueOf(t);
+			String name = target == TaxTarget.GUILD_ID ? FactionManager.getGuildByString(id).getName() : FactionManager.getByString(id).getName();
 			inv.setChanging(f, p, target, id);
 			p.sendTitle("§aTax Change", "§eType a new tax for "+name+" §ein chat.", 20, 40, 20);
 			p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
@@ -245,7 +312,9 @@ public class GovernmentView {
 			if(f == null) return;
 			String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
 			if(id == null) return;
-			Law law = f.getLawHandler().getLaw(id);
+			String group = meta.getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+			if(group == null) return;
+			Law law = f.getLawHandler().getLaw(group, id);
 			if(law == null) return;
 			Government gov = f.getGovernment();
 			Proposal proposal = new Proposal(p.getName(), gov);
@@ -263,6 +332,69 @@ public class GovernmentView {
 			}
 		} else if (h.getType() == SFGUI.PROPOSALS) {
 			e.setCancelled(true);
+		} else if (h.getType() == SFGUI.COUNCIL_VIEW) {
+			e.setCancelled(true);
+			int slot = e.getSlot();
+			ItemStack item = e.getCurrentItem();
+			if(item == null) return;
+			Faction f = FactionManager.getByString(((SFInventoryHolder)e.getInventory().getHolder()).getId());
+			if(f == null) return;
+			boolean isLeader = p.getName().equalsIgnoreCase(f.getLeader());
+			if(!isLeader) return;
+			// Handle council member click for replace/appoint
+			ItemMeta meta = item.getItemMeta();
+			if(meta == null) return;
+			Integer s = meta.getPersistentDataContainer().get(Keys.INT, PersistentDataType.INTEGER);
+			if(s == null) return;
+			
+			Council council = f.getGovernment().getCouncil();
+			List<String> members = council.getMembers();
+			boolean isOccupied = s < members.size() && members.get(s) != null && !members.get(s).isEmpty();
+			boolean isNextEmpty = s == members.size();
+			
+			if(!isOccupied && !isNextEmpty) {
+				p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				p.sendMessage("§cYou must fill council seats in order!");
+				return;
+			}
+			
+			councilSelect(p, f, null, s);
+			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+		} else if (h.getType() == SFGUI.COUNCIL_SELECT) {
+			e.setCancelled(true);
+			ItemStack item = e.getCurrentItem();
+			if(item == null) return;
+			Faction f = FactionManager.getByString(((SFInventoryHolder)e.getInventory().getHolder()).getId());
+			if(f == null) return;
+			boolean isLeader = p.getName().equalsIgnoreCase(f.getLeader());
+			if(!isLeader) return;
+			// Handle council member click for replace/appoint
+			ItemMeta meta = item.getItemMeta();
+			if(meta == null) return;
+			String member = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+			if(member == null) return;
+			Integer s = meta.getPersistentDataContainer().get(Keys.INT, PersistentDataType.INTEGER);
+			if(s == null) return;
+			Council council = f.getGovernment().getCouncil();
+			
+			// Verify slot can be appointed/modified
+			List<String> members = council.getMembers();
+			boolean isOccupied = s < members.size() && members.get(s) != null && !members.get(s).isEmpty();
+			boolean isNextEmpty = s == members.size();
+			
+			if(!isOccupied && !isNextEmpty) {
+				p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				p.sendMessage("§cYou must fill council seats in order!");
+				return;
+			}
+			
+			if(isOccupied) {
+				council.replaceMember(s, member);
+			} else {
+				council.addMember(member);
+			}
+			councilView(p, f, null);
+			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 		}
 	}
 }

@@ -11,7 +11,8 @@ public enum FactionModifiers {
     PRESTIGE_BONUS(true, false),
     DE_JURE(false, false),
     TRADE_POWER(true, true),
-    PRODUCTION(true, true);
+    PRODUCTION(true, true),
+    DIPLOMATIC_CAPACITY_MULTIPLIER(true, false);
 
     private final boolean positiveIsGood;
     private final boolean affectsEconomy;

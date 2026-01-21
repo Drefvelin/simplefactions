@@ -18,12 +18,18 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
+import me.Plugins.SimpleFactions.Utils.EconomicImpact;
 import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.Utils.Represents;
+import me.Plugins.SimpleFactions.Utils.Wealth;
+import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Stance;
+import me.Plugins.SimpleFactions.government.Council;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxLawChange;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawGroup;
@@ -61,8 +67,7 @@ public class GovernmentCreator {
         if(gov.getCouncil().getCurrentSize() > 0) {
             lore.add(StringFormatter.formatHex("#93c9a7Members:"));
             for(String member : gov.getCouncilMembers()) {
-                if(member.equalsIgnoreCase(f.getLeader())) continue;
-                lore.add(StringFormatter.formatHex("#d4bb98- "+member));
+                lore.add(StringFormatter.formatHex("#d4bb98- "+member + " §7("+Represents.represents(f, member)+")"));
             }
         }
         m.setLore(lore);
@@ -78,13 +83,21 @@ public class GovernmentCreator {
         m.setDisplayName(StringFormatter.formatHex("#85c265Stability§7: §e"+gov.getStabilityString()+"%"));
         List<String> lore = new ArrayList<String>();
         lore.add(StringFormatter.formatHex("#b8ae61Base: #45c46f+"+Formatter.formatDouble(gov.STABILITY_BASE)+"%"));
-        double effect = f.getOrCreateMainGuild().getStabilityModifier();
+        double effect = f.getOrCreateMainGuild().getStabilityModifier(f);
         lore.add(StringFormatter.formatHex("#b8ae61From State: " + ( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"));
-        lore.add(StringFormatter.formatHex("#93c9a7Guild Effects:"));
+        if(gov.getStabilityMalusFromCouncil() > 0) {
+            lore.add(StringFormatter.formatHex("#b8ae61Council too small: #d13530-"+Formatter.formatDouble(gov.getStabilityMalusFromCouncil())+"%"));
+        }
+        lore.add(StringFormatter.formatHex("#93c9a7Stances:"));
         for(Guild guild : f.getGuildHandler().getGuilds()) {
             if(guild.isBase()) continue;
-            effect = guild.getStabilityModifier();
-            lore.add(StringFormatter.formatHex(" #d4bb98- "+guild.getName()+" §7("+guild.getType().getName()+"§7): "+guild.getStance().getDisplay()+" §7("+( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"+"§7)"));
+            effect = guild.getStabilityModifier(f);
+            lore.add(StringFormatter.formatHex(" #d4bb98- "+guild.getName()+" §7("+guild.getType().getName()+"§7): "+guild.getStance(f).getDisplay()+" §7("+( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"+"§7)"));
+        }
+        for(Faction v : RelationManager.getSubjects(f)) {
+            Guild guild = v.getOrCreateMainGuild();
+            effect = guild.getStabilityModifier(f);
+            lore.add(StringFormatter.formatHex(" #d4bb98- "+guild.getName()+" §7(#4269a8Vassal§7): "+guild.getStance(f).getDisplay()+" §7("+( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"+"§7)"));
         }
         m.setLore(lore);
         item.setItemMeta(m);
@@ -92,14 +105,14 @@ public class GovernmentCreator {
     }
 
     public ItemStack createStanceItem(Faction f, Guild guild) {
-        Stance stance = guild.getStance();
+        Stance stance = guild.getStance(f);
         ItemStack item = new ItemStack(Material.YELLOW_CONCRETE);
         if(stance == Stance.OPPOSE) item = new ItemStack(Material.RED_CONCRETE);
         else if(stance == Stance.SUPPORT) item = new ItemStack(Material.GREEN_CONCRETE);
         ItemMeta m = item.getItemMeta();
         m.setDisplayName(StringFormatter.formatHex(stance.getDisplay()));
         List<String> lore = new ArrayList<String>();
-        double effect = guild.getStabilityModifier();
+        double effect = guild.getStabilityModifier(f);
         lore.add(StringFormatter.formatHex("#b8ae61Stability Effect: "+( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"));
         lore.add("");
         lore.add(StringFormatter.formatHex("#28ed70Click to change"));
@@ -114,7 +127,7 @@ public class GovernmentCreator {
         ItemMeta m = item.getItemMeta();
         m.setDisplayName(StringFormatter.formatHex("#93c9a7"+target.getDisplayName()));
         List<String> lore = new ArrayList<String>();
-        if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID) {
+        if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) {
             lore.add(StringFormatter.formatHex("#28ed70Click to view options"));
         } else {
             Government gov = f.getGovernment();
@@ -133,40 +146,45 @@ public class GovernmentCreator {
         return item;
     }
 
-    public ItemStack createSpecificTaxItem(Player p, Faction f, String id, boolean isGuild) {
+    public ItemStack createSpecificTaxItem(Player p, Faction f, String id, TaxTarget target) {
         String name = "";
         ItemStack item = new ItemStack(Material.GOLD_INGOT);
-        if(isGuild) {
+        if(target == TaxTarget.GUILD_ID) {
             Guild g = FactionManager.getGuildByString(id);
             if(g == null) return null;
             name = g.getName();
             item = g.getBanner().clone();
-        } else {
+        } else if(target == TaxTarget.VASSAL_ID) {
             Faction vassal = FactionManager.getByString(id);
             if(vassal == null) return null;
             name = vassal.getName();
             item = vassal.getBanner().clone();
+        } else if(target == TaxTarget.TARIFF_ID) {
+            Faction faction = FactionManager.getByString(id);
+            if(faction == null) return null;
+            name = faction.getName();
+            item = faction.getBanner().clone();
         }
         ItemMeta m = item.getItemMeta();
         m.setDisplayName(StringFormatter.formatHex(name));
         List<String> lore = new ArrayList<String>();
         TaxHandler taxHandler = f.getTaxHandler();
-        TaxTarget target = isGuild ? TaxTarget.GUILDS : TaxTarget.VASSALS;
-        if(taxHandler.hasSpecificTax(target, id)) {
+        double taxRate = taxHandler.getTaxRate(target, id);
+        if(taxHandler.hasSpecificTax(target, null)) {
             lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+taxHandler.getSpecificTax(target, id)+"%"));
-            lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+(isGuild ? taxHandler.getGuildTax() : taxHandler.getVassalTax())+"%#3f4040)"));
+            lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+taxRate+"%#3f4040)"));
         } else {
-            lore.add(StringFormatter.formatHex("#812222No specific tax set."));
-            lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+(isGuild ? taxHandler.getGuildTax() : taxHandler.getVassalTax())+"%#3f4040)"));
+            lore.add(StringFormatter.formatHex("#812222No specific "+(target == TaxTarget.TARIFF_ID ? "tariff" : "tax")+" set."));
+            lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+taxRate+"%#3f4040)"));
         }
         Government gov = f.getGovernment();
         Proposal proposal = new Proposal(p.getName(), gov);
-        proposal.setTaxProposal(new TaxLawChange(isGuild ? TaxTarget.GUILD_ID : TaxTarget.VASSAL_ID, id, 50));
+        proposal.setTaxProposal(new TaxLawChange(target, id, 50));
         if(gov.canProposeOrStartMovement(p) && gov.canBeProposed(proposal)) lore.add(StringFormatter.formatHex("#28ed70Click to propose a change"));
         else lore.add(StringFormatter.formatHex("#89504eAnother proposal is active for this target."));
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, id);
-        m.getPersistentDataContainer().set(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN, isGuild);
+        m.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, target.name());
         item.setItemMeta(m);
         return item;
     }
@@ -210,6 +228,141 @@ public class GovernmentCreator {
         return item;
     }
 
+    public ItemStack createCouncilMemberItem(Player player, Faction f, int slot) {
+        Council council = f.getGovernment().getCouncil();
+        List<String> members = council.getMembers();
+        
+        String memberName = slot < members.size() ? members.get(slot) : null;
+        boolean isEmpty = memberName == null;
+        boolean isLeader = player.getName().equalsIgnoreCase(f.getLeader());
+        boolean canModify = isLeader && (
+            council.getType().equals(Rules.APPOINTED_COUNCIL) ||
+            council.getType().equals(Rules.WEALTH_BASED_COUNCIL) ||
+            council.getType().equals(Rules.ELECTED_COUNCIL)
+        );
+        
+        // Check if this slot can be appointed to (only next empty slot)
+        boolean isNextEmpty = slot == members.size();
+        boolean isOccupied = !isEmpty;
+        boolean canAppoint = canModify && (isNextEmpty || isOccupied);
+        
+        ItemStack item;
+        if(isEmpty) {
+            if(canAppoint) {
+                item = new ItemStack(Material.GREEN_CONCRETE);
+            } else {
+                // Can't appoint yet - not next in order
+                item = new ItemStack(Material.RED_CONCRETE);
+            }
+        } else {
+            item = new ItemStack(Material.PLAYER_HEAD);
+            ItemMeta skullMeta = item.getItemMeta();
+            if(skullMeta instanceof org.bukkit.inventory.meta.SkullMeta) {
+                ((org.bukkit.inventory.meta.SkullMeta) skullMeta).setOwner(memberName);
+            }
+            item.setItemMeta(skullMeta);
+        }
+        
+        ItemMeta m = item.getItemMeta();
+        
+        if(isEmpty) {
+            m.setDisplayName(StringFormatter.formatHex("#89504eEmpty Seat"));
+            List<String> lore = new ArrayList<>();
+            if(canAppoint) {
+                lore.add(StringFormatter.formatHex("#28ed70Click to appoint a member"));
+            } else {
+                lore.add(StringFormatter.formatHex("#c74d32Must fill seats in order"));
+            }
+            m.setLore(lore);
+        } else {
+            m.setDisplayName(StringFormatter.formatHex("#93c9a7" + memberName));
+            List<String> lore = new ArrayList<>();
+            
+            // Display wealth and ranking
+            double wealth = Wealth.wealth(memberName);
+            List<String> topByWealth = Wealth.topWealth(f, true);
+            int ranking = topByWealth.indexOf(memberName) + 1;
+            lore.add(StringFormatter.formatHex("#499eccRepresents§7: "+Represents.represents(f, memberName)));
+            lore.add(StringFormatter.formatHex("#85c265Wealth§7: #ccbb76" + Formatter.formatDouble(wealth)+"d"));
+            lore.add(StringFormatter.formatHex("#85c265Ranking§7: #7a706a" + ranking + "/" + f.getMembers().size()));
+            lore.add("");
+            
+            // Display why they have their seat
+            Rules councilType = council.getType();
+            if(councilType.equals(Rules.APPOINTED_COUNCIL)) {
+                lore.add(StringFormatter.formatHex("#b8ae61Appointed Member"));
+            } else if(councilType.equals(Rules.WEALTH_BASED_COUNCIL)) {
+                lore.add(StringFormatter.formatHex("#b8ae61Wealth-Based Selection"));
+            } else if(councilType.equals(Rules.ELECTED_COUNCIL)) {
+                lore.add(StringFormatter.formatHex("#b8ae61Elected Member"));
+            }
+            
+            lore.add("");
+            
+            // Add modify option if leader
+            if(canModify) {
+                lore.add(StringFormatter.formatHex("#28ed70Click to replace"));
+            }
+            
+            m.setLore(lore);
+        }
+        
+        // Store member name and slot in persistent data
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, 
+            memberName != null ? memberName : "");
+        m.getPersistentDataContainer().set(Keys.INT, PersistentDataType.INTEGER, slot);
+        
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createPotentialMemberItem(Player player, Faction f, String member, int slot) {
+        
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta skullMeta = item.getItemMeta();
+        if(skullMeta instanceof org.bukkit.inventory.meta.SkullMeta) {
+            ((org.bukkit.inventory.meta.SkullMeta) skullMeta).setOwner(member);
+        }
+        item.setItemMeta(skullMeta);
+        
+        
+        ItemMeta m = item.getItemMeta();
+
+        m.setDisplayName(StringFormatter.formatHex("#93c9a7" + member));
+        List<String> lore = new ArrayList<>();
+        
+        // Display wealth and ranking
+        double wealth = Wealth.wealth(member);
+        List<String> topByWealth = Wealth.topWealth(f, true);
+        int ranking = topByWealth.indexOf(member) + 1;
+        lore.add(StringFormatter.formatHex("#499eccRepresents§7: "+Represents.represents(f, member)));
+        lore.add(StringFormatter.formatHex("#85c265Wealth§7: #ccbb76" + Formatter.formatDouble(wealth)+"d"));
+        lore.add(StringFormatter.formatHex("#85c265Ranking§7: #7a706a" + ranking + "/" + f.getMembers().size()));
+        lore.add("");
+
+        lore.add(StringFormatter.formatHex("#28ed70Click to replace"));
+        
+        m.setLore(lore);
+        
+        // Store member name and slot in persistent data
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, member);
+        m.getPersistentDataContainer().set(Keys.INT, PersistentDataType.INTEGER, slot);
+        
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createStartCouncilButton(Player p, Faction f) {
+        ItemStack item = new ItemStack(Material.EMERALD);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#85c265Start Council Meeting"));
+        List<String> lore = new ArrayList<String>();
+        lore.add(StringFormatter.formatHex("#49c96bClick to start"));
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
     public ItemStack createCurrentProposalItem(Player p, Faction f, Proposal proposal) {
         ItemStack item = new ItemStack(Material.BOOK);
         ItemMeta m = item.getItemMeta();
@@ -218,56 +371,12 @@ public class GovernmentCreator {
         lore.add(StringFormatter.formatHex("#85c265Proposed by: #c2bea7"+proposal.getProposer()));
         if(proposal.isLawProposal()) {
             Law law = proposal.getLaw();
-            LawGroup group = f.getLawHandler().getGroupByLaw(law.getId());
+            LawGroup group = f.getLawHandler().getGroup(law.getGroup());
             lore.add(StringFormatter.formatHex("#b8ae61Group: #c2bea7"+group.getName()));
             lore.add(StringFormatter.formatHex(group.getCurrent().getName()+" §7-> "+law.getName()));
             // ---- Economic preview ----
             if (law.affectsEconomy()) {
-                Guild us = FactionManager.getGuildByMember(p.getName());
-                if (us != null) {
-                    Map<Guild, Double> deltas =
-                        SimpleFactions.getInstance()
-                            .getProvinceManager()
-                            .previewLawIncomeExact(f, group, law);
-                    lore.add("");
-                    lore.add(StringFormatter.formatHex("#a6c793Estimated Economic Impact:"));
-
-                    boolean shownAny = false;
-
-                    // ---- Our guild first ----
-                    Double ourDelta = deltas.get(us);
-                    if (ourDelta != null && Math.abs(ourDelta) > 0) {
-                        lore.add(StringFormatter.formatHex(
-                            "  " + us.getName() + "§7: " +
-                            (ourDelta > 0 ? "#87d65c+" : "#d65c5c") +
-                            String.format("%.2f", ourDelta) +
-                            "d/day"
-                        ));
-                        shownAny = true;
-                    }
-                    lore.add("");
-                    lore.add(StringFormatter.formatHex("#78856dOther Notable Impacts:"));
-                    // ---- Other most impacted guilds ----
-                    deltas.entrySet().stream()
-                        .filter(e -> !e.getKey().equals(us))
-                        .filter(e -> Math.abs(e.getValue()) > 0)
-                        .sorted((a, b) ->
-                            Double.compare(Math.abs(b.getValue()), Math.abs(a.getValue()))
-                        )
-                        .limit(5)
-                        .forEach(e -> {
-                            lore.add(StringFormatter.formatHex(
-                                "  " + e.getKey().getName() + " §7("+e.getKey().getFaction().getName()+"§7): " +
-                                (e.getValue() > 0 ? "#87d65c+" : "#d65c5c") +
-                                String.format("%.2f", e.getValue()) +
-                                "d/day"
-                            ));
-                        });
-
-                    if (!shownAny && deltas.values().stream().allMatch(v -> Math.abs(v) == 0)) {
-                        lore.add(StringFormatter.formatHex("  #9cb68cNo economic change"));
-                    }
-                }
+                EconomicImpact.applyEconomicChange(lore, p, f, group, law);
             }
         } else if(proposal.isTaxProposal()) {
             TaxLawChange taxChange = proposal.getTaxChange();
@@ -281,25 +390,35 @@ public class GovernmentCreator {
             } else if(target == TaxTarget.VASSAL_ID) {
                 name = FactionManager.getByString(taxChange.getId()).getName();
                 type = "#4269a8Vassal";
-            } else {
+            } else if(target == TaxTarget.TARIFF_ID) {
+                name = FactionManager.getByString(taxChange.getId()).getName();
+                type = "#79bf6dTariff";
+            } else{
                 name = target.getDisplayName();
             }
-            boolean isGuild = target == TaxTarget.GUILD_ID;
             String oldRate = "";
-            if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID) {
+            if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) {
                 double rate = f.getTaxRate(target, taxChange.getId());
                 if(rate == -1.0) {
-                    oldRate = String.valueOf(isGuild ? f.getTaxHandler().getGuildTax() : f.getTaxHandler().getVassalTax());
+                    oldRate = String.valueOf(f.getTaxRate(target, null));
                 } else {
                     oldRate = String.valueOf(rate);
                 }
             } else {
                 oldRate = String.valueOf(f.getTaxRate(target));
             }
-            lore.add(StringFormatter.formatHex("#b8ae61Target: #c2bea7"+name+" §7("+type+"§7)"));
+            double baseRate = f.getTaxRate(target, null);
+            lore.add(StringFormatter.formatHex("#b8ae61Target: #c2bea7"+name+
+                (type.isEmpty() ? "" : " §7("+type+"§7)")));
             lore.add(StringFormatter.formatHex("#b8ae61Change: #c2bea7"+oldRate+"% §7-> #c2bea7"+taxChange.getNewTax()+"%"));
-            if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID)
-                lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+(isGuild ? f.getTaxHandler().getGuildTax() : f.getTaxHandler().getVassalTax())+"%#3f4040)"));
+            if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) {
+                lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+baseRate+"%#3f4040)"));
+            }
+            if(target == TaxTarget.TARIFFS || target == TaxTarget.TARIFF_ID) {
+                EconomicImpact.applyTariffImpact(lore, p, f, taxChange.getNewTax());
+            } else {
+                EconomicImpact.applyTaxImpact(lore, p, f, target, taxChange.getId(), taxChange.getNewTax());
+            }
         }
         m.setLore(lore);
         item.setItemMeta(m);

@@ -130,7 +130,7 @@ public class ProvinceManager {
             if(owner != null) {
                 if(save) guild.getTradeBreakdown().registerIncome(owner, provinceIncome);
                 if(owner.getTaxHandler().hasTariffs() && !RelationManager.sameRealm(owner, guild.getFaction())){
-                    double provinceTariffs = provinceIncome*owner.getTaxRate(TaxTarget.TARIFFS)/100.0;
+                    double provinceTariffs = provinceIncome*owner.getTaxRate(TaxTarget.TARIFFS, guild.getFaction().getId())/100.0;
                     tariffs+=provinceTariffs;
                     if(save) {
                         guild.getTradeBreakdown().registerTariffs(owner, provinceTariffs);
@@ -266,5 +266,50 @@ public class ProvinceManager {
 
             dst.setProsperity(src.getProsperity());
         }
+    }
+
+    /**
+     * Previews the economic impact of changing a faction's tariff rate.
+     * Efficiently calculates tariff deltas without traversing the trade graph,
+     * since tariffs don't affect trade distribution.
+     * 
+     * @param faction The faction changing its tariff rate
+     * @param newTariffRate The new tariff rate (0-100)
+     * @return Map of guilds to their tariff impact (negative = lose income, positive = gain income)
+     */
+    public Map<Guild, Double> previewTariffRateChange(Faction faction, double newTariffRate) {
+        Map<Guild, Double> impacts = new HashMap<>();
+        
+        // Initialize all guilds with 0 impact
+        for (Guild guild : FactionManager.getAllGuilds()) {
+            impacts.put(guild, 0.0);
+        }
+        
+        double oldTariffRate = faction.getTaxHandler().getTariffs();
+        
+        // Loop through all provinces
+        for (Province province : provinces.values()) {
+            Faction owner = TitleManager.getByProvince(province.getId());
+            // Only care about provinces owned by the faction changing tariffs
+            if (owner == null || !owner.equals(faction)) continue;
+            
+            // For each guild that might trade in this province
+            for (Guild guild : FactionManager.getAllGuilds()) {
+                // Skip guilds in same realm (no tariffs within realm)
+                if (RelationManager.sameRealm(faction, guild.getFaction())) continue;
+                
+                double provinceIncome = province.getIncome(guild);
+                if (provinceIncome == 0) continue;
+                
+                // Calculate tariff impact delta
+                double oldTariff = provinceIncome * (oldTariffRate / 100.0);
+                double newTariff = provinceIncome * (newTariffRate / 100.0);
+                double tariffDelta = -(newTariff - oldTariff); // Negative because it reduces guild income
+                
+                impacts.put(guild, impacts.get(guild) + tariffDelta);
+            }
+        }
+        
+        return impacts;
     }
 }

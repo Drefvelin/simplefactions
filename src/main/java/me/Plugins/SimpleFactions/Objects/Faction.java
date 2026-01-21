@@ -25,12 +25,6 @@ import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Guild.Guild;
-import me.Plugins.SimpleFactions.Guild.income.Cashflow;
-import me.Plugins.SimpleFactions.Guild.income.Ledger;
-import me.Plugins.SimpleFactions.Guild.income.entry.FactionEntry;
-import me.Plugins.SimpleFactions.Guild.income.entry.GuildEntry;
-import me.Plugins.SimpleFactions.Guild.income.entry.PlayerEntry;
-import me.Plugins.SimpleFactions.Guild.income.entry.TaxEntry;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.TierLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
@@ -127,7 +121,8 @@ public class Faction {
 		}
 		this.military = new Military(this);
 		this.government = new Government(this);
-		this.taxHandler = new TaxHandler(5, 5, 5, 5, 5);
+		lawHandler.apply();
+		this.taxHandler = new TaxHandler(this, 5, 5, 5, 5, 5);
 		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(new Guild(this));
 		init();
@@ -157,10 +152,11 @@ public class Faction {
 		}
 		this.titles = titles;
 		this.military = new Military(this);
-		this.taxHandler = new TaxHandler(taxRate, 5, 5, 5, 5); //TODO persistence
+		this.taxHandler = new TaxHandler(this, taxRate, 5, 5, 5, 5); //TODO persistence
 		this.guildHandler = new GuildHandler(this);
 		this.lawHandler = new LawHandler(this); //TODO persistence
 		this.government = new Government(this); //TODO persistence
+		lawHandler.apply();
 		init();
 		createBanner(bannerPatterns);
 		updateTier();
@@ -449,6 +445,13 @@ public class Faction {
 	public List<String> getMembers() {
 		return guildHandler.getAllMembers();
 	}
+	public List<String> getVassalMembers() {
+		List<String> members = new ArrayList<>();
+		for(Faction vassal : RelationManager.getSubjects(this)) {
+			members.addAll(vassal.getMembers());
+		}
+		return members;
+	}
 	public void addMember(String m) {
 		getOrCreateMainGuild().addMember(m);
 	}
@@ -479,6 +482,21 @@ public class Faction {
 	}
 	public Double getWealth() {
 		return wealth;
+	}
+	public double getVassalWealth() {
+		double total = 0.0;
+		for(Faction vassal : RelationManager.getSubjects(this)) {
+			total += vassal.getWealth();
+		}
+		return Formatter.formatDouble(total);
+	}
+
+	public double getVassalTradePower() {
+		double total = 0.0;
+		for(Faction vassal : RelationManager.getSubjects(this)) {
+			total += vassal.getGuildHandler().getTotalTradePower();
+		}
+		return Formatter.formatDouble(total);
 	}
 	public void setWealth(Double wealth) {
 		this.wealth = wealth;
@@ -788,6 +806,26 @@ public class Faction {
 				}
 			}
 		}
+		if(effect.affectsCouncilSize() || effect.affectsCouncilType()) {
+			government.getCouncil().reorganize();
+		}
+		if(effect.prohibitsVassals() && hasVassals()) {
+			for(Faction vassal : getVassals()) {
+				RelationManager.endVassalage(vassal, this, false);
+			}
+		}
+	}
+
+	public boolean hasVassals() {
+		return RelationManager.getSubjects(this).size() > 0;
+	}
+
+	public List<Faction> getVassals() {
+		return RelationManager.getSubjects(this);
+	}
+
+	public boolean canHaveVassals() {
+		return hasFactionRule(Rules.CAN_HAVE_VASSALS);
 	}
 
 	public int getCouncilSize() {
