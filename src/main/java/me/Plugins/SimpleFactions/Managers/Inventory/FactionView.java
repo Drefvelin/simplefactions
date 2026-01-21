@@ -296,7 +296,7 @@ public class FactionView {
 				SFInventoryHolder h = (SFInventoryHolder) inventory.getHolder();
 				Faction f = FactionManager.getByString(h.getId());
 				if(!f.getLeader().equalsIgnoreCase(p.getName())) return;
-				inv.taxView(p);;
+				inv.taxView(p, f);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			}
 		}

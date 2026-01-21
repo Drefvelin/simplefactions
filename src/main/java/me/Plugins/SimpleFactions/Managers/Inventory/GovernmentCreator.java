@@ -122,23 +122,26 @@ public class GovernmentCreator {
         return item;
     }
 
-    public ItemStack createTaxTypeItem(Player p, Faction f, TaxTarget target) {
+    public ItemStack createTaxTypeItem(Player p, Faction f, TaxTarget target, boolean proposalView) {
         ItemStack item = new ItemStack(Material.GOLD_INGOT);
         ItemMeta m = item.getItemMeta();
         m.setDisplayName(StringFormatter.formatHex("#93c9a7"+target.getDisplayName()));
         List<String> lore = new ArrayList<String>();
         if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) {
-            lore.add(StringFormatter.formatHex("#28ed70Click to view options"));
+            if(proposalView) lore.add(StringFormatter.formatHex("#28ed70Click to view options"));
+            else lore.add(StringFormatter.formatHex("#28ed70Click to specific rates"));
         } else {
             Government gov = f.getGovernment();
             Proposal proposal = new Proposal(p.getName(), gov);
             proposal.setTaxProposal(new TaxLawChange(target, "all", 50));
             if(gov.canProposeOrStartMovement(p) && gov.canBeProposed(proposal)) {
                 lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+f.getTaxRate(target)+"%"));
-                lore.add(StringFormatter.formatHex("#b8ae61Create a proposal to change"));
-                lore.add(StringFormatter.formatHex("#b8ae61the rate for #62ca43"+target.getDisplayName()+"."));
+                if(proposalView) {
+                    lore.add(StringFormatter.formatHex("#b8ae61Create a proposal to change"));
+                    lore.add(StringFormatter.formatHex("#b8ae61the rate for #62ca43"+target.getDisplayName()+"."));
+                }
             }
-            else lore.add(StringFormatter.formatHex("#89504eAnother proposal is active for this target."));
+            else if(proposalView) lore.add(StringFormatter.formatHex("#89504eAnother proposal is active for this target."));
         }
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, target.name());

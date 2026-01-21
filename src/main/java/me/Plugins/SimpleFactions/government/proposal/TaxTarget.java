@@ -9,7 +9,7 @@ public enum TaxTarget {
     TARIFF_ID("Faction Specific Tariffs"),
     GUILD_ID("Guild Specific"),
     VASSAL_ID("Vassal Specific");
-    
+    //If you expand this you need to change the GUI size
 
     private String displayName;
 

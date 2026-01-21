@@ -51,4 +51,6 @@ public class FactionData {
 
     @SerializedName("faction modifiers")
     public List<String> factionModifiers = new ArrayList<>();
+
+    public List<String> laws = new ArrayList<>();
 }

@@ -168,8 +168,8 @@ public class InventoryManager implements Listener{
 	//Tax
 	public TaxView taxView = new TaxView(this);
 
-	public void taxView(Player p) {
-		taxView.taxView(p);
+	public void taxView(Player p, Faction f) {
+		taxView.taxView(p, f);
 	}
 
 	public boolean isChanging(Player p) {
@@ -225,6 +225,11 @@ public class InventoryManager implements Listener{
 				Proposal proposal = new Proposal(p.getName(), gov);
 				TaxLawChange tax = new TaxLawChange(change.getTarget(), change.getId(), amount);
 				proposal.setTaxProposal(tax);
+				if(!gov.hasCouncil() && f.isLeader(p.getName())) {
+					p.sendMessage("§aChange applied!");
+					proposal.apply();
+					return;
+				}
 				if(gov.canBeProposed(proposal)) {
 					if(gov.canPropose(p)) {
 						gov.propose(proposal);
@@ -371,6 +376,12 @@ public class InventoryManager implements Listener{
 					case LEDGER_VIEW:
 						factionView(p, f);
 						break;
+					case TAX_VIEW_SPECIFIC:
+						taxView(p, f);
+						break;
+					case TAX_VIEW:
+						factionView(p, f);
+						break;
 					default:
 						break;
 				}
@@ -405,6 +416,8 @@ public class InventoryManager implements Listener{
 					|| (inv.getHolder() instanceof SFCombinedInventoryHolder && ((SFCombinedInventoryHolder) inv.getHolder()).getType().equals(SFGUI.WARGOAL_VIEW))) {
 				warView.click(e, inv, p);
 			} else if(inv.getHolder() instanceof SFInventoryHolder && ((SFInventoryHolder) inv.getHolder()).getType().equals(SFGUI.TAX_VIEW)) {
+				taxView.click(e, inv, p);
+			} else if(inv.getHolder() instanceof SFInventoryHolder && ((SFInventoryHolder) inv.getHolder()).getType().equals(SFGUI.TAX_VIEW_SPECIFIC)) {
 				taxView.click(e, inv, p);
 			}
 		}

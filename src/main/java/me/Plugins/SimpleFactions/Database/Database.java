@@ -29,6 +29,8 @@ import me.Plugins.SimpleFactions.War.Side;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.WarGoal;
 import me.Plugins.SimpleFactions.enums.Stance;
+import me.Plugins.SimpleFactions.laws.Law;
+import me.Plugins.SimpleFactions.laws.LawGroup;
 
 public class Database {
 
@@ -113,7 +115,8 @@ public class Database {
                         loadModifiers(data.prestigeModifiers),
                         tax,
                         vassalTax,
-                        capital
+                        capital,
+                        data.laws
                 );
 
                 // --- Relations ---
@@ -279,6 +282,14 @@ public class Database {
                 data.guilds.add(gd);
             }
 
+
+            // --- Laws ---
+            for (LawGroup group : f.getLawHandler().getGroupList()) {
+                Law current = group.getCurrent();
+                if (current != null) {
+                    data.laws.add(group.getId() + ":" + current.getId());
+                }
+            }
 
             data.overlord = RelationManager.getOverlord(f);
             data.tierIndex = (double) f.getTier().getIndex();

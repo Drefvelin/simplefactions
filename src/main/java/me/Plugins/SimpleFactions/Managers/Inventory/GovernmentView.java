@@ -121,7 +121,7 @@ public class GovernmentView {
 		int x = 0;
 		for(TaxTarget target : TaxTarget.values()) {
 			if(!f.getTaxHandler().canCollectTax(target)) continue;
-			i.setItem(x, creator.createTaxTypeItem(player, f, target));
+			i.setItem(x, creator.createTaxTypeItem(player, f, target, true));
 			x++;
 		}
 		i.setItem(8, inv.createBackButton(SFGUI.TAX_PROPOSAL_VIEW));
@@ -319,6 +319,13 @@ public class GovernmentView {
 			Government gov = f.getGovernment();
 			Proposal proposal = new Proposal(p.getName(), gov);
 			proposal.setLawProposal(law);
+			if(!gov.hasCouncil() && f.isLeader(p.getName())) {
+				p.sendMessage("§aChange applied!");
+				proposal.apply();
+				governmentView(p, f, null);
+				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				return;
+			}
 			if(gov.canPropose(p)) {
 				if(!gov.canBeProposed(proposal)) {
 					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);

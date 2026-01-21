@@ -130,7 +130,7 @@ public class Faction {
 		updatePrestige();
 		updateTier();
 	}
-	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> patterns, String governmentType, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, double taxRate, double vassalTax, int capital) {
+	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> patterns, String governmentType, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, double taxRate, double vassalTax, int capital, List<String> laws) {
 		this.id = id;
 		this.name = name;
 		this.leader = leader;
@@ -152,9 +152,9 @@ public class Faction {
 		}
 		this.titles = titles;
 		this.military = new Military(this);
-		this.taxHandler = new TaxHandler(this, taxRate, 5, 5, 5, 5); //TODO persistence
 		this.guildHandler = new GuildHandler(this);
-		this.lawHandler = new LawHandler(this); //TODO persistence
+		this.lawHandler = new LawHandler(this, laws);
+		this.taxHandler = new TaxHandler(this, taxRate, 5, 5, 5, 5); //TODO persistence
 		this.government = new Government(this); //TODO persistence
 		lawHandler.apply();
 		init();
