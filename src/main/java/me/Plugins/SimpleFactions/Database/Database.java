@@ -96,8 +96,21 @@ public class Database {
                 int capital = data.capital != null ? data.capital : -1;
                 int extraCap = data.extraNodeCapacity != null ? data.extraNodeCapacity.intValue() : 0;
 
-                double tax = data.taxRate != null ? data.taxRate : 5.0;
-                double vassalTax = data.vassalTaxRate != null ? data.vassalTaxRate : 100.0;
+                double citizenTax = data.citizenTax != null ? data.citizenTax : 5.0;
+                double guildTax = data.guildTax != null ? data.guildTax : 5.0;
+                double vassalTax = data.vassalTax != null ? data.vassalTax : 5.0;
+                double dividendTax = data.dividendTax != null ? data.dividendTax : 5.0;
+                double tariffs = data.tariffs != null ? data.tariffs : 5.0;
+                
+                // Deep copy specific taxes
+                HashMap<String, HashMap<String, Double>> specificTaxes = new HashMap<>();
+                if (data.specificTaxes != null) {
+                    for (HashMap.Entry<String, HashMap<String, Double>> entry : data.specificTaxes.entrySet()) {
+                        if (entry.getValue() != null) {
+                            specificTaxes.put(entry.getKey(), new HashMap<>(entry.getValue()));
+                        }
+                    }
+                }
 
                 Faction f = new Faction(
                         data.id,
@@ -113,8 +126,12 @@ public class Database {
                         data.religion,
                         extraCap,
                         loadModifiers(data.prestigeModifiers),
-                        tax,
+                        citizenTax,
+                        guildTax,
                         vassalTax,
+                        dividendTax,
+                        tariffs,
+                        specificTaxes,
                         capital,
                         data.laws
                 );
@@ -209,8 +226,12 @@ public class Database {
             data.culture = f.getCulture();
             data.religion = f.getReligion();
 
-            data.taxRate = f.getTaxRate();
-            data.vassalTaxRate = f.getVassalTaxRate();
+            data.citizenTax = f.getTaxHandler().getCitizenTax();
+            data.guildTax = f.getTaxHandler().getGuildTax();
+            data.vassalTax = f.getTaxHandler().getVassalTax();
+            data.dividendTax = f.getTaxHandler().getDividendTax();
+            data.tariffs = f.getTaxHandler().getTariffs();
+            data.specificTaxes = serializeSpecificTaxes(f.getTaxHandler());
             data.capital = f.getCapital();
             data.extraNodeCapacity = (double) f.getExtraNodeCapacity();
 
@@ -313,6 +334,17 @@ public class Database {
             list.add(new Modifier(type, amt, true));
         }
         return list;
+    }
+
+    private HashMap<String, HashMap<String, Double>> serializeSpecificTaxes(me.Plugins.SimpleFactions.Objects.Handler.TaxHandler taxHandler) {
+        HashMap<String, HashMap<String, Double>> result = new HashMap<>();
+        
+        HashMap<me.Plugins.SimpleFactions.government.proposal.TaxTarget, HashMap<String, Double>> specificTaxes = taxHandler.getSpecificTaxes();
+        for (Map.Entry<me.Plugins.SimpleFactions.government.proposal.TaxTarget, HashMap<String, Double>> entry : specificTaxes.entrySet()) {
+            result.put(entry.getKey().name(), new HashMap<>(entry.getValue()));
+        }
+        
+        return result;
     }
 
     public void deleteFaction(Faction f) {

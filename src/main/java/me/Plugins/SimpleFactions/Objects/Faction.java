@@ -130,7 +130,29 @@ public class Faction {
 		updatePrestige();
 		updateTier();
 	}
-	public Faction(String id, String rgb, List<Integer> provinces, List<Title> titles, String leader, String name, String rulerTitle, List<String> patterns, String governmentType, String culture, String religion, int exCap, List<Modifier> prestigeModifiers, double taxRate, double vassalTax, int capital, List<String> laws) {
+	public Faction(
+		String id, 
+		String rgb, 
+		List<Integer> provinces, 
+		List<Title> titles, 
+		String leader, 
+		String name, 
+		String rulerTitle, 
+		List<String> patterns, 
+		String governmentType, 
+		String culture, 
+		String religion, 
+		int exCap, 
+		List<Modifier> prestigeModifiers, 
+		double citizenTax, 
+		double guildTax, 
+		double vassalTax, 
+		double dividendTax, 
+		double tariffs, 
+		HashMap<String, HashMap<String, Double>> specificTaxes, 
+		int capital, 
+		List<String> laws
+	) {
 		this.id = id;
 		this.name = name;
 		this.leader = leader;
@@ -154,7 +176,21 @@ public class Faction {
 		this.military = new Military(this);
 		this.guildHandler = new GuildHandler(this);
 		this.lawHandler = new LawHandler(this, laws);
-		this.taxHandler = new TaxHandler(this, taxRate, 5, 5, 5, 5); //TODO persistence
+		this.taxHandler = new TaxHandler(this, citizenTax, guildTax, vassalTax, dividendTax, tariffs);
+		if (specificTaxes != null) {
+			for (Map.Entry<String, HashMap<String, Double>> entry : specificTaxes.entrySet()) {
+				try {
+					me.Plugins.SimpleFactions.government.proposal.TaxTarget target = me.Plugins.SimpleFactions.government.proposal.TaxTarget.valueOf(entry.getKey());
+					if (entry.getValue() != null) {
+						for (Map.Entry<String, Double> taxEntry : entry.getValue().entrySet()) {
+							taxHandler.setSpecificTax(target, taxEntry.getKey(), taxEntry.getValue());
+						}
+					}
+				} catch (IllegalArgumentException e) {
+					// Ignore invalid tax targets
+				}
+			}
+		}
 		this.government = new Government(this); //TODO persistence
 		lawHandler.apply();
 		init();
