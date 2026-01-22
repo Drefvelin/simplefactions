@@ -50,6 +50,10 @@ public class LawGroup {
         return new ArrayList<>(laws.values()).get(0);
     }
 
+    public Law getLaw(String lawId) {
+        return laws.get(lawId);
+    }
+
     public String getId() { return id; }
     public String getName() { return name; }
     public Law getCurrent() { return current; }

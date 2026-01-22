@@ -133,7 +133,8 @@ public class Database {
                         tariffs,
                         specificTaxes,
                         capital,
-                        data.laws
+                        data.laws,
+                        data.governmentData
                 );
 
                 // --- Relations ---
@@ -236,6 +237,9 @@ public class Database {
             data.extraNodeCapacity = (double) f.getExtraNodeCapacity();
 
             data.banner = new ArrayList<>(f.getBannerPatterns());
+            
+            // --- Government ---
+            data.governmentData = f.getGovernment().serialize();
 
             for (int p : f.getProvinces()) data.provinces.add(p);
             for (Title t : f.getTitles()) data.titles.add(t.getId());

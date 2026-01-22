@@ -1,5 +1,6 @@
 package me.Plugins.SimpleFactions.government;
 
+import java.util.Date;
 import java.util.List;
 
 import org.bukkit.entity.Player;
@@ -19,6 +20,8 @@ public class Government {
     private double power;
     private double powerGain;
 
+    private Date lastElectionDate = new Date(0);
+
     public final double STABILITY_BASE = 25.0;
 
     public Government(Faction f) {
@@ -26,6 +29,26 @@ public class Government {
         this.council = new Council(this, f);
         this.power = -1;
         this.powerGain = -1;
+    }
+
+    public Government(Faction f, me.Plugins.SimpleFactions.Database.GovernmentData data) {
+        this.f = f;
+        this.council = new Council(this, f);
+        this.power = data.power != null ? data.power : -1;
+        this.powerGain = -1;
+        this.lastElectionDate = data.lastElectionDate != null ? new java.util.Date(data.lastElectionDate) : new java.util.Date(0);
+        
+        // Restore council members
+        if (data.councilMembers != null) {
+            for (String member : data.councilMembers) {
+                council.addMember(member);
+            }
+        }
+        
+        // Restore proposals
+        if (data.proposals != null) {
+            council.getProposalHandler().restoreProposals(f, data.proposals);
+        }
     }
 
     public void ping() {
@@ -159,5 +182,14 @@ public class Government {
 
     public void calculateStability() {
         
+    }
+
+    public me.Plugins.SimpleFactions.Database.GovernmentData serialize() {
+        me.Plugins.SimpleFactions.Database.GovernmentData data = new me.Plugins.SimpleFactions.Database.GovernmentData();
+        data.power = this.power >= 0 ? this.power : null;
+        data.lastElectionDate = this.lastElectionDate.getTime();
+        data.councilMembers = new java.util.ArrayList<>(council.getMembers());
+        data.proposals = council.getProposalHandler().serializeProposals();
+        return data;
     }
 }

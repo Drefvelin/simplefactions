@@ -61,6 +61,8 @@ public class FactionData {
 
     public List<GuildData> guilds = new ArrayList<>();
 
+    public GovernmentData governmentData;
+
     @SerializedName("faction modifiers")
     public List<String> factionModifiers = new ArrayList<>();
 

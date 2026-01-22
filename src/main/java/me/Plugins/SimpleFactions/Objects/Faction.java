@@ -151,7 +151,8 @@ public class Faction {
 		double tariffs, 
 		HashMap<String, HashMap<String, Double>> specificTaxes, 
 		int capital, 
-		List<String> laws
+		List<String> laws,
+		me.Plugins.SimpleFactions.Database.GovernmentData governmentData
 	) {
 		this.id = id;
 		this.name = name;
@@ -191,7 +192,7 @@ public class Faction {
 				}
 			}
 		}
-		this.government = new Government(this); //TODO persistence
+		this.government = governmentData != null ? new Government(this, governmentData) : new Government(this);
 		lawHandler.apply();
 		init();
 		createBanner(bannerPatterns);
