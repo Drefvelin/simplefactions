@@ -6,12 +6,14 @@ import java.util.List;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Represents;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.election.Candidate;
 import me.Plugins.SimpleFactions.government.election.Election;
+import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.TLibs.TLibs;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
@@ -21,21 +23,30 @@ public class ElectionCreator {
         ItemStack item = TLibs.getItemAPI().getCreator().getItemFromPath("ia.iasurvival:letter");
         ItemMeta m = item.getItemMeta();
         Government gov = f.getGovernment();
-        m.setDisplayName(StringFormatter.formatHex("#84c468"+c.getName()+" Candidates"));
+        m.setDisplayName(StringFormatter.formatHex("#84c468"+c.getName()));
         List<String> lore = new ArrayList<String>();
         if(!gov.hasElection()) {
             lore.add(StringFormatter.formatHex("#ab483fCannot cast votes yet"));
             lore.add(StringFormatter.formatHex("#ad9072Next Election: #e3d5a1"+gov.getTimeUntilNextElection()));
             lore.add("");
         }
-        for(String candidate : e.getCandidates(c)) {
-            lore.add(StringFormatter.formatHex("§f- #e3d5a1"+candidate + Represents.represents(f, candidate)));
+        List<String> candidates = e.getCandidates(c);
+        if(candidates.isEmpty()) {
+            lore.add(StringFormatter.formatHex("#c4ba89No candidates yet"));
+        } else {
+            lore.add(StringFormatter.formatHex("#67cc64Candidates:"));
+            for(String candidate : candidates) {
+                lore.add(StringFormatter.formatHex("§f- #e3d5a1"+candidate + " §7(" + Represents.represents(f, candidate) +"§7)"));
+            }
         }
+        lore.add("");
         if(!e.canBeCandidate(c, p.getName())) {
-            lore.add("");
             e.applyReasons(lore, c, p);
+        } else {
+            lore.add(StringFormatter.formatHex("#28ed70Click to sign up"));
         }
         m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, c.name());
         item.setItemMeta(m);
         return item;
     }

@@ -13,8 +13,10 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.Database.Database;
@@ -482,6 +484,23 @@ public class FactionManager implements Listener{
 			if(gov.isVotingBooth(b.getLocation())) return f;
 		}
 		return null;
+	}
+
+	@EventHandler
+	public void openBooth(PlayerInteractEvent e) {
+		if(!e.getAction().equals(Action.RIGHT_CLICK_BLOCK)) return;
+		Block b = e.getClickedBlock();
+		Player p = e.getPlayer();
+		Faction f = getByVotingBooth(b);
+		if(f == null) return;
+		e.setCancelled(true);
+		if(!f.canVote(p)) {
+			p.sendMessage("§cYou have no voting rights in this faction");
+			p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+			return;
+		}
+		InventoryManager inv = new InventoryManager();
+		inv.electionView(p, f);
 	}
 
 	@EventHandler

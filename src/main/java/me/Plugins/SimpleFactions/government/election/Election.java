@@ -37,9 +37,21 @@ public class Election {
         return active;
     }
 
+    public void addCandidate(Candidate c, String player) {
+        candidates.get(c).add(player);
+    }
+
+    public boolean isCandiate(Candidate c, String player) {
+        return candidates.get(c).contains(player);
+    }
+
     public void applyReasons(List<String> lore, Candidate type, Player p) {
+        if(isCandiate(type, p.getName())) return;
         if(!canBeCandidate(type, p.getName())) {
             lore.add("§cYou cannot apply for this position:");
+            if(active) {
+                lore.add("§7- #ba7872Election is in the voting phase");
+            }
             if(type == Candidate.LEADER) {
                 if(!gov.getFaction().isMember(p.getName())) {
                     lore.add("§7- #ba7872You must be a member of the faction to be Leader");
@@ -57,6 +69,7 @@ public class Election {
     }
 
     public boolean canBeCandidate(Candidate type, String player) {
+        if(active) return false;
         switch (type) {
             case LEADER:
                 if(candidates.get(Candidate.LEADER).contains(player)) return false;

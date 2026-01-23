@@ -806,6 +806,13 @@ public class Faction {
 	public void ping() {
 		government.ping();
 	}
+	public boolean canVote(Player p) {
+		if(isMember(p.getName())) return true;
+		if(hasFactionRule(Rules.VASSAL_VOTING_RIGHTS)) {
+			if(getVassalMembers().contains(p.getName())) return true;
+		}
+		return false;
+	}
 
 	//Laws
 	public LawHandler getLawHandler() { return lawHandler; }
