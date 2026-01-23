@@ -74,6 +74,10 @@ public class TaxHandler {
         return dividendTax;
     }
 
+    public HashMap<TaxTarget, HashMap<String, Double>> getSpecificTaxes() {
+        return specificTaxes;
+    }
+
     public void setTaxRate(TaxTarget target, String id, double rate) {
         switch (target) {
             case CITIZENS:

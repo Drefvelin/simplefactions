@@ -44,6 +44,28 @@ public class LawHandler {
         }
     }
 
+    public LawHandler(Faction f, List<String> lawData) {
+        this.f = f;
+        for(Map.Entry<String, LawGroup> entry : LawLoader.get().entrySet()) {
+            laws.put(entry.getKey(), new LawGroup(f, entry.getValue()));
+        }
+        if (lawData == null || lawData.isEmpty()) return;
+        for (String lawEntry : lawData) {
+            String[] split = lawEntry.split(":");
+            if (split.length == 2) {
+                String groupId = split[0];
+                String lawId = split[1];
+                LawGroup group = getGroup(groupId);
+                if (group != null) {
+                    Law law = group.getLaws().get(lawId);
+                    if (law != null) {
+                        group.setCurrent(law);
+                    }
+                }
+            }
+        }
+    }
+
     public List<LawGroup> getGroupList() {
         return new ArrayList<>(laws.values());
     }

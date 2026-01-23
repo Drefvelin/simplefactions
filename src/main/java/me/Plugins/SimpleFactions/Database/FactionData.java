@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.Database;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -18,11 +19,22 @@ public class FactionData {
     public String culture;
     public String religion;
 
-    @SerializedName("tax rate")
-    public Double taxRate;
+    @SerializedName("citizen tax")
+    public Double citizenTax;
 
-    @SerializedName("vassal tax rate")
-    public Double vassalTaxRate;
+    @SerializedName("guild tax")
+    public Double guildTax;
+
+    @SerializedName("vassal tax")
+    public Double vassalTax;
+
+    @SerializedName("dividend tax")
+    public Double dividendTax;
+
+    public Double tariffs;
+
+    @SerializedName("specific taxes")
+    public HashMap<String, HashMap<String, Double>> specificTaxes = new HashMap<>();
 
     public Integer capital;
 
@@ -49,6 +61,10 @@ public class FactionData {
 
     public List<GuildData> guilds = new ArrayList<>();
 
+    public GovernmentData governmentData;
+
     @SerializedName("faction modifiers")
     public List<String> factionModifiers = new ArrayList<>();
+
+    public List<String> laws = new ArrayList<>();
 }
