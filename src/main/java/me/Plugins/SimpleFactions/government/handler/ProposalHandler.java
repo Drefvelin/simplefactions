@@ -17,14 +17,22 @@ import me.Plugins.SimpleFactions.laws.LawGroup;
 
 public class ProposalHandler {
     private Government gov;
+    private boolean movement;
 
     public ProposalHandler(Government gov) {
         this.gov = gov;
+        this.movement = false;
+    }
+
+    public ProposalHandler(Government gov, boolean movement) {
+        this.gov = gov;
+        this.movement = movement;
     }
 
     private List<Proposal> proposals = new ArrayList<>();
     
     public boolean canPropose(String member) {
+        if(movement) return true;
         return proposals.stream().filter(p -> p.getProposer().equals(member)).count() < 2;
     }
 
@@ -38,6 +46,7 @@ public class ProposalHandler {
     }
 
     public boolean canBeProposed(Proposal proposal) {
+        if(movement) return true;
         if(proposal.isLawProposal()) {
             LawGroup group = gov.getFaction().getLawHandler().getGroup(proposal.getLaw().getGroup());
             for(Proposal p : proposals) {
@@ -65,7 +74,6 @@ public class ProposalHandler {
     }
 
     public void clearProposals() {
-        Bukkit.getPlayer("drefvelin").sendMessage("cleared");
         proposals.clear();
     }
 
