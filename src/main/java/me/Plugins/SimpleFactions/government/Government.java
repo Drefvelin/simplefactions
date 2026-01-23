@@ -1,8 +1,15 @@
 package me.Plugins.SimpleFactions.government;
 
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
@@ -22,6 +29,7 @@ public class Government {
     private double powerGain;
 
     private Election election;
+    private List<Location> votingBooths = new ArrayList<>();
 
     private Date lastElectionDate = new Date(0);
 
@@ -55,10 +63,17 @@ public class Government {
     }
 
     public void ping() {
-        this.council.reorganize();
-        if(power == -1) this.power = f.getMembers().size() * 10;
-        if(powerGain == -1) this.powerGain = 1;
+        council.reorganize();
+
+        if (power == -1) power = f.getMembers().size() * 10;
+        if (powerGain == -1) powerGain = 1;
+
+        if (election == null && shouldStartElection()) {
+            election = new Election(this);
+            lastElectionDate = new Date(); // store START date
+        }
     }
+
 
     public boolean isCouncilMember(Player p) {
         String name = p.getName();
@@ -183,8 +198,52 @@ public class Government {
         return StringFormatter.formatHex(String.format("#%02X%02X%02X"+getStability(), r, g, b));
     }
 
-    public void calculateStability() {
+    public LocalDate getLastElectionStartDate() {
+        return Instant.ofEpochMilli(lastElectionDate.getTime())
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+    }
+
+    //election
+    public boolean hasElection() {
+        return election != null;
+    }
+
+    public boolean shouldStartElection() {
+        LocalDate today = LocalDate.now();
         
+        // 1. Must be Monday
+        if (today.getDayOfWeek() != DayOfWeek.MONDAY) {
+            return false;
+        }
+
+        // 2. Calculate last election end
+        LocalDate lastElectionStart = getLastElectionStartDate();
+        LocalDate lastElectionEnd = lastElectionStart.plusDays(7);
+
+        // 3. Days since last election ended
+        long daysSinceEnd = ChronoUnit.DAYS.between(lastElectionEnd, today);
+
+        return daysSinceEnd >= 21;
+    }
+
+    public void addVotingBooth(Location loc) {
+        votingBooths.add(loc);
+    }
+
+    public void removeVotingBooth(Location loc) {
+        votingBooths.remove(loc);
+    }
+
+    public boolean isVotingBooth(Location loc) {
+        for(Location l : votingBooths) {
+            if(l.equals(loc)) return true;
+        }
+        return false;
+    }
+
+    public Election getElection() {
+        return election;
     }
 
     public me.Plugins.SimpleFactions.Database.GovernmentData serialize() {

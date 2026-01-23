@@ -126,6 +126,7 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(titleManager, this);
 		getServer().getPluginManager().registerEvents(playerManager, this);
 		getServer().getPluginManager().registerEvents(sessionManager, this);
+		getServer().getPluginManager().registerEvents(factionManager, this);
 	}
 	public void createFolders() {
 		File dataFolder = getDataFolder();

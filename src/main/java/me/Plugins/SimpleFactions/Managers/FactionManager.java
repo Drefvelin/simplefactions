@@ -8,8 +8,13 @@ import java.util.List;
 import java.util.Map;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Sound;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.Database.Database;
@@ -23,11 +28,14 @@ import me.Plugins.SimpleFactions.Map.MapSystem;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Objects.PrestigeRank;
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.DailyGuildTransfers;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.government.Government;
+import me.Plugins.TLibs.TLibs;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
 import net.tfminecraft.DenarEconomy.Enum.Accounts;
 
@@ -465,4 +473,42 @@ public class FactionManager implements Listener{
 		losing.removeTitle(t);
 		return t;
     }
+
+	//Elections and stuff
+
+	public Faction getByVotingBooth(Block b) {
+		for(Faction f : factions) {
+			Government gov = f.getGovernment();
+			if(gov.isVotingBooth(b.getLocation())) return f;
+		}
+		return null;
+	}
+
+	@EventHandler
+	public void placeVotingBooth(BlockPlaceEvent e) {
+		Block b = e.getBlock();
+		Player p = e.getPlayer();
+		if(!TLibs.getBlockAPI().getChecker().checkBlock(b, Cache.votingBlock)) return;
+		Faction f = FactionManager.getByMember(p.getName());
+		if(f == null) return;
+		Government gov = f.getGovernment();
+		if(gov.isVotingBooth(b.getLocation())) return;
+		gov.addVotingBooth(b.getLocation());
+		p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+		p.sendMessage("§aVoting booth added!");
+	}
+
+	@EventHandler
+	public void breakVotingBooth(BlockBreakEvent e) {
+		Block b = e.getBlock();
+		Player p = e.getPlayer();
+		if(!TLibs.getBlockAPI().getChecker().checkBlock(b, Cache.votingBlock)) return;
+		Faction f = getByVotingBooth(b);
+		if(f == null) return;
+		Government gov = f.getGovernment();
+		if(!gov.isVotingBooth(b.getLocation())) return;
+		gov.removeVotingBooth(b.getLocation());
+		p.playSound(p.getLocation(), Sound.BLOCK_ANVIL_LAND, 1.0f, 1.0f);
+		p.sendMessage("§cVoting booth removed!");
+	}
 }
