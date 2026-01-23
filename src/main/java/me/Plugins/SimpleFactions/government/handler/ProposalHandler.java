@@ -90,10 +90,10 @@ public class ProposalHandler {
         for (Proposal p : proposals) {
             if (p.isLawProposal() && p.getLaw() != null) {
                 Law law = p.getLaw();
-                result.add("law:" + law.getGroup() + ":" + law.getId());
+                result.add(p.getProposer() + ":law:" + law.getGroup() + ":" + law.getId());
             } else if (p.isTaxProposal() && p.getTaxChange() != null) {
                 TaxLawChange tax = p.getTaxChange();
-                result.add("tax:" + tax.getTarget().name() + ":" + tax.getId() + ":" + tax.getNewTax());
+                result.add(p.getProposer() + ":tax:" + tax.getTarget().name() + ":" + tax.getId() + ":" + tax.getNewTax());
             }
         }
         return result;
@@ -102,6 +102,8 @@ public class ProposalHandler {
     public void restoreProposals(me.Plugins.SimpleFactions.Objects.Faction faction, List<String> serialized) {
         proposals.clear();
         for (String s : serialized) {
+            String proposer = s.split(":", 2)[0];
+            s = s.substring(proposer.length() + 1);
             if (s.startsWith("law:")) {
                 String[] parts = s.substring(4).split(":");
                 if (parts.length >= 2) {
@@ -112,7 +114,7 @@ public class ProposalHandler {
                     if (group != null) {
                         Law newLaw = group.getLaw(newLawId);
                         if (newLaw != null) {
-                            Proposal p = new Proposal("system", gov);
+                            Proposal p = new Proposal(proposer, gov);
                             p.setLawProposal(newLaw);
                             proposals.add(p);
                         }
@@ -127,7 +129,7 @@ public class ProposalHandler {
                         double newRate = Double.parseDouble(parts[2]);
                         
                         TaxLawChange tax = new TaxLawChange(target, taxId, newRate);
-                        Proposal p = new Proposal("system", gov);
+                        Proposal p = new Proposal(proposer, gov);
                         p.setTaxProposal(tax);
                         proposals.add(p);
                     } catch (Exception e) {

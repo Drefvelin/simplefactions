@@ -5,11 +5,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bukkit.entity.Player;
+
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.government.Government;
 
 public class Election {
     private Government gov;
+    private boolean active;
 
     private Map<Candidate, List<String>> candidates = new HashMap<>() {{
         put(Candidate.LEADER, new ArrayList<>());
@@ -23,12 +26,41 @@ public class Election {
 
     public Election(Government gov) {
         this.gov = gov;
+        this.active = false;
+    }
+
+    public void start() {
+        this.active = true;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void applyReasons(List<String> lore, Candidate type, Player p) {
+        if(!canBeCandidate(type, p.getName())) {
+            lore.add("§cYou cannot apply for this position:");
+            if(type == Candidate.LEADER) {
+                if(!gov.getFaction().isMember(p.getName())) {
+                    lore.add("§7- #ba7872You must be a member of the faction to be Leader");
+                }
+                if(otherCandidateExists(Candidate.LEADER, p.getName())) {
+                    lore.add("§7- #ba7872Your guild already has a Leader candidate");
+                }
+            } else if(type == Candidate.COUNCIL) {
+                if(otherCandidateExists(Candidate.COUNCIL, p.getName())) {
+                    lore.add("§7- #ba7872Your guild already has a Council candidate");
+                }
+            }
+        }
+
     }
 
     public boolean canBeCandidate(Candidate type, String player) {
         switch (type) {
             case LEADER:
                 if(candidates.get(Candidate.LEADER).contains(player)) return false;
+                if(!gov.getFaction().isMember(player)) return false;
                 if(otherCandidateExists(Candidate.LEADER, player)) return false;
                 break;
             case COUNCIL:
@@ -52,5 +84,9 @@ public class Election {
             if(cg.getId().equalsIgnoreCase(g.getId())) return  true;
         }
         return false;
+    }
+
+    public List<String> getCandidates(Candidate type) {
+        return candidates.get(type);
     }
 }

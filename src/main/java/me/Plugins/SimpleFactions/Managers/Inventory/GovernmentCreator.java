@@ -75,6 +75,23 @@ public class GovernmentCreator {
         return item;
     }
 
+    public ItemStack createElectionItem(Player p, Faction f) {
+        ItemStack item = TLibs.getItemAPI().getCreator().getItemFromPath("ia.iasurvival:letter");
+        ItemMeta m = item.getItemMeta();
+        Government gov = f.getGovernment();
+        m.setDisplayName(StringFormatter.formatHex("#51d6e8Election"));
+        List<String> lore = new ArrayList<String>();
+        if(gov.hasElection()) {
+            lore.add(StringFormatter.formatHex("#85c265Election in progress"));
+        } else {
+            lore.add(StringFormatter.formatHex("#ad9072Next Election: #e3d5a1"+gov.getTimeUntilNextElection()));
+            lore.add(StringFormatter.formatHex("#ad9072Last Election: #e3d5a1"+gov.getLastElectionString()));
+        }
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
     public ItemStack createStabilityItem(Faction f) {
         ItemStack item = new ItemStack(Material.BLACK_DYE);
         ItemMeta m = item.getItemMeta();
