@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.Managers.Inventory;
 
+import java.util.List;
+
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -43,6 +45,21 @@ public class ElectionView {
 		p.openInventory(i);
     }
 
+    public void votingView(Player p, Faction f, Candidate candidateType) {
+        Inventory i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.ELECTION_VOTING_VIEW), 54, "§7Vote for " + candidateType.getName());
+        Election election = f.getGovernment().getElection();
+        List<String> candidates = election.getCandidates(candidateType);
+        
+        int x = 0;
+        for(String candidateName : candidates) {
+            if(x >= 54) break;
+            i.setItem(x, creator.createCandidateItem(f, candidateType, candidateName));
+            x++;
+        }
+        
+        p.openInventory(i);
+    }
+
     public void click(InventoryClickEvent e, Inventory inventory, Player p) {
 		e.setCancelled(true);
         Faction f = FactionManager.getByLeader(p.getName());
@@ -51,17 +68,20 @@ public class ElectionView {
             return;
         }
 		SFInventoryHolder holder = (SFInventoryHolder) inventory.getHolder();
+		ItemStack item = e.getCurrentItem();
+		if(item == null || item.getItemMeta() == null) return;
+		ItemMeta meta = item.getItemMeta();
+		String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+		if(id == null) return;
+		
 		if(holder.getType() == SFGUI.ELECTION_VIEW) {
-			ItemStack item = e.getCurrentItem();
-			if(item == null || item.getItemMeta() == null) return;
-			ItemMeta meta = item.getItemMeta();
-			String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
-			if(id == null) return;
 			try {
 				Candidate c = Candidate.valueOf(id);
 				Election election = f.getGovernment().getElection();
                 if(election.isActive()) {
-                    return; //TODO open voting GUI
+                    if(f.canVote(p) && !election.hasVoted(c, p.getName())) {
+                        votingView(p, f, c);
+                    }
                 } else {
                     if(election.canBeCandidate(c, p.getName())) {
                         election.addCandidate(c, p.getName());
@@ -71,8 +91,28 @@ public class ElectionView {
                     }
                 }
 			} catch (Exception ex) {
-				// Non-specific tax type, do nothing
+				// Not a candidate type
 			}
+		} else if(holder.getType() == SFGUI.ELECTION_VOTING_VIEW) {
+			String candidateName = id;
+			Election election = f.getGovernment().getElection();
+			String cid = meta.getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+		    if(cid == null) return;
+            try {
+                Candidate type = Candidate.valueOf(cid);
+                if(f.canVote(p) && election.isActive()) {
+                    if(!election.hasVoted(type, p.getName()) && 
+                        election.getCandidates(type).contains(candidateName)) {
+                        election.addVote(type, p.getName(), candidateName);
+                        p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+                        p.sendMessage("§aVoted for " + candidateName + " as " + type.getName());
+                        p.closeInventory();
+                        return;
+                    }
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
 		}
 	}
 }

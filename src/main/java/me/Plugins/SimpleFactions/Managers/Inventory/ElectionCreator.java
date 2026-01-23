@@ -6,6 +6,7 @@ import java.util.List;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -45,9 +46,30 @@ public class ElectionCreator {
         } else {
             lore.add(StringFormatter.formatHex("#28ed70Click to sign up"));
         }
+        if(gov.hasElection() && f.canVote(p)){
+            if(!e.hasVoted(c, p.getName())) {
+                lore.add(StringFormatter.formatHex("#28ed70Click to view candidates"));
+            } else {
+                lore.add(StringFormatter.formatHex("#ab483fYou have already voted for a candidate"));
+            }
+        }
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, c.name());
         item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createCandidateItem(Faction f, Candidate candidateType, String candidateName) {
+        ItemStack item = new ItemStack(org.bukkit.Material.PLAYER_HEAD);
+        SkullMeta skull = (SkullMeta) item.getItemMeta();
+        skull.setOwningPlayer(org.bukkit.Bukkit.getOfflinePlayer(candidateName));
+        skull.setDisplayName(StringFormatter.formatHex("#84c468" + candidateName));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#67cc64" + Represents.represents(f, candidateName)));
+        skull.setLore(lore);
+        skull.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, candidateName);
+        skull.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, candidateType.name());
+        item.setItemMeta(skull);
         return item;
     }
 }

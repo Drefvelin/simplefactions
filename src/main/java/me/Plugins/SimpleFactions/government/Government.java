@@ -79,6 +79,10 @@ public class Government {
         }
     }
 
+    public void tick() {
+        election.tick();
+    }
+
 
     public boolean isCouncilMember(Player p) {
         String name = p.getName();
@@ -315,6 +319,10 @@ public class Government {
             if(l.equals(loc)) return true;
         }
         return false;
+    }
+
+    public List<Location> getVotingBooths() {
+        return votingBooths;
     }
 
     public Election getElection() {

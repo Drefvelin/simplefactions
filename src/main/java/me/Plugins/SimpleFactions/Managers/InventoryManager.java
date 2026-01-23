@@ -414,7 +414,7 @@ public class InventoryManager implements Listener{
 				governmentView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.DIPLOMACY_VIEW || h.getType() == SFGUI.ATTITUDE_VIEW || h.getType() == SFGUI.RELATION_VIEW) {
 				relationView.click(e, inv, p);
-			} else if(h.getType() == SFGUI.ELECTION_VIEW) {
+			} else if(h.getType() == SFGUI.ELECTION_VIEW || h.getType() == SFGUI.ELECTION_VOTING_VIEW) {
 				electionView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.TIER_VIEW 
 					|| h.getType() == SFGUI.TITLE_VIEW

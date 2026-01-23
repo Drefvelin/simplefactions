@@ -337,6 +337,7 @@ public class Faction {
 			if(!m.isTimed()) continue;
 			if(m.tick()) removeModifier(m);
 		}
+		government.tick();
 	}
 
 	public boolean hasProvince(int i) {
