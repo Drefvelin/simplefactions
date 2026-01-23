@@ -10,6 +10,7 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.Rules;
+import me.Plugins.SimpleFactions.government.election.Election;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
@@ -19,6 +20,8 @@ public class Government {
     private Council council;
     private double power;
     private double powerGain;
+
+    private Election election;
 
     private Date lastElectionDate = new Date(0);
 
