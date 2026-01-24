@@ -29,13 +29,74 @@ public class Election {
         put(Candidate.COUNCIL, new HashMap<>());
     }}; //type -> (voter -> candidate)
 
-    public Election(Government gov) {
+    private Map<Candidate, Map<String, Integer>> previousVotes = new HashMap<>() {{
+        put(Candidate.LEADER, new HashMap<>());
+        put(Candidate.COUNCIL, new HashMap<>());
+    }}; //type -> (candidate -> votes)
+
+    public Election(Government gov, boolean active) {
         this.gov = gov;
-        this.active = false;
+        this.active = active;
     }
 
     public void start() {
         this.active = true;
+    }
+
+    public void end() {
+        this.active = false;
+        for(Candidate c : Candidate.values()) {
+            for(String candidate : candidates.get(c)) {
+                previousVotes.get(c).put(candidate, getVotes(c, candidate));
+            }
+        }
+        candidates.clear();
+        votes.clear();
+    }
+
+    public int getVotes(Candidate c, String player) {
+        int count = 0;
+        for(Map.Entry<String, String> entry : votes.get(c).entrySet()) {
+            if(entry.getValue().equalsIgnoreCase(player)) count++;
+        }
+        return count;
+    }
+
+    public Map<Candidate, Map<String, Integer>> getPreviousVotes() {
+        return previousVotes;
+    }
+
+    public List<String> getWinners(Candidate c) {
+        List<String> result = new ArrayList<>();
+
+        // Map candidate -> vote count
+        Map<String, Integer> voteCounts = new HashMap<>();
+
+        // Initialize all candidates with 0 votes
+        for (String candidate : candidates.get(c)) {
+            voteCounts.put(candidate, 0);
+        }
+
+        // Count votes
+        for (String votedFor : votes.get(c).values()) {
+            voteCounts.computeIfPresent(votedFor, (k, v) -> v + 1);
+        }
+
+        // Sort candidates by vote count (descending)
+        result.addAll(voteCounts.keySet());
+        result.sort((a, b) -> {
+            int va = voteCounts.get(a);
+            int vb = voteCounts.get(b);
+
+            // Descending vote order
+            int cmp = Integer.compare(vb, va);
+            if (cmp != 0) return cmp;
+
+            // Optional tie-breaker: alphabetical (stable & deterministic)
+            return a.compareToIgnoreCase(b);
+        });
+
+        return result;
     }
 
     public boolean isActive() {
@@ -44,6 +105,7 @@ public class Election {
 
     public void addCandidate(Candidate c, String player) {
         candidates.get(c).add(player);
+        start();
     }
 
     public boolean isCandiate(Candidate c, String player) {
@@ -149,6 +211,7 @@ public class Election {
 
     public void addVote(Candidate type, String voter, String candidate) {
         votes.get(type).put(voter, candidate);
+        if(hasVoted(voter)) end();
     }
 
     public boolean hasVoted(String voter) {
@@ -159,10 +222,69 @@ public class Election {
     }
 
     public boolean hasVoted(Candidate type, String voter) {
-        return votes.get(type).containsKey(voter);
+        return !gov.hasElections(type) || votes.get(type).containsKey(voter);
     }
 
     public String getVote(Candidate type, String voter) {
         return votes.get(type).get(voter);
+    }
+
+    public void restoreFromData(Map<String, List<String>> candidatesData, Map<String, Map<String, String>> votesData, Map<String, Map<String, Integer>> previousVotesData) {
+        if (candidatesData != null) {
+            for (Map.Entry<String, List<String>> entry : candidatesData.entrySet()) {
+                try {
+                    Candidate type = Candidate.valueOf(entry.getKey());
+                    candidates.put(type, new ArrayList<>(entry.getValue()));
+                } catch (IllegalArgumentException e) {
+                    // Skip invalid candidate types
+                }
+            }
+        }
+
+        if (votesData != null) {
+            for (Map.Entry<String, Map<String, String>> entry : votesData.entrySet()) {
+                try {
+                    Candidate type = Candidate.valueOf(entry.getKey());
+                    votes.put(type, new HashMap<>(entry.getValue()));
+                } catch (IllegalArgumentException e) {
+                    // Skip invalid candidate types
+                }
+            }
+        }
+
+        if (previousVotesData != null) {
+            for (Map.Entry<String, Map<String, Integer>> entry : previousVotesData.entrySet()) {
+                try {
+                    Candidate type = Candidate.valueOf(entry.getKey());
+                    previousVotes.put(type, new HashMap<>(entry.getValue()));
+                } catch (IllegalArgumentException e) {
+                    // Skip invalid candidate types
+                }
+            }
+        }
+    }
+
+    public Map<String, List<String>> serializeCandidates() {
+        Map<String, List<String>> data = new HashMap<>();
+        for (Map.Entry<Candidate, List<String>> entry : candidates.entrySet()) {
+            data.put(entry.getKey().name(), new ArrayList<>(entry.getValue()));
+        }
+        return data;
+    }
+
+    public Map<String, Map<String, String>> serializeVotes() {
+        Map<String, Map<String, String>> data = new HashMap<>();
+        for (Map.Entry<Candidate, Map<String, String>> entry : votes.entrySet()) {
+            data.put(entry.getKey().name(), new HashMap<>(entry.getValue()));
+        }
+        return data;
+    }
+
+    public Map<String, Map<String, Integer>> serializePreviousVotes() {
+        Map<String, Map<String, Integer>> data = new HashMap<>();
+        for (Map.Entry<Candidate, Map<String, Integer>> entry : previousVotes.entrySet()) {
+            data.put(entry.getKey().name(), new HashMap<>(entry.getValue()));
+        }
+        return data;
     }
 }

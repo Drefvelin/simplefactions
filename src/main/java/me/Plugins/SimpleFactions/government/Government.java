@@ -9,6 +9,7 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -43,7 +44,7 @@ public class Government {
         this.council = new Council(this, f);
         this.power = -1;
         this.powerGain = -1;
-        this.election = new Election(this);
+        this.election = new Election(this, false);
     }
 
     public Government(Faction f, me.Plugins.SimpleFactions.Database.GovernmentData data) {
@@ -52,7 +53,23 @@ public class Government {
         this.power = data.power != null ? data.power : -1;
         this.powerGain = -1;
         this.lastElectionDate = data.lastElectionDate != null ? new java.util.Date(data.lastElectionDate) : new java.util.Date(0);
-        this.election = new Election(this); //TODO persistence
+        boolean electionActive = false;
+
+        // If an election was started less than 7 days ago, it is still active
+        if (data.lastElectionDate != null) {
+            LocalDate start = Instant.ofEpochMilli(data.lastElectionDate)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate();
+
+            electionActive = ChronoUnit.DAYS.between(start, LocalDate.now()) < 7;
+        }
+
+        this.election = new Election(this, electionActive);
+        
+        // Restore election candidates and votes
+        if (data.electionCandidates != null || data.electionVotes != null || data.previousVotes != null) {
+            election.restoreFromData(data.electionCandidates, data.electionVotes, data.previousVotes);
+        }
         
         // Restore council members
         if (data.councilMembers != null) {
@@ -77,11 +94,57 @@ public class Government {
             election.start();
             lastElectionDate = new Date(); // store START date
         }
+
+        if (election.isActive()) {
+            LocalDate today = LocalDate.now();
+            LocalDate end = getElectionEndDate();
+
+            if (end != null && !today.isBefore(end)) {
+                election.end();
+                applyElectionResults();
+            }
+        }
     }
+
+    public void applyElectionResults() {
+        // Leader
+        if (hasLeaderElections()) {
+            election.getWinners(Candidate.LEADER).stream()
+                    .filter(f::canBecomeLeader)
+                    .findFirst()
+                    .ifPresent(f::setLeader);
+        }
+
+        // Council
+        if (hasCouncilElections() && council.getType() == Rules.ELECTED_COUNCIL) {
+            int maxSize = council.getMaxSize();
+
+            List<String> oldCouncil = new ArrayList<>(council.getMembers());
+            List<String> winners = election.getWinners(Candidate.COUNCIL);
+
+            council.clearMembers();
+
+            for (String name : winners) {
+                if (council.getCurrentSize() >= maxSize) break;
+                if (council.canBeMember(name, true)) {
+                    council.addMemberForce(name);
+                }
+            }
+
+            for (String name : oldCouncil) {
+                if (council.getCurrentSize() >= maxSize) break;
+                if (council.canBeMember(name, true)) {
+                    council.addMemberForce(name);
+                }
+            }
+        }
+    }
+
 
     public void tick() {
         election.tick();
     }
+
 
 
     public boolean isCouncilMember(Player p) {
@@ -272,6 +335,42 @@ public class Government {
         return String.format("%02d/%02d %s", day, month, year);
     }
 
+    public LocalDate getElectionEndDate() {
+        // If election never started
+        if (lastElectionDate == null || lastElectionDate.getTime() == 0) {
+            return null;
+        }
+
+        // Election lasts exactly 7 days
+        return getLastElectionStartDate().plusDays(7);
+    }
+
+    public String getTimeUntilElectionEnds() {
+        if (!hasElection()) {
+            return "N/A";
+        }
+
+        LocalDate endDate = getElectionEndDate();
+        if(endDate == null) return "N/A";
+        Instant end = endDate
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant();
+
+        Instant now = Instant.now();
+
+        if (end.isBefore(now)) {
+            return "0d 0h";
+        }
+
+        long seconds = ChronoUnit.SECONDS.between(now, end);
+        long days = seconds / 86400;
+        long hours = (seconds % 86400) / 3600;
+
+        return days + "d " + hours + "h";
+    }
+
+
+
     public boolean hasElections(Candidate type) {
         switch (type) {
             case LEADER:
@@ -335,6 +434,9 @@ public class Government {
         data.lastElectionDate = this.lastElectionDate.getTime();
         data.councilMembers = new java.util.ArrayList<>(council.getMembers());
         data.proposals = council.getProposalHandler().serializeProposals();
+        data.electionCandidates = election.serializeCandidates();
+        data.electionVotes = election.serializeVotes();
+        data.previousVotes = election.serializePreviousVotes();
         return data;
     }
 }

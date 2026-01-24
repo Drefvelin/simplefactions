@@ -118,6 +118,17 @@ public class Council {
         return true;
     }
 
+    public void clearMembers() {
+        members.clear();
+    }
+
+    public void addMemberForce(String name) {
+        if (!members.contains(name)) {
+            members.add(name);
+        }
+    }
+
+
     public void addMember(String member) {
         if(members.size() < size) members.add(member);
     }
