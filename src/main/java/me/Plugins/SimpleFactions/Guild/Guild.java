@@ -202,6 +202,9 @@ public class Guild {
     public boolean isMember(Player p) { return isMember(p.getName()); }
     public void addMember(String p) {
         if(isMember(p)) return;
+        if(!isBase() && host.getOrCreateMainGuild().isMember(p)) {
+            host.getOrCreateMainGuild().kick(p);
+        } 
         if(isInvited(p)) invites.remove(p);
         members.add(p);
     }
