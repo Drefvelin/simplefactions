@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Wealth;
 import me.Plugins.SimpleFactions.enums.Rules;
+import me.Plugins.SimpleFactions.government.election.Candidate;
 import me.Plugins.SimpleFactions.government.handler.ProposalHandler;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.session.Session;
@@ -41,39 +42,46 @@ public class Council {
     public void reorganize() {
         int newSize = f.getCouncilSize();
         Rules newType = f.getCouncilType();
-        if(newSize < size && members.size() > newSize) {
-            members = members.subList(0, newSize); //Trim council if size reduced
+
+        boolean typeChanged = newType != type;
+        boolean sizeDecreased = newSize < size;
+
+        // Trim if size decreased
+        if (sizeDecreased && members.size() > newSize) {
+            members = new ArrayList<>(members.subList(0, newSize));
         }
-        if(newType != type) {
-            if(newType.equals(Rules.WEALTH_BASED_COUNCIL)) members.clear(); //Wealth based council needs to be reselected
-            //Elected council gets to keep members until the next election.
-            proposalHandler.clearProposals(); //Council change always clears proposals
+
+        // Handle type change
+        if (typeChanged) {
+            switch (newType) {
+                case WEALTH_BASED_COUNCIL:
+                    members.clear(); // must reselect
+                    break;
+
+                case NO_COUNCIL:
+                    members.clear();
+                    break;
+
+                case APPOINTED_COUNCIL:
+                    // keep existing members, seats may go empty later
+                    break;
+
+                case ELECTED_COUNCIL:
+                    // keep until next election
+                    break;
+                default:
+                    break;
+            }
+
+            proposalHandler.clearProposals();
         }
+
+        // Apply new settings
         setCouncilSize(newSize);
         setCouncilType(newType);
-        populate();
-    }
-    
-    public void populate() {
-        switch (type) {
-            case APPOINTED_COUNCIL:
-                return;
-            case ELECTED_COUNCIL:
-                //Members are elected by faction members
-                //Implement election record to take from
-                break;
-            case WEALTH_BASED_COUNCIL:
-                List<String> sortedByWealth = Wealth.topWealth(f, true);
-                while(getCurrentSize() < getMaxSize() && sortedByWealth.size() > 0) {
-                    String richest = sortedByWealth.remove(0);
-                    if(canBeMember(richest, false)) {
-                        members.add(richest);
-                    }
-                }
-                break;
-            default:
-                break;
-        }
+
+        // 🔑 Let the unified logic handle membership validity & refill
+        replace();
     }
 
     public boolean hasSession() {
@@ -117,6 +125,22 @@ public class Council {
         }
         return true;
     }
+
+    public boolean canRemainMember(String name) {
+        if (f.getLeader().equalsIgnoreCase(name)) return false;
+        if (f.getOrCreateMainGuild().isMember(name)) return true;
+
+        for (Faction vassal : RelationManager.getSubjects(f)) {
+            if (vassal.isLeader(name)) return true;
+        }
+
+        for (Guild guild : f.getGuildHandler().getGuilds()) {
+            if (guild.isLeader(name)) return true;
+        }
+
+        return false;
+    }
+
 
     public void clearMembers() {
         members.clear();
@@ -200,5 +224,69 @@ public class Council {
         
         // At least 75% of eligible voters must be valid
         return (validCount * 100) / total >= 75;
+    }
+
+    public void replace() {
+        cleanupCouncil();
+        refillCouncil();
+    }
+
+    private void cleanupCouncil() {
+        for (String member : new ArrayList<>(getMembers())) {
+            if (!canRemainMember(member)) {
+                getMembers().remove(member);
+            }
+        }
+    }
+
+    private void refillCouncil() {
+        if (getCurrentSize() >= getMaxSize()) return;
+
+        switch (getType()) {
+            case ELECTED_COUNCIL:
+                refillElectedCouncil();
+                break;
+
+            case WEALTH_BASED_COUNCIL:
+                refillWealthCouncil();
+                break;
+
+            case APPOINTED_COUNCIL:
+            case NO_COUNCIL:
+            default:
+                // Do nothing — seats stay empty
+                break;
+        }
+    }
+
+    private void refillElectedCouncil() {
+        int maxSize = getMaxSize();
+
+        // 1. Election winners
+        for (String name : f.getGovernment().getElection().getWinners(Candidate.COUNCIL)) {
+            if (getCurrentSize() >= maxSize) break;
+            if (!isMember(name) && canRemainMember(name)) {
+                addMemberForce(name);
+            }
+        }
+
+        // 2. Fallback faction members
+        for (String name : f.getMembers()) {
+            if (getCurrentSize() >= maxSize) break;
+            if (!isMember(name) && canRemainMember(name)) {
+                addMemberForce(name);
+            }
+        }
+    }
+
+    private void refillWealthCouncil() {
+        List<String> richest = Wealth.topWealth(f, true);
+
+        for (String name : richest) {
+            if (getCurrentSize() >= getMaxSize()) break;
+            if (!isMember(name) && canBeMember(name, false)) {
+                addMemberForce(name);
+            }
+        }
     }
 }

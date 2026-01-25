@@ -41,7 +41,12 @@ public class ElectionCreator {
             }
         }
         lore.add("");
-        if(!e.canBeCandidate(c, p.getName())) {
+        if(e.isCandiate(c, p.getName())) {
+            // Already a candidate
+            if(!e.isActive()) {
+                lore.add(StringFormatter.formatHex("#ba7872Click to withdraw"));
+            }
+        } else if(!e.canBeCandidate(c, p.getName())) {
             e.applyReasons(lore, c, p);
         } else {
             lore.add(StringFormatter.formatHex("#28ed70Click to sign up"));

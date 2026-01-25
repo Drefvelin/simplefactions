@@ -11,6 +11,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -19,6 +20,7 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.Utils.Wealth;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.government.election.Candidate;
 import me.Plugins.SimpleFactions.government.election.Election;
@@ -65,7 +67,6 @@ public class Government {
         }
 
         this.election = new Election(this, electionActive);
-        
         // Restore election candidates and votes
         if (data.electionCandidates != null || data.electionVotes != null || data.previousVotes != null) {
             election.restoreFromData(data.electionCandidates, data.electionVotes, data.previousVotes);
@@ -92,7 +93,6 @@ public class Government {
 
         if (shouldStartElection()) {
             election.start();
-            lastElectionDate = new Date(); // store START date
         }
 
         if (election.isActive()) {
@@ -101,9 +101,23 @@ public class Government {
 
             if (end != null && !today.isBefore(end)) {
                 election.end();
-                applyElectionResults();
             }
         }
+    }
+
+    // Government
+    public void cancelElections(Candidate type) {
+        if (!election.isActive()) return;
+        election.cancel(type);
+    }
+
+    public void cancelAllElections() {
+        if (!election.isActive()) return;
+        election.cancelAll();
+    }
+
+    public void setLastElectionDate() {
+        lastElectionDate = new Date();
     }
 
     public void applyElectionResults() {
@@ -112,7 +126,7 @@ public class Government {
             election.getWinners(Candidate.LEADER).stream()
                     .filter(f::canBecomeLeader)
                     .findFirst()
-                    .ifPresent(f::setLeader);
+                    .ifPresent(f::promoteToLeader);
         }
 
         // Council
@@ -138,14 +152,42 @@ public class Government {
                 }
             }
         }
+        replace();
     }
 
 
     public void tick() {
         election.tick();
+        if(!hasElections()) lastElectionDate = new Date(0);
+        replace();
+    }
+
+    public void replace() {
+        replaceLeader();
+        council.replace();
     }
 
 
+    private void replaceLeader() {
+        if (!f.canRemainLeader(f.getLeader())) {
+            boolean promoted =
+                election.getWinners(Candidate.LEADER).stream()
+                    .filter(f::canBecomeLeader)
+                    .findFirst()
+                    .map(name -> {
+                        f.promoteToLeader(name);
+                        return true;
+                    })
+                    .orElse(false);
+
+            if (!promoted) {
+                f.getMembers().stream()
+                    .filter(f::canBecomeLeader)
+                    .findFirst()
+                    .ifPresent(f::promoteToLeader);
+            }
+        }
+    }
 
     public boolean isCouncilMember(Player p) {
         String name = p.getName();

@@ -41,6 +41,8 @@ public class Election {
 
     public void start() {
         this.active = true;
+        gov.setLastElectionDate();
+        clearVotes();
     }
 
     public void end() {
@@ -50,8 +52,42 @@ public class Election {
                 previousVotes.get(c).put(candidate, getVotes(c, candidate));
             }
         }
-        candidates.clear();
-        votes.clear();
+        gov.applyElectionResults();
+        clearCandidates();
+        clearVotes();
+    }
+
+    public void cancel(Candidate type) {
+        candidates.get(type).clear();
+        votes.get(type).clear();
+        previousVotes.get(type).clear();
+
+        // If no remaining election types are active, end election fully
+        if (!gov.hasElections()) {
+            active = false;
+        }
+    }
+
+    public void cancelAll() {
+        active = false;
+        clearCandidates();
+        clearVotes();
+
+        for (Candidate c : Candidate.values()) {
+            previousVotes.get(c).clear();
+        }
+    }
+
+    public void clearVotes() {
+        for(Candidate c : Candidate.values()) {
+            if(votes.containsKey(c)) votes.get(c).clear();
+        }
+    }
+
+    public void clearCandidates() {
+        for(Candidate c : Candidate.values()) {
+            if(candidates.containsKey(c)) candidates.get(c).clear();
+        }
     }
 
     public int getVotes(Candidate c, String player) {
@@ -67,32 +103,28 @@ public class Election {
     }
 
     public List<String> getWinners(Candidate c) {
-        List<String> result = new ArrayList<>();
-
-        // Map candidate -> vote count
         Map<String, Integer> voteCounts = new HashMap<>();
 
-        // Initialize all candidates with 0 votes
-        for (String candidate : candidates.get(c)) {
-            voteCounts.put(candidate, 0);
+        if (active) {
+            // Live election: initialize from candidates
+            for (String candidate : candidates.get(c)) {
+                voteCounts.put(candidate, 0);
+            }
+
+            // Count live votes
+            for (String votedFor : votes.get(c).values()) {
+                voteCounts.computeIfPresent(votedFor, (k, v) -> v + 1);
+            }
+        } else {
+            // Finished election: use stored results
+            voteCounts.putAll(previousVotes.get(c));
         }
 
-        // Count votes
-        for (String votedFor : votes.get(c).values()) {
-            voteCounts.computeIfPresent(votedFor, (k, v) -> v + 1);
-        }
+        List<String> result = new ArrayList<>(voteCounts.keySet());
 
-        // Sort candidates by vote count (descending)
-        result.addAll(voteCounts.keySet());
         result.sort((a, b) -> {
-            int va = voteCounts.get(a);
-            int vb = voteCounts.get(b);
-
-            // Descending vote order
-            int cmp = Integer.compare(vb, va);
+            int cmp = Integer.compare(voteCounts.get(b), voteCounts.get(a));
             if (cmp != 0) return cmp;
-
-            // Optional tie-breaker: alphabetical (stable & deterministic)
             return a.compareToIgnoreCase(b);
         });
 
@@ -105,7 +137,6 @@ public class Election {
 
     public void addCandidate(Candidate c, String player) {
         candidates.get(c).add(player);
-        start();
     }
 
     public boolean isCandiate(Candidate c, String player) {
@@ -122,6 +153,12 @@ public class Election {
             if(type == Candidate.LEADER) {
                 if(!gov.getFaction().isMember(p.getName())) {
                     lore.add(StringFormatter.formatHex("§7- #ba7872You must be a member of the faction to be Leader"));
+                }
+                Guild g = gov.getFaction().getGuild(p.getName());
+                if (g != null && !g.isBase() && g.isLeader(p.getName())) {
+                    lore.add(StringFormatter.formatHex(
+                        "§7- #ba7872Guild leaders cannot be faction leaders"
+                    ));
                 }
                 if(otherCandidateExists(Candidate.LEADER, p.getName())) {
                     lore.add(StringFormatter.formatHex("§7- #ba7872Your guild already has a Leader candidate"));
@@ -143,9 +180,22 @@ public class Election {
         if(active && includeAlreadySignedUp) return false;
         switch (type) {
             case LEADER:
-                if(candidates.get(Candidate.LEADER).contains(player) && includeAlreadySignedUp) return false;
-                if(!gov.getFaction().isMember(player)) return false;
-                if(otherCandidateExists(Candidate.LEADER, player)) return false;
+                if (includeAlreadySignedUp && candidates.get(Candidate.LEADER).contains(player))
+                    return false;
+
+                // Must be faction member (any guild)
+                if (!gov.getFaction().isMember(player))
+                    return false;
+                // Cannot already be faction leader
+                if (gov.getFaction().isLeader(player))
+                    return false;
+                Guild g = gov.getFaction().getGuild(player);
+                if (g != null && !g.isBase() && g.isLeader(player)) {
+                    return false;
+                }
+                // Only one candidate per guild
+                if (otherCandidateExists(Candidate.LEADER, player))
+                    return false;
                 break;
             case COUNCIL:
                 if(candidates.get(Candidate.COUNCIL).contains(player) && includeAlreadySignedUp) return false;
@@ -178,18 +228,25 @@ public class Election {
                 notify++;
             }
         }
-        for(Candidate c : Candidate.values()) {
-            for(String candidate : candidates.get(c)) {
-                if(!canBeCandidate(c, candidate, false)) {
+        for (Candidate c : Candidate.values()) {
+            for (String candidate : new ArrayList<>(candidates.get(c))) {
+                if (!canBeCandidate(c, candidate, false)) {
                     removeCandidate(c, candidate);
                 }
             }
         }
     }
 
-    public void removeCandidate(Candidate c, String player) {
-        candidates.get(c).remove(player);
-        votes.get(c).remove(player);
+    public void removeCandidate(Candidate c, String candidate) {
+        // Remove candidate
+        candidates.get(c).remove(candidate);
+
+        // Remove all votes FOR this candidate
+        Map<String, String> voteMap = votes.get(c);
+
+        voteMap.entrySet().removeIf(entry ->
+            entry.getValue().equalsIgnoreCase(candidate)
+        );
     }
 
     public boolean otherCandidateExists(Candidate type, String player) {
@@ -197,6 +254,7 @@ public class Election {
         if(g == null) return false;
         if(g.isBase()) return false;
         for(String candidate : candidates.get(type)) {
+            if(candidate.equalsIgnoreCase(player)) continue;
             Guild cg = gov.getFaction().getGuildHandler().getGuildByMember(candidate);
             if(cg == null) continue;
             if(cg.isBase()) continue;
@@ -211,18 +269,17 @@ public class Election {
 
     public void addVote(Candidate type, String voter, String candidate) {
         votes.get(type).put(voter, candidate);
-        if(hasVoted(voter)) end();
     }
 
     public boolean hasVoted(String voter) {
         for(Candidate c : Candidate.values()) {
-            if(hasVoted(c, voter)) return true;
+            if(!hasVoted(c, voter)) return false;
         }
-        return false;
+        return true;
     }
 
     public boolean hasVoted(Candidate type, String voter) {
-        return !gov.hasElections(type) || votes.get(type).containsKey(voter);
+        return !gov.hasElections(type) || votes.get(type).containsKey(voter) || candidates.get(type).isEmpty();
     }
 
     public String getVote(Candidate type, String voter) {

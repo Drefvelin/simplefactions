@@ -62,12 +62,9 @@ public class ElectionView {
 
     public void click(InventoryClickEvent e, Inventory inventory, Player p) {
 		e.setCancelled(true);
-        Faction f = FactionManager.getByLeader(p.getName());
-        if(f == null) {
-            p.closeInventory();
-            return;
-        }
 		SFInventoryHolder holder = (SFInventoryHolder) inventory.getHolder();
+        Faction f = FactionManager.getByString(holder.getId());
+        if(f == null) return;
 		ItemStack item = e.getCurrentItem();
 		if(item == null || item.getItemMeta() == null) return;
 		ItemMeta meta = item.getItemMeta();
@@ -83,7 +80,12 @@ public class ElectionView {
                         votingView(p, f, c);
                     }
                 } else {
-                    if(election.canBeCandidate(c, p.getName())) {
+                    if(election.isCandiate(c, p.getName())) {
+                        election.removeCandidate(c, p.getName());
+                        p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+                        p.sendMessage("§aWithdrawn from candidacy for "+c.getName());
+                        electionView(p, f);
+                    } else if(election.canBeCandidate(c, p.getName())) {
                         election.addCandidate(c, p.getName());
                         p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
                         p.sendMessage("§aSigned up as a candidate for "+c.getName());
