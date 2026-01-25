@@ -12,6 +12,7 @@ public class Cache {
 	public static int maxWealthPrestige;
 	public static String year;
 	public static String bankBlock;
+	public static String votingBlock;
 
 	public static int maxExtraNodeCapacity;
 	

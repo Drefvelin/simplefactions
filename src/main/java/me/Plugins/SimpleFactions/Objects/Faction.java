@@ -48,6 +48,7 @@ import me.Plugins.SimpleFactions.enums.Region;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.government.Government;
+import me.Plugins.SimpleFactions.government.election.Candidate;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawEffect;
@@ -337,6 +338,7 @@ public class Faction {
 			if(!m.isTimed()) continue;
 			if(m.tick()) removeModifier(m);
 		}
+		government.tick();
 	}
 
 	public boolean hasProvince(int i) {
@@ -513,6 +515,10 @@ public class Faction {
 		}
 		return true;
 	}
+	public boolean canRemainLeader(String name) {
+		return isMember(name);
+	}
+
 	public boolean canBeCleanKicked(String p) {
 		if(leader.equalsIgnoreCase(p)) return false;
 		return !guildHandler.isGuildLeader(p);
@@ -557,6 +563,21 @@ public class Faction {
 		getOrCreateMainGuild().setLeader(leader);
 		this.leader = leader;
 	}
+	public void promoteToLeader(String name) {
+		if (!canBecomeLeader(name)) return;
+
+		// Remove from any non-base guild
+		Guild g = guildHandler.getGuildByMember(name);
+		if (g != null && !g.isBase()) {
+			g.kick(name);
+		}
+
+		// Ensure member is in main guild
+		getOrCreateMainGuild().addMember(name);
+
+		setLeader(name);
+	}
+
 	public List<Modifier> getPrestigeModifiers() {
 		return prestigeModifiers;
 	}
@@ -574,6 +595,9 @@ public class Faction {
 	}
 	public GuildHandler getGuildHandler() {
 		return guildHandler;
+	}
+	public Guild getGuild(String player) {
+		return guildHandler.getGuildByMember(player);
 	}
 	public void updatePrestige() {
 		prestige = 0.0;
@@ -806,52 +830,99 @@ public class Faction {
 	public void ping() {
 		government.ping();
 	}
+	public boolean canVote(Player p) {
+		if(isMember(p.getName())) return true;
+		if(hasFactionRule(Rules.VASSAL_VOTING_RIGHTS)) {
+			if(getVassalMembers().contains(p.getName())) return true;
+		}
+		return false;
+	}
 
 	//Laws
 	public LawHandler getLawHandler() { return lawHandler; }
 
 	public void applyLaw(Law law, LawGroup group) {
 		group.setCurrent(law);
+
 		LawEffect effect = law.getScopedEffects().get(Scope.FACTION);
-        if(effect.hasBrackets()) {
-            for(Map.Entry<Brackets, Bracket> entry : effect.getBrackets().entrySet()) {
-				taxHandler.applyBracket(BracketToTaxTarget.convert(entry.getKey()), entry.getValue());
+
+		// --- existing tax logic ---
+		if (effect.hasBrackets()) {
+			for (Map.Entry<Brackets, Bracket> entry : effect.getBrackets().entrySet()) {
+				taxHandler.applyBracket(
+					BracketToTaxTarget.convert(entry.getKey()),
+					entry.getValue()
+				);
 			}
-        }
-		if(effect.hasRules()) {
-			for(Map.Entry<Rules, Boolean> entry : effect.getRules().entrySet()) {
+		}
+
+		if (effect.hasRules()) {
+			for (Map.Entry<Rules, Boolean> entry : effect.getRules().entrySet()) {
 				Rules rule = entry.getKey();
 				Boolean value = entry.getValue();
-				switch(rule) {
+
+				switch (rule) {
 					case CITIZEN_TAX:
-						if(!value) taxHandler.applyBracket(TaxTarget.CITIZENS, new Bracket(0, 0));
+						if (!value)
+							taxHandler.applyBracket(TaxTarget.CITIZENS, new Bracket(0, 0));
 						break;
 					case VASSAL_TAX:
-						if(!value) taxHandler.applyBracket(TaxTarget.VASSALS, new Bracket(0, 0));
+						if (!value)
+							taxHandler.applyBracket(TaxTarget.VASSALS, new Bracket(0, 0));
 						break;
 					case GUILD_TAX:
-						if(!value) taxHandler.applyBracket(TaxTarget.GUILDS, new Bracket(0, 0));
+						if (!value)
+							taxHandler.applyBracket(TaxTarget.GUILDS, new Bracket(0, 0));
 						break;
 					case DIVIDEND_TAX:
-						if(!value) taxHandler.applyBracket(TaxTarget.DIVIDENDS, new Bracket(0, 0));
+						if (!value)
+							taxHandler.applyBracket(TaxTarget.DIVIDENDS, new Bracket(0, 0));
 						break;
 					case TARIFFS:
-						if(!value) taxHandler.applyBracket(TaxTarget.TARIFFS, new Bracket(0, 0));
+						if (!value)
+							taxHandler.applyBracket(TaxTarget.TARIFFS, new Bracket(0, 0));
 						break;
 					default:
 						break;
 				}
 			}
 		}
-		if(effect.affectsCouncilSize() || effect.affectsCouncilType()) {
+
+		// --- council structure ---
+		if (effect.affectsCouncilSize() || effect.affectsCouncilType()) {
 			government.getCouncil().reorganize();
 		}
-		if(effect.prohibitsVassals() && hasVassals()) {
-			for(Faction vassal : getVassals()) {
+
+		// --- 🔴 ELECTION CANCELLATION LOGIC ---
+		cancelInvalidElections();
+
+		// --- vassal logic ---
+		if (effect.prohibitsVassals() && hasVassals()) {
+			for (Faction vassal : getVassals()) {
 				RelationManager.endVassalage(vassal, this, false);
 			}
 		}
 	}
+
+	private void cancelInvalidElections() {
+		Government gov = getGovernment();
+
+		// Leader elections disabled
+		if (!hasFactionRule(Rules.LEADER_ELECTIONS)) {
+			gov.cancelElections(Candidate.LEADER);
+		}
+
+		// Council elections disabled
+		if (!hasFactionRule(Rules.ELECTED_COUNCIL) || getCouncilType() != Rules.ELECTED_COUNCIL) {
+			gov.cancelElections(Candidate.COUNCIL);
+		}
+
+		// No elections at all
+		if (!gov.hasElections()) {
+			gov.cancelAllElections();
+		}
+	}
+
 
 	public boolean hasVassals() {
 		return RelationManager.getSubjects(this).size() > 0;

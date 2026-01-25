@@ -26,6 +26,7 @@ import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.SimpleFactions.government.Council;
 import me.Plugins.SimpleFactions.government.Government;
+import me.Plugins.SimpleFactions.government.election.Candidate;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxLawChange;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
@@ -74,6 +75,94 @@ public class GovernmentCreator {
         item.setItemMeta(m);
         return item;
     }
+
+    public ItemStack createElectionItem(Player p, Faction f) {
+        ItemStack item = TLibs.getItemAPI().getCreator().getItemFromPath("ia.iasurvival:letter");
+        ItemMeta m = item.getItemMeta();
+        Government gov = f.getGovernment();
+
+        m.setDisplayName(StringFormatter.formatHex("#51d6e8Election"));
+        List<String> lore = new ArrayList<>();
+
+        if (gov.hasElection()) {
+            lore.add(StringFormatter.formatHex("#85c265Election in progress"));
+            lore.add(StringFormatter.formatHex("#ad9072Ends in: #e3d5a1" + gov.getTimeUntilElectionEnds()));
+        } else {
+            lore.add(StringFormatter.formatHex("#ad9072Next Election: #e3d5a1" + gov.getTimeUntilNextElection()));
+            lore.add(StringFormatter.formatHex("#ad9072Last Election: #e3d5a1" + gov.getLastElectionString()));
+
+            Map<Candidate, Map<String, Integer>> prev = gov.getElection().getPreviousVotes();
+
+            // Leader results
+            if (gov.hasLeaderElections() && !prev.get(Candidate.LEADER).isEmpty()) {
+                lore.add("");
+                lore.add(StringFormatter.formatHex("#93c9a7Leader Results"));
+
+                int totalVotes = prev.get(Candidate.LEADER).values().stream().mapToInt(i -> i).sum();
+                List<String> winners = gov.getElection().getWinners(Candidate.LEADER);
+
+                int i = 1;
+                for (String name : winners) {
+                    int votes = prev.get(Candidate.LEADER).getOrDefault(name, 0);
+
+                    String color;
+                    if (f.isLeader(name)) {
+                        color = "#45c46f"; // green – current leader
+                    } else if (f.canBecomeLeader(name)) {
+                        color = "#9bb6c9"; // eligible
+                    } else {
+                        color = "#c74d32"; // ineligible
+                    }
+
+                    lore.add(formatElectionLine(i++, name, votes, totalVotes, color));
+                }
+
+            }
+
+            // Council results
+            if (gov.hasCouncilElections()
+                    && gov.getCouncil().getType() == Rules.ELECTED_COUNCIL
+                    && !prev.get(Candidate.COUNCIL).isEmpty()) {
+
+                lore.add("");
+                lore.add(StringFormatter.formatHex("#93c9a7Council Results"));
+
+                int totalVotes = prev.get(Candidate.COUNCIL).values().stream().mapToInt(i -> i).sum();
+                List<String> winners = gov.getElection().getWinners(Candidate.COUNCIL);
+
+                int i = 1;
+                for (String name : winners) {
+                    int votes = prev.get(Candidate.COUNCIL).getOrDefault(name, 0);
+
+                    String color;
+                    if (gov.getCouncil().isMember(name)) {
+                        color = "#45c46f"; // green – current council member
+                    } else if (gov.getCouncil().canBeMember(name, true)) {
+                        color = "#9bb6c9"; // eligible
+                    } else {
+                        color = "#c74d32"; // ineligible
+                    }
+
+                    lore.add(formatElectionLine(i++, name, votes, totalVotes, color));
+                }
+            }
+        }
+
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
+    private String formatElectionLine(int index, String name, int votes, int totalVotes, String nameColor) {
+        int percent = totalVotes > 0 ? (votes * 100) / totalVotes : 0;
+
+        return StringFormatter.formatHex(
+            "#ffffff[" + index + "] " +
+            nameColor + name +
+            " #c0c0c0(" + percent + "%)"
+        );
+    }
+
 
     public ItemStack createStabilityItem(Faction f) {
         ItemStack item = new ItemStack(Material.BLACK_DYE);

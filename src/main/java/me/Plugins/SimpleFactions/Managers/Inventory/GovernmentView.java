@@ -50,6 +50,7 @@ public class GovernmentView {
 		i.setItem(15, creator.createProposalItem(player, f));
 		i.setItem(24, creator.createProposalListItem(player, f));
 		Government gov = f.getGovernment();
+		if(gov.hasElections()) i.setItem(14, creator.createElectionItem(player, f));
 		if(gov.getCouncil().canHostSession() && f.getLeader().equalsIgnoreCase(player.getName())) {
 			i.setItem(23, creator.createStartCouncilButton(player, f));
 		}

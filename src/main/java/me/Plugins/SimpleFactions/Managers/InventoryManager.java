@@ -22,6 +22,7 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.Holder.SFCombinedInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
+import me.Plugins.SimpleFactions.Managers.Inventory.ElectionView;
 import me.Plugins.SimpleFactions.Managers.Inventory.FactionView;
 import me.Plugins.SimpleFactions.Managers.Inventory.GovernmentView;
 import me.Plugins.SimpleFactions.Managers.Inventory.GuildView;
@@ -163,6 +164,13 @@ public class InventoryManager implements Listener{
 	}
 	public void relationView(Inventory i, Player player, Faction f, boolean open) {
 		relationView.relationView(i, player, f, open);
+	}
+
+	//Election
+	public ElectionView electionView = new ElectionView(this);
+
+	public void electionView(Player p, Faction f) {
+		electionView.electionView(p, f);
 	}
 
 	//Tax
@@ -406,6 +414,8 @@ public class InventoryManager implements Listener{
 				governmentView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.DIPLOMACY_VIEW || h.getType() == SFGUI.ATTITUDE_VIEW || h.getType() == SFGUI.RELATION_VIEW) {
 				relationView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.ELECTION_VIEW || h.getType() == SFGUI.ELECTION_VOTING_VIEW) {
+				electionView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.TIER_VIEW 
 					|| h.getType() == SFGUI.TITLE_VIEW
 					|| (inv.getHolder() instanceof SFInventoryHolder && ((SFInventoryHolder) inv.getHolder()).getType().equals(SFGUI.TITLE_TYPE_VIEW))) {
