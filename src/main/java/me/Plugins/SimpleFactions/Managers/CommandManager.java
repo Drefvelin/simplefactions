@@ -470,6 +470,10 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cOnly the leader can set a new leader!");
 					return true;
 				}
+				if(f.getGovernment().hasLeaderElections()) {
+					p.sendMessage("§cCannot set leader in a democracy!");
+					return true;
+				}
 				if(!f.getMembers().contains(args[1])) {
 					p.sendMessage("§cPlayer is not in the faction");
 					return true;
