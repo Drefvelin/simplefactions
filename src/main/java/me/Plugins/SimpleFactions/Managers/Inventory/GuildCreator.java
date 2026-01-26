@@ -24,6 +24,7 @@ import me.Plugins.SimpleFactions.Guild.Branch.BranchModifier;
 import me.Plugins.SimpleFactions.Guild.income.Cashflow;
 import me.Plugins.SimpleFactions.Guild.income.Ledger;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
+import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Guild.Guild;
@@ -37,6 +38,7 @@ import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.TLibs.Enums.APIType;
 import me.Plugins.TLibs.Objects.API.ItemAPI;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
+import me.Plugins.TLibs.Utils.TimeFormatter;
 import me.Plugins.TLibs.TLibs;
 
 public class GuildCreator {
@@ -596,6 +598,9 @@ public class GuildCreator {
 		lore.add(StringFormatter.formatHex("#575150Current Level: #d6cf69" + upgrade.getLevel()));
 		lore.add("");
 		
+		lore.add("§7Time: §e" + TimeFormatter.formatTime(upgrade.getExpansionTime()));
+		lore.add("");
+		
 		double upkeepIncrease = upgrade.getUpkeep();
 		lore.add(StringFormatter.formatHex("#d4c9aeUpkeep Change: #cf493a+" + String.format("%.2f", upkeepIncrease) + "d/day"));
 
@@ -624,6 +629,23 @@ public class GuildCreator {
 
 		meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, upgrade.getId());
 		meta.getPersistentDataContainer().set(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN, false);
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createUpgradeQueueItem(UpgradeExpansion expansion, int index) {
+		ItemStack i = expansion.getUpgrade().getIconItem().clone();
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex("#d979c2Upgrading " + expansion.getUpgrade().getName()));
+		
+		List<String> lore = new ArrayList<>();
+		if(index == 0) {
+			lore.add("§7Time Left: §e" + TimeFormatter.formatTime(expansion.getTimeLeft()));
+		} else {
+			lore.add(StringFormatter.formatHex("#857e59Queued..."));
+		}
+		
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;

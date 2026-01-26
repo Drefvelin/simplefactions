@@ -21,6 +21,7 @@ import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.income.Ledger;
 import me.Plugins.SimpleFactions.Guild.income.TradeBreakdown;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
+import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
 import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
@@ -30,9 +31,11 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
+import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
@@ -66,6 +69,8 @@ public class Guild {
     private TradeBreakdown breakdown = new TradeBreakdown();
 
     private Stance stance;
+
+    private List<UpgradeExpansion> upgradeQueue = new ArrayList<>();
 
     public Guild(Faction f) {
         host = f;
@@ -168,6 +173,17 @@ public class Guild {
         this.ledger = new Ledger(this);
         createBanner();
     }
+
+    public void tick() {
+		if(upgradeQueue.size() == 0) return;
+		UpgradeExpansion e = upgradeQueue.get(0);
+		e.tick();
+		if(e.getTimeLeft() != 0) return;
+		upgradeQueue.remove(0);
+		e.getUpgrade().levelUp();
+		FactionManager.getInv().getUpdater().inventorySound("minecraft:block.note_block.chime", SFGUI.UPGRADE_VIEW);
+	}
+
     public Ledger getLedger() {
         return ledger;
     }
@@ -493,5 +509,23 @@ public class Guild {
 
     public boolean hasUpgrades() {
         return !getUpgrades().isEmpty();
+    }
+
+    public List<UpgradeExpansion> getUpgradeQueue() {
+        return upgradeQueue;
+    }
+
+    public void setUpgradeQueue(List<UpgradeExpansion> queue) {
+        this.upgradeQueue = queue;
+    }
+
+    public void enqueueUpgrade(Upgrade u) {
+        if(upgradeQueue.size() == 3) return;
+        upgradeQueue.add(new UpgradeExpansion(u));
+    }
+
+    public void addQueuedUpgrade(Upgrade u, int time) {
+        if(upgradeQueue.size() == 3) return;
+        upgradeQueue.add(new UpgradeExpansion(u, time));
     }
 }

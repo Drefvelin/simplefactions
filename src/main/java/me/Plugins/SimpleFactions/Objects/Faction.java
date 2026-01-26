@@ -334,6 +334,9 @@ public class Faction {
 		if(getTaxRate() + tax > 100) setTaxRate(100-tax);
 		
 		military.tick();
+		for(Guild guild : guildHandler.getGuilds()) {
+			guild.tick();
+		}
 		for(FactionModifier m : getModifiers()) {
 			if(!m.isTimed()) continue;
 			if(m.tick()) removeModifier(m);

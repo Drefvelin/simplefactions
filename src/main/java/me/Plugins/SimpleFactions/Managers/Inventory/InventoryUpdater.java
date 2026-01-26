@@ -28,11 +28,15 @@ public class InventoryUpdater {
 			Inventory i = p.getOpenInventory().getTopInventory();
 			if(i.getHolder() instanceof SFInventoryHolder) {
 				SFInventoryHolder h = (SFInventoryHolder) i.getHolder();
-				if(h.getType().equals(SFGUI.GUILD_VIEW)) {
-					Guild guild = FactionManager.getGuildByString(h.getId());
-					inv.guildView(p, guild, i);
+				Guild guild = FactionManager.getGuildByString(h.getId());
+				Faction f = FactionManager.getByString(h.getId());
+				if(guild != null) {
+					if(h.getType().equals(SFGUI.GUILD_VIEW)) {
+						inv.guildView(p, guild, i);
+					} else if(h.getType().equals(SFGUI.UPGRADE_VIEW)) {
+						inv.upgradeView(p, guild, i);
+					}
 				} else {
-					Faction f = FactionManager.getByString(h.getId());
 					if(f == null) continue;
 					if(h.getType().equals(SFGUI.MILITARY_VIEW)) {
 						inv.militaryView(i, p, f, false);
@@ -63,7 +67,7 @@ public class InventoryUpdater {
 			Inventory i = p.getOpenInventory().getTopInventory();
 			if(!(i.getHolder() instanceof SFInventoryHolder)) continue;
 			SFInventoryHolder h = (SFInventoryHolder) i.getHolder();
-			if(h.getType().equals(SFGUI.MILITARY_VIEW)) {
+			if(h.getType().equals(gui)) {
 				p.playSound(p, sound, 1f, 1f);
 			}
 		}

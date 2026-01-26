@@ -17,6 +17,7 @@ import org.bukkit.persistence.PersistentDataType;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
+import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
@@ -155,7 +156,6 @@ public class GuildView {
 		int index = 9;
 		for (Upgrade upgrade : upgrades) {
 			if (index > 17) break;
-			;
 			i.setItem(index, creator.createUpgradeItem(player, guild, upgrade));
 			
 			if (guild.isLeader(player)) {
@@ -164,6 +164,14 @@ public class GuildView {
 			}
 			
 			index++;
+		}
+		
+		// Display upgrade queue (3 items at slots 39-41)
+		int queueIndex = 0;
+		for (var queueItem : guild.getUpgradeQueue()) {
+			if (queueIndex >= 3) break;
+			i.setItem(39 + queueIndex, creator.createUpgradeQueueItem(queueItem, queueIndex));
+			queueIndex++;
 		}
 		
 		i.setItem(53, inv.createBackButton(SFGUI.UPGRADE_VIEW));
@@ -295,9 +303,14 @@ public class GuildView {
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 					p.sendMessage("§cDowngraded " + u.getName() + "§c to level §e" + u.getLevel());
 				} else {
-					// Upgrade logic
-					u.levelUp();
-					p.sendMessage("§aUpgraded " + u.getName() + "§a to level §e" + u.getLevel());
+					// Upgrade logic - queue the upgrade
+					if(guild.getUpgradeQueue().size() == 3) {
+						p.sendMessage("§cUpgrade queue is full");
+						p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+						return;
+					}
+					guild.enqueueUpgrade(u);
+					p.sendMessage("§eQueued " + u.getName());
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				}
 				upgradeView(p, guild, inventory);

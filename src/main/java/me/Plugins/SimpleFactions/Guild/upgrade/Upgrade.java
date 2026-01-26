@@ -25,6 +25,7 @@ public class Upgrade {
     private String icon;
     private int level;
     private double upkeep;
+    private int expansionTime;
     private List<GuildType> allowedTypes = new ArrayList<>();
     private Map<GuildModifier, BranchModifier> modifiers = new HashMap<>();
 
@@ -36,6 +37,7 @@ public class Upgrade {
         icon = config.getString("icon", "black_dye.10");
         upkeep = config.getDouble("upkeep", 10);
         level = 0;
+        expansionTime = config.getInt("expansion-time", 21600);
         for(String s : config.getStringList("allowed-types")) {
             GuildType type = GuildLoader.getByString(s);
             if(type != null) allowedTypes.add(type);
@@ -71,6 +73,7 @@ public class Upgrade {
         upkeep = b.upkeep;
         allowedTypes = b.allowedTypes;
         modifiers = b.modifiers;
+        expansionTime = b.expansionTime;
         this.description = b.description;
         this.level = level;
     }
@@ -83,6 +86,7 @@ public class Upgrade {
         return allowedTypes.contains(type);
     }
     public int getLevel() { return level; }
+    public int getExpansionTime() { return expansionTime; }
     public void levelUp() {
         level++;
     }

@@ -15,6 +15,7 @@ import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
+import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
@@ -211,6 +212,16 @@ public class Database {
                             g.updateWealth();
                         }
 
+                        // --- Upgrade Queue ---
+                        if (gd.upgradeQueue != null) {
+                            for (UpgradeExpansionData ued : gd.upgradeQueue) {
+                                Upgrade upgrade = g.getUpgrade(ued.upgrade);
+                                if (upgrade != null) {
+                                    g.addQueuedUpgrade(upgrade, ued.timeLeft);
+                                }
+                            }
+                        }
+
                         f.getGuildHandler().addGuild(g);
                     }
                 }
@@ -324,6 +335,13 @@ public class Database {
                     bd.id = u.getId();
                     bd.level = u.getLevel();
                     gd.upgrades.add(bd);
+                }
+
+                for (UpgradeExpansion e : g.getUpgradeQueue()) {
+                    UpgradeExpansionData ued = new UpgradeExpansionData();
+                    ued.upgrade = e.getUpgrade().getId();
+                    ued.timeLeft = e.getTimeLeft();
+                    gd.upgradeQueue.add(ued);
                 }
 
                 data.guilds.add(gd);
