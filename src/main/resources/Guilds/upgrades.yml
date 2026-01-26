@@ -1,0 +1,9 @@
+max_admin_power:
+  name: "§fMax Administative Power"
+  icon: "writable_book.0"
+  allowed-types:
+    - realm
+  modifiers:
+    - trade_power 3 1
+    - diplomatic_capacity 5
+    - production 0.05

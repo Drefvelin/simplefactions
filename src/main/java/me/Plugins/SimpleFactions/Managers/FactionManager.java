@@ -209,6 +209,7 @@ public class FactionManager implements Listener{
 		for (var entry : deltas.entrySet()) {
 			double amount = Formatter.formatDouble(entry.getValue());
 			if (amount == 0.0) continue;
+			if(entry.getKey().getBank() == null) continue;
 			entry.getKey().getBank().deposit(amount);
 		}
 

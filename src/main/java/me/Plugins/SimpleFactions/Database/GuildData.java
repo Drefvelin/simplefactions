@@ -28,6 +28,7 @@ public class GuildData {
 
     public List<String> members = new ArrayList<>();
     public List<GuildBranchData> branches = new ArrayList<>();
+    public List<GuildBranchData> upgrades = new ArrayList<>();
 
     @SerializedName("wealth modifiers")
     public List<String> wealthModifiers = new ArrayList<>();

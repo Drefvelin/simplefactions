@@ -16,6 +16,7 @@ import me.Plugins.SimpleFactions.Loaders.RegimentLoader;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TierLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
+import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Loaders.WarGoalLoader;
 import me.Plugins.SimpleFactions.Managers.BankManager;
 import me.Plugins.SimpleFactions.Managers.CommandManager;
@@ -44,6 +45,7 @@ public class SimpleFactions extends JavaPlugin{
 	private static final TitleLoader titleLoader = new TitleLoader();
 	private final WarGoalLoader goalLoader = new WarGoalLoader();
 	private final BranchLoader branchLoader = new BranchLoader();
+	private final UpgradeLoader upgradeLoader = new UpgradeLoader();
 	private final GuildLoader guildLoader = new GuildLoader();
 	private final LawLoader lawLoader = new LawLoader();
 	private final ProvinceLoader provinceLoader = new ProvinceLoader();
@@ -117,6 +119,7 @@ public class SimpleFactions extends JavaPlugin{
 		goalLoader.load(new File(getDataFolder(), "wargoals.yml"));
 		guildLoader.load(new File(getDataFolder(), "Guilds/guild-types.yml"));
 		branchLoader.load(new File(getDataFolder(), "Guilds/branches.yml"));
+		upgradeLoader.load(new File(getDataFolder(), "Guilds/upgrades.yml"));
 		titleLoader.loadAll();
 	}
 	public void registerListeners() {
@@ -161,6 +164,7 @@ public class SimpleFactions extends JavaPlugin{
 				"laws.yml",
 				"Guilds/guild-types.yml",
 				"Guilds/branches.yml",
+				"Guilds/upgrades.yml",
 				};
 		for(String s : files) {
 			File newConfigFile = new File(getDataFolder(), s);

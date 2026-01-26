@@ -14,9 +14,11 @@ import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
+import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
+import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Loaders.WarGoalLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
@@ -173,6 +175,18 @@ public class Database {
                             }
                         }
 
+                        List<Upgrade> upgrades = new ArrayList<>();
+                        if(gd.upgrades != null) {
+                            for (GuildBranchData bd : gd.upgrades) {
+                                Upgrade base = UpgradeLoader.getByString(bd.id);
+                                if (base != null) {
+                                    upgrades.add(
+                                        new Upgrade(base, bd.level.intValue())
+                                    );
+                                }
+                            }
+                        }
+
                         Guild g = new Guild(
                             gd.id,
                             gd.name,
@@ -182,6 +196,7 @@ public class Database {
                             gd.type,
                             gd.members,
                             branches,
+                            upgrades,
                             gd.banner,
                             loadModifiers(gd.wealthModifiers),
                             f,
@@ -302,6 +317,13 @@ public class Database {
                     bd.id = b.getId();
                     bd.level = b.getLevel();
                     gd.branches.add(bd);
+                }
+
+                for (Upgrade u : g.getUpgrades()) {
+                    GuildBranchData bd = new GuildBranchData();
+                    bd.id = u.getId();
+                    bd.level = u.getLevel();
+                    gd.upgrades.add(bd);
                 }
 
                 data.guilds.add(gd);
