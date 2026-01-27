@@ -11,6 +11,7 @@ import org.bukkit.Bukkit;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.income.entry.PlayerEntry;
+import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
@@ -108,6 +109,11 @@ public class Ledger {
             case FORTS:
                 //TODO implement
                 break;
+            case UPGRADES_UPKEEP:
+                for(Upgrade u : guild.getUpgrades()) {
+                    amount -= u.getTotalUpkeep();
+                }
+                break;
             default:
                 break;
         }
@@ -158,6 +164,7 @@ public class Ledger {
                 // -------- NEGATIVE / COSTS --------
                 case TRADE_UPKEEP:
                 case FORTS:
+                case UPGRADES_UPKEEP:
                 case GUILD_PAYMENTS:
                 case OVERLORD_TAX:
                 case TRIBUTE_PAYMENTS:
@@ -240,6 +247,7 @@ public class Ledger {
             case TRADE:
             case TRADE_UPKEEP:
             case FORTS:
+            case UPGRADES_UPKEEP:
             case CITIZENS:
                 buffer.addExternalDelta(guild, getIncome(cf));
                 return;

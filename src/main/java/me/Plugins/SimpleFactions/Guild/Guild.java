@@ -434,6 +434,9 @@ public class Guild {
         for(Branch b : branches.values()) {
             amount += b.getAmount(m);
         }
+        for(Upgrade u : upgrades.values()) {
+            amount += u.getAmount(m);
+        }
         return amount;
     }
 
@@ -527,5 +530,13 @@ public class Guild {
     public void addQueuedUpgrade(Upgrade u, int time) {
         if(upgradeQueue.size() == 3) return;
         upgradeQueue.add(new UpgradeExpansion(u, time));
+    }
+
+    public double getUpgradesUpkeep() {
+        double total = 0;
+        for(Upgrade u : upgrades.values()) {
+            total+=u.getTotalUpkeep();
+        }
+        return total;
     }
 }

@@ -161,7 +161,7 @@ public class FactionCreator {
 			Government gov = f.getGovernment();
 			lore.add(StringFormatter.formatHex("#9c9775§l"+f.getRulerTitle()+": #c2bea7"+f.getLeader()));
 			lore.add(StringFormatter.formatHex("#85c265Administrative Power§7: §e"+format.formatDouble(gov.getPower())+"/"+format.formatDouble(gov.getMaxPower())+" §7(§e+"
-					+format.formatDouble(gov.getPowerGain())+"§7/day)"));
+					+format.formatDouble(gov.getPowerGain())+"§7/hour)"));
 			lore.add(StringFormatter.formatHex("#85c265Stability§7: §e"+gov.getStabilityString()+"%"));
 			lore.add(" ");
 			lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernmentString()));

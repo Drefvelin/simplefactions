@@ -21,6 +21,8 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Wealth;
+import me.Plugins.SimpleFactions.enums.FactionModifiers;
+import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.government.election.Candidate;
 import me.Plugins.SimpleFactions.government.election.Election;
@@ -32,7 +34,6 @@ public class Government {
     private Faction f;
     private Council council;
     private double power;
-    private double powerGain;
 
     private final Election election;
     private List<Location> votingBooths = new ArrayList<>();
@@ -45,7 +46,6 @@ public class Government {
         this.f = f;
         this.council = new Council(this, f);
         this.power = -1;
-        this.powerGain = -1;
         this.election = new Election(this, false);
     }
 
@@ -53,7 +53,6 @@ public class Government {
         this.f = f;
         this.council = new Council(this, f);
         this.power = data.power != null ? data.power : -1;
-        this.powerGain = -1;
         this.lastElectionDate = data.lastElectionDate != null ? new java.util.Date(data.lastElectionDate) : new java.util.Date(0);
         boolean electionActive = false;
 
@@ -89,7 +88,6 @@ public class Government {
         council.reorganize();
 
         if (power == -1) power = f.getMembers().size() * 10;
-        if (powerGain == -1) powerGain = 1;
 
         if (shouldStartElection()) {
             election.start();
@@ -160,6 +158,12 @@ public class Government {
         election.tick();
         if(!hasElections()) lastElectionDate = new Date(0);
         replace();
+    }
+
+    public void powerTick() {
+        power += getPowerGain();
+        double maxPower = getMaxPower();
+        if (power > maxPower) power = maxPower;
     }
 
     public void replace() {
@@ -247,12 +251,25 @@ public class Government {
     public boolean hasCouncilElections() {
         return f.hasFactionRule(Rules.ELECTED_COUNCIL);
     }
+
+    public double getMaxPower() {
+        double base = f.getMembers().size() * 10;
+        base += f.getOrCreateMainGuild().getModifier(GuildModifier.ADMIN_POWER);
+        base *= 1+f.getModifier(FactionModifiers.ADMIN_POWER_MULTIPLIER).getAmount()/100.0;
+        base *= getStability()/100.0;
+        return base;
+    }
+
     public double getPower() {
         return power;
     }
 
     public double getPowerGain() {
-        return powerGain;
+        double base = 1;
+        base += f.getOrCreateMainGuild().getModifier(GuildModifier.ADMIN_POWER_GAIN);
+        base *= 1+f.getModifier(FactionModifiers.ADMIN_POWER_GAIN_MULTIPLIER).getAmount()/100.0;
+        base *= getStability()/100.0;
+        return base;
     }
 
     public boolean canAffectStability(Guild guild) {
@@ -287,13 +304,6 @@ public class Government {
         if(stability < 0) stability = 0;
         if(stability > 100) stability = 100;
         return Formatter.formatDouble(stability);
-    }
-
-    public double getMaxPower() {
-        double base = f.getMembers().size() * 10;
-        base *= 1+(council.getCurrentSize())/2.0;
-        base *= getStability()/100.0;
-        return base;
     }
 
     public String getStabilityString() {

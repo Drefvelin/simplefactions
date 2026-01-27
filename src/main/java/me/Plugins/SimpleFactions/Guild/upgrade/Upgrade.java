@@ -82,6 +82,9 @@ public class Upgrade {
     public String getId() { return id; }
     public String getName() { return name; }
     public double getUpkeep() { return upkeep; }
+    public double getTotalUpkeep() {
+        return upkeep * level;
+    }
     public boolean isAllowed(GuildType type) {
         return allowedTypes.contains(type);
     }
