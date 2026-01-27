@@ -46,7 +46,7 @@ public class GovernmentCreator {
         Government gov = f.getGovernment();
         lore.add(StringFormatter.formatHex("#9c9775§l"+f.getRulerTitle()+": #c2bea7"+f.getLeader()));
         lore.add(StringFormatter.formatHex("#85c265Administrative Power§7: §e"+Formatter.formatDouble(gov.getPower())+"/"+Formatter.formatDouble(gov.getMaxPower())+" §7(§e+"
-                +Formatter.formatDouble(gov.getPowerGain())+"§7/day)"));
+                +Formatter.formatDouble(gov.getPowerGain())+"§7/hour)"));
         lore.add(" ");
         lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernmentString()));
         lore.add(StringFormatter.formatHex("#b8ae61Leader Elections: "+(gov.hasLeaderElections() ? "#45afc4✔" : "#c74d32✖")));

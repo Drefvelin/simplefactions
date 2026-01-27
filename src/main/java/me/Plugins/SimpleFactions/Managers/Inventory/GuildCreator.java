@@ -23,6 +23,8 @@ import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.Branch.BranchModifier;
 import me.Plugins.SimpleFactions.Guild.income.Cashflow;
 import me.Plugins.SimpleFactions.Guild.income.Ledger;
+import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
+import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Guild.Guild;
@@ -36,6 +38,7 @@ import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.TLibs.Enums.APIType;
 import me.Plugins.TLibs.Objects.API.ItemAPI;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
+import me.Plugins.TLibs.Utils.TimeFormatter;
 import me.Plugins.TLibs.TLibs;
 
 public class GuildCreator {
@@ -161,6 +164,24 @@ public class GuildCreator {
 			m.setCustomModelData(icon.getItemMeta().getCustomModelData());
 			i.setItemMeta(m);
 		}
+		return i;
+	}
+
+	public ItemStack createUpgradesItem(Player p, Guild guild) {
+		ItemStack i = new ItemStack(Material.GOLD_INGOT);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex("#d979c2Upgrades"));
+
+		List<String> lore = new ArrayList<>();
+		for(Upgrade u : guild.getUpgrades()) {
+			lore.add(StringFormatter.formatHex(" #adc7be- "+u.getName()+" §7["+u.getLevel()+"]"));
+		}
+		if(guild.isLeader(p)) {
+			lore.add("");
+			lore.add(StringFormatter.formatHex("#28ed70Click to view"));
+		}
+		meta.setLore(lore);
+		i.setItemMeta(meta);
 		return i;
 	}
 
@@ -527,6 +548,106 @@ public class GuildCreator {
 
 		m.setLore(lore);
 		i.setItemMeta(m);
+		return i;
+	}
+
+	public ItemStack createUpgradeItem(Player p, Guild guild, Upgrade upgrade) {
+		ItemStack i = upgrade.getIconItem();
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(upgrade.getName());
+
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#575150[#d6cf69LVL " + upgrade.getLevel() + "#575150]"));
+		lore.add("");
+		lore.addAll(upgrade.getDescription());
+		lore.add("");
+		lore.add(StringFormatter.formatHex("#a6c793Effects:"));
+
+		for (GuildModifier m : upgrade.getModifierKeys()) {
+			BranchModifier mod = upgrade.getModifier(m);
+			if (mod == null) continue;
+
+			lore.add(StringFormatter.formatHex(
+				"§f - " + m.getName()
+				+ "#d6cf69:"
+				+ (m.isPositive() ? " #4fd945" : " #cf493a")
+				+ (mod.getCurrent(upgrade.getLevel())
+				+ " #575150("
+				+ (m.isPositive() ? "#4fd945" : "#cf493a")
+				+ mod.getPerLevel()
+				+ "#87807f/level#575150)")
+			));
+		}
+
+		lore.add("");
+		double totalUpkeep = upgrade.getUpkeep() * upgrade.getLevel();
+		lore.add(StringFormatter.formatHex("#d4c9aeUpkeep: #cb5b4f" + String.format("%.2f", totalUpkeep) + "d/day"));
+
+		meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, upgrade.getId());
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createUpgradeUpgradeItem(Player p, Guild guild, Upgrade upgrade) {
+		ItemStack i = TLibs.getItemAPI().getCreator().getItemsAdderItem("mcicons:icon_up_gray");
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex("#50e846Upgrade " + upgrade.getName()));
+
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#575150Current Level: #d6cf69" + upgrade.getLevel()));
+		lore.add("");
+		
+		lore.add("§7Time: §e" + TimeFormatter.formatTime(upgrade.getExpansionTime()));
+		lore.add("");
+		
+		double upkeepIncrease = upgrade.getUpkeep();
+		lore.add(StringFormatter.formatHex("#d4c9aeUpkeep Change: #cf493a+" + String.format("%.2f", upkeepIncrease) + "d/day"));
+
+		meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, upgrade.getId());
+		meta.getPersistentDataContainer().set(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN, true);
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createUpgradeDowngradeItem(Player p, Guild guild, Upgrade upgrade) {
+		ItemStack i = TLibs.getItemAPI().getCreator().getItemsAdderItem("mcicons:icon_down_gray");
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex("#cf493aDowngrade " + upgrade.getName()));
+
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#575150Current Level: #d6cf69" + upgrade.getLevel()));
+		lore.add("");
+		
+		if (upgrade.getLevel() <= 0) {
+			lore.add(StringFormatter.formatHex("#7a706aThis upgrade cannot be downgraded further."));
+		} else {
+			double upkeepDecrease = upgrade.getUpkeep();
+			lore.add(StringFormatter.formatHex("#d4c9aeUpkeep Change: #4fd945-" + String.format("%.2f", upkeepDecrease) + "d/day"));
+		}
+
+		meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, upgrade.getId());
+		meta.getPersistentDataContainer().set(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN, false);
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createUpgradeQueueItem(UpgradeExpansion expansion, int index) {
+		ItemStack i = expansion.getUpgrade().getIconItem().clone();
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex("#d979c2Upgrading " + expansion.getUpgrade().getName()));
+		
+		List<String> lore = new ArrayList<>();
+		if(index == 0) {
+			lore.add("§7Time Left: §e" + TimeFormatter.formatTime(expansion.getTimeLeft()));
+		} else {
+			lore.add(StringFormatter.formatHex("#857e59Queued..."));
+		}
+		
+		meta.setLore(lore);
+		i.setItemMeta(meta);
 		return i;
 	}
 }

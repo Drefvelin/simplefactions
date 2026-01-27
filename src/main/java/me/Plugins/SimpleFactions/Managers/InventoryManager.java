@@ -119,6 +119,12 @@ public class InventoryManager implements Listener{
 	public void guildView(Player player, Guild guild, Inventory i) {
 		guildView.guildView(player, guild, i);
 	}
+	public void upgradeView(Player player, Guild guild) {
+		guildView.upgradeView(player, guild);
+	}
+	public void upgradeView(Player player, Guild guild, Inventory i) {
+		guildView.upgradeView(player, guild, i);
+	}
 
 	//Laws
 	LawView lawView = new LawView(this);
@@ -390,13 +396,16 @@ public class InventoryManager implements Listener{
 					case TAX_VIEW:
 						factionView(p, f);
 						break;
+					case UPGRADE_VIEW:
+						guildView(p, g);
+						break;
 					default:
 						break;
 				}
 			}
 			if(h.getType() == SFGUI.FACTION_LIST || h.getType() == SFGUI.FACTION_VIEW) {
 				factionView.click(e, inv, p);
-			} else if(h.getType() == SFGUI.GUILD_LIST || h.getType() == SFGUI.GUILD_VIEW) {
+			} else if(h.getType() == SFGUI.GUILD_LIST || h.getType() == SFGUI.GUILD_VIEW || h.getType() == SFGUI.UPGRADE_VIEW) {
 				guildView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.LAW_VIEW || h.getType() == SFGUI.LAW_SELECT) {
 				lawView.click(e, inv, p);

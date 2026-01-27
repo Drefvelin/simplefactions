@@ -12,7 +12,9 @@ public enum FactionModifiers {
     DE_JURE(false, false),
     TRADE_POWER(true, true),
     PRODUCTION(true, true),
-    DIPLOMATIC_CAPACITY_MULTIPLIER(true, false);
+    DIPLOMATIC_CAPACITY_MULTIPLIER(true, false),
+    ADMIN_POWER_MULTIPLIER(true, false),
+    ADMIN_POWER_GAIN_MULTIPLIER(true, false);
 
     private final boolean positiveIsGood;
     private final boolean affectsEconomy;

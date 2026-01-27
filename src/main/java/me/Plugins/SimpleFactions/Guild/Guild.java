@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.Guild;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,17 +20,22 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.income.Ledger;
 import me.Plugins.SimpleFactions.Guild.income.TradeBreakdown;
+import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
+import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
+import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
+import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
@@ -46,6 +52,7 @@ public class Guild {
     private List<String> members = new ArrayList<>();
     private List<String> invites = new ArrayList<>();
     private Map<Integer, Branch> branches = new HashMap<>();
+    private Map<String, Upgrade> upgrades = new LinkedHashMap<>();
     private Bank bank;
 
     private Ledger ledger;
@@ -62,6 +69,8 @@ public class Guild {
     private TradeBreakdown breakdown = new TradeBreakdown();
 
     private Stance stance;
+
+    private List<UpgradeExpansion> upgradeQueue = new ArrayList<>();
 
     public Guild(Faction f) {
         host = f;
@@ -81,6 +90,9 @@ public class Guild {
         while(BranchLoader.getByGroup(this, group) != null) {
             branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 0));
             group++;
+        }
+        for(Upgrade u : UpgradeLoader.getList()) {
+            upgrades.put(u.getId(), new Upgrade(u, 0));
         }
         this.ledger = new Ledger(this);
         createBanner();
@@ -106,6 +118,9 @@ public class Guild {
             branches.put(group, new Branch(BranchLoader.getByGroup(this, group), 0));
             group++;
         }
+        for(Upgrade u : UpgradeLoader.getList()) {
+            upgrades.put(u.getId(), new Upgrade(u, 0));
+        }
         f.getOrCreateMainGuild().kick(p.getName()); //remove from main guild
         this.ledger = new Ledger(this);
         createBanner();
@@ -120,6 +135,7 @@ public class Guild {
         String type,
         List<String> members,
         List<Branch> branchList,
+        List<Upgrade> upgradeList,
         List<String> patterns,
         List<Modifier> wealthModifiers,
         Faction host,
@@ -145,12 +161,29 @@ public class Guild {
             }
             group++;
         }
+        for(Upgrade u : upgradeList) {
+            upgrades.put(u.getId(), new Upgrade(u, u.getLevel()));
+        }
+        for(Upgrade u : UpgradeLoader.getList()) {
+            if(!upgrades.containsKey(u.getId())) upgrades.put(u.getId(), new Upgrade(u, 0));
+        }
         this.bannerPatterns = patterns;
         this.wealth = 0.0;
         this.wealthModifiers = wealthModifiers;
         this.ledger = new Ledger(this);
         createBanner();
     }
+
+    public void tick() {
+		if(upgradeQueue.size() == 0) return;
+		UpgradeExpansion e = upgradeQueue.get(0);
+		e.tick();
+		if(e.getTimeLeft() != 0) return;
+		upgradeQueue.remove(0);
+		e.getUpgrade().levelUp();
+		FactionManager.getInv().getUpdater().inventorySound("minecraft:block.note_block.chime", SFGUI.UPGRADE_VIEW);
+	}
+
     public Ledger getLedger() {
         return ledger;
     }
@@ -401,6 +434,9 @@ public class Guild {
         for(Branch b : branches.values()) {
             amount += b.getAmount(m);
         }
+        for(Upgrade u : upgrades.values()) {
+            amount += u.getAmount(m);
+        }
         return amount;
     }
 
@@ -459,5 +495,48 @@ public class Guild {
                 stance = Stance.OPPOSE;
                 break;
         }
+    }
+
+    //Upgrades
+    public Upgrade getUpgrade(String id) {
+        return upgrades.get(id);
+    }
+
+    public List<Upgrade> getUpgrades() {
+        List<Upgrade> list = new ArrayList<>();
+        for(Upgrade u : upgrades.values()) {
+            if(u.isAllowed(type)) list.add(u);
+        }
+        return list;
+    }
+
+    public boolean hasUpgrades() {
+        return !getUpgrades().isEmpty();
+    }
+
+    public List<UpgradeExpansion> getUpgradeQueue() {
+        return upgradeQueue;
+    }
+
+    public void setUpgradeQueue(List<UpgradeExpansion> queue) {
+        this.upgradeQueue = queue;
+    }
+
+    public void enqueueUpgrade(Upgrade u) {
+        if(upgradeQueue.size() == 3) return;
+        upgradeQueue.add(new UpgradeExpansion(u));
+    }
+
+    public void addQueuedUpgrade(Upgrade u, int time) {
+        if(upgradeQueue.size() == 3) return;
+        upgradeQueue.add(new UpgradeExpansion(u, time));
+    }
+
+    public double getUpgradesUpkeep() {
+        double total = 0;
+        for(Upgrade u : upgrades.values()) {
+            total+=u.getTotalUpkeep();
+        }
+        return total;
     }
 }

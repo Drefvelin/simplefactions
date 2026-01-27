@@ -153,6 +153,11 @@ public class FactionManager implements Listener{
 
 	public void time() {
 		timer++;
+		if(timer%10 == 0) {
+			for(Faction f : factions) {
+				f.getGovernment().powerTick();
+			}
+		}
 		if(timer%300 == 0) {
 			for(Faction f : factions) {
 				if(f.getProvinces().size() == 0) continue;
@@ -209,6 +214,7 @@ public class FactionManager implements Listener{
 		for (var entry : deltas.entrySet()) {
 			double amount = Formatter.formatDouble(entry.getValue());
 			if (amount == 0.0) continue;
+			if(entry.getKey().getBank() == null) continue;
 			entry.getKey().getBank().deposit(amount);
 		}
 

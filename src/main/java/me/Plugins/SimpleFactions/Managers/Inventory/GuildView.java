@@ -16,6 +16,8 @@ import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
+import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
@@ -125,6 +127,7 @@ public class GuildView {
 		i.setItem(11, creator.createMenuItem(player, guild, MenuItemType.LEADER));
 		i.setItem(12, creator.createMenuItem(player, guild, MenuItemType.WEALTH));
 		i.setItem(15, creator.createMenuItem(player, guild, MenuItemType.MEMBERS));
+		if(guild.hasUpgrades()) i.setItem(16, creator.createUpgradesItem(player, guild));
 		int group = 0;
 		while(guild.getBranch(group) != null || group > 10) {
 			Branch b = guild.getBranch(group);
@@ -140,7 +143,43 @@ public class GuildView {
 		i.setItem(53, inv.createBackButton(SFGUI.GUILD_VIEW));
 	}
 
+	public void upgradeView(Player player, Guild guild) {
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(guild.getId(), SFGUI.UPGRADE_VIEW), 54, "§7Upgrade View");
+		upgradeView(player, guild, i);
+		player.openInventory(i);
+	}
+
+	public void upgradeView(Player player, Guild guild, Inventory i) {
+		i.clear();
+		List<Upgrade> upgrades = guild.getUpgrades();
+		
+		int index = 9;
+		for (Upgrade upgrade : upgrades) {
+			if (index > 17) break;
+			i.setItem(index, creator.createUpgradeItem(player, guild, upgrade));
+			
+			if (guild.isLeader(player)) {
+				i.setItem(index - 9, creator.createUpgradeUpgradeItem(player, guild, upgrade));
+				i.setItem(index + 9, creator.createUpgradeDowngradeItem(player, guild, upgrade));
+			}
+			
+			index++;
+		}
+		
+		// Display upgrade queue (3 items at slots 39-41)
+		int queueIndex = 0;
+		for (var queueItem : guild.getUpgradeQueue()) {
+			if (queueIndex >= 3) break;
+			i.setItem(39 + queueIndex, creator.createUpgradeQueueItem(queueItem, queueIndex));
+			queueIndex++;
+		}
+		
+		i.setItem(53, inv.createBackButton(SFGUI.UPGRADE_VIEW));
+	}
+
 	public void click(InventoryClickEvent e, Inventory inventory, Player p) {
+		if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
+		SFInventoryHolder h = (SFInventoryHolder) inventory.getHolder();
 		if (e.getView().getTitle().equalsIgnoreCase("§7Guild List")) {
 			e.setCancelled(true);
 
@@ -194,10 +233,8 @@ public class GuildView {
 		}
 		if(e.getView().getTitle().equalsIgnoreCase("§7Guild View")) {
 			e.setCancelled(true);
-			SFInventoryHolder h = (SFInventoryHolder) inventory.getHolder();
 			Guild guild = FactionManager.getGuildByString(h.getId());
 			if(e.getSlot() == 19) {
-				if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
 				guild.setBannerPatterns(RestServer.fetchBannerList());
 				inventory.setItem(10, creator.createMenuItem(p, guild, MenuItemType.BANNER));
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
@@ -206,6 +243,11 @@ public class GuildView {
 				ItemStack i = new ItemStack(guild.getBanner());
 				p.getInventory().addItem(i);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			} else if(e.getSlot() == 16) {
+				if(!guild.isLeader(p)) return;
+				upgradeView(p, guild);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				return;
 			}
 			ItemStack item = e.getCurrentItem();
 			ItemMeta meta = item.getItemMeta();
@@ -235,6 +277,43 @@ public class GuildView {
 				}
 				manager.recalculateForSingleGuild(guild, true);
 				guildView(p, guild, inventory);
+			}
+		}
+		if(h.getType() == SFGUI.UPGRADE_VIEW) {
+			e.setCancelled(true);
+			Guild guild = FactionManager.getGuildByString(h.getId());
+			
+			ItemStack item = e.getCurrentItem();
+			if(item == null || !item.hasItemMeta()) return;
+			
+			ItemMeta meta = item.getItemMeta();
+			String data = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+			if(data != null) {
+				Boolean upgrade = meta.getPersistentDataContainer().get(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN);
+				if(upgrade == null) return;
+				if(!guild.isLeader(p)) return;
+				
+				Upgrade u = guild.getUpgrade(data);
+				if(u == null) return;
+				
+				if(!upgrade) {
+					// Downgrade logic
+					if(u.getLevel() == 0) return;
+					u.levelDown();
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					p.sendMessage("§cDowngraded " + u.getName() + "§c to level §e" + u.getLevel());
+				} else {
+					// Upgrade logic - queue the upgrade
+					if(guild.getUpgradeQueue().size() == 3) {
+						p.sendMessage("§cUpgrade queue is full");
+						p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+						return;
+					}
+					guild.enqueueUpgrade(u);
+					p.sendMessage("§eQueued " + u.getName());
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				}
+				upgradeView(p, guild, inventory);
 			}
 		}
 	}

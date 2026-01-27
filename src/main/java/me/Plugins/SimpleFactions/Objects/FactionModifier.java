@@ -117,6 +117,12 @@ public class FactionModifier {
 			case DIPLOMATIC_CAPACITY_MULTIPLIER:
 				prefix = "#56ccf2Diplomatic Capacity Multiplier";
 				break;
+			case ADMIN_POWER_MULTIPLIER:
+				prefix = "#ebde54Admin Power Multiplier";
+				break;
+			case ADMIN_POWER_GAIN_MULTIPLIER:
+				prefix = "#d1b347Admin Power Gain Multiplier";
+				break;
 			default:
 				prefix = "#c7b381Unknown Modifier";
 				break;
