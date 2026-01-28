@@ -284,7 +284,12 @@ public class Government {
         if(power > getMaxPower()) {
             power = getMaxPower();
         }
-        return power;
+        return Formatter.formatDouble(power);
+    }
+
+    public void spendPower(double amount) {
+        power -= amount;
+        if(power < 0) power = 0;
     }
 
     public double getPowerGain() {
