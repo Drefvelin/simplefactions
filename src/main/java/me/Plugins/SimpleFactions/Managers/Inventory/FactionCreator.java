@@ -160,8 +160,11 @@ public class FactionCreator {
 			List<String> lore = new ArrayList<String>();
 			Government gov = f.getGovernment();
 			lore.add(StringFormatter.formatHex("#9c9775§l"+f.getRulerTitle()+": #c2bea7"+f.getLeader()));
-			lore.add(StringFormatter.formatHex("#85c265Administrative Power§7: §e"+format.formatDouble(gov.getPower())+"/"+format.formatDouble(gov.getMaxPower())+" §7(§e+"
-					+format.formatDouble(gov.getPowerGain())+"§7/hour)"));
+			double power = Formatter.formatDouble(gov.getPower());
+			double maxPower = Formatter.formatDouble(gov.getMaxPower());
+			String powerString = ((power < 0) ? "§c" : "") + power+"/"+((maxPower < 0) ? "§c" : "") + maxPower;
+			lore.add(StringFormatter.formatHex("#85c265Administrative Power§7: §e"+powerString+" §7(§e+"
+					+Formatter.formatDouble(gov.getPowerGain())+"§7/hour)"));
 			lore.add(StringFormatter.formatHex("#85c265Stability§7: §e"+gov.getStabilityString()+"%"));
 			lore.add(" ");
 			lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernmentString()));
@@ -311,7 +314,7 @@ public class FactionCreator {
             for (TaxTarget target : TaxTarget.values()) {
                 if (target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) continue;
                 if (!f.getTaxHandler().canCollectTax(target)) continue;
-                lore.add(StringFormatter.formatHex("#93c9a7" + target.getDisplayName() + ": #a39a84" + f.getTaxRate(target) + "%"));
+                lore.add(StringFormatter.formatHex("#93c9a7" + target.getDisplayName() + ": #a39a84" + f.getTaxRate(target, null, false) + "%"+ " §8(§7"+f.getTaxRate(target, null, true)+"% effective§8)"));
             }
 			lore.add("");
 			lore.add(StringFormatter.formatHex("§7Click to view"));
@@ -327,6 +330,12 @@ public class FactionCreator {
 			for(LawGroup group : f.getLawHandler().getGroupList()) {
 				lore.add(group.getName()+"§e: "+group.getCurrent().getName());
 			}
+			lore.add("");
+			double upkeep = f.getGovernment().getTotalUpkeep();
+			if(upkeep > 0) {
+				lore.add(StringFormatter.formatHex("#d4c9aeTotal Law Upkeep: §e"+Formatter.formatDouble(upkeep)+" Administrative Power/hour"));
+			}
+			lore.add(StringFormatter.formatHex("§7Click to view"));
 			m.setLore(lore);
 			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
 			m.getPersistentDataContainer().set(key, PersistentDataType.STRING, f.getId());

@@ -121,9 +121,9 @@ public class SessionReport {
                         name = FactionManager.getByString(taxChange.getId()).getName();
                     }
                     
-                    double oldRate = faction.getTaxRate(target, taxChange.getId());
+                    double oldRate = faction.getTaxRate(target, taxChange.getId(), false);
                     if (oldRate == -1.0) {
-                        oldRate = faction.getTaxRate(target, null);
+                        oldRate = faction.getTaxRate(target, null, false);
                     }
                     
                     currentPage.append("Type: Tax\n");

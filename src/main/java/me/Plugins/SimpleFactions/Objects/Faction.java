@@ -250,19 +250,15 @@ public class Faction {
 		SimpleFactions.getInstance().getProvinceManager().recalculateForSingleGuild(getOrCreateMainGuild(), true);
 	}
 
-	public double getTaxRate(TaxTarget target) {
-		return taxHandler.getTaxRate(target, null);
-	}
-
-	public double getTaxRate(TaxTarget target, String id) {
-		return taxHandler.getTaxRate(target, id);
+	public double getTaxRate(TaxTarget target, String id, boolean effective) {
+		return taxHandler.getTaxRate(target, id, effective);
 	}
 
 	public double getOverlordTaxRate(Faction f) {
 		double taxRate = 0;
 		Faction overlord = getOverlord();
 		if(overlord == null) return taxRate;
-		taxRate = overlord.getTaxRate(TaxTarget.VASSALS, id);
+		taxRate = overlord.getTaxRate(TaxTarget.VASSALS, id, false);
 		for(FactionModifier mod : getModifiers()) {
 			if(!mod.getType().equals(FactionModifiers.TAX_MULTIPLIER)) continue;
 			double mult = 1+mod.getAmount()/100.0;

@@ -52,7 +52,7 @@ public class Ledger {
             case GUILD_PAYMENTS:
                 if(guild.isBase()) return 0;
                 amount = -getGrossTaxableIncome();
-                amount *= guild.getFaction().getTaxRate(TaxTarget.GUILDS, guild.getId())/100.0;
+                amount *= guild.getFaction().getTaxRate(TaxTarget.GUILDS, guild.getId(), true)/100.0;
                 break;
             case DIVIDENDS:
                 if(!guild.isBase()) return 0;

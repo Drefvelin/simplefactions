@@ -27,6 +27,7 @@ import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.government.election.Candidate;
 import me.Plugins.SimpleFactions.government.election.Election;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
+import me.Plugins.SimpleFactions.laws.LawGroup;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 
@@ -252,7 +253,20 @@ public class Government {
         return f.hasFactionRule(Rules.ELECTED_COUNCIL);
     }
 
-    public double getMaxPower() {
+    public double getTotalUpkeep() {
+        double total = 0;
+        for(LawGroup group : f.getLawHandler().getGroupList()) {
+            total += group.getCurrent().getUpkeep();
+        }
+        total *= 3-getStability()/50.0;
+        return total;
+    }
+
+    public double getTaxEfficiency() {
+        return getStability()/100.0;
+    }
+
+    public double getBaseMaxPower() {
         double base = f.getMembers().size() * 10;
         base += f.getOrCreateMainGuild().getModifier(GuildModifier.ADMIN_POWER);
         base *= 1+f.getModifier(FactionModifiers.ADMIN_POWER_MULTIPLIER).getAmount()/100.0;
@@ -260,7 +274,16 @@ public class Government {
         return base;
     }
 
+    public double getMaxPower() {
+        double max = getBaseMaxPower();
+        max -= getTotalUpkeep();
+        return max;
+    }
+
     public double getPower() {
+        if(power > getMaxPower()) {
+            power = getMaxPower();
+        }
         return power;
     }
 

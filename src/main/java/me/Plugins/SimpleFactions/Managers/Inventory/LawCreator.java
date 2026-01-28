@@ -16,6 +16,7 @@ import me.Plugins.SimpleFactions.Objects.Bracket;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Utils.EconomicImpact;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.enums.Brackets;
 import me.Plugins.SimpleFactions.enums.Region;
@@ -166,6 +167,19 @@ public class LawCreator {
 		if (law.hasDescription()) {
 			lore.addAll(law.getDescription());
 			lore.add("");
+		}
+		if(!isCurrent) {
+			double cost = law.getCost()*law.getCompatibility(group.getCurrent().getId());
+			double upkeep = law.getUpkeep();
+			if(forProposal) {
+				lore.add(StringFormatter.formatHex("#d4c9aeCost: §e"+Formatter.formatDouble(cost)+" Administrative Power"));
+				if(upkeep > 0) {
+					lore.add(StringFormatter.formatHex("#d4c9aeUpkeep: §e"+Formatter.formatDouble(upkeep)+" Administrative Power/hour"));
+				} else {
+					lore.add(StringFormatter.formatHex("#d4c9aeUpkeep: §eNone"));
+				}
+				lore.add("");
+			}
 		}
 
 		// ---- Effects ----

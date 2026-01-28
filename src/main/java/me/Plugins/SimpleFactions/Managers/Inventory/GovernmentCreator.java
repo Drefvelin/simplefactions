@@ -45,7 +45,10 @@ public class GovernmentCreator {
         List<String> lore = new ArrayList<String>();
         Government gov = f.getGovernment();
         lore.add(StringFormatter.formatHex("#9c9775§l"+f.getRulerTitle()+": #c2bea7"+f.getLeader()));
-        lore.add(StringFormatter.formatHex("#85c265Administrative Power§7: §e"+Formatter.formatDouble(gov.getPower())+"/"+Formatter.formatDouble(gov.getMaxPower())+" §7(§e+"
+        double power = Formatter.formatDouble(gov.getPower());
+        double maxPower = Formatter.formatDouble(gov.getMaxPower());
+        String powerString = ((power < 0) ? "§c" : "") + power+"/"+((maxPower < 0) ? "§c" : "") + maxPower;
+        lore.add(StringFormatter.formatHex("#85c265Administrative Power§7: §e"+powerString+" §7(§e+"
                 +Formatter.formatDouble(gov.getPowerGain())+"§7/hour)"));
         lore.add(" ");
         lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernmentString()));
@@ -188,6 +191,33 @@ public class GovernmentCreator {
             effect = guild.getStabilityModifier(f);
             lore.add(StringFormatter.formatHex(" #d4bb98- "+guild.getName()+" §7(#4269a8Vassal§7): "+guild.getStance(f).getDisplay()+" §7("+( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"+"§7)"));
         }
+        
+        // Add stability effects section
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#93c9a7Effects:"));
+        
+        // Tax Efficiency penalty (1 - taxEfficiency)
+        double taxEfficiencyPenalty = (1.0 - gov.getTaxEfficiency()) * 100.0;
+        lore.add(StringFormatter.formatHex("#b8ae61Tax Efficiency: #d13530-"+Formatter.formatDouble(taxEfficiencyPenalty)+"%"));
+        
+        // Admin Power Gain (stability/100 is the multiplier, so penalty from 100% stability)
+        double stabilityMultiplier = gov.getStability() / 100.0;
+        double powerGainPenalty = (1.0 - stabilityMultiplier) * 100.0;
+        lore.add(StringFormatter.formatHex("#b8ae61Admin Power Gain: #d13530-"+Formatter.formatDouble(powerGainPenalty)+"%"));
+        
+        // Max Admin Power (also uses stability/100 multiplier)
+        double maxPowerPenalty = (1.0 - stabilityMultiplier) * 100.0;
+        lore.add(StringFormatter.formatHex("#b8ae61Max Admin Power: #d13530-"+Formatter.formatDouble(maxPowerPenalty)+"%"));
+        
+        // Law Upkeep (uses 3 - stability/50 multiplier, so upkeep increases as stability decreases)
+        double upkeepMultiplier = 3.0 - gov.getStability() / 50.0;
+        double upkeepIncrease = (upkeepMultiplier - 1.0) * 100.0;
+        if(upkeepIncrease > 0) {
+            lore.add(StringFormatter.formatHex("#b8ae61Law Upkeep: #d13530+"+Formatter.formatDouble(upkeepIncrease)+"%"));
+        } else {
+            lore.add(StringFormatter.formatHex("#b8ae61Law Upkeep: #45c46f"+Formatter.formatDouble(upkeepIncrease)+"%"));
+        }
+        
         m.setLore(lore);
         item.setItemMeta(m);
         return item;
@@ -224,7 +254,7 @@ public class GovernmentCreator {
             Proposal proposal = new Proposal(p.getName(), gov);
             proposal.setTaxProposal(new TaxLawChange(target, "all", 50));
             if(gov.canProposeOrStartMovement(p) && gov.canBeProposed(proposal)) {
-                lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+f.getTaxRate(target)+"%"));
+                lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+f.getTaxRate(target, null, false)+"%"+ " §8(§7"+f.getTaxRate(target, null, true)+"% effective§8)"));
                 if(proposalView) {
                     lore.add(StringFormatter.formatHex("#b8ae61Create a proposal to change"));
                     lore.add(StringFormatter.formatHex("#b8ae61the rate for #62ca43"+target.getDisplayName()+"."));
@@ -261,9 +291,9 @@ public class GovernmentCreator {
         m.setDisplayName(StringFormatter.formatHex(name));
         List<String> lore = new ArrayList<String>();
         TaxHandler taxHandler = f.getTaxHandler();
-        double taxRate = taxHandler.getTaxRate(target, id);
+        double taxRate = taxHandler.getTaxRate(target, id, false);
         if(taxHandler.hasSpecificTax(target, null)) {
-            lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+taxHandler.getSpecificTax(target, id)+"%"));
+            lore.add(StringFormatter.formatHex("#525d5dCurrent Rate: #e3d5a1"+taxRate+"%"+ " §8(§7"+f.getTaxRate(target, id, true)+"% effective§8)"));
             lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+taxRate+"%#3f4040)"));
         } else {
             lore.add(StringFormatter.formatHex("#812222No specific "+(target == TaxTarget.TARIFF_ID ? "tariff" : "tax")+" set."));
@@ -490,16 +520,16 @@ public class GovernmentCreator {
             }
             String oldRate = "";
             if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) {
-                double rate = f.getTaxRate(target, taxChange.getId());
+                double rate = f.getTaxRate(target, taxChange.getId(), false);
                 if(rate == -1.0) {
-                    oldRate = String.valueOf(f.getTaxRate(target, null));
+                    oldRate = String.valueOf(f.getTaxRate(target, null, false));
                 } else {
                     oldRate = String.valueOf(rate);
                 }
             } else {
-                oldRate = String.valueOf(f.getTaxRate(target));
+                oldRate = String.valueOf(f.getTaxRate(target, null, false));
             }
-            double baseRate = f.getTaxRate(target, null);
+            double baseRate = f.getTaxRate(target, null, false);
             lore.add(StringFormatter.formatHex("#b8ae61Target: #c2bea7"+name+
                 (type.isEmpty() ? "" : " §7("+type+"§7)")));
             lore.add(StringFormatter.formatHex("#b8ae61Change: #c2bea7"+oldRate+"% §7-> #c2bea7"+taxChange.getNewTax()+"%"));
