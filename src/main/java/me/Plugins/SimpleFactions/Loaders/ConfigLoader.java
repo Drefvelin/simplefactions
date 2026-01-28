@@ -20,6 +20,7 @@ public class ConfigLoader {
             e.printStackTrace();
         }
 		Cache.mapRef = config.getString("map-reference", "main");
+		Cache.worldName = config.getString("world-name", "TFMC_S2");
 
 		Cache.maxMembers = config.getInt("max-members", 64);
 		Cache.maxWealthPrestige = config.getInt("max-prestige-from-wealth", 1000);

@@ -41,8 +41,6 @@ public class Government {
 
     private Date lastElectionDate = new Date(0);
 
-    public final double STABILITY_BASE = 25.0;
-
     public Government(Faction f) {
         this.f = f;
         this.council = new Council(this, f);
@@ -318,8 +316,12 @@ public class Government {
         return 0;
     }
 
+    public double getBaseStability() {
+        return 100.0/(f.getMembers().size()+f.getVassalMembers().size());
+    }
+
     public double getStability() {
-        double stability = STABILITY_BASE;
+        double stability = getBaseStability();
         for(Guild guild : f.getGuildHandler().getGuilds()) {
             stability += guild.getStabilityModifier(f);
         }

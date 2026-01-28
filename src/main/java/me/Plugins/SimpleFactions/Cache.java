@@ -7,6 +7,7 @@ import me.Plugins.SimpleFactions.enums.Terrain;
 
 public class Cache {
 	public static String mapRef;
+	public static String worldName;
 
 	public static int maxMembers;
 	public static int maxWealthPrestige;

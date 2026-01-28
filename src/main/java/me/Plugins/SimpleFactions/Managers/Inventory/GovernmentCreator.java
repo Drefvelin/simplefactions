@@ -174,7 +174,7 @@ public class GovernmentCreator {
         Government gov = f.getGovernment();
         m.setDisplayName(StringFormatter.formatHex("#85c265Stability§7: §e"+gov.getStabilityString()+"%"));
         List<String> lore = new ArrayList<String>();
-        lore.add(StringFormatter.formatHex("#b8ae61Base: #45c46f+"+Formatter.formatDouble(gov.STABILITY_BASE)+"%"));
+        lore.add(StringFormatter.formatHex("#b8ae61Base: #45c46f+"+Formatter.formatDouble(gov.getBaseStability())+"%"));
         double effect = f.getOrCreateMainGuild().getStabilityModifier(f);
         lore.add(StringFormatter.formatHex("#b8ae61From State: " + ( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"));
         if(gov.getStabilityMalusFromCouncil() > 0) {
@@ -193,29 +193,31 @@ public class GovernmentCreator {
         }
         
         // Add stability effects section
-        lore.add(" ");
-        lore.add(StringFormatter.formatHex("#93c9a7Effects:"));
-        
-        // Tax Efficiency penalty (1 - taxEfficiency)
-        double taxEfficiencyPenalty = (1.0 - gov.getTaxEfficiency()) * 100.0;
-        lore.add(StringFormatter.formatHex("#b8ae61Tax Efficiency: #d13530-"+Formatter.formatDouble(taxEfficiencyPenalty)+"%"));
-        
-        // Admin Power Gain (stability/100 is the multiplier, so penalty from 100% stability)
-        double stabilityMultiplier = gov.getStability() / 100.0;
-        double powerGainPenalty = (1.0 - stabilityMultiplier) * 100.0;
-        lore.add(StringFormatter.formatHex("#b8ae61Admin Power Gain: #d13530-"+Formatter.formatDouble(powerGainPenalty)+"%"));
-        
-        // Max Admin Power (also uses stability/100 multiplier)
-        double maxPowerPenalty = (1.0 - stabilityMultiplier) * 100.0;
-        lore.add(StringFormatter.formatHex("#b8ae61Max Admin Power: #d13530-"+Formatter.formatDouble(maxPowerPenalty)+"%"));
-        
-        // Law Upkeep (uses 3 - stability/50 multiplier, so upkeep increases as stability decreases)
-        double upkeepMultiplier = 3.0 - gov.getStability() / 50.0;
-        double upkeepIncrease = (upkeepMultiplier - 1.0) * 100.0;
-        if(upkeepIncrease > 0) {
-            lore.add(StringFormatter.formatHex("#b8ae61Law Upkeep: #d13530+"+Formatter.formatDouble(upkeepIncrease)+"%"));
-        } else {
-            lore.add(StringFormatter.formatHex("#b8ae61Law Upkeep: #45c46f"+Formatter.formatDouble(upkeepIncrease)+"%"));
+        if(gov.getStability() < 100) {
+            lore.add(" ");
+            lore.add(StringFormatter.formatHex("#93c9a7Effects:"));
+            
+            // Tax Efficiency penalty (1 - taxEfficiency)
+            double taxEfficiencyPenalty = (1.0 - gov.getTaxEfficiency()) * 100.0;
+            lore.add(StringFormatter.formatHex("#b8ae61Tax Efficiency: #d13530-"+Formatter.formatDouble(taxEfficiencyPenalty)+"%"));
+            
+            // Admin Power Gain (stability/100 is the multiplier, so penalty from 100% stability)
+            double stabilityMultiplier = gov.getStability() / 100.0;
+            double powerGainPenalty = (1.0 - stabilityMultiplier) * 100.0;
+            lore.add(StringFormatter.formatHex("#b8ae61Admin Power Gain: #d13530-"+Formatter.formatDouble(powerGainPenalty)+"%"));
+            
+            // Max Admin Power (also uses stability/100 multiplier)
+            double maxPowerPenalty = (1.0 - stabilityMultiplier) * 100.0;
+            lore.add(StringFormatter.formatHex("#b8ae61Max Admin Power: #d13530-"+Formatter.formatDouble(maxPowerPenalty)+"%"));
+            
+            // Law Upkeep (uses 3 - stability/50 multiplier, so upkeep increases as stability decreases)
+            double upkeepMultiplier = 3.0 - gov.getStability() / 50.0;
+            double upkeepIncrease = (upkeepMultiplier - 1.0) * 100.0;
+            if(upkeepIncrease > 0) {
+                lore.add(StringFormatter.formatHex("#b8ae61Law Upkeep: #d13530+"+Formatter.formatDouble(upkeepIncrease)+"%"));
+            } else {
+                lore.add(StringFormatter.formatHex("#b8ae61Law Upkeep: #45c46f"+Formatter.formatDouble(upkeepIncrease)+"%"));
+            }
         }
         
         m.setLore(lore);

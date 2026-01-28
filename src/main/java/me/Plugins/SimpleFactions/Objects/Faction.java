@@ -930,45 +930,47 @@ public class Faction {
 
 	//Rules
 	public boolean hasFactionRule(Rules rule) {
-		if(hasRule(Scope.FACTION, rule)) return true;
-		String o = RelationManager.getOverlord(this);
-		if(o != null) {
-			Faction overlord = FactionManager.getByString(o);
-			if(overlord.hasRule(Scope.VASSALS, rule)) return true;
+
+		// 1️⃣ Check faction rules first
+		Boolean factionRule = getExplicitRule(Scope.FACTION, rule);
+		if (factionRule != null) {
+			return factionRule;
 		}
-		return false;
+
+		// 2️⃣ Check overlord rules (NO defaults allowed here)
+		Faction overlord = getOverlord();
+		if (overlord != null) {
+			Boolean overlordRule = overlord.getExplicitRule(Scope.VASSALS, rule);
+			if (overlordRule != null) {
+				return overlordRule;
+			}
+		}
+
+		// 3️⃣ Only now apply default
+		return rule.trueIfAbsent();
 	}
-	public boolean hasRule(Scope scope, Rules rule) {
-		boolean foundExplicitTrue = false;
-		boolean foundExplicitFalse = false;
+
+	public Boolean getExplicitRule(Scope scope, Rules rule) {
+		boolean foundTrue = false;
 
 		for (Law law : lawHandler.getCurrentLaws()) {
 
-			// Law does not define this scope → ignore
 			if (!law.getScopedEffects().containsKey(scope)) continue;
 
-			var effect = law.getScopedEffects().get(scope);
+			LawEffect effect = law.getScopedEffects().get(scope);
 
-			// Law defines scope but no rules → ignore
 			if (!effect.hasRules()) continue;
-
-			// Law does not mention this rule → ignore
 			if (!effect.getRules().containsKey(rule)) continue;
 
 			boolean value = effect.getRules().get(rule);
 
-			if (!value) {
-				foundExplicitFalse = true;
-				break; // FALSE always wins
-			}
-
-			foundExplicitTrue = true;
+			if (!value) return Boolean.FALSE; // explicit false always wins
+			foundTrue = true;
 		}
 
-		if (foundExplicitFalse) return false;
-		if (foundExplicitTrue) return true;
+		if (foundTrue) return Boolean.TRUE;
 
-		return rule.trueIfAbsent();
+		return null; // not defined
 	}
 
 	
