@@ -1089,6 +1089,12 @@ public class Faction {
 		if(government.getMaxPower() < 0) {
 			p += Math.abs(government.getMaxPower());
 		}
+		if(diplomacyHandler.getAvailableCapacity() < 0) {
+			p += Math.abs(diplomacyHandler.getAvailableCapacity());
+		}
 		return p;
+	}
+	public DiplomacyHandler getDiplomacyHandler() {
+		return diplomacyHandler;
 	}
 }

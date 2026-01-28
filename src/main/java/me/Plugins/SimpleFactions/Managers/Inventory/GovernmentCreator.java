@@ -209,6 +209,10 @@ public class GovernmentCreator {
             // Max Admin Power (also uses stability/100 multiplier)
             double maxPowerPenalty = (1.0 - stabilityMultiplier) * 100.0;
             lore.add(StringFormatter.formatHex("#b8ae61Max Admin Power: #d13530-"+Formatter.formatDouble(maxPowerPenalty)+"%"));
+
+            // Max Diplomatic Capacity (also uses stability/100 multiplier)
+            double maxDiplomaticPenalty = (1.0 - stabilityMultiplier) * 100.0;
+            lore.add(StringFormatter.formatHex("#b8ae61Max Diplomatic Capacity: #d13530-"+Formatter.formatDouble(maxDiplomaticPenalty)+"%"));
             
             // Law Upkeep (uses 3 - stability/50 multiplier, so upkeep increases as stability decreases)
             double upkeepMultiplier = 3.0 - gov.getStability() / 50.0;

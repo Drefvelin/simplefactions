@@ -59,6 +59,12 @@ public class RelationManager {
 		return overlord.equalsIgnoreCase(target.getId());
 	}
 
+	public static double getDiplomaticCost(Faction from, Faction to, Relation r) {
+		double cost = r.getType().getBaseCost();
+		
+		return cost;
+	}
+
 	public static boolean sameRealm(Faction a, Faction b) {
 		if (a == null || b == null) return false;
 		if (a.getId().equalsIgnoreCase(b.getId())) return true;

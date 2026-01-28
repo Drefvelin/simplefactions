@@ -14,6 +14,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Diplomacy.DiplomacyHandler;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
@@ -206,14 +207,25 @@ public class FactionCreator {
 			}
 			lore.add(" ");
 			lore.add(StringFormatter.formatHex("#7fbd73Current Rank: "+f.getRank().getName()));
+			if(f.getRank().hasModifiers()) {
+				for(FactionModifier mod : f.getRank().getModifiers()) {
+					if(mod.getAmount() != 0.0) lore.add(StringFormatter.formatHex("#d4c9ae- "+mod.getString()));
+				}
+				lore.add("");
+			}
 			if(f.getRank().getLevel() < RankLoader.getRanks().size()) {
 				PrestigeRank rank = RankLoader.getByLevel(f.getRank().getLevel()+1);
 				if(rank.getAn()) {
 					lore.add(StringFormatter.formatHex("#d4c9aeFaction needs at least #7fbd73"+FactionManager.getRankUpAmount(rank)+" #4793bfPrestige"));
-					lore.add(StringFormatter.formatHex("#d4c9aeto become an "+rank.getName()));
+					lore.add(StringFormatter.formatHex("#d4c9aeto become an "+rank.getName()+(rank.hasModifiers() ? " #d4c9aewhich gives:" : "")));
 				} else {
 					lore.add(StringFormatter.formatHex("#d4c9aeFaction needs at least #7fbd73"+FactionManager.getRankUpAmount(rank)+" #4793bfPrestige"));
-					lore.add(StringFormatter.formatHex("#d4c9aeto become a "+rank.getName()));
+					lore.add(StringFormatter.formatHex("#d4c9aeto become a "+rank.getName()+(rank.hasModifiers() ? " #d4c9aewhich gives:" : "")));
+				}
+				if(rank.hasModifiers()) {
+					for(FactionModifier mod : rank.getModifiers()) {
+						if(mod.getAmount() != 0.0) lore.add(StringFormatter.formatHex("#d4c9ae- "+mod.getString()));
+					}
 				}
 			}
 			if(f.getRank().getLevel() != 1) {
@@ -221,10 +233,15 @@ public class FactionCreator {
 				PrestigeRank rank = RankLoader.getByLevel(f.getRank().getLevel()-1);
 				if(rank.getAn()) {
 					lore.add(StringFormatter.formatHex("#d4c9aeIf the Faction falls below #7fbd73"+(FactionManager.getRankUpAmount(RankLoader.getByLevel(f.getRank().getLevel()))*0.95)+" #4793bfPrestige"));
-					lore.add(StringFormatter.formatHex("#d4c9aethe faction will become an "+rank.getName()));
+					lore.add(StringFormatter.formatHex("#d4c9aethe faction will become an "+rank.getName()+(rank.hasModifiers() ? " #d4c9aewhich gives:" : "")));
 				} else {
 					lore.add(StringFormatter.formatHex("#d4c9aeIf the Faction falls below #7fbd73"+(format.formatDouble(FactionManager.getRankUpAmount(RankLoader.getByLevel(f.getRank().getLevel()))*0.95))+" #4793bfPrestige"));
-					lore.add(StringFormatter.formatHex("#d4c9aethe faction will become a "+rank.getName()));
+					lore.add(StringFormatter.formatHex("#d4c9aethe faction will become a "+rank.getName()+(rank.hasModifiers() ? " #d4c9aewhich gives:" : "")));
+				}
+				if(rank.hasModifiers()) {
+					for(FactionModifier mod : rank.getModifiers()) {
+						if(mod.getAmount() != 0.0) lore.add(StringFormatter.formatHex("#d4c9ae- "+mod.getString()));
+					}
 				}
 			}
 			m.setLore(lore);
@@ -232,13 +249,16 @@ public class FactionCreator {
 		} else if(t.equals(MenuItemType.MEMBERS)) {
 				i = new ItemStack(Material.PLAYER_HEAD, 1);
 				ItemMeta m = i.getItemMeta();
-				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+f.getMembers().size())); //TODO full subject population as well cause cool
+				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+(f.getMembers().size()+f.getVassalMembers().size()))); //TODO full subject population as well cause cool
 				List<String> lore = new ArrayList<String>();
 				for(String s : f.getMembers()) {
-					lore.add(StringFormatter.formatHex("#d4c9ae"+s));
+					lore.add(StringFormatter.formatHex("#d4c9ae"+s+Represents.represents(f, s)));
+				}
+				for(String s : f.getVassalMembers()) {
+					lore.add(StringFormatter.formatHex("#a39ba8"+s+Represents.represents(f, s)));
 				}
 				m.setLore(lore);
-				i.setItemMeta(m);
+				i.setItemMeta(m);	
 		} else if(t.equals(MenuItemType.MILITARY)) {
 				i = new ItemStack(Material.IRON_SWORD, 1);
 				ItemMeta m = i.getItemMeta();
@@ -249,15 +269,39 @@ public class FactionCreator {
 				NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
 				m.getPersistentDataContainer().set(key, PersistentDataType.STRING, f.getId());
 				i.setItemMeta(m);
-		} else if(t.equals(MenuItemType.DIPLOMACY)) {
+		}else if (t.equals(MenuItemType.DIPLOMACY)) {
 			i = new ItemStack(Material.WRITABLE_BOOK, 1);
 			ItemMeta m = i.getItemMeta();
 			m.setDisplayName(StringFormatter.formatHex("#35f2bdDiplomacy"));
-			List<String> lore = new ArrayList<String>();
+
+			List<String> lore = new ArrayList<>();
+
+			DiplomacyHandler dh = f.getDiplomacyHandler();
+			double used = dh.getUsedDiplomaticCapacity();
+			double max = dh.getDiplomaticCapacity();
+
+			String capacityText;
+			if (used > max) {
+				// Everything red if over capacity
+				capacityText = "§c" + Formatter.formatDouble(used) + "/" + Formatter.formatDouble(max);
+			} else {
+				// Used + max colored, slash gray
+				capacityText =
+						"#6cb9d5" + Formatter.formatDouble(used) +
+						"§7/" +
+						"#6cb9d5" + Formatter.formatDouble(max);
+			}
+
+			lore.add(StringFormatter.formatHex(
+					"#7fbd73Diplomatic Capacity: " + capacityText+ " §8(used/max)"
+			));
 			lore.add("§7Click to view Diplomacy");
+
 			m.setLore(lore);
+
 			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
 			m.getPersistentDataContainer().set(key, PersistentDataType.STRING, f.getId());
+
 			i.setItemMeta(m);
 		} else if(t.equals(MenuItemType.TIER)) {
 			ItemMeta m = i.getItemMeta();
