@@ -33,7 +33,7 @@ public class DiplomacyHandler {
             Relation r = entry.getValue();
             Faction from = FactionManager.getByString(entry.getKey());
             if(from == null) continue;
-            used += RelationManager.getDiplomaticCost(from, f, r);
+            used += RelationManager.getDiplomaticCost(from, f, r.getType());
         }
         return used;
     }

@@ -172,6 +172,16 @@ public class RelationView {
 				p.sendMessage("§cYou have reached the limit for this relation type");
 				return;
 			}
+
+			double ourCost = RelationManager.getDiplomaticCost(origin, f, r);
+			double theirCost = r.hasLink() ? RelationManager.getDiplomaticCost(f, origin, r.getLink()) : 0;
+			if(origin.getDiplomacyHandler().getAvailableCapacity() < ourCost && !origin.getRelation(f.getId()).getType().equals(r) || f.getDiplomacyHandler().getAvailableCapacity() < theirCost && !f.getRelation(origin.getId()).getType().equals(r.getLink())) {
+				if(origin.getDiplomacyHandler().getAvailableCapacity() < ourCost && !origin.getRelation(f.getId()).getType().equals(r)) 
+					p.sendMessage("§cYou lack diplomatic capacity for this relation!");
+				if(f.getDiplomacyHandler().getAvailableCapacity() < theirCost && !f.getRelation(origin.getId()).getType().equals(r.getLink())) 
+					p.sendMessage("§cThey lack diplomatic capacity for this relation!");
+				return;
+			}
 			
 			RelationManager.setRelation(p, r, f, origin, true);
 			

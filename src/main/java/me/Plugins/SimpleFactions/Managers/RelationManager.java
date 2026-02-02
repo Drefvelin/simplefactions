@@ -59,9 +59,13 @@ public class RelationManager {
 		return overlord.equalsIgnoreCase(target.getId());
 	}
 
-	public static double getDiplomaticCost(Faction from, Faction to, Relation r) {
-		double cost = r.getType().getBaseCost();
-		
+	public static double getDiplomaticCost(Faction from, Faction to, RelationType r) {
+		double cost = r.getBaseCost();
+		if(!r.isSettable()) cost = 0;
+		cost*=to.getPrestige()/10.0;
+		if(r.isVassalage()) {
+			cost/=3.0;
+		}
 		return cost;
 	}
 
