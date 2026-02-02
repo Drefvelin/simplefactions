@@ -28,6 +28,7 @@ import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
@@ -80,6 +81,7 @@ public class Guild {
         while(!RandomRGB.isFree(rgb)) {
             rgb = RandomRGB.similarButDistinct(f.getRGB());
         }
+        this.bank = new Bank(this);
         bannerPatterns = f.getBannerPatterns();
         name = f.getName();
         leader = f.getLeader();
@@ -108,6 +110,7 @@ public class Guild {
         while(!RandomRGB.isFree(rgb)) {
             rgb = RandomRGB.random();
         }
+        this.bank = new Bank(this);
         this.bannerPatterns = RestServer.fetchBannerList();
         this.members.add(leader);
         this.type = GuildLoader.getDefaultType();
@@ -450,17 +453,35 @@ public class Guild {
     }
 
     public double getMemberPercentage() {
-        return (double)members.size()/(double)(host.getMembers().size()+host.getVassalMembers().size());
+        int totalMembers = host.getMembers().size() + host.getVassalMembers().size();
+        if (totalMembers <= 0) {
+            return 0.0;
+        }
+        return (double) members.size() / (double) totalMembers;
     }
 
     public double getStabilityEffect() {
-        double effect = 0;
-        double percentage = getMemberPercentage();
-        effect += 30*Math.min(percentage, 1.0);
-        double wealthPercentage = wealth / (host.getWealth()+host.getVassalWealth());
-        effect += 20*Math.min(wealthPercentage, 1.0);
-        double tradePercentage = breakdown.getTradePower() / (host.getGuildHandler().getTotalTradePower()+host.getVassalTradePower());
-        effect += 40*Math.min(tradePercentage, 1.0);
+        double effect = 0.0;
+
+        // Member percentage
+        double memberPercentage = getMemberPercentage();
+        effect += 30.0 * Math.min(memberPercentage, 1.0);
+
+        // Wealth percentage
+        double totalWealth = host.getWealth() + host.getVassalWealth();
+        if (totalWealth > 0) {
+            double wealthPercentage = wealth / totalWealth;
+            effect += 20.0 * Math.min(wealthPercentage, 1.0);
+        }
+
+        // Trade power percentage
+        double totalTradePower =
+                host.getGuildHandler().getTotalTradePower() + host.getVassalTradePower();
+        if (totalTradePower > 0) {
+            double tradePercentage = breakdown.getTradePower() / totalTradePower;
+            effect += 40.0 * Math.min(tradePercentage, 1.0);
+        }
+
         return effect;
     }
 

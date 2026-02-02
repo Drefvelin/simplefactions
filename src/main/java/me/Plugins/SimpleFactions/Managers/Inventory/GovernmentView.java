@@ -318,10 +318,17 @@ public class GovernmentView {
 			Law law = f.getLawHandler().getLaw(group, id);
 			if(law == null) return;
 			Government gov = f.getGovernment();
+			double cost = law.getCost()*law.getCompatibility(f.getLawHandler().getGroup(group).getCurrent().getId());
 			Proposal proposal = new Proposal(p.getName(), gov);
 			proposal.setLawProposal(law);
 			if(!gov.hasCouncil() && f.isLeader(p.getName())) {
+				if(gov.getPower() < cost) {
+					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					p.sendMessage("§cThe government does not have enough power to propose this! §7(Need §e"+cost+"§7, has §e"+gov.getPower()+"§7)");
+					return;
+				}
 				p.sendMessage("§aChange applied!");
+				gov.spendPower(cost);
 				proposal.apply();
 				governmentView(p, f, null);
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
@@ -332,7 +339,13 @@ public class GovernmentView {
 					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
 					return;
 				}
+				if(gov.getPower() < cost) {
+					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					p.sendMessage("§cThe government does not have enough power to propose this! §7(Need §e"+cost+"§7, has §e"+gov.getPower()+"§7)");
+					return;
+				}
 				gov.propose(proposal);
+				gov.spendPower(cost);
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 				governmentView(p, f, null);;
 			} else if(gov.canProposeOrStartMovement(p)) {

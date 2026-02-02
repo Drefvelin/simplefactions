@@ -24,6 +24,7 @@ public enum Cashflow {
     // Money sinks
     TRADE_UPKEEP("#d6645aTrade Upkeep", true, false),
     UPGRADES_UPKEEP("#c46054Upgrades Upkeep", true, false),
+    PENALTIES("#c74c3fPenalties", true, false),
     FORTS("#706964Forts", true, false);
 
     private final String display;

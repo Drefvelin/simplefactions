@@ -104,7 +104,7 @@ public class FactionView {
 		Inventory i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.FACTION_VIEW), 54, "§7Faction View");
 		if(f.getMembers().contains(player.getName())) i.setItem(1, creator.createMenuItem(player, f, MenuItemType.BANNER_GET));
 		i.setItem(10, creator.createMenuItem(player, f, MenuItemType.BANNER));
-		/*if(f.getLeader().equalsIgnoreCase(player.getName())) */i.setItem(19, creator.createMenuItem(player, f, MenuItemType.BANNER_RANDOM));
+		if(f.getLeader().equalsIgnoreCase(player.getName())) i.setItem(19, creator.createMenuItem(player, f, MenuItemType.BANNER_RANDOM));
 		i.setItem(11, creator.createMenuItem(player, f, MenuItemType.GOVERNMENT));
 		i.setItem(12, creator.createMenuItem(player, f, MenuItemType.WEALTH));
 		i.setItem(13, creator.createMenuItem(player, f, MenuItemType.PRESTIGE));
@@ -281,6 +281,7 @@ public class FactionView {
 				if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
 				SFInventoryHolder h = (SFInventoryHolder) inventory.getHolder();
 				Faction f = FactionManager.getByString(h.getId());
+				if(!f.isLeader(p.getName())) return;
 				f.setBannerPatterns(RestServer.fetchBannerList());
 				inventory.setItem(10, creator.createMenuItem(p, f, MenuItemType.BANNER));
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);

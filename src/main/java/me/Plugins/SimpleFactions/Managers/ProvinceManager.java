@@ -130,7 +130,7 @@ public class ProvinceManager {
             if(owner != null) {
                 if(save) guild.getTradeBreakdown().registerIncome(owner, provinceIncome);
                 if(owner.getTaxHandler().hasTariffs() && !RelationManager.sameRealm(owner, guild.getFaction())){
-                    double provinceTariffs = provinceIncome*owner.getTaxRate(TaxTarget.TARIFFS, guild.getFaction().getId())/100.0;
+                    double provinceTariffs = provinceIncome*owner.getTaxRate(TaxTarget.TARIFFS, guild.getFaction().getId(), true)/100.0;
                     tariffs+=provinceTariffs;
                     if(save) {
                         guild.getTradeBreakdown().registerTariffs(owner, provinceTariffs);
@@ -218,7 +218,7 @@ public class ProvinceManager {
         
         // Apply the same tax rate to the income change to estimate net impact
         Faction f = guild.getFaction();
-        double guildTaxRate = f.getTaxRate(TaxTarget.GUILDS, guild.getId()) / 100.0;
+        double guildTaxRate = f.getTaxRate(TaxTarget.GUILDS, guild.getId(), true) / 100.0;
         double estimatedNetChange = tradeIncomeChange * (1.0 - guildTaxRate);
 
         branch.levelDown();
@@ -243,7 +243,7 @@ public class ProvinceManager {
         
         // Apply the same tax rate to the income change to estimate net impact
         Faction f = guild.getFaction();
-        double guildTaxRate = f.getTaxRate(TaxTarget.GUILDS, guild.getId()) / 100.0;
+        double guildTaxRate = f.getTaxRate(TaxTarget.GUILDS, guild.getId(), true) / 100.0;
         double estimatedNetChange = tradeIncomeChange * (1.0 - guildTaxRate);
 
         // Revert upgrade

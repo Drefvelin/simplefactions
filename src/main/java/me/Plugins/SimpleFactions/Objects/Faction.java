@@ -23,6 +23,7 @@ import org.bukkit.inventory.meta.BannerMeta;
 import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Diplomacy.DiplomacyHandler;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
@@ -82,16 +83,13 @@ public class Faction {
 	private Tier tier;
 	
 	//Diplomacy
-	private HashMap<String, Relation> relations = new HashMap<>();
+	private final DiplomacyHandler diplomacyHandler;
 	
 	//Military
 	private Military military;
 	
 	//Titles
 	private List<Title> titles = new ArrayList<>();
-	
-	//Modifiers
-	private HashMap<FactionModifiers, List<FactionModifier>> modifiers = new HashMap<>();
 
 	//Guilds
 	private GuildHandler guildHandler;
@@ -103,8 +101,9 @@ public class Faction {
 	private final LawHandler lawHandler;
 	
 	public Faction(String id, String leader) {
-		this.id = format.formatId(id);
-		this.name = StringFormatter.formatHex(format.formatName(id));
+		this.id = Formatter.formatId(id);
+		this.name = StringFormatter.formatHex(Formatter.formatName(id));
+		this.diplomacyHandler = new DiplomacyHandler(this);
 		this.leader = leader;
 		this.rulerTitle = "Leader";
 		this.bannerPatterns = RestServer.fetchBannerList();
@@ -122,11 +121,10 @@ public class Faction {
 		}
 		this.military = new Military(this);
 		this.government = new Government(this);
-		lawHandler.apply();
 		this.taxHandler = new TaxHandler(this, 5, 5, 5, 5, 5);
+		lawHandler.apply();
 		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(new Guild(this));
-		init();
 		createBanner(bannerPatterns);
 		updatePrestige();
 		updateTier();
@@ -158,6 +156,7 @@ public class Faction {
 		this.id = id;
 		this.name = name;
 		this.leader = leader;
+		this.diplomacyHandler = new DiplomacyHandler(this);
 		this.rulerTitle = rulerTitle;
 		this.bannerPatterns = patterns;
 		this.rank = RankLoader.getLowest();
@@ -177,8 +176,8 @@ public class Faction {
 		this.titles = titles;
 		this.military = new Military(this);
 		this.guildHandler = new GuildHandler(this);
-		this.lawHandler = new LawHandler(this, laws);
 		this.taxHandler = new TaxHandler(this, citizenTax, guildTax, vassalTax, dividendTax, tariffs);
+		this.lawHandler = new LawHandler(this, laws);
 		if (specificTaxes != null) {
 			for (Map.Entry<String, HashMap<String, Double>> entry : specificTaxes.entrySet()) {
 				try {
@@ -195,7 +194,6 @@ public class Faction {
 		}
 		this.government = governmentData != null ? new Government(this, governmentData) : new Government(this);
 		lawHandler.apply();
-		init();
 		createBanner(bannerPatterns);
 		updateTier();
 	}
@@ -250,19 +248,15 @@ public class Faction {
 		SimpleFactions.getInstance().getProvinceManager().recalculateForSingleGuild(getOrCreateMainGuild(), true);
 	}
 
-	public double getTaxRate(TaxTarget target) {
-		return taxHandler.getTaxRate(target, null);
-	}
-
-	public double getTaxRate(TaxTarget target, String id) {
-		return taxHandler.getTaxRate(target, id);
+	public double getTaxRate(TaxTarget target, String id, boolean effective) {
+		return taxHandler.getTaxRate(target, id, effective);
 	}
 
 	public double getOverlordTaxRate(Faction f) {
 		double taxRate = 0;
 		Faction overlord = getOverlord();
 		if(overlord == null) return taxRate;
-		taxRate = overlord.getTaxRate(TaxTarget.VASSALS, id);
+		taxRate = overlord.getTaxRate(TaxTarget.VASSALS, id, false);
 		for(FactionModifier mod : getModifiers()) {
 			if(!mod.getType().equals(FactionModifiers.TAX_MULTIPLIER)) continue;
 			double mult = 1+mod.getAmount()/100.0;
@@ -307,17 +301,12 @@ public class Faction {
 		return taxHandler.getVassalTax();
 	}
 	
-	public void init() {
-		addModifier(null, new FactionModifier(FactionModifiers.DE_JURE, Cache.deJureRequirement));
-	}
-	
 	public HashMap<String, Relation> getRelations(){
-		return relations;
+		return diplomacyHandler.getRelations();
 	}
 	
 	public Relation getRelation(String s) {
-		if(relations.containsKey(s)) return relations.get(s);
-		return new Relation();
+		return diplomacyHandler.getRelation(s);
 	}
 	
 	public Military getMilitary() {
@@ -337,10 +326,12 @@ public class Faction {
 		for(Guild guild : guildHandler.getGuilds()) {
 			guild.tick();
 		}
+		/*
 		for(FactionModifier m : getModifiers()) {
 			if(!m.isTimed()) continue;
 			if(m.tick()) removeModifier(m);
 		}
+		*/
 		government.tick();
 	}
 
@@ -398,13 +389,7 @@ public class Faction {
 		return rank;
 	}
 	public void setRank(PrestigeRank rank) {
-		if(this.rank.hasModifiers()) {
-			removeModifiers(this.rank.getModifiers());
-		}
 		this.rank = rank;
-		if(rank.hasModifiers()) {
-			addModifiers(null, rank.getModifiers());
-		}
 	}
 	public String getGovernmentString() {
 		return governmentType;
@@ -604,7 +589,7 @@ public class Faction {
 	}
 	public void updatePrestige() {
 		prestige = 0.0;
-		addPrestigeModifier(new Modifier("Members", format.formatDouble(Math.pow(guildHandler.getAllMembers().size()+4, 1.8)+5), false));
+		addPrestigeModifier(new Modifier("Members", Formatter.formatDouble(Math.pow(guildHandler.getAllMembers().size()+4, 1.8)+5), false));
 		if(wealth == 0) {
 			addPrestigeModifier(new Modifier("Wealth", 0.0, false));
 		}
@@ -613,7 +598,7 @@ public class Faction {
 			if(amount > wealth) {
 				amount = wealth;
 			}
-			addPrestigeModifier(new Modifier("Wealth", format.formatDouble(amount), false));
+			addPrestigeModifier(new Modifier("Wealth", Formatter.formatDouble(amount), false));
 		}
 		int provincePrestige = TierLoader.getByString("province").getPrestige();
 		if(provinces.size() > 0 && provincePrestige > 0) {
@@ -629,7 +614,7 @@ public class Faction {
 			for(Modifier p : prestigeModifiers) {
 				extra += p.getAmount();
 			}
-			extra = format.formatDouble(extra*multiplier);
+			extra = Formatter.formatDouble(extra*multiplier);
 			addPrestigeModifier(new Modifier(getModifier(FactionModifiers.PRESTIGE_BONUS).getAmount()+"% Bonus", extra, false));
 		}
 		double fromSubjects = 0.0;
@@ -641,13 +626,13 @@ public class Faction {
 			}
 		}
 		if(fromSubjects > 0) {
-			fromSubjects = format.formatDouble(fromSubjects);
+			fromSubjects = Formatter.formatDouble(fromSubjects);
 			addPrestigeModifier(new Modifier("Subjects", fromSubjects, false));
 		}
 		for(Modifier p : prestigeModifiers) {
 			prestige = prestige + p.getAmount();
 		}
-		prestige = format.formatDouble(prestige);
+		prestige = Formatter.formatDouble(prestige);
 		
 		if(this.rank.getLevel() < RankLoader.getRanks().size()) {
 			Double rankUpAmount = FactionManager.getRankUpAmount(RankLoader.getByLevel(this.rank.getLevel()+1));
@@ -673,35 +658,16 @@ public class Faction {
 		for(Guild guild : guildHandler.getGuilds()) {
 			wealth += guild.getWealth();
 		}
-		wealth = format.formatDouble(wealth);
+		wealth = Formatter.formatDouble(wealth);
 		FactionManager.updateAllPrestige();
 	}
 	
 	public void setRelation(Faction f, Relation r) {
-		//Clean old relation modifiers
-		if(relations.containsKey(f.getId())) {
-			Relation old = relations.get(f.getId());
-			if(old.getType().hasRecieveModifiers()) {
-				removeModifiers(old.getType().getRecieveModifiers());
-			}
-			if(old.getType().hasGiveModifiers()) {
-				f.removeModifiers(old.getType().getGiveModifiers());
-			}
-		}
-		
-		
-		//update
-		relations.put(f.getId(), r);
-		
-		//Apply new modifiers
-		if(r.getType().hasRecieveModifiers()) addModifiers(f, r.getType().getRecieveModifiers());
-		if(r.getType().hasGiveModifiers()) f.addModifiers(this, r.getType().getGiveModifiers());
+		diplomacyHandler.setRelation(f, r);
 	}
 	
 	public void updateRelations() {
-		for(Map.Entry<String, Relation> entry : relations.entrySet()) {
-			entry.getValue().tick();
-		}
+		diplomacyHandler.updateRelations();
 	}
 	
 	//Titles
@@ -964,45 +930,47 @@ public class Faction {
 
 	//Rules
 	public boolean hasFactionRule(Rules rule) {
-		if(hasRule(Scope.FACTION, rule)) return true;
-		String o = RelationManager.getOverlord(this);
-		if(o != null) {
-			Faction overlord = FactionManager.getByString(o);
-			if(overlord.hasRule(Scope.VASSALS, rule)) return true;
+
+		// 1️⃣ Check faction rules first
+		Boolean factionRule = getExplicitRule(Scope.FACTION, rule);
+		if (factionRule != null) {
+			return factionRule;
 		}
-		return false;
+
+		// 2️⃣ Check overlord rules (NO defaults allowed here)
+		Faction overlord = getOverlord();
+		if (overlord != null) {
+			Boolean overlordRule = overlord.getExplicitRule(Scope.VASSALS, rule);
+			if (overlordRule != null) {
+				return overlordRule;
+			}
+		}
+
+		// 3️⃣ Only now apply default
+		return rule.trueIfAbsent();
 	}
-	public boolean hasRule(Scope scope, Rules rule) {
-		boolean foundExplicitTrue = false;
-		boolean foundExplicitFalse = false;
+
+	public Boolean getExplicitRule(Scope scope, Rules rule) {
+		boolean foundTrue = false;
 
 		for (Law law : lawHandler.getCurrentLaws()) {
 
-			// Law does not define this scope → ignore
 			if (!law.getScopedEffects().containsKey(scope)) continue;
 
-			var effect = law.getScopedEffects().get(scope);
+			LawEffect effect = law.getScopedEffects().get(scope);
 
-			// Law defines scope but no rules → ignore
 			if (!effect.hasRules()) continue;
-
-			// Law does not mention this rule → ignore
 			if (!effect.getRules().containsKey(rule)) continue;
 
 			boolean value = effect.getRules().get(rule);
 
-			if (!value) {
-				foundExplicitFalse = true;
-				break; // FALSE always wins
-			}
-
-			foundExplicitTrue = true;
+			if (!value) return Boolean.FALSE; // explicit false always wins
+			foundTrue = true;
 		}
 
-		if (foundExplicitFalse) return false;
-		if (foundExplicitTrue) return true;
+		if (foundTrue) return Boolean.TRUE;
 
-		return rule.trueIfAbsent();
+		return null; // not defined
 	}
 
 	
@@ -1010,40 +978,6 @@ public class Faction {
 
 	public List<FactionModifier> getModifiers(Scope scope, Region region) {
 		return lawHandler.getLawModifiers(scope, region);
-	}
-	
-	public void addModifiers(Faction from, List<FactionModifier> mods) {
-	    for (FactionModifier m : mods) {
-	        addModifier(from, m);
-	    }
-	}
-	
-	public void addModifier(Faction from, FactionModifier m) {
-		if(from != null && from.getId().equalsIgnoreCase("cape_vander")) Bukkit.getPlayerExact("drefvelin").sendMessage(m.getType().toString()+" "+m.getAmount());
-		FactionModifier mod = new FactionModifier(from, m.getType(), m.getAmount(), m.getTime());
-		modifiers.computeIfAbsent(mod.getType(), k -> new ArrayList<>());
-        List<FactionModifier> list = modifiers.get(m.getType());
-        if (!list.contains(mod)) {
-            list.add(mod);
-			if(mod.getFrom() != null && id.equalsIgnoreCase("Wythe")) Bukkit.getPlayerExact("drefvelin").sendMessage(mod.getFrom().getName()+" "+mod.getType().toString()+" "+mod.getAmount());
-        }
-	}
-
-	
-	public void removeModifiers(List<FactionModifier> mods) {
-	    for (FactionModifier m : mods) {
-	        removeModifier(m);
-	    }
-	}
-	
-	public void removeModifier(FactionModifier m) {
-		List<FactionModifier> list = modifiers.get(m.getType());
-        if (list != null) {
-            list.remove(m);
-            if (list.isEmpty()) {
-                modifiers.remove(m.getType());
-            }
-        }
 	}
 
 	public Faction getOverlord() {
@@ -1054,25 +988,24 @@ public class Faction {
 	
 	public Collection<FactionModifier> getModifiers() {
 	    List<FactionModifier> all = new ArrayList<>();
-	    for (List<FactionModifier> list : modifiers.values()) {
-	        all.addAll(list);
-			all.addAll(getModifiers(Scope.FACTION, null));
-			Faction overlord = getOverlord();
-			if(overlord != null) {
-				all.addAll(overlord.getModifiers(Scope.VASSALS, null));
-			}
-	    }
+		all.addAll(getModifiers(Scope.FACTION, null));
+		all.addAll(diplomacyHandler.getModifiers());
+		Faction overlord = getOverlord();
+		if(overlord != null) {
+			all.addAll(overlord.getModifiers(Scope.VASSALS, null));
+		}
+		if(rank.hasModifiers()) {
+			all.addAll(rank.getModifiers());
+		}
 	    return all;
 	}
 	
 	public Collection<FactionModifier> getCombinedModifiers() {
 	    Map<FactionModifiers, Double> combined = new HashMap<>();
 
-	    for (List<FactionModifier> list : modifiers.values()) {
-	        for (FactionModifier mod : list) {
-	            combined.merge(mod.getType(), mod.getAmount(), Double::sum);
-	        }
-	    }
+	    for (FactionModifier mod : getModifiers()) {
+			combined.merge(mod.getType(), mod.getAmount(), Double::sum);
+		}
 
 	    List<FactionModifier> result = new ArrayList<>();
 	    for (Map.Entry<FactionModifiers, Double> entry : combined.entrySet()) {
@@ -1086,11 +1019,9 @@ public class Faction {
 	}
 	
 	public FactionModifier getModifier(FactionModifiers m) {
-	    List<FactionModifier> list = modifiers.get(m);
-	    if (list == null || list.isEmpty()) return new FactionModifier(m, 0.0);
-
 	    double totalAmount = 0;
-	    for (FactionModifier mod : list) {
+	    for (FactionModifier mod : getModifiers()) {
+			if(mod.getType() != m) continue;
 	        totalAmount += mod.getAmount();
 	    }
 	    return new FactionModifier(m, totalAmount);
@@ -1150,6 +1081,20 @@ public class Faction {
 			if(province == null)  continue;
 			amount += province.getProsperity();
 		}
-		return format.formatDouble(amount);
+		return Formatter.formatDouble(amount);
+	}
+
+	public double getPenalty() {
+		double p = 0;
+		if(government.getMaxPower() < 0) {
+			p += Math.abs(government.getMaxPower());
+		}
+		if(diplomacyHandler.getAvailableCapacity() < 0) {
+			p += Math.abs(diplomacyHandler.getAvailableCapacity());
+		}
+		return p;
+	}
+	public DiplomacyHandler getDiplomacyHandler() {
+		return diplomacyHandler;
 	}
 }

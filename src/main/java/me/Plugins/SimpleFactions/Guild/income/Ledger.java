@@ -41,6 +41,7 @@ public class Ledger {
 
     public double getIncome(Cashflow cashflow) {
         double amount = 0;
+        Faction f = guild.getFaction();
         switch (cashflow) {
             case GUILDS:
                 if(!guild.isBase()) return 0;
@@ -52,7 +53,7 @@ public class Ledger {
             case GUILD_PAYMENTS:
                 if(guild.isBase()) return 0;
                 amount = -getGrossTaxableIncome();
-                amount *= guild.getFaction().getTaxRate(TaxTarget.GUILDS, guild.getId())/100.0;
+                amount *= guild.getFaction().getTaxRate(TaxTarget.GUILDS, guild.getId(), true)/100.0;
                 break;
             case DIVIDENDS:
                 if(!guild.isBase()) return 0;
@@ -90,7 +91,6 @@ public class Ledger {
                 break;
             case OVERLORD_TAX:
                 if(!guild.isBase()) return 0;
-                Faction f = guild.getFaction();
                 if(f.getOverlord() == null) return 0;
                 amount = -getOverlordTax();
                 break;
@@ -113,6 +113,9 @@ public class Ledger {
                 for(Upgrade u : guild.getUpgrades()) {
                     amount -= u.getTotalUpkeep();
                 }
+                break;
+            case PENALTIES:
+                amount = -f.getPenalty();
                 break;
             default:
                 break;
@@ -165,6 +168,7 @@ public class Ledger {
                 case TRADE_UPKEEP:
                 case FORTS:
                 case UPGRADES_UPKEEP:
+                case PENALTIES:
                 case GUILD_PAYMENTS:
                 case OVERLORD_TAX:
                 case TRIBUTE_PAYMENTS:
@@ -248,6 +252,7 @@ public class Ledger {
             case TRADE_UPKEEP:
             case FORTS:
             case UPGRADES_UPKEEP:
+            case PENALTIES:
             case CITIZENS:
                 buffer.addExternalDelta(guild, getIncome(cf));
                 return;

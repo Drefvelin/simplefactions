@@ -28,6 +28,7 @@ public class RelationType {
 	private boolean lock;
 	
 	private String link;
+	private double baseCost;
 	
 	private List<FactionModifier> giveModifiers = new ArrayList<>();
 	private List<FactionModifier> recieveModifiers = new ArrayList<>();
@@ -38,6 +39,7 @@ public class RelationType {
 		id = key;
 		name = StringFormatter.formatHex(config.getString("name", "None"));
 		prefix = StringFormatter.formatHex(config.getString("prefix", "#a89977Our "));
+		baseCost = config.getDouble("cost", 0.0);
 		target = config.getInt("target", 0);
 		limit = config.getInt("limit", -1);
 		def = config.getBoolean("default", false);
@@ -61,6 +63,10 @@ public class RelationType {
 				recieveModifiers.add(new FactionModifier(s));
 			}
 		}
+	}
+
+	public double getBaseCost() {
+		return baseCost;
 	}
 	
 	public boolean hasThreshold() {

@@ -16,6 +16,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
+import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import me.Plugins.TLibs.Utils.ParseUtils;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
@@ -40,9 +41,9 @@ public class PlayerManager implements Listener{
         String p = e.getPlayer();
         if(FactionManager.getByMember(p) != null) {
 			Faction f = FactionManager.getByMember(p);
-			if(f.getTaxRate() > 0) {
+			if(f.getTaxRate(TaxTarget.CITIZENS, null, true) > 0) {
 				if(f.getBank() != null) {
-					paidTax = f.getTaxRate()/100.0*amount;
+					paidTax = f.getTaxRate(TaxTarget.CITIZENS, null, true)/100.0*amount;
 					f.giveTax(p, paidTax);
 				}
 			}

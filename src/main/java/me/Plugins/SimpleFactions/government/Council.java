@@ -196,6 +196,7 @@ public class Council {
     }
 
     public double fillPercentage() {
+        if(size == 0) return 0.0;
         return (double)members.size()/(double)size;
     }
 

@@ -1,8 +1,10 @@
 package me.Plugins.SimpleFactions.Objects;
 
 
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import net.tfminecraft.DenarEconomy.Data.Account;
 
@@ -12,6 +14,12 @@ public class Bank {
 	private Account bank;
 	
 	private Chunk chunk;
+
+	public Bank(Guild g) {
+		guild = g;
+		bank = new Account(0, false);
+		chunk = Bukkit.getWorld(Cache.worldName).getChunkAt(0, 0); //TODO world name
+	}
 	
 	public Bank(Guild g, Chunk c) {
 		guild = g;

@@ -20,6 +20,7 @@ import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.OpinionColourMapper;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
@@ -113,6 +114,14 @@ public class RelationCreator {
 		if(t.hasLimit()) {
 			lore.add(StringFormatter.formatHex("#a89977Current: #59795f"+RelationManager.getRelationCount(origin, t)+"/"+t.getLimit()));
 		}
+		double ourCost = RelationManager.getDiplomaticCost(origin, target, t);
+		double theirCost = t.hasLink() ? RelationManager.getDiplomaticCost(target, origin, t.getLink()) : 0;
+		if(ourCost > 0) {
+			lore.add(StringFormatter.formatHex("#a89977Diplomatic Cost "+(theirCost > 0 ? "§7(us)#a89977" : "")+": #56ccf2"+Formatter.formatDouble(ourCost)+" Diplomatic Capacity"));
+		}
+		if(theirCost > 0) {
+			lore.add(StringFormatter.formatHex("#a89977Diplomatic Cost §7(them)#a89977: #56ccf2"+Formatter.formatDouble(theirCost)+" Diplomatic Capacity"));
+		}
 		if(t.isVisible()) {
 			lore.add(" ");
 			if(t.getTarget() > 0) {
@@ -156,6 +165,13 @@ public class RelationCreator {
 			RelationType current = origin.getRelation(target.getId()).getType();
 			if(current.hasLock()) {
 				lore.add(StringFormatter.formatHex("#d4bb98You have the relation "+current.getName()+" #d4bb98which you cannot change freely!"));
+				lore.add(" ");
+				lore.add(StringFormatter.formatHex("#ba3439Unavailable"));
+			} else if(origin.getDiplomacyHandler().getAvailableCapacity() < ourCost && !current.equals(t) || target.getDiplomacyHandler().getAvailableCapacity() < theirCost && !current.equals(t.getLink())) {
+				if(origin.getDiplomacyHandler().getAvailableCapacity() < ourCost && !current.equals(t)) 
+					lore.add(StringFormatter.formatHex("#d4bb98You lack diplomatic capacity for this relation!"));
+				if(target.getDiplomacyHandler().getAvailableCapacity() < theirCost && !current.equals(t.getLink())) 
+					lore.add(StringFormatter.formatHex("#d4bb98They lack diplomatic capacity for this relation!"));
 				lore.add(" ");
 				lore.add(StringFormatter.formatHex("#ba3439Unavailable"));
 			} else {

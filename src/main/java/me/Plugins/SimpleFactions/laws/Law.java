@@ -1,6 +1,7 @@
 package me.Plugins.SimpleFactions.laws;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,9 @@ public class Law {
     private String icon;
     private List<String> requirements = new ArrayList<>();
     private List<String> description = new ArrayList<>();
+    private Map<String, Integer> compatibility = new HashMap<>();
+    private double upkeep;
+    private double cost;
 
     //Effects
     private Map<Scope, LawEffect> scopedEffects = new LinkedHashMap<>();
@@ -30,6 +34,8 @@ public class Law {
         id = key;
         icon = config.getString("icon", "v.book");
         name = StringFormatter.formatHex(config.getString("name", key));
+        upkeep = config.getDouble("upkeep", 0);
+        cost = config.getDouble("cost", 10);
         if(config.contains("requirements")) {
             for(String s : config.getStringList("requirements")) 
                 requirements.add(s);
@@ -46,6 +52,17 @@ public class Law {
                 } catch (Exception e) {
                     Bukkit.getLogger().info("[SimpleFactions] could not parse modifier for law "+s);
                     // TODO: handle exception
+                }
+            }
+        }
+        if(config.contains("compatibility")) {
+            for(String s : config.getStringList("compatibility")) {
+                String[] split = s.split("\\s+");
+                if(split.length != 2) continue;
+                try {
+                    compatibility.put(split[0], Integer.parseInt(split[1]));
+                } catch (Exception e) {
+                    Bukkit.getLogger().info("[SimpleFactions] could not parse compatibility for law "+s);
                 }
             }
         }
@@ -72,5 +89,20 @@ public class Law {
             if(effect.affectsEconomy()) return true;
         }
         return false;
+    }
+
+    public Map<String, Integer> getCompatibility() {
+        return compatibility;
+    }
+
+    public Integer getCompatibility(String lawId) {
+        return compatibility.getOrDefault(lawId, 1);
+    }
+
+    public double getUpkeep() {
+        return upkeep;
+    }
+    public double getCost() {
+        return cost;
     }
 }

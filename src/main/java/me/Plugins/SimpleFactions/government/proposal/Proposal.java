@@ -117,18 +117,18 @@ public class Proposal {
             String oldRate = "";
             if (f != null) {
                 if (target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) {
-                    double rate = f.getTaxRate(target, tax.getId());
-                    if (rate == -1.0) oldRate = String.valueOf(f.getTaxRate(target, null));
+                    double rate = f.getTaxRate(target, tax.getId(), false);
+                    if (rate == -1.0) oldRate = String.valueOf(f.getTaxRate(target, null, false));
                     else oldRate = String.valueOf(rate);
                 } else {
-                    oldRate = String.valueOf(f.getTaxRate(target));
+                    oldRate = String.valueOf(f.getTaxRate(target, null, false));
                 }
             }
 
             first.add(StringFormatter.formatHex("#b8ae61Target: #c2bea7" + name + (type.isEmpty() ? "" : " §7(" + type + "§7)")));
             first.add(StringFormatter.formatHex("#b8ae61Change: #c2bea7" + oldRate + "% §7-> #c2bea7" + tax.getNewTax() + "%"));
             if (f != null && (target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID)) {
-                double baseRate = f.getTaxRate(target, null);
+                double baseRate = f.getTaxRate(target, null, false);
                 first.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a" + baseRate + "%#3f4040)"));
             }
         }

@@ -8,6 +8,7 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Bracket;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.Rules;
 
 public class TaxHandler {
@@ -117,8 +118,8 @@ public class TaxHandler {
         }
     }
 
-    public double getTaxRate(TaxTarget target, String id) {
-        return switch (target) {
+    public double getTaxRate(TaxTarget target, String id, boolean effective) {
+        double rate =  switch (target) {
             case CITIZENS -> citizenTax;
             case DIVIDENDS -> dividendTax;
             case TARIFFS -> tariffs;
@@ -140,6 +141,7 @@ public class TaxHandler {
 
             default -> 0.0;
         };
+        return effective ? Formatter.formatDouble(rate * f.getGovernment().getTaxEfficiency()) : rate;
     }
 
 
