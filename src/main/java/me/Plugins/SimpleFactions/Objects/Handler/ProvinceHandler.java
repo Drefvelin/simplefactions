@@ -9,6 +9,7 @@ import java.util.Set;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
@@ -58,6 +59,7 @@ public class ProvinceHandler {
 	public void addProvince(int i) {
 		if(provinces.contains(i)) return;
 		provinces.add(i);
+			
 		f.updateTier();
 	}
 
@@ -77,6 +79,7 @@ public class ProvinceHandler {
 				return;
 			}
 		}
+		FactionManager.getMap().enqueue("nation", f.getRGB());
 		f.updateTier();
 	}
 	public List<Integer> getProvinces(){
@@ -148,6 +151,11 @@ public class ProvinceHandler {
 		ProvinceManager pm = SimpleFactions.getInstance().getProvinceManager();
 		Province target = pm.get(provinceId);
 		if (target == null || !target.isValid()) return false;
+
+		if(guild.getCapital() == guild.getFaction().getCapital()) {
+			// Guild capital is the faction capital - no need to exclude it
+			return canClaim(provinceId, sea);
+		}
 
 		// Calculate which provinces would still be legal without this guild's capital
 		Set<Integer> legalWithoutGuildCapital = calculateLegalProvincesExcludingGuildCapital(pm, guild);

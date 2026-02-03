@@ -150,7 +150,6 @@ public class MapSystem {
 			f.setCapital(province);
 			p.sendMessage("§aThis province has been set as your capital!");
 		}
-		enqueue("nation", f.getRGB());
 	}
 
 	public Faction getRelocationTarget(Player p) {
@@ -184,7 +183,6 @@ public class MapSystem {
 		if(p != null) p.sendMessage("§aSuccessfully  unclaimed province "+province);
 		f.removeProvince(province, true);
 		f.getProvinceHandler().revalidateClaims();
-		enqueue("nation", f.getRGB());
 	}
 
 	public void exportProvinces() {

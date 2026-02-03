@@ -486,7 +486,7 @@ public class FactionManager implements Listener{
 
 	//Guild relocation
 
-	public static void requestRelocation(Player sender, Guild g, Faction target) {
+	public static void requestRelocation(Player sender, Guild g, Faction target, int capital) {
 		Player p = Bukkit.getPlayerExact(target.getLeader());
 		if(p == null) {
 			sender.sendMessage("§cTarget faction leader is not online");
@@ -496,11 +496,12 @@ public class FactionManager implements Listener{
 		p.sendMessage("§7Type §a/faction accept §7to accept");
 		p.sendMessage("§7Request will time out in 60 seconds");
 		sender.sendMessage("§aRelocation request sent to "+target.getName());
-		RequestManager.addRequest(sender, p, new RelocateRequest(g));
+		RequestManager.addRequest(sender, p, new RelocateRequest(g, capital));
 	}
 
 	public static void acceptRequest(Player p) {
-		RelationRequest req = (RelationRequest) RequestManager.getRequest(p);
+		p.sendMessage("test");
+		RelocateRequest req = (RelocateRequest) RequestManager.getRequest(p);
 		Faction reciever = FactionManager.getByLeader(p.getName());
 		if(reciever == null) {
 			p.sendMessage("§cYou do not have a faction");
@@ -509,7 +510,7 @@ public class FactionManager implements Listener{
 		Guild sender = req.getSender();
 		Player sp = Bukkit.getPlayerExact(sender.getLeader());
 		if(sp != null && sp.isOnline()) sp.sendMessage(reciever.getName()+" §aaccepted your request to relocate to their faction");
-		sender.relocate(reciever);
+		sender.relocate(reciever, req.getNewCapital());
 		p.sendMessage(sender.getName()+"§a has been relocated to your faction");
 	}
 

@@ -252,10 +252,10 @@ public class FactionCreator {
 				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+(f.getMembers().size()+f.getVassalMembers().size()))); //TODO full subject population as well cause cool
 				List<String> lore = new ArrayList<String>();
 				for(String s : f.getMembers()) {
-					lore.add(StringFormatter.formatHex("#d4c9ae"+s+Represents.represents(f, s)));
+					lore.add(StringFormatter.formatHex("#d4c9ae"+s+" "+Represents.represents(f, s)));
 				}
 				for(String s : f.getVassalMembers()) {
-					lore.add(StringFormatter.formatHex("#a39ba8"+s+Represents.represents(f, s)));
+					lore.add(StringFormatter.formatHex("#a39ba8"+s+" "+Represents.represents(f, s)));
 				}
 				m.setLore(lore);
 				i.setItemMeta(m);	

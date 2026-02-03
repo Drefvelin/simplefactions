@@ -269,7 +269,7 @@ public class GuildView {
 					return;
 				}
 				if(!target.getId().equalsIgnoreCase(guild.getFaction().getId())) {
-					FactionManager.requestRelocation(p, guild, target);
+					FactionManager.requestRelocation(p, guild, target, province);
 				} else {
 					if(target.hasProvince(province)) {
 						guild.setCapital(province);

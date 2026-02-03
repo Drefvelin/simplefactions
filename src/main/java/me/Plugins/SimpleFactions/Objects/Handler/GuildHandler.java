@@ -27,6 +27,7 @@ public class GuildHandler {
 
     public void removeGuild(String id) {
         guilds.remove(id);
+        f.getProvinceHandler().revalidateClaims();
     }
 
     public Guild getGuildByMember(String member) {

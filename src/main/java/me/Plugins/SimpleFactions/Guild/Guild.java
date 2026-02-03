@@ -178,7 +178,7 @@ public class Guild {
         createBanner();
     }
 
-    public void relocate(Faction f) {
+    public void relocate(Faction f, int newCapital) {
         if(isBase()) return;
         if(f.getId().equalsIgnoreCase(host.getId())) return;
         Faction origin = FactionManager.getByString(this.host.getId());
@@ -187,6 +187,9 @@ public class Guild {
         }
         f.getGuildHandler().addGuild(this);
         this.host = f;
+        if(newCapital != -1) {
+            setCapital(newCapital);
+        }
         
     }
 
