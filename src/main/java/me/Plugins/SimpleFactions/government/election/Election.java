@@ -237,6 +237,15 @@ public class Election {
         }
     }
 
+    public boolean hasAnyCandidates() {
+        for (Candidate c : Candidate.values()) {
+            if (gov.hasElections(c) && !candidates.get(c).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void removeCandidate(Candidate c, String candidate) {
         // Remove candidate
         candidates.get(c).remove(candidate);
