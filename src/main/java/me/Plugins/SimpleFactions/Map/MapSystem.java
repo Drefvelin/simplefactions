@@ -96,7 +96,7 @@ public class MapSystem {
 		queues.clear();
 	}
 	
-	public void claim(Player p, Faction f, int pid) {
+	public void claim(Player p, Faction f, int pid, boolean sea) {
 		if(pid == 0) {
 			p.sendMessage("§cThis location has no province!");
 			return;
@@ -109,6 +109,10 @@ public class MapSystem {
 				p.sendMessage("§cThis location has no province!");
 				return;
 			}
+		}
+		if(!f.getProvinceHandler().canClaim(pid, sea)) {
+			p.sendMessage(f.getProvinceHandler().getClaimDeniedReason(pid, sea));
+			return;
 		}
 		Faction owner = FactionManager.getByProvince(pid);
 		boolean stolen = false;

@@ -256,10 +256,17 @@ public class CommandManager implements Listener, CommandExecutor{
 					if(claim == 0) {
 						p.sendMessage("§cThis location has no province!");
 						return true;
-					} else if(!g.getFaction().getProvinces().contains(claim)) {
-						p.sendMessage("§cYour host faction doesn't own this province!");
-						return true;
 					}
+					Faction owner = FactionManager.getByProvince(claim);
+					if(owner != null && !owner.getId().equalsIgnoreCase(g.getFaction().getId())) {
+						p.sendMessage("§cThis province is already owned by another faction!");
+						return true;
+					} else if(!g.getFaction().getProvinces().contains(claim)) {
+						FactionManager.getMap().claim(p, g.getFaction(), claim, true);
+					}
+				}
+				if(!g.getFaction().getProvinces().contains(claim)) {
+					return true;
 				}
 				g.setCapital(claim);
 				p.sendMessage("§aCapital set!");
@@ -321,7 +328,7 @@ public class CommandManager implements Listener, CommandExecutor{
 					if(claim == -2) {
 						p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
 					} else {
-						FactionManager.getMap().claim(p, f, claim);
+						FactionManager.getMap().claim(p, f, claim, false);
 					}
 				} else {
 					p.sendMessage("§cYou need to be a faction leader to claim land");
