@@ -109,7 +109,7 @@ public class WarManager {
 		p.sendMessage(FactionManager.getByLeader(sender.getName()).getName()+" §7is requesting that you aid them in their war against "+w.getEnemy(origin).getName());
 		p.sendMessage("§7Type §a/faction accept §7to accept");
 		p.sendMessage("§7Request will time out in 60 seconds");
-		RequestManager.addRequest(sender, p, new WarRequest(FactionManager.getByLeader(sender.getName()), w));
+		RequestManager.addRequest(sender, p, new WarRequest(FactionManager.getByLeader(sender.getName()).getOrCreateMainGuild(), w));
 	}
 	
 	public static void acceptRequest(Player p) {
@@ -119,7 +119,7 @@ public class WarManager {
 			p.sendMessage("§cYou do not have a faction");
 			return;
 		}
-		Faction sender = req.getSender();
+		Faction sender = req.getFaction();
 		Player sp = Bukkit.getPlayerExact(sender.getLeader());
 		if(sp != null && sp.isOnline()) sp.sendMessage(reciever.getName()+" §aaccepted your call to arms");
 		p.sendMessage("§aYour faction has joined the "+req.getWar().getName());

@@ -30,6 +30,8 @@ import me.Plugins.SimpleFactions.Map.MapSystem;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Objects.PrestigeRank;
+import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
+import me.Plugins.SimpleFactions.Objects.Request.RelocateRequest;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Title;
@@ -481,6 +483,35 @@ public class FactionManager implements Listener{
 		losing.removeTitle(t);
 		return t;
     }
+
+	//Guild relocation
+
+	public static void requestRelocation(Player sender, Guild g, Faction target) {
+		Player p = Bukkit.getPlayerExact(target.getLeader());
+		if(p == null) {
+			sender.sendMessage("§cTarget faction leader is not online");
+			return;
+		}
+		p.sendMessage(g.getName()+" §7is requesting to relocate to your faction");
+		p.sendMessage("§7Type §a/faction accept §7to accept");
+		p.sendMessage("§7Request will time out in 60 seconds");
+		sender.sendMessage("§aRelocation request sent to "+target.getName());
+		RequestManager.addRequest(sender, p, new RelocateRequest(g));
+	}
+
+	public static void acceptRequest(Player p) {
+		RelationRequest req = (RelationRequest) RequestManager.getRequest(p);
+		Faction reciever = FactionManager.getByLeader(p.getName());
+		if(reciever == null) {
+			p.sendMessage("§cYou do not have a faction");
+			return;
+		}
+		Guild sender = req.getSender();
+		Player sp = Bukkit.getPlayerExact(sender.getLeader());
+		if(sp != null && sp.isOnline()) sp.sendMessage(reciever.getName()+" §aaccepted your request to relocate to their faction");
+		sender.relocate(reciever);
+		p.sendMessage(sender.getName()+"§a has been relocated to your faction");
+	}
 
 	//Elections and stuff
 

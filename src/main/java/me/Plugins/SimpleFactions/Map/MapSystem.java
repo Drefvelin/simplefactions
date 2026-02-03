@@ -156,6 +156,7 @@ public class MapSystem {
 	public Faction getRelocationTarget(Player p) {
 		Guild guild = FactionManager.getGuildByLeader(p.getName());
 		if(guild == null) return null;
+		if(guild.isBase()) return null;
 		if(!guild.hasCapital()) return null;
 		int location = RestServer.getProvince(p);
 		if(guild.getCapital() == location) return null;
@@ -164,7 +165,7 @@ public class MapSystem {
 		Faction owner = prov.getOwner();
 		if(owner != null) return owner;
 		owner = guild.getFaction();
-		if(owner.getProvinceHandler().canClaim(location, true)) return owner;
+		if(owner.getProvinceHandler().canClaim(location, true, guild)) return owner;
 		return null;
 	}
 	

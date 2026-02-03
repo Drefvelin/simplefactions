@@ -131,6 +131,150 @@ public class ProvinceHandler {
 		return false;
 	}
 
+	/**
+	 * Check if a province can be claimed while excluding a guild's capital from legality calculations.
+	 * Used for guild relocation logic - checks if a province is claimable without considering
+	 * the specified guild's current capital as a valid claim source.
+	 * 
+	 * @param provinceId The province to check
+	 * @param sea Whether sea adjacency is allowed
+	 * @param guild The guild whose capital should be excluded from legality checks
+	 * @return true if the province can be claimed without relying on the guild's capital
+	 */
+	public boolean canClaim(int provinceId, boolean sea, Guild guild) {
+		if(provinces.size() == 0) return true;
+		if(provinces.contains(provinceId)) return false;
+
+		ProvinceManager pm = SimpleFactions.getInstance().getProvinceManager();
+		Province target = pm.get(provinceId);
+		if (target == null || !target.isValid()) return false;
+
+		// Calculate which provinces would still be legal without this guild's capital
+		Set<Integer> legalWithoutGuildCapital = calculateLegalProvincesExcludingGuildCapital(pm, guild);
+
+		// 1) Normal land adjacency (only check against legal provinces)
+		for (int ownedId : legalWithoutGuildCapital) {
+			Province owned = pm.get(ownedId);
+			if (owned != null && owned.getNeighbours().contains(provinceId)) {
+				return true;
+			}
+		}
+
+		// 2) Sea-adjacency mode (only from legal provinces)
+		if (sea) {
+			return isSeaAdjacentFromSet(pm, target, legalWithoutGuildCapital);
+		}
+
+		return false;
+	}
+
+	/**
+	 * Calculate which provinces would still be legal if a specific guild's capital was removed.
+	 * This determines the "legal claim base" for guild relocation.
+	 */
+	private Set<Integer> calculateLegalProvincesExcludingGuildCapital(ProvinceManager pm, Guild guild) {
+		Set<Integer> legal = new HashSet<>();
+
+		int excludedCapital = guild.hasCapital() ? guild.getCapital() : -1;
+
+		// 1) Flood from faction capital (if exists and is not the excluded capital)
+		if (hasCapital() && capital != excludedCapital) {
+			legal.add(capital);
+			floodLandExcluding(pm, capital, legal, excludedCapital);
+		}
+
+		// 2) Flood from other guild capitals (excluding the specified guild's capital)
+		for (Guild g : f.getGuildHandler().getGuilds()) {
+			if (!g.hasCapital()) continue;
+			int guildCap = g.getCapital();
+			if (guildCap == excludedCapital) continue;
+
+			legal.add(guildCap);
+			floodLandExcluding(pm, guildCap, legal, excludedCapital);
+		}
+
+		return legal;
+	}
+
+	/**
+	 * Flood-fill land provinces while excluding a specific province from traversal.
+	 */
+	private void floodLandExcluding(ProvinceManager pm, int start, Set<Integer> out, int excludeProvince) {
+		ArrayDeque<Integer> queue = new ArrayDeque<>();
+		Set<Integer> visited = new HashSet<>();
+
+		queue.add(start);
+		visited.add(start);
+
+		while (!queue.isEmpty()) {
+			int current = queue.poll();
+			out.add(current);
+
+			Province p = pm.get(current);
+			if (p == null) continue;
+
+			for (int n : p.getNeighbours()) {
+				if (visited.contains(n)) continue;
+				if (!provinces.contains(n)) continue;
+				if (n == excludeProvince) continue; // Skip the excluded province
+
+				Province np = pm.get(n);
+				if (np == null || np.isSea()) continue;
+
+				visited.add(n);
+				queue.add(n);
+			}
+		}
+	}
+
+	/**
+	 * Check sea adjacency from a specific set of provinces (used for guild relocation checks).
+	 */
+	private boolean isSeaAdjacentFromSet(ProvinceManager pm, Province target, Set<Integer> fromProvinces) {
+		Set<Integer> visited = new HashSet<>();
+		ArrayDeque<Integer> queue = new ArrayDeque<>();
+
+		// Seed the queue with sea provinces adjacent to the legal province set
+		for (int ownedId : fromProvinces) {
+			Province owned = pm.get(ownedId);
+			if (owned == null) continue;
+
+			for (int nId : owned.getNeighbours()) {
+				Province n = pm.get(nId);
+				if (n == null) continue;
+
+				if (n.isSea()) {
+					queue.add(nId);
+					visited.add(nId);
+				}
+			}
+		}
+
+		// Flood-fill sea region
+		while (!queue.isEmpty()) {
+			int currentId = queue.poll();
+			Province current = pm.get(currentId);
+			if (current == null) continue;
+
+			// If target touches this sea province
+			if (current.getNeighbours().contains(target.getId())) {
+				return true;
+			}
+
+			for (int nId : current.getNeighbours()) {
+				if (visited.contains(nId)) continue;
+
+				Province n = pm.get(nId);
+				if (n == null || !n.isSea()) continue;
+
+				visited.add(nId);
+				queue.add(nId);
+			}
+		}
+
+		return false;
+	}
+
 	private boolean isLandConnected(ProvinceManager pm, int startId, int targetId) {
 		Set<Integer> visited = new HashSet<>();
 		ArrayDeque<Integer> queue = new ArrayDeque<>();

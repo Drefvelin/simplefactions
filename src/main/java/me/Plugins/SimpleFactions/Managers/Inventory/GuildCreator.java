@@ -676,9 +676,7 @@ public class GuildCreator {
 			}
 		}
 		lore.add("");
-		double mult = factionChange ? 0.15 : newProvince ? 0.15 : 0.05;
-		double cost = Formatter.formatDouble(guild.getTotalExpansionSpent()*mult);
-		cost = Math.max(cost, 100);
+		double cost = guild.getRelocationCost(province);
 		lore.add(StringFormatter.formatHex("#d4c9aeCost: #ccbb76"+cost+"d"));
 		lore.add("");
 		lore.add(StringFormatter.formatHex("#50e846§lClick to Relocate"));
