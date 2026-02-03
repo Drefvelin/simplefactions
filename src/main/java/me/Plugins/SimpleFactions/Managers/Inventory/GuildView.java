@@ -20,6 +20,7 @@ import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
+import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.REST.RestServer;
@@ -128,6 +129,10 @@ public class GuildView {
 		i.setItem(12, creator.createMenuItem(player, guild, MenuItemType.WEALTH));
 		i.setItem(15, creator.createMenuItem(player, guild, MenuItemType.MEMBERS));
 		if(guild.hasUpgrades()) i.setItem(16, creator.createUpgradesItem(player, guild));
+		Faction target = FactionManager.getMap().getRelocationTarget(player);
+		if(target != null) {
+			i.setItem(34, creator.createRelocateItem(player, target, guild));
+		}
 		int group = 0;
 		while(guild.getBranch(group) != null || group > 10) {
 			Branch b = guild.getBranch(group);

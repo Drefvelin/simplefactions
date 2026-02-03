@@ -32,6 +32,7 @@ public class FactionCleanup {
             for (Faction faction : factions) {
                 for (String member : faction.getMembers()) {
                     String name = member.toLowerCase();
+                    if(name.startsWith("dummy_")) continue;
                     offlineDays.putIfAbsent(name, 0); // If not tracked yet, start at 0
                 }
             }
@@ -45,6 +46,7 @@ public class FactionCleanup {
                 List<String> members = new ArrayList<>(faction.getMembers()); // Avoid ConcurrentModificationException
 
                 for (String member : members) {
+                    if(member.startsWith("dummy_")) continue;
                     int daysOffline = offlineDays.getOrDefault(member.toLowerCase(), 0);
                     if(!faction.getMembers().contains(member)) continue;
                     if (daysOffline >= MAX_DAYS_OFFLINE) {

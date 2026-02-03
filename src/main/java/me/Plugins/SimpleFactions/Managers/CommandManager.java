@@ -59,7 +59,7 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cYou are the leader of the faction");
 					return true;
 				}
-				String id = format.formatId(args[1]);
+				String id = Formatter.formatId(args[1]);
 				if(FactionManager.guildExists(id)) {
 					p.sendMessage("§cThis guild already exists");
 					return true;
@@ -67,6 +67,33 @@ public class CommandManager implements Listener, CommandExecutor{
 				Guild guild = new Guild(args[1], p, f, -1);
 				f.getGuildHandler().addGuild(guild);
 				p.sendMessage("§aGuild "+guild.getName()+" §acreated!");
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("delete") && args.length == 2) {
+				String id = Formatter.formatId(args[1]);
+				Guild guild = FactionManager.getGuildByString(id);
+				if(guild == null) {
+					p.sendMessage("§cNo guild by the id "+args[1]);
+					return true;
+				}
+				if(!guild.getLeader().equalsIgnoreCase(p.getName()) && !Permissions.isAdmin(sender)) {
+					p.sendMessage("§cYou are not the leader of this guild");
+					return true;
+				}
+				if(guild.isBase()) {
+					p.sendMessage("§cYou cannot delete the base guild of a faction");
+					return true;
+				}
+				guild.getFaction().getGuildHandler().removeGuild(guild.getId());
+				guild.getFaction().getProvinceHandler().revalidateClaims();
+				for(String member : guild.getMembers()) {
+					Player pl = Bukkit.getPlayerExact(member);
+					if(pl != null && !member.equalsIgnoreCase(guild.getLeader())) {
+						pl.sendMessage("§cYour guild has been deleted!");
+					}
+					pl.sendMessage("§aJoined "+guild.getFaction().getName());
+					guild.getFaction().addMember(member);
+				}
+				p.sendMessage("§cGuild "+guild.getName()+" §cdeleted!");
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("dummyLeader") && args.length == 1) {
 				Guild guild = FactionManager.getGuildByMember(p.getName());

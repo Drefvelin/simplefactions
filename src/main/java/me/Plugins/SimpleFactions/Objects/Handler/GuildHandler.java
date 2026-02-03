@@ -25,6 +25,10 @@ public class GuildHandler {
         return guilds.getOrDefault(id, null);
     }
 
+    public void removeGuild(String id) {
+        guilds.remove(id);
+    }
+
     public Guild getGuildByMember(String member) {
         for(Guild g : guilds.values()) {
             if(g.isMember(member)) return g;

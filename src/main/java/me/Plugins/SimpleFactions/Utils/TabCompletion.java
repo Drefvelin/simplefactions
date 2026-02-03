@@ -10,6 +10,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
@@ -40,7 +41,6 @@ public class TabCompletion implements TabCompleter{
 				completions.add("setbank");
 				completions.add("deposit");
 				completions.add("withdraw");
-				completions.add("relocate");
 				completions.add("setcapital");
 				if(FactionManager.getGuildByLeader(p.getName()) != null) {
 					completions.add("invite");
@@ -116,6 +116,25 @@ public class TabCompletion implements TabCompleter{
 				List<String> completions = new ArrayList<String>();
 				if(f != null) {
 					completions.add(f.getId());
+				}
+				return completions;
+			}
+		} else if(cmd.getName().equalsIgnoreCase("guild") && args.length == 2 && args[0].equalsIgnoreCase("delete")){
+			if(sender instanceof Player){
+				Player p = (Player) sender;
+				Guild g = FactionManager.getGuildByMember(p.getName());
+				List<String> completions = new ArrayList<String>();
+				if(g != null && !g.isBase()) {
+					completions.add(g.getId());
+				}
+				if(Permissions.isAdmin(sender)) {
+					for(Faction fac : FactionManager.factions) {
+						for(Guild guild : fac.getGuildHandler().getGuilds()) {
+							if(!completions.contains(guild.getId()) && !guild.isBase()) {
+								completions.add(guild.getId());
+							}
+						}
+					}
 				}
 				return completions;
 			}

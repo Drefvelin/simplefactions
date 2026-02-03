@@ -108,7 +108,8 @@ public class ProvinceHandler {
     //claims
 
 	public boolean canClaim(int provinceId, boolean sea) {
-		if (provinces.contains(provinceId)) return false;
+        if(provinces.size() == 0) return true;
+		if(provinces.contains(provinceId)) return false;
 
 		ProvinceManager pm = SimpleFactions.getInstance().getProvinceManager();
 		Province target = pm.get(provinceId);
@@ -221,6 +222,7 @@ public class ProvinceHandler {
 
 		// 2) Flood from faction capital (land only)
 		if (hasCapital()) {
+            legal.add(capital);
 			floodLand(pm, capital, legal);
 		}
 
@@ -280,11 +282,11 @@ public class ProvinceHandler {
         Province target = pm.get(provinceId);
 
         if (target == null || !target.isValid()) {
-            return "This location has no province.";
+            return "§cThis location has no province.";
         }
 
         if (provinces.contains(provinceId)) {
-            return "This province is already part of your realm.";
+            return "§cThis province is already part of your realm.";
         }
 
         // Land-only adjacency check
@@ -299,7 +301,7 @@ public class ProvinceHandler {
 
         if (!sea) {
             if (!landAdjacent) {
-                return "This province does not border your current realm.";
+                return "§cThis province does not border your current realm.";
             }
             return "Success";
         }
@@ -308,7 +310,7 @@ public class ProvinceHandler {
         if (landAdjacent) return "Success";
 
         if (!isSeaAdjacent(pm, target)) {
-            return "This province must be connected to your realm by land or by sea.";
+            return "§cThis province must be connected to your realm by land or by sea.";
         }
 
         return "Success";

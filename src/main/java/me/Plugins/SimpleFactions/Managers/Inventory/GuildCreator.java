@@ -25,13 +25,16 @@ import me.Plugins.SimpleFactions.Guild.income.Cashflow;
 import me.Plugins.SimpleFactions.Guild.income.Ledger;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
+import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Objects.Modifier;
+import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.Utils.FactionRanker;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
 import me.Plugins.SimpleFactions.enums.RankType;
 import me.Plugins.SimpleFactions.keys.Keys;
@@ -646,6 +649,39 @@ public class GuildCreator {
 			lore.add(StringFormatter.formatHex("#857e59Queued..."));
 		}
 		
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createRelocateItem(Player p, Faction target, Guild guild) {
+		boolean factionChange = !guild.getFaction().getId().equalsIgnoreCase(target.getId());
+		int province = RestServer.getProvince(p);
+		boolean newProvince = !target.hasProvince(province);
+		ItemStack i = new ItemStack(Material.FILLED_MAP);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex(factionChange ? 
+			"#d4c9ae§lRelocate Guild to "+target.getName() : 
+			"#d4c9ae§lRelocate Guild within "+guild.getFaction().getName()));
+		List<String> lore = new ArrayList<>();
+		if(factionChange) {
+			lore.add(StringFormatter.formatHex("#d4c9aeRelocate your guild to "+target.getName()));
+			lore.add(StringFormatter.formatHex("#e15757This changes the faction you are part of!"));
+		} else {
+			if(newProvince) {
+				lore.add(StringFormatter.formatHex("#d4c9aeRelocate your guild to a new province outside "+target.getName()));
+				lore.add(StringFormatter.formatHex("#d4c9aeborders, thus expanding the realm."));
+			} else {
+				lore.add(StringFormatter.formatHex("#d4c9aeRelocate your guild within "+target.getName()));
+			}
+		}
+		lore.add("");
+		double mult = factionChange ? 0.15 : newProvince ? 0.15 : 0.05;
+		double cost = Formatter.formatDouble(guild.getTotalExpansionSpent()*mult);
+		cost = Math.max(cost, 100);
+		lore.add(StringFormatter.formatHex("#d4c9aeCost: #ccbb76"+cost+"d"));
+		lore.add("");
+		lore.add(StringFormatter.formatHex("#50e846§lClick to Relocate"));
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;

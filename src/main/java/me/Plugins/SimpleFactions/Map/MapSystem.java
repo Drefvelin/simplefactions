@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Database.Database;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
@@ -145,7 +146,26 @@ public class MapSystem {
 		}
 		p.sendMessage(stolen ? "§aSuccessfully  claimed province "+province+" §afrom "+owner.getName() : "§aSuccessfully  claimed province "+province);
 		f.addProvince(province);
+		if(f.getProvinces().size() == 1) {
+			f.setCapital(province);
+			p.sendMessage("§aThis province has been set as your capital!");
+		}
 		enqueue("nation", f.getRGB());
+	}
+
+	public Faction getRelocationTarget(Player p) {
+		Guild guild = FactionManager.getGuildByLeader(p.getName());
+		if(guild == null) return null;
+		if(!guild.hasCapital()) return null;
+		int location = RestServer.getProvince(p);
+		if(guild.getCapital() == location) return null;
+		Province prov = SimpleFactions.getInstance().getProvinceManager().get(location);
+		if(!prov.isValid() || prov.isSea()) return null;
+		Faction owner = prov.getOwner();
+		if(owner != null) return owner;
+		owner = guild.getFaction();
+		if(owner.getProvinceHandler().canClaim(location, true)) return owner;
+		return null;
 	}
 	
 	public void unclaim(Player p, Faction f, int province) {
