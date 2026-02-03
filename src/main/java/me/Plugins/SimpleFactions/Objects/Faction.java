@@ -1,5 +1,6 @@
 package me.Plugins.SimpleFactions.Objects;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -30,11 +31,13 @@ import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.TierLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Handler.GuildHandler;
 import me.Plugins.SimpleFactions.Objects.Handler.LawHandler;
+import me.Plugins.SimpleFactions.Objects.Handler.ProvinceHandler;
 import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
@@ -74,9 +77,7 @@ public class Faction {
 	private String leader;
 	private Integer extraNodeCapacity;
 	private List<Modifier> prestigeModifiers = new ArrayList<>();
-	private List<Integer> provinces = new ArrayList<>();
-
-	private int capital = -1;
+	
 	
 	private TaxHandler taxHandler;
 
@@ -99,6 +100,9 @@ public class Faction {
 
 	//Laws
 	private final LawHandler lawHandler;
+
+	//Realm
+	private final ProvinceHandler provinceHandler;
 	
 	public Faction(String id, String leader) {
 		this.id = Formatter.formatId(id);
@@ -116,6 +120,7 @@ public class Faction {
 		this.extraNodeCapacity = 0;
 		this.rgb = RandomRGB.random();
 		this.lawHandler = new LawHandler(this);
+		this.provinceHandler = new ProvinceHandler(this);
 		while(!RandomRGB.isFree(rgb)) {
 			this.rgb = RandomRGB.random();
 		}
@@ -168,11 +173,7 @@ public class Faction {
 		this.extraNodeCapacity = exCap;
 		this.prestigeModifiers = prestigeModifiers;
 		this.rgb = rgb;
-		this.capital = capital;
-		for(int i : provinces) {
-			if(TitleManager.getByProvince(i) != null) continue;
-			this.provinces.add(i);
-		}
+		this.provinceHandler = new ProvinceHandler(this, capital, provinces);
 		this.titles = titles;
 		this.military = new Military(this);
 		this.guildHandler = new GuildHandler(this);
@@ -235,17 +236,15 @@ public class Faction {
 	}
 
 	public boolean hasCapital() {
-		return capital != -1;
+		return provinceHandler.hasCapital();
 	}
 
 	public int getCapital() {
-		return capital;
+		return provinceHandler.getCapital();
 	}
 
 	public void setCapital(int i) {
-		if(!provinces.contains(i)) return;
-		capital = i;
-		SimpleFactions.getInstance().getProvinceManager().recalculateForSingleGuild(getOrCreateMainGuild(), true);
+		provinceHandler.setCapital(i);
 	}
 
 	public double getTaxRate(TaxTarget target, String id, boolean effective) {
@@ -335,28 +334,23 @@ public class Faction {
 		government.tick();
 	}
 
+	public ProvinceHandler getProvinceHandler() {
+		return provinceHandler;
+	}
+
 	public boolean hasProvince(int i) {
-		return provinces.contains(i);
+		return provinceHandler.hasProvince(i);
 	}
 	
 	public void addProvince(int i) {
-		if(provinces.contains(i)) return;
-		provinces.add(i);
-		updateTier();
+		provinceHandler.addProvince(i);
 	}
 	
-	public void removeProvince(int i) {
-		for(int x = 0; x<provinces.size(); x++) {
-			int p = provinces.get(x);
-			if(p == i) {
-				provinces.remove(x);
-				return;
-			}
-		}
-		updateTier();
+	public void removeProvince(int i, boolean destroyTitles) {
+		provinceHandler.removeProvince(i, destroyTitles);
 	}
 	public List<Integer> getProvinces(){
-		return provinces;
+		return provinceHandler.getProvinces();
 	}
 	public List<String> getInvited() {
 		return invited;
@@ -601,8 +595,8 @@ public class Faction {
 			addPrestigeModifier(new Modifier("Wealth", Formatter.formatDouble(amount), false));
 		}
 		int provincePrestige = TierLoader.getByString("province").getPrestige();
-		if(provinces.size() > 0 && provincePrestige > 0) {
-			addPrestigeModifier(new Modifier("Provinces", (double) (provincePrestige*provinces.size()), false));
+		if(provinceHandler.getProvinces().size() > 0 && provincePrestige > 0) {
+			addPrestigeModifier(new Modifier("Provinces", (double) (provincePrestige*provinceHandler.getProvinces().size()), false));
 		}
 		if(titles.size() > 0) {
 			double titleAmount = getHighestTitle().getTier().getPrestige();
@@ -691,16 +685,7 @@ public class Faction {
 	}
 	
 	public List<Integer> getUntitledProvinces() {
-		List<Integer> p = new ArrayList<>();
-		for(int i : provinces) {
-			if(TitleLoader.getByProvince(i) == null) p.add(i);
-		}
-		for(Faction subject : RelationManager.getSubjects(this)) {
-			for(int i : subject.getProvinces()) {
-				if(TitleLoader.getByProvince(i) == null) p.add(i);
-			}
-		}
-		return p;
+		return provinceHandler.getUntitledProvinces();
 	}
 	
 	public List<Title> getFreeTitles(Tier tier) {
@@ -761,9 +746,9 @@ public class Faction {
 	
 	public void updateTier() {
 		Tier temp = null;
-	    if (provinces.size() == 0 && titles.size() == 0) {
+	    if (provinceHandler.getProvinces().size() == 0 && titles.size() == 0) {
 	    	temp = TierLoader.getLowest();
-	    } else if (provinces.size() > 0 && titles.size() == 0) {
+	    } else if (provinceHandler.getProvinces().size() > 0 && titles.size() == 0) {
 	    	temp = TierLoader.getByString("province");
 	    } else {
 	        Title highest = titles.stream()
@@ -1057,12 +1042,7 @@ public class Faction {
     }
 
 	public void provinceCap() {
-		if(TitleManager.overProvinceCap(this) && provinces.size() > 0) {
-			int toRemove = provinces.get(provinces.size() - 1);
-			if(toRemove == capital && provinces.size() > 1) toRemove = provinces.get(provinces.size() - 2);
-			if(toRemove == capital) return;
-			removeProvince(toRemove);
-		}
+		provinceHandler.provinceCap();
 	}
 
 	public int numOnline() {
@@ -1076,7 +1056,7 @@ public class Faction {
 
 	public double getProsperity() {
 		double amount = 0;
-		for(int p : provinces) {
+		for(int p : provinceHandler.getProvinces()) {
 			Province province = SimpleFactions.getInstance().getProvinceManager().get(p);
 			if(province == null)  continue;
 			amount += province.getProsperity();

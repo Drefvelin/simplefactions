@@ -26,6 +26,7 @@ import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
 import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
@@ -43,7 +44,7 @@ import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 public class Guild {
     private Formatter format = new Formatter();
 
-    private final Faction host;
+    private Faction host;
 
     private String id;
     private String name;
@@ -175,6 +176,21 @@ public class Guild {
         this.wealthModifiers = wealthModifiers;
         this.ledger = new Ledger(this);
         createBanner();
+    }
+
+    public void relocate(Faction f, int newCapital) {
+        if(isBase()) return;
+        if(f.getId().equalsIgnoreCase(host.getId())) return;
+        Faction origin = FactionManager.getByString(this.host.getId());
+        if(origin != null) {
+            origin.getGuildHandler().removeGuild(id);
+        }
+        f.getGuildHandler().addGuild(this);
+        this.host = f;
+        if(newCapital != -1) {
+            setCapital(newCapital);
+        }
+        
     }
 
     public void tick() {
@@ -342,6 +358,10 @@ public class Guild {
 	}
 	public void setBank(Bank bank) {
 		this.bank = bank;
+	}
+
+    public void setName(String name) {
+		this.name = name;
 	}
 
     public Double getWealth() {
@@ -559,5 +579,15 @@ public class Guild {
             total+=u.getTotalUpkeep();
         }
         return total;
+    }
+
+    public double getRelocationCost(int province) {
+        Province prov = SimpleFactions.getInstance().getProvinceManager().get(province);
+        double cost = getTotalExpansionSpent();
+        if(prov == null) return -1;
+        Faction owner = prov.getOwner();
+        if(owner == null) return Math.max(cost *= 0.15, 100);
+        if(owner.getId().equalsIgnoreCase(host.getId())) return Math.max(cost *= 0.05, 100);
+        return Math.max(cost *= 0.15, 100);
     }
 }

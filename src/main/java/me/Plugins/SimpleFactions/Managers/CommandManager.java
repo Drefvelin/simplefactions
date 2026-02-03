@@ -59,40 +59,41 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cYou are the leader of the faction");
 					return true;
 				}
-				if(!f.hasCapital()) {
-					p.sendMessage("§cYour faction has no capital");
-					return true;
-				}
-				if(f.getProvinces().isEmpty()) {
-					p.sendMessage("§cYour faction has no land");
-					return true;
-				}
-				int claim = RestServer.getProvince(p);
-				if(claim == -2) {
-					p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
-				} else {
-					if(claim == 0) {
-						p.sendMessage("§cThis location has no province!");
-						return true;
-					} else if(!f.getProvinces().contains(claim)) {
-						p.sendMessage("§cYour faction doesn't own this province!");
-						return true;
-					} else {
-						Province province = SimpleFactions.getInstance().getProvinceManager().get(claim);
-						if(province.getTerrain().equals(Terrain.WATER) || province.getTerrain().equals(Terrain.SEA)) {
-							p.sendMessage("§cThis location has no province!");
-							return true;
-						}
-					}
-				}
-				String id = format.formatId(args[1]);
+				String id = Formatter.formatId(args[1]);
 				if(FactionManager.guildExists(id)) {
 					p.sendMessage("§cThis guild already exists");
 					return true;
 				}
-				Guild guild = new Guild(args[1], p, f, claim);
+				Guild guild = new Guild(args[1], p, f, -1);
 				f.getGuildHandler().addGuild(guild);
 				p.sendMessage("§aGuild "+guild.getName()+" §acreated!");
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("delete") && args.length == 2) {
+				String id = Formatter.formatId(args[1]);
+				Guild guild = FactionManager.getGuildByString(id);
+				if(guild == null) {
+					p.sendMessage("§cNo guild by the id "+args[1]);
+					return true;
+				}
+				if(!guild.getLeader().equalsIgnoreCase(p.getName()) && !Permissions.isAdmin(sender)) {
+					p.sendMessage("§cYou are not the leader of this guild");
+					return true;
+				}
+				if(guild.isBase()) {
+					p.sendMessage("§cYou cannot delete the base guild of a faction");
+					return true;
+				}
+				guild.getFaction().getGuildHandler().removeGuild(guild.getId());
+				guild.getFaction().getProvinceHandler().revalidateClaims();
+				for(String member : guild.getMembers()) {
+					Player pl = Bukkit.getPlayerExact(member);
+					if(pl != null && !member.equalsIgnoreCase(guild.getLeader())) {
+						pl.sendMessage("§cYour guild has been deleted!");
+					}
+					pl.sendMessage("§aJoined "+guild.getFaction().getName());
+					guild.getFaction().addMember(member);
+				}
+				p.sendMessage("§cGuild "+guild.getName()+" §cdeleted!");
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("dummyLeader") && args.length == 1) {
 				Guild guild = FactionManager.getGuildByMember(p.getName());
@@ -282,16 +283,58 @@ public class CommandManager implements Listener, CommandExecutor{
 					if(claim == 0) {
 						p.sendMessage("§cThis location has no province!");
 						return true;
-					} else if(!g.getFaction().getProvinces().contains(claim)) {
-						p.sendMessage("§cYour host faction doesn't own this province!");
-						return true;
 					}
+					Faction owner = FactionManager.getByProvince(claim);
+					if(owner != null && !owner.getId().equalsIgnoreCase(g.getFaction().getId())) {
+						p.sendMessage("§cThis province is already owned by another faction!");
+						return true;
+					} else if(!g.getFaction().getProvinces().contains(claim)) {
+						FactionManager.getMap().claim(p, g.getFaction(), claim, true);
+					}
+				}
+				if(!g.getFaction().getProvinces().contains(claim)) {
+					return true;
 				}
 				g.setCapital(claim);
 				p.sendMessage("§aCapital set!");
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 				return true;
-			}
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("setleader") && args.length == 2) {
+				Guild g = FactionManager.getGuildByMember(p.getName());
+				if(g == null) {
+					p.sendMessage("§cYou need to have a guild to change leader");
+					return true;
+				}
+				if(!p.getName().equalsIgnoreCase(g.getLeader())) {
+					p.sendMessage("§cOnly the leader can set a new leader!");
+					return true;
+				}
+				if(!g.isMember(args[1])) {
+					p.sendMessage("§cPlayer is not in the faction");
+					return true;
+				}
+				if(args[1].equalsIgnoreCase(g.getLeader())) {
+					p.sendMessage("§cPlayer is already the leader");
+					return true;
+				}
+				g.setLeader(args[1]);
+				for(Player pl : Bukkit.getOnlinePlayers()) {
+					if(g.isMember(pl.getName())) {
+						pl.sendMessage("§a"+args[1]+ " is the new guild leader!");
+					}
+				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("rename") && args.length == 2) {
+				Guild g = FactionManager.getGuildByLeader(p.getName());
+				if(g == null) {
+					p.sendMessage("§a[SimpleFactions]§c Error! You must be the leader of a guild to rename one!");
+					return true;
+				}
+				Formatter format = new Formatter();
+				g.setName(StringFormatter.formatHex(format.formatName(args[1])));
+				p.sendMessage("§aGuild renamed to "+g.getName());
+				return true;
+			} 
 			if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("create") && args.length == 2) {
 				if(FactionManager.getByMember(p.getName()) != null) {
 					p.sendMessage("§cYou already have a faction!");
@@ -312,7 +355,7 @@ public class CommandManager implements Listener, CommandExecutor{
 					if(claim == -2) {
 						p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
 					} else {
-						FactionManager.getMap().claim(p, f, claim);
+						FactionManager.getMap().claim(p, f, claim, false);
 					}
 				} else {
 					p.sendMessage("§cYou need to be a faction leader to claim land");

@@ -470,6 +470,7 @@ public class Government {
 
     public boolean shouldStartElection() {
         if(hasElection()) return false;
+        if(!election.hasAnyCandidates()) return false;
         LocalDate today = LocalDate.now();
         
         // 1. Must be Monday

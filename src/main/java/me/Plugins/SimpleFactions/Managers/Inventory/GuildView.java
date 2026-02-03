@@ -20,6 +20,8 @@ import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
+import me.Plugins.SimpleFactions.Map.Provinces.Province;
+import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.REST.RestServer;
@@ -128,6 +130,10 @@ public class GuildView {
 		i.setItem(12, creator.createMenuItem(player, guild, MenuItemType.WEALTH));
 		i.setItem(15, creator.createMenuItem(player, guild, MenuItemType.MEMBERS));
 		if(guild.hasUpgrades()) i.setItem(16, creator.createUpgradesItem(player, guild));
+		Faction target = FactionManager.getMap().getRelocationTarget(player);
+		if(target != null) {
+			i.setItem(34, creator.createRelocateItem(player, target, guild));
+		}
 		int group = 0;
 		while(guild.getBranch(group) != null || group > 10) {
 			Branch b = guild.getBranch(group);
@@ -246,6 +252,42 @@ public class GuildView {
 			} else if(e.getSlot() == 16) {
 				if(!guild.isLeader(p)) return;
 				upgradeView(p, guild);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				return;
+			} else if(e.getSlot() == 34) {
+				if(!guild.isLeader(p)) return;
+				if(guild.isBase()) return;
+				Faction target = FactionManager.getMap().getRelocationTarget(p);
+				if(target == null)  return;
+				int province = RestServer.getProvince(p);
+				Province prov = SimpleFactions.getInstance().getProvinceManager().get(province);
+				if(prov == null || !prov.isValid() || prov.isSea()) return;
+				double cost = guild.getRelocationCost(province);
+				if(guild.getBank().getWealth() < cost) {	
+					p.sendMessage("§cCannot afford to relocate");
+					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					return;
+				}
+				if(!target.getId().equalsIgnoreCase(guild.getFaction().getId())) {
+					FactionManager.requestRelocation(p, guild, target, province);
+				} else {
+					if(target.hasProvince(province)) {
+						guild.setCapital(province);
+					} else {
+						int old = guild.getCapital();
+						guild.setCapital(-1);
+						FactionManager.getMap().claim(p, target, province, true);
+						if(!target.hasProvince(province)) {
+							guild.setCapital(old);
+							p.sendMessage("§cRelocation failed, cannot claim province!");
+							p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+							return;
+						}
+						guild.setCapital(province);
+					}
+					guild.getBank().withdraw(cost);
+				}
+				guildView(p, guild, inventory);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				return;
 			}

@@ -273,7 +273,7 @@ public class RelationManager {
 		p.sendMessage(FactionManager.getByLeader(sender.getName()).getName()+" §7is requesting that you become their "+type.getName());
 		p.sendMessage("§7Type §a/faction accept §7to accept");
 		p.sendMessage("§7Request will time out in 60 seconds");
-		RequestManager.addRequest(sender, p, new RelationRequest(FactionManager.getByLeader(sender.getName()), type));
+		RequestManager.addRequest(sender, p, new RelationRequest(FactionManager.getByLeader(sender.getName()).getOrCreateMainGuild(), type));
 	}
 	
 	public static void acceptRequest(Player p) {
@@ -283,7 +283,7 @@ public class RelationManager {
 			p.sendMessage("§cYou do not have a faction");
 			return;
 		}
-		Faction sender = req.getSender();
+		Faction sender = req.getFaction();
 		Player sp = Bukkit.getPlayerExact(sender.getLeader());
 		if(sp != null && sp.isOnline()) sp.sendMessage(reciever.getName()+" §aaccepted your request and became your "+req.getType().getName());
 		setRelation(p, req.getType(), reciever, sender, false);

@@ -10,6 +10,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
@@ -19,6 +20,14 @@ import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.TLibs.Utils.TabCleaner;
 
 public class TabCompletion implements TabCompleter{
+
+	private boolean eitherCommand(Command cmd) {
+		if(cmd.getName().equalsIgnoreCase("faction") || cmd.getName().equalsIgnoreCase("guild")) {
+			return true;
+		}
+		return false;
+	}
+
     @Override
     public List<String> onTabComplete (CommandSender sender, Command cmd, String label, String[] args){
 		if(cmd.getName().equalsIgnoreCase("guild") && args.length >= 0 && args.length < 2 ) {
@@ -28,8 +37,19 @@ public class TabCompletion implements TabCompleter{
 				if(FactionManager.getGuildByMember(p.getName()) != null) completions.add("menu");
 				completions.add("create");
 				completions.add("join");
+				completions.add("menu");
+				completions.add("setbank");
+				completions.add("deposit");
+				completions.add("withdraw");
+				completions.add("setcapital");
 				if(FactionManager.getGuildByLeader(p.getName()) != null) {
 					completions.add("invite");
+					completions.add("setleader");
+					completions.add("rename");
+				}
+				if(Permissions.isAdmin(sender)) {
+					completions.add("dummify");
+					completions.add("dummyleader");
 				}
 				return completions;
 			}
@@ -82,7 +102,7 @@ public class TabCompletion implements TabCompleter{
 				TabCleaner.cleanTab(completions, args);
 				return completions;
 			}
-		} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("create")){
+		} else if(eitherCommand(cmd) && args.length == 2 && args[0].equalsIgnoreCase("create")){
 			if(sender instanceof Player){
 				List<String> completions = new ArrayList<String>();
 				completions.add("<id>");
@@ -99,7 +119,26 @@ public class TabCompletion implements TabCompleter{
 				}
 				return completions;
 			}
-		} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("invite")){
+		} else if(cmd.getName().equalsIgnoreCase("guild") && args.length == 2 && args[0].equalsIgnoreCase("delete")){
+			if(sender instanceof Player){
+				Player p = (Player) sender;
+				Guild g = FactionManager.getGuildByMember(p.getName());
+				List<String> completions = new ArrayList<String>();
+				if(g != null && !g.isBase()) {
+					completions.add(g.getId());
+				}
+				if(Permissions.isAdmin(sender)) {
+					for(Faction fac : FactionManager.factions) {
+						for(Guild guild : fac.getGuildHandler().getGuilds()) {
+							if(!completions.contains(guild.getId()) && !guild.isBase()) {
+								completions.add(guild.getId());
+							}
+						}
+					}
+				}
+				return completions;
+			}
+		} else if(eitherCommand(cmd) && args.length == 2 && args[0].equalsIgnoreCase("invite")){
 			if(sender instanceof Player){
 				List<String> completions = new ArrayList<String>();
 				for(Player p : Bukkit.getOnlinePlayers()) {
@@ -165,7 +204,7 @@ public class TabCompletion implements TabCompleter{
 				
 				return completions;
 			}
-		} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("setbanner")){
+		} else if(eitherCommand(cmd) && args.length == 2 && args[0].equalsIgnoreCase("setbanner")){
 			if(sender instanceof Player){
 				List<String> completions = new ArrayList<String>();
 				
@@ -183,7 +222,7 @@ public class TabCompletion implements TabCompleter{
 				
 				return completions;
 			}
-		} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("accept")){
+		} else if(eitherCommand(cmd) && args.length == 2 && args[0].equalsIgnoreCase("accept")){
 			if(sender instanceof Player){
 				List<String> completions = new ArrayList<String>();
 				

@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Database.Database;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
@@ -96,7 +97,7 @@ public class MapSystem {
 		queues.clear();
 	}
 	
-	public void claim(Player p, Faction f, int pid) {
+	public void claim(Player p, Faction f, int pid, boolean sea) {
 		if(pid == 0) {
 			p.sendMessage("§cThis location has no province!");
 			return;
@@ -109,6 +110,10 @@ public class MapSystem {
 				p.sendMessage("§cThis location has no province!");
 				return;
 			}
+		}
+		if(!f.getProvinceHandler().canClaim(pid, sea)) {
+			p.sendMessage(f.getProvinceHandler().getClaimDeniedReason(pid, sea));
+			return;
 		}
 		Faction owner = FactionManager.getByProvince(pid);
 		boolean stolen = false;
@@ -141,7 +146,26 @@ public class MapSystem {
 		}
 		p.sendMessage(stolen ? "§aSuccessfully  claimed province "+province+" §afrom "+owner.getName() : "§aSuccessfully  claimed province "+province);
 		f.addProvince(province);
-		enqueue("nation", f.getRGB());
+		if(f.getProvinces().size() == 1) {
+			f.setCapital(province);
+			p.sendMessage("§aThis province has been set as your capital!");
+		}
+	}
+
+	public Faction getRelocationTarget(Player p) {
+		Guild guild = FactionManager.getGuildByLeader(p.getName());
+		if(guild == null) return null;
+		if(guild.isBase()) return null;
+		if(!guild.hasCapital()) return null;
+		int location = RestServer.getProvince(p);
+		if(guild.getCapital() == location) return null;
+		Province prov = SimpleFactions.getInstance().getProvinceManager().get(location);
+		if(!prov.isValid() || prov.isSea()) return null;
+		Faction owner = prov.getOwner();
+		if(owner != null) return owner;
+		owner = guild.getFaction();
+		if(owner.getProvinceHandler().canClaim(location, true, guild)) return owner;
+		return null;
 	}
 	
 	public void unclaim(Player p, Faction f, int province) {
@@ -157,14 +181,8 @@ public class MapSystem {
 			return;
 		}
 		if(p != null) p.sendMessage("§aSuccessfully  unclaimed province "+province);
-		f.removeProvince(province);
-		Title t = TitleLoader.getByProvince(province);
-		if(t != null) {
-			List<Integer> provinces = TitleManager.getProvinces(f);
-			List<Title> titles = TitleManager.getTitles(f);
-			t.destroy(f, provinces, titles);
-		}
-		enqueue("nation", f.getRGB());
+		f.removeProvince(province, true);
+		f.getProvinceHandler().revalidateClaims();
 	}
 
 	public void exportProvinces() {

@@ -8,6 +8,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
+import me.Plugins.SimpleFactions.Objects.Request.RelocateRequest;
 import me.Plugins.SimpleFactions.Objects.Request.Request;
 import me.Plugins.SimpleFactions.Objects.Request.WarRequest;
 
@@ -48,6 +49,8 @@ public class RequestManager {
 			RelationManager.acceptRequest(p);
 		} else if(req instanceof WarRequest){
 			WarManager.acceptRequest(p);
+		} else if(req instanceof RelocateRequest){
+			FactionManager.acceptRequest(p);
 		}
 		requests.remove(p);
 	}
