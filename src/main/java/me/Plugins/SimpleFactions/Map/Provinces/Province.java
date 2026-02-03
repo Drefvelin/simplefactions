@@ -280,4 +280,8 @@ public class Province {
         }
         return 1;
     }
+
+    public boolean isSea() {
+        return terrain == Terrain.SEA || terrain == Terrain.WATER;
+    }
 }

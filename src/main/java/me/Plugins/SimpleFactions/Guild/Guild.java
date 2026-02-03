@@ -344,6 +344,10 @@ public class Guild {
 		this.bank = bank;
 	}
 
+    public void setName(String name) {
+		this.name = name;
+	}
+
     public Double getWealth() {
 		return wealth;
 	}

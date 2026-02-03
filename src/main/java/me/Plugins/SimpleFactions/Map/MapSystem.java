@@ -157,13 +157,8 @@ public class MapSystem {
 			return;
 		}
 		if(p != null) p.sendMessage("§aSuccessfully  unclaimed province "+province);
-		f.removeProvince(province);
-		Title t = TitleLoader.getByProvince(province);
-		if(t != null) {
-			List<Integer> provinces = TitleManager.getProvinces(f);
-			List<Title> titles = TitleManager.getTitles(f);
-			t.destroy(f, provinces, titles);
-		}
+		f.removeProvince(province, true);
+		f.getProvinceHandler().revalidateClaims();
 		enqueue("nation", f.getRGB());
 	}
 
