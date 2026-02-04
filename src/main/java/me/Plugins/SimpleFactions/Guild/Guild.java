@@ -37,6 +37,7 @@ import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
+import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -589,5 +590,34 @@ public class Guild {
         if(owner == null) return Math.max(cost *= 0.15, 100);
         if(owner.getId().equalsIgnoreCase(host.getId())) return Math.max(cost *= 0.05, 100);
         return Math.max(cost *= 0.15, 100);
+    }
+
+    public double getElevationCost() {
+        double cost = getSize();
+        return Math.pow(cost, 1.1);
+    }
+
+    public boolean canBeElevated(Player p) {
+        if(isBase()) {
+            if(p != null) p.sendMessage("§cCannot elevate the main guild");
+            return false;
+        }
+        if(!host.hasFactionRule(Rules.CAN_HAVE_VASSALS)) {
+            if(p != null) p.sendMessage("§cHost faction cannot have vassals");
+            return false;
+        }
+        if(hasCapital() && capital == host.getCapital()) {
+            if(p != null) p.sendMessage("§cGuild capital is the same as the faction capital, move it first");
+            return false;
+        }
+        for(Guild g : host.getGuildHandler().getGuilds()) {
+            if(g.isBase()) continue;
+            if(g.getId().equalsIgnoreCase(id)) continue;
+            if(g.getCapital() == capital) {
+                if(p != null) p.sendMessage("§cAnother guild already has that capital, move it first");
+                return false;
+            }
+        }
+        return true;
     }
 }

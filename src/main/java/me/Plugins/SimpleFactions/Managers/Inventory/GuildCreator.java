@@ -26,6 +26,7 @@ import me.Plugins.SimpleFactions.Guild.income.Ledger;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
+import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Guild.Guild;
@@ -661,8 +662,8 @@ public class GuildCreator {
 		ItemStack i = new ItemStack(Material.FILLED_MAP);
 		ItemMeta meta = i.getItemMeta();
 		meta.setDisplayName(StringFormatter.formatHex(factionChange ? 
-			"#d4c9ae§lRelocate Guild to "+target.getName() : 
-			"#d4c9ae§lRelocate Guild within "+guild.getFaction().getName()));
+			"#d4c9aeRelocate Guild to "+target.getName() : 
+			"#d4c9aeRelocate Guild within "+guild.getFaction().getName()));
 		List<String> lore = new ArrayList<>();
 		if(factionChange) {
 			lore.add(StringFormatter.formatHex("#d4c9aeRelocate your guild to "+target.getName()));
@@ -679,7 +680,31 @@ public class GuildCreator {
 		double cost = guild.getRelocationCost(province);
 		lore.add(StringFormatter.formatHex("#d4c9aeCost: #ccbb76"+cost+"d"));
 		lore.add("");
-		lore.add(StringFormatter.formatHex("#50e846§lClick to Relocate"));
+		lore.add(StringFormatter.formatHex("#50e846Click to Relocate"));
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createElevationItem(Player p, Guild guild) {
+		ItemStack i = new ItemStack(Material.BLACK_DYE);
+		ItemMeta meta = i.getItemMeta();
+		meta.setCustomModelData(13);
+		meta.setDisplayName(StringFormatter.formatHex("#d4c9aeElevate Guild to Faction Status"));
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#d4c9aeThis will make the guild an "+RelationLoader.getElevationTarget().getName()));
+		lore.add(StringFormatter.formatHex("#d4c9aeof our faction, giving them their own laws and government."));
+		lore.add(StringFormatter.formatHex("#d4c9aethey also get the ability to have guilds and vassals of their own"));
+		lore.add(StringFormatter.formatHex("#e15757The guild capital province will be transferred to the new faction!"));
+		lore.add("");
+		double cost = guild.getElevationCost();
+		lore.add(StringFormatter.formatHex("#d4c9aeCost: §e"+cost+" Administrative Power"));
+		lore.add("");
+		if(guild.canBeElevated(null)) {
+			lore.add(StringFormatter.formatHex("#50e846Click to Elevate"));
+		} else {
+			lore.add(StringFormatter.formatHex("#e15757Unavailable"));
+		}
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;

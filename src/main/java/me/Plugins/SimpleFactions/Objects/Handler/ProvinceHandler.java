@@ -16,6 +16,7 @@ import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.enums.Terrain;
 
 public class ProvinceHandler {
     private Faction f;
@@ -111,22 +112,21 @@ public class ProvinceHandler {
     //claims
 
 	public boolean canClaim(int provinceId, boolean sea) {
-        if(provinces.size() == 0) return true;
-		if(provinces.contains(provinceId)) return false;
+		if (provinces.size() == 0) return true;
+		if (provinces.contains(provinceId)) return false;
 
 		ProvinceManager pm = SimpleFactions.getInstance().getProvinceManager();
 		Province target = pm.get(provinceId);
 		if (target == null || !target.isValid()) return false;
 
-		// 1) Normal land adjacency
+		// 1️⃣ Effective adjacency (land + water + capital sea fan-out)
 		for (int ownedId : provinces) {
-			Province owned = pm.get(ownedId);
-			if (owned != null && owned.getNeighbours().contains(provinceId)) {
+			if (isEffectivelyAdjacent(pm, ownedId, provinceId)) {
 				return true;
 			}
 		}
 
-		// 2) Sea-adjacency mode
+		// 2️⃣ Sea adjacency mode (existing flood logic)
 		if (sea) {
 			return isSeaAdjacent(pm, target);
 		}
@@ -430,41 +430,70 @@ public class ProvinceHandler {
 	}
 
     public String getClaimDeniedReason(int provinceId, boolean sea) {
-        ProvinceManager pm = SimpleFactions.getInstance().getProvinceManager();
-        Province target = pm.get(provinceId);
+		ProvinceManager pm = SimpleFactions.getInstance().getProvinceManager();
+		Province target = pm.get(provinceId);
 
-        if (target == null || !target.isValid()) {
-            return "§cThis location has no province.";
-        }
+		if (target == null || !target.isValid()) {
+			return "§cThis location has no province.";
+		}
 
-        if (provinces.contains(provinceId)) {
-            return "§cThis province is already part of your realm.";
-        }
+		if (provinces.contains(provinceId)) {
+			return "§cThis province is already part of your realm.";
+		}
 
-        // Land-only adjacency check
-        boolean landAdjacent = false;
-        for (int ownedId : provinces) {
-            Province owned = pm.get(ownedId);
-            if (owned != null && owned.getNeighbours().contains(provinceId)) {
-                landAdjacent = true;
-                break;
-            }
-        }
+		boolean adjacent = false;
+		for (int ownedId : provinces) {
+			if (isEffectivelyAdjacent(pm, ownedId, provinceId)) {
+				adjacent = true;
+				break;
+			}
+		}
 
-        if (!sea) {
-            if (!landAdjacent) {
-                return "§cThis province does not border your current realm.";
-            }
-            return "Success";
-        }
+		if (!sea) {
+			return adjacent
+				? "Success"
+				: "§cThis province does not border your current realm.";
+		}
 
-        // Sea-enabled mode
-        if (landAdjacent) return "Success";
+		if (adjacent || isSeaAdjacent(pm, target)) {
+			return "Success";
+		}
 
-        if (!isSeaAdjacent(pm, target)) {
-            return "§cThis province must be connected to your realm by land or by sea.";
-        }
+		return "§cThis province must be connected to your realm by land or by sea.";
+	}
 
-        return "Success";
-    }
+	private boolean isEffectivelyAdjacent(ProvinceManager pm, int fromId, int targetId) {
+		Province from = pm.get(fromId);
+		Province target = pm.get(targetId);
+		if (from == null || target == null) return false;
+
+		// 1️⃣ Direct adjacency
+		if (from.getNeighbours().contains(targetId)) {
+			return true;
+		}
+
+		// 2️⃣ Single WATER bridge
+		for (int nId : from.getNeighbours()) {
+			Province mid = pm.get(nId);
+			if (mid == null || mid.getTerrain() != Terrain.WATER) continue;
+
+			if (mid.getNeighbours().contains(targetId)) {
+				return true;
+			}
+		}
+
+		// 3️⃣ Capital SEA fan-out
+		if (fromId == capital) {
+			for (int nId : from.getNeighbours()) {
+				Province sea = pm.get(nId);
+				if (sea == null || !sea.isSea()) continue;
+
+				if (sea.getNeighbours().contains(targetId)) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
 }
