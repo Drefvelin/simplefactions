@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.Managers.Inventory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -113,6 +114,95 @@ public class FactionCreator {
 		meta.getPersistentDataContainer().set(id, PersistentDataType.STRING, f.getId());
 		i.setItemMeta(meta);
 		return i;
+	}
+
+	public ItemStack createDissolveItem(Faction f) {
+		ItemStack item = new ItemStack(Material.PRISMARINE_CRYSTALS);
+		ItemMeta meta = item.getItemMeta();
+
+		meta.setDisplayName(StringFormatter.formatHex(
+			"#c45749§lDissolve Faction"
+		));
+
+		List<String> lore = new ArrayList<>();
+
+		lore.add(StringFormatter.formatHex(
+			"#d4bb98This action will result in the following:"
+		));
+		lore.add("");
+
+		Faction overlord = f.getOverlord();
+		if (overlord != null) {
+
+			// This faction
+			lore.add(StringFormatter.formatHex(
+				"#b85c5c• " + f.getName() +
+				" dissolves and becomes a guild under #e0cfa6" + overlord.getName()
+			));
+			lore.add("");
+
+			// Guilds
+			for (Guild g : f.getGuildHandler().getGuilds()) {
+				lore.add(StringFormatter.formatHex(
+					"#b8a58a• Guild " + g.getName() +
+					" is transferred to #e0cfa6" + overlord.getName()
+				));
+			}
+
+			if (!f.getGuildHandler().getGuilds().isEmpty()) {
+				lore.add("");
+			}
+
+			// Vassals
+			for (Faction vassal : f.getSubjects()) {
+				lore.add(StringFormatter.formatHex(
+					"#b8a58a• " + vassal.getName() +
+					" is transferred to #e0cfa6" + overlord.getName()
+				));
+			}
+		}
+		else {
+
+			// Guilds becoming factions
+			for (Guild g : f.getGuildHandler().getGuilds()) {
+				if (g.isBase()) continue;
+
+				lore.add(StringFormatter.formatHex(
+					"#b8a58a• Guild " + g.getName() +
+					" becomes an independent faction"
+				));
+			}
+
+			if (f.getGuildHandler().getGuilds().stream().anyMatch(g -> !g.isBase())) {
+				lore.add("");
+			}
+
+			// Vassals released
+			for (Faction vassal : f.getSubjects()) {
+				lore.add(StringFormatter.formatHex(
+					"#b8a58a• " + vassal.getName() +
+					" becomes independent"
+				));
+			}
+
+			// Nothing happens case (edge-safe)
+			if (f.getGuildHandler().getGuilds().size() <= 1 && f.getSubjects().isEmpty()) {
+				lore.add(StringFormatter.formatHex(
+					"#9f8f78• No other factions or guilds are affected"
+				));
+			}
+		}
+
+		lore.add("");
+		lore.add(StringFormatter.formatHex(
+			"#e0cfa6§oThis action is permanent and cannot be undone."
+		));
+
+		meta.setLore(lore);
+		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
+		meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, f.getId());
+		item.setItemMeta(meta);
+		return item;
 	}
 	
 	@SuppressWarnings("deprecation")
@@ -249,7 +339,7 @@ public class FactionCreator {
 		} else if(t.equals(MenuItemType.MEMBERS)) {
 				i = new ItemStack(Material.PLAYER_HEAD, 1);
 				ItemMeta m = i.getItemMeta();
-				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+(f.getMembers().size()+f.getVassalMembers().size()))); //TODO full subject population as well cause cool
+				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+(f.getMembers().size()+f.getVassalMembers().size())));
 				List<String> lore = new ArrayList<String>();
 				for(String s : f.getMembers()) {
 					lore.add(StringFormatter.formatHex("#d4c9ae"+s+" "+Represents.represents(f, s)));
@@ -269,7 +359,7 @@ public class FactionCreator {
 				NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
 				m.getPersistentDataContainer().set(key, PersistentDataType.STRING, f.getId());
 				i.setItemMeta(m);
-		}else if (t.equals(MenuItemType.DIPLOMACY)) {
+		} else if (t.equals(MenuItemType.DIPLOMACY)) {
 			i = new ItemStack(Material.WRITABLE_BOOK, 1);
 			ItemMeta m = i.getItemMeta();
 			m.setDisplayName(StringFormatter.formatHex("#35f2bdDiplomacy"));

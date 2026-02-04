@@ -21,6 +21,14 @@ public class GuildHandler {
         return new ArrayList<>(guilds.values());
     }
 
+    public List<Guild> getReleasableGuilds() {
+        List<Guild> releasable = new ArrayList<>();
+        for(Guild g : guilds.values()) {
+            if(g.canBeElevated(null)) releasable.add(g);
+        }
+        return releasable;
+    }
+
     public Guild getGuild(String id) {
         return guilds.getOrDefault(id, null);
     }

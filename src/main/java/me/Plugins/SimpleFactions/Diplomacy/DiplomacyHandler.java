@@ -69,6 +69,7 @@ public class DiplomacyHandler {
                 mods.addAll(r.getType().getRecieveModifiers());
             }
             Faction other = FactionManager.getByString(entry.getKey());
+            if(other == null) continue;
             Relation back = other.getRelation(f.getId());
             if(back.getType().hasGiveModifiers()) {
                 mods.addAll(back.getType().getGiveModifiers());

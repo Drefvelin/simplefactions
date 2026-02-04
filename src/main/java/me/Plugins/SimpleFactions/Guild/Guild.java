@@ -624,20 +624,44 @@ public class Guild {
     }
 
     public void convert(GuildType type) {
+        if (this.type == GuildLoader.getBaseType()) {
+            this.capital = getCapital();
+            this.id = getId();
+            this.leader = getLeader();
+            this.members = new ArrayList<>(getMembers());
+            this.invites = new ArrayList<>(getInvites());
+            this.name = getName();
+            this.bannerPatterns = new ArrayList<>(getBannerPatterns());
+            this.rgb = getRGB();
+            this.bank = getBank();
+            this.ledger = getLedger();
+            this.wealth = getWealth();
+            this.wealthModifiers = new ArrayList<>(getWealthModifiers());
+            this.breakdown = getTradeBreakdown();
+            this.stance = Stance.NEUTRAL;
+            this.upgradeQueue = new ArrayList<>(getUpgradeQueue());
+            createBanner();
+        }
+
         this.type = type;
-        for(Branch b : branches.values()) {
-            if(!b.isAllowed(type)) {
-                branches.put(b.getGroup(), new Branch(BranchLoader.getByGroup(this, b.getGroup()), b.getLevel()));
+
+        for (Branch b : branches.values()) {
+            if (!b.isAllowed(type)) {
+                branches.put(
+                    b.getGroup(),
+                    new Branch(BranchLoader.getByGroup(this, b.getGroup()), b.getLevel())
+                );
             }
         }
-        for(Upgrade u : upgrades.values()) {
-            if(!u.isAllowed(type)) {
+
+        for (Upgrade u : upgrades.values()) {
+            if (!u.isAllowed(type)) {
                 u.setLevel(0);
             }
         }
-    } 
+    }
 
-    public Faction elevate() {
+    public Faction elevate(boolean subjugate) {
         if(!canBeElevated(null)) return null;
         host.getGuildHandler().removeGuild(id);
         host.getProvinceHandler().removeProvince(capital, false);
@@ -646,7 +670,7 @@ public class Guild {
         host = elevated;
         elevated.getProvinceHandler().addProvince(capital);
         FactionManager.addFaction(elevated);
-        RelationManager.setRelation(null, RelationLoader.getElevationTarget(), elevated, old, false);
+        if(subjugate) RelationManager.setRelation(null, RelationLoader.getElevationTarget(), elevated, old, false);
         return elevated;
     }
 }

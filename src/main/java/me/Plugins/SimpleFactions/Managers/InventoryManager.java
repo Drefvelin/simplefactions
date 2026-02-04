@@ -461,6 +461,24 @@ public class InventoryManager implements Listener{
 				militaryView(null, p, f, true);
 				return;
 			}
+			key = new NamespacedKey(SimpleFactions.plugin, "dissolve");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if(data != null) {
+				Faction f = confirming.get(p);
+				if(item.getType().equals(Material.RED_CONCRETE)) {
+					factionView(p, f);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					return;
+				}
+				Boolean b = Boolean.parseBoolean(data);
+				if(b) {
+					if(!f.canDissolve()) return;
+					Faction returnView = f.dissolve(f.getSubjects(), f.getGuildHandler().getReleasableGuilds());
+					factionView(p, returnView);
+					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				}
+				return;
+			}
 		}
 	}
 }

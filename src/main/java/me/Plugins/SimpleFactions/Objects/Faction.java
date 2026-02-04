@@ -1110,4 +1110,54 @@ public class Faction {
 	public DiplomacyHandler getDiplomacyHandler() {
 		return diplomacyHandler;
 	}
+
+	//dissolution
+
+	public List<Faction> getSubjects() {
+		return RelationManager.getSubjects(this);
+	}
+
+	public boolean canDissolve() {
+		Faction overlord = getOverlord();
+		if(overlord != null) return true;
+		if(getSubjects().size() > 0) return true;
+		if(guildHandler.getGuilds().size() > 1) return true;
+		return false;
+	}
+
+	public Faction dissolve(List<Faction> vassals, List<Guild> guilds) {
+		Faction overlord = getOverlord();
+		if(overlord != null) {
+			for(int i : provinceHandler.getProvinces()) {
+				overlord.getProvinceHandler().addProvince(i);
+			}
+		}
+		for(Guild guild : guilds) {
+			if(guild.isBase()) continue;
+			if(overlord != null) {
+				guild.relocate(overlord, guild.getCapital());
+			} else {
+				if(!guild.canBeElevated(null)) continue;
+				guild.elevate(false);
+			}
+		}
+		for(Faction vassal : vassals) {
+			if(overlord != null) {
+				RelationManager.transferSubject(vassal, overlord);
+			} else {
+				RelationManager.endVassalage(vassal, this, false);
+			}
+		}
+		if(overlord != null) {
+			for(int i : provinceHandler.getProvinces()) {
+				provinceHandler.removeProvince(i, true);
+			}
+			Guild base = getOrCreateMainGuild();
+			base.convert(GuildLoader.getDefaultType());
+			overlord.getGuildHandler().addGuild(base);
+			FactionManager.deleteFaction(this);
+			return overlord;
+		}
+		return this;
+	}
 }
