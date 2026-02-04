@@ -27,6 +27,7 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Diplomacy.DiplomacyHandler;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Loaders.GuildLoader;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.TierLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
@@ -130,6 +131,38 @@ public class Faction {
 		lawHandler.apply();
 		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(new Guild(this));
+		createBanner(bannerPatterns);
+		updatePrestige();
+		updateTier();
+	}
+	public Faction(Guild guild) {
+		this.id = guild.getId();
+		this.name = guild.getName();
+		this.diplomacyHandler = new DiplomacyHandler(this);
+		this.leader = guild.getLeader();
+		this.rulerTitle = "Leader";
+		this.bannerPatterns = guild.getBannerPatterns();
+		this.rank = RankLoader.getLowest();
+		this.governmentType = "Community";
+		this.culture = guild.getFaction().getCulture();
+		this.religion = guild.getFaction().getReligion();
+		this.wealth = 0.0;
+		this.prestige = 0.0;
+		this.extraNodeCapacity = 0;
+		this.rgb = guild.getRGB();
+		this.lawHandler = new LawHandler(this);
+		this.provinceHandler = new ProvinceHandler(this);
+		setCapital(guild.getCapital());
+		while(!RandomRGB.isFree(rgb)) {
+			this.rgb = RandomRGB.random();
+		}
+		this.military = new Military(this);
+		this.government = new Government(this);
+		this.taxHandler = new TaxHandler(this, 5, 5, 5, 5, 5);
+		this.guildHandler = new GuildHandler(this);
+		guildHandler.addGuild(guild);
+		guild.convert(GuildLoader.getBaseType());
+		lawHandler.apply();
 		createBanner(bannerPatterns);
 		updatePrestige();
 		updateTier();

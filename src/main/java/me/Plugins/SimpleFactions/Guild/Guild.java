@@ -24,8 +24,10 @@ import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
+import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -51,7 +53,7 @@ public class Guild {
     private String name;
     private String leader;
     private String rgb;
-    private final GuildType type;
+    private GuildType type;
     private List<String> members = new ArrayList<>();
     private List<String> invites = new ArrayList<>();
     private Map<Integer, Branch> branches = new HashMap<>();
@@ -593,8 +595,8 @@ public class Guild {
     }
 
     public double getElevationCost() {
-        double cost = getSize();
-        return Math.pow(cost, 1.1);
+        double cost = getSize()*12;
+        return 25+Math.pow(cost, 1.1);
     }
 
     public boolean canBeElevated(Player p) {
@@ -619,5 +621,32 @@ public class Guild {
             }
         }
         return true;
+    }
+
+    public void convert(GuildType type) {
+        this.type = type;
+        for(Branch b : branches.values()) {
+            if(!b.isAllowed(type)) {
+                branches.put(b.getGroup(), new Branch(BranchLoader.getByGroup(this, b.getGroup()), b.getLevel()));
+            }
+        }
+        for(Upgrade u : upgrades.values()) {
+            if(!u.isAllowed(type)) {
+                u.setLevel(0);
+            }
+        }
+    } 
+
+    public Faction elevate() {
+        if(!canBeElevated(null)) return null;
+        host.getGuildHandler().removeGuild(id);
+        host.getProvinceHandler().removeProvince(capital, false);
+        Faction elevated = new Faction(this);
+        Faction old = host;
+        host = elevated;
+        elevated.getProvinceHandler().addProvince(capital);
+        FactionManager.addFaction(elevated);
+        RelationManager.setRelation(null, RelationLoader.getElevationTarget(), elevated, old, false);
+        return elevated;
     }
 }

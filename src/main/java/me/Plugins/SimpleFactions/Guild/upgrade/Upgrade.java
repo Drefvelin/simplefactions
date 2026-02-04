@@ -89,6 +89,7 @@ public class Upgrade {
         return allowedTypes.contains(type);
     }
     public int getLevel() { return level; }
+    public void setLevel(int level) { this.level = level; }
     public int getExpansionTime() { return expansionTime; }
     public void levelUp() {
         level++;

@@ -299,7 +299,14 @@ public class GuildView {
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
 					return;
 				}
-				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				Faction newFaction = guild.elevate();
+				if(newFaction == null) {
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
+					return;
+				}
+				p.sendMessage("§aGuild elevated to Faction!");
+				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				inv.factionView(p, newFaction);
 				return;
 			}
 			ItemStack item = e.getCurrentItem();

@@ -60,7 +60,7 @@ public class ProvinceHandler {
 	public void addProvince(int i) {
 		if(provinces.contains(i)) return;
 		provinces.add(i);
-			
+		FactionManager.getMap().enqueue("nation", f.getRGB());
 		f.updateTier();
 	}
 
