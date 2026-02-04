@@ -500,7 +500,6 @@ public class FactionManager implements Listener{
 	}
 
 	public static void acceptRequest(Player p) {
-		p.sendMessage("test");
 		RelocateRequest req = (RelocateRequest) RequestManager.getRequest(p);
 		Faction reciever = FactionManager.getByLeader(p.getName());
 		if(reciever == null) {
@@ -508,7 +507,14 @@ public class FactionManager implements Listener{
 			return;
 		}
 		Guild sender = req.getSender();
+		double cost = sender.getRelocationCost(req.getNewCapital());
 		Player sp = Bukkit.getPlayerExact(sender.getLeader());
+		if(sender.getBank().getWealth() < cost) {
+			p.sendMessage("§c"+sender.getName()+" does not have enough funds to relocate (Cost: "+Formatter.formatDouble(cost)+"d)");
+			if(sp != null && sp.isOnline()) sp.sendMessage("§cYour guild does not have enough funds to relocate (Cost: "+Formatter.formatDouble(cost)+"d)");
+			return;
+		}
+		sender.getBank().withdraw(cost);
 		if(sp != null && sp.isOnline()) sp.sendMessage(reciever.getName()+" §aaccepted your request to relocate to their faction");
 		sender.relocate(reciever, req.getNewCapital());
 		p.sendMessage(sender.getName()+"§a has been relocated to your faction");
