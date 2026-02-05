@@ -47,8 +47,8 @@ public class ProvinceHandler {
 		return capital;
 	}
 
-	public void setCapital(int i) {
-		if(!provinces.contains(i)) return;
+	public void setCapital(int i, boolean force) {
+		if(!provinces.contains(i) && !force) return;
 		capital = i;
 		SimpleFactions.getInstance().getProvinceManager().recalculateForSingleGuild(f.getOrCreateMainGuild(), true);
 	}

@@ -152,7 +152,6 @@ public class Faction {
 		this.rgb = guild.getRGB();
 		this.lawHandler = new LawHandler(this);
 		this.provinceHandler = new ProvinceHandler(this);
-		setCapital(guild.getCapital());
 		while(!RandomRGB.isFree(rgb)) {
 			this.rgb = RandomRGB.random();
 		}
@@ -161,7 +160,9 @@ public class Faction {
 		this.taxHandler = new TaxHandler(this, 5, 5, 5, 5, 5);
 		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(guild);
+		int capital = guild.getCapital();
 		guild.convert(GuildLoader.getBaseType());
+		setCapital(capital, true);
 		lawHandler.apply();
 		createBanner(bannerPatterns);
 		updatePrestige();
@@ -277,7 +278,11 @@ public class Faction {
 	}
 
 	public void setCapital(int i) {
-		provinceHandler.setCapital(i);
+		setCapital(i, false);
+	}
+
+	public void setCapital(int i, boolean force) {
+		provinceHandler.setCapital(i, force);
 	}
 
 	public double getTaxRate(TaxTarget target, String id, boolean effective) {
@@ -502,10 +507,21 @@ public class Faction {
 	public List<String> getVassalMembers() {
 		List<String> members = new ArrayList<>();
 		for(Faction vassal : RelationManager.getSubjects(this)) {
+			if(vassal == null) continue;
 			members.addAll(vassal.getMembers());
 		}
 		return members;
 	}
+	public List<String> getCompleteMemberList() {
+		List<String> members = new ArrayList<>();
+		members.addAll(getMembers());
+		for(Faction vassal : RelationManager.getSubjects(this)) {
+			if(vassal == null) continue;
+			members.addAll(vassal.getCompleteMemberList());
+		}
+		return members;
+	}
+
 	public void addMember(String m) {
 		getOrCreateMainGuild().addMember(m);
 	}
@@ -1121,7 +1137,6 @@ public class Faction {
 		Faction overlord = getOverlord();
 		if(overlord != null) return true;
 		if(getSubjects().size() > 0) return true;
-		if(guildHandler.getGuilds().size() > 1) return true;
 		return false;
 	}
 
@@ -1132,11 +1147,15 @@ public class Faction {
 				overlord.getProvinceHandler().addProvince(i);
 			}
 		}
-		for(Guild guild : guilds) {
-			if(guild.isBase()) continue;
-			if(overlord != null) {
+		
+		if(overlord != null) {
+			for(Guild guild : guildHandler.getGuilds()) {
+				if(guild.isBase()) continue;
 				guild.relocate(overlord, guild.getCapital());
-			} else {
+			}
+		} else {
+			for(Guild guild : guilds) {
+				if(guild.isBase()) continue;
 				if(!guild.canBeElevated(null)) continue;
 				guild.elevate(false);
 			}
@@ -1149,12 +1168,18 @@ public class Faction {
 			}
 		}
 		if(overlord != null) {
-			for(int i : provinceHandler.getProvinces()) {
+			for(int i : new ArrayList<>(provinceHandler.getProvinces())) {
 				provinceHandler.removeProvince(i, true);
 			}
 			Guild base = getOrCreateMainGuild();
 			base.convert(GuildLoader.getDefaultType());
 			overlord.getGuildHandler().addGuild(base);
+			//failsafe relocation
+			for(Guild g : FactionManager.getAllGuilds()) {
+				if(g.getFaction().getId().equalsIgnoreCase(id)) {
+					g.relocate(overlord, g.getCapital());
+				}
+			}
 			FactionManager.deleteFaction(this);
 			return overlord;
 		}

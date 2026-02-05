@@ -61,6 +61,10 @@ public class DiplomacyHandler {
 		}
 	}
 
+    public void removeRelation(String s) {
+        relations.remove(s);
+    }
+
     public List<FactionModifier> getModifiers() {
         List<FactionModifier> mods = new ArrayList<>();
         for(Map.Entry<String, Relation> entry : relations.entrySet()) {

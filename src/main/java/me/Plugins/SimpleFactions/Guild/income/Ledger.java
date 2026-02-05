@@ -115,6 +115,7 @@ public class Ledger {
                 }
                 break;
             case PENALTIES:
+                if(!guild.isBase()) return 0;
                 amount = -f.getPenalty();
                 break;
             default:

@@ -89,8 +89,8 @@ public class CommandManager implements Listener, CommandExecutor{
 					Player pl = Bukkit.getPlayerExact(member);
 					if(pl != null && !member.equalsIgnoreCase(guild.getLeader())) {
 						pl.sendMessage("§cYour guild has been deleted!");
+						pl.sendMessage("§aJoined "+guild.getFaction().getName());
 					}
-					pl.sendMessage("§aJoined "+guild.getFaction().getName());
 					guild.getFaction().addMember(member);
 				}
 				p.sendMessage("§cGuild "+guild.getName()+" §cdeleted!");

@@ -62,7 +62,8 @@ public class FactionCreator {
 		lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernmentString()));
 		lore.add(StringFormatter.formatHex("#b8ae61Culture: #d4c9ae"+f.getCulture()));
 		lore.add(StringFormatter.formatHex("#b8ae61Religion: #d4c9ae"+f.getReligion()));
-		lore.add(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+f.getMembers().size()));
+		int subjectMembers = f.getCompleteMemberList().size()-f.getMembers().size();
+		lore.add(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+f.getCompleteMemberList().size()+((subjectMembers > 0) ? " #a39ba8("+subjectMembers+" from subjects)" : "")));
 		lore.add(" ");
 		lore.add(StringFormatter.formatHex("#4793bfPrestige: #6eafba"+f.getPrestige()+" #7a706a("+r.getPrestigeRank(f)+")"));
 		lore.add(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+f.getWealth()+"d #7a706a("+r.getWealthRank(f)+")"));
@@ -127,7 +128,7 @@ public class FactionCreator {
 		List<String> lore = new ArrayList<>();
 
 		lore.add(StringFormatter.formatHex(
-			"#d4bb98This action will result in the following:"
+			"#d4c9aeThis action will result in the following:"
 		));
 		lore.add("");
 
@@ -136,16 +137,17 @@ public class FactionCreator {
 
 			// This faction
 			lore.add(StringFormatter.formatHex(
-				"#b85c5c• " + f.getName() +
-				" dissolves and becomes a guild under #e0cfa6" + overlord.getName()
+				"#b8a58a• " + f.getName() +" §7(#4ecc5eYou§7)"+
+				" #d4c9aedissolves and becomes a guild under #e0cfa6" + overlord.getName()
 			));
 			lore.add("");
 
 			// Guilds
 			for (Guild g : f.getGuildHandler().getGuilds()) {
+				if (g.isBase()) continue;
 				lore.add(StringFormatter.formatHex(
-					"#b8a58a• Guild " + g.getName() +
-					" is transferred to #e0cfa6" + overlord.getName()
+					"#b8a58a• " + g.getName() + " §7(" +g.getType().getName()+ "§7)" +
+					" #d4c9aeis transferred to #e0cfa6" + overlord.getName()
 				));
 			}
 
@@ -156,46 +158,48 @@ public class FactionCreator {
 			// Vassals
 			for (Faction vassal : f.getSubjects()) {
 				lore.add(StringFormatter.formatHex(
-					"#b8a58a• " + vassal.getName() +
-					" is transferred to #e0cfa6" + overlord.getName()
+					"#b8a58a• " + vassal.getName() +" §7(#4269a8Vassal§7)"+
+					" #d4c9aeis transferred to #e0cfa6" + overlord.getName()
 				));
 			}
 		}
 		else {
 
+			/*
 			// Guilds becoming factions
 			for (Guild g : f.getGuildHandler().getGuilds()) {
 				if (g.isBase()) continue;
 
 				lore.add(StringFormatter.formatHex(
-					"#b8a58a• Guild " + g.getName() +
-					" becomes an independent faction"
+					"#b8a58a• " + g.getName() + " §7(" +g.getType().getName()+ "§7)" +
+					" #d4c9aebecomes an independent faction"
 				));
 			}
 
 			if (f.getGuildHandler().getGuilds().stream().anyMatch(g -> !g.isBase())) {
 				lore.add("");
 			}
+			*/
 
 			// Vassals released
 			for (Faction vassal : f.getSubjects()) {
 				lore.add(StringFormatter.formatHex(
-					"#b8a58a• " + vassal.getName() +
-					" becomes independent"
+					"#b8a58a• " + vassal.getName() +" §7(#4269a8Vassal§7)"+
+					" #d4c9aebecomes independent"
 				));
 			}
 
 			// Nothing happens case (edge-safe)
 			if (f.getGuildHandler().getGuilds().size() <= 1 && f.getSubjects().isEmpty()) {
 				lore.add(StringFormatter.formatHex(
-					"#9f8f78• No other factions or guilds are affected"
+					"#9f8f78• #d4c9aeNo other factions or guilds are affected"
 				));
 			}
 		}
 
 		lore.add("");
 		lore.add(StringFormatter.formatHex(
-			"#e0cfa6§oThis action is permanent and cannot be undone."
+			"#a13030§oThis action is permanent and cannot be undone."
 		));
 
 		meta.setLore(lore);
@@ -295,15 +299,17 @@ public class FactionCreator {
 			for(Modifier mod : f.getPrestigeModifiers()) {
 				lore.add(StringFormatter.formatHex("#93c9a7+"+mod.getAmount()+" from "+mod.getType()));
 			}
-			lore.add(" ");
+			lore.add(StringFormatter.formatHex("#b69f5a────────────"));
 			lore.add(StringFormatter.formatHex("#7fbd73Current Rank: "+f.getRank().getName()));
 			if(f.getRank().hasModifiers()) {
 				for(FactionModifier mod : f.getRank().getModifiers()) {
 					if(mod.getAmount() != 0.0) lore.add(StringFormatter.formatHex("#d4c9ae- "+mod.getString()));
 				}
-				lore.add("");
 			}
+			lore.add(StringFormatter.formatHex("#b69f5a────────────"));
+			lore.add("");
 			if(f.getRank().getLevel() < RankLoader.getRanks().size()) {
+				lore.add(StringFormatter.formatHex("#534f43────────────"));
 				PrestigeRank rank = RankLoader.getByLevel(f.getRank().getLevel()+1);
 				if(rank.getAn()) {
 					lore.add(StringFormatter.formatHex("#d4c9aeFaction needs at least #7fbd73"+FactionManager.getRankUpAmount(rank)+" #4793bfPrestige"));
@@ -319,7 +325,7 @@ public class FactionCreator {
 				}
 			}
 			if(f.getRank().getLevel() != 1) {
-				lore.add(" ");
+				lore.add(StringFormatter.formatHex("#534f43────────────"));
 				PrestigeRank rank = RankLoader.getByLevel(f.getRank().getLevel()-1);
 				if(rank.getAn()) {
 					lore.add(StringFormatter.formatHex("#d4c9aeIf the Faction falls below #7fbd73"+(FactionManager.getRankUpAmount(RankLoader.getByLevel(f.getRank().getLevel()))*0.95)+" #4793bfPrestige"));
@@ -339,13 +345,17 @@ public class FactionCreator {
 		} else if(t.equals(MenuItemType.MEMBERS)) {
 				i = new ItemStack(Material.PLAYER_HEAD, 1);
 				ItemMeta m = i.getItemMeta();
-				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+(f.getMembers().size()+f.getVassalMembers().size())));
+				List<String> memberNames = f.getCompleteMemberList();
+				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+memberNames.size()));
 				List<String> lore = new ArrayList<String>();
-				for(String s : f.getMembers()) {
+				int count = 0;
+				for(String s : memberNames) {
+					if(count == 24) break;
 					lore.add(StringFormatter.formatHex("#d4c9ae"+s+" "+Represents.represents(f, s)));
+					count++;
 				}
-				for(String s : f.getVassalMembers()) {
-					lore.add(StringFormatter.formatHex("#a39ba8"+s+" "+Represents.represents(f, s)));
+				if(count < memberNames.size()) {
+					lore.add("§7...and "+(memberNames.size()-count)+" more");
 				}
 				m.setLore(lore);
 				i.setItemMeta(m);	
@@ -467,7 +477,7 @@ public class FactionCreator {
 			lore.add("");
 			double upkeep = f.getGovernment().getTotalUpkeep();
 			if(upkeep > 0) {
-				lore.add(StringFormatter.formatHex("#d4c9aeTotal Law Upkeep: §e"+Formatter.formatDouble(upkeep)+" Administrative Power/hour"));
+				lore.add(StringFormatter.formatHex("#d4c9aeTotal Law Upkeep: §e"+Formatter.formatDouble(upkeep)+" Administrative Power"));
 			}
 			lore.add(StringFormatter.formatHex("§7Click to view"));
 			m.setLore(lore);

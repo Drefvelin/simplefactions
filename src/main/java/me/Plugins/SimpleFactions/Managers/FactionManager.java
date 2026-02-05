@@ -295,6 +295,9 @@ public class FactionManager implements Listener{
 	}
 	public static void deleteFaction(Faction f){
 		map.enqueue("nation", f.getRGB());
+		for(Faction fac : factions) {
+			fac.getDiplomacyHandler().removeRelation(f.getId());
+		}
 		factions.remove(f);
 		Database db = new Database();
 		db.deleteFaction(f);
