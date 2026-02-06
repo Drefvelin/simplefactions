@@ -299,6 +299,12 @@ public class GuildView {
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
 					return;
 				}
+				if(guild.getFaction().getGovernment().getPower() < guild.getElevationCost()) {
+					p.sendMessage("§cCannot afford to elevate");
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
+					return;
+				}
+				guild.getFaction().getGovernment().spendPower(guild.getElevationCost());
 				Faction newFaction = guild.elevate(true);
 				if(newFaction == null) {
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
