@@ -61,6 +61,10 @@ public class DiplomacyHandler {
 		}
 	}
 
+    public void removeRelation(String s) {
+        relations.remove(s);
+    }
+
     public List<FactionModifier> getModifiers() {
         List<FactionModifier> mods = new ArrayList<>();
         for(Map.Entry<String, Relation> entry : relations.entrySet()) {
@@ -69,6 +73,7 @@ public class DiplomacyHandler {
                 mods.addAll(r.getType().getRecieveModifiers());
             }
             Faction other = FactionManager.getByString(entry.getKey());
+            if(other == null) continue;
             Relation back = other.getRelation(f.getId());
             if(back.getType().hasGiveModifiers()) {
                 mods.addAll(back.getType().getGiveModifiers());

@@ -134,6 +134,9 @@ public class GuildView {
 		if(target != null) {
 			i.setItem(34, creator.createRelocateItem(player, target, guild));
 		}
+		if(guild.getFaction().isLeader(player.getName()) && !guild.isBase() && guild.hasCapital()) {
+			i.setItem(43, creator.createElevationItem(player, guild));
+		}
 		int group = 0;
 		while(guild.getBranch(group) != null || group > 10) {
 			Branch b = guild.getBranch(group);
@@ -289,6 +292,21 @@ public class GuildView {
 				}
 				guildView(p, guild, inventory);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				return;
+			} else if(e.getSlot() == 43) {
+				if(!guild.getFaction().isLeader(p.getName())) return;
+				if(!guild.canBeElevated(p)) {
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
+					return;
+				}
+				Faction newFaction = guild.elevate(true);
+				if(newFaction == null) {
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
+					return;
+				}
+				p.sendMessage("§aGuild elevated to Faction!");
+				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				inv.factionView(p, newFaction);
 				return;
 			}
 			ItemStack item = e.getCurrentItem();

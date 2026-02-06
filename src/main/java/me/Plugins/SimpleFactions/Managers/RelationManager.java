@@ -194,8 +194,9 @@ public class RelationManager {
 		List<Faction> subjects = new ArrayList<>();
 		if(f == null) return subjects;
 		for(Map.Entry<String, Relation> entry : ((Map<String, Relation>) f.getRelations().clone()).entrySet()) {
-			if(FactionManager.getByString(entry.getKey()) == null) f.getRelations().remove(entry.getKey());
-			if(entry.getValue().getType().isVassalage()) subjects.add(FactionManager.getByString(entry.getKey()));
+			Faction potential = FactionManager.getByString(entry.getKey());
+			if(potential == null) f.getRelations().remove(entry.getKey());
+			if(entry.getValue().getType().isVassalage()) subjects.add(potential);
 		}
 		return subjects;
 	}

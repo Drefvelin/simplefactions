@@ -26,6 +26,7 @@ import me.Plugins.SimpleFactions.Guild.income.Ledger;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
+import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Guild.Guild;
@@ -61,8 +62,9 @@ public class GuildCreator {
 		lore.add(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+guild.getMembers().size()));
 		lore.add(" ");
 		if(guild.hasCapital()) {
-			lore.add(StringFormatter.formatHex("#41b541§lTrade Power: #a4bc5c"+guild.getTradeBreakdown().getTradePower()));
-			lore.add(StringFormatter.formatHex("#74ba74Estimated Income: #5cbc5c"+guild.getLedger().getNetIncome()));
+			lore.add(StringFormatter.formatHex("#41b541Trade Power: #a4bc5c"+guild.getTradeBreakdown().getTradePower()));
+			double income = guild.getLedger().getNetIncome();
+			lore.add(StringFormatter.formatHex("#74ba74Estimated Income: "+(income > 0 ? "#5cbc5c" : "#c45749")+income+"d/day"));
 		}
 		lore.add(StringFormatter.formatHex("#d1b43fWealth: #ccbb76"+guild.getWealth()+"d #7a706a("+r.getWealthRank(guild)+")"));
 		meta.setLore(lore);
@@ -143,7 +145,6 @@ public class GuildCreator {
 			Collections.reverse(top);
 			for(Guild g : top) {
 				x++;
-				
 				lore.add(StringFormatter.formatHex("§f - §e"+x+". "+g.getName()+" §7["+g.getSize()+"§7]#d4c9ae: #7fbd73"+SimpleFactions.getInstance().getProvinceManager().getIncome(g)+"d/day"));
 				if(x > 4) break;
 			}
@@ -198,22 +199,27 @@ public class GuildCreator {
 		lore.add("");
 		lore.addAll(branch.getDescription());
 		lore.add("");
-		lore.add(StringFormatter.formatHex("#a6c793Effects:"));
+		if(!guild.hasCapital()) {
+				lore.add("");
+				lore.add(StringFormatter.formatHex("#ed1313No capital!"));
+		} else {
+			lore.add(StringFormatter.formatHex("#a6c793Effects:"));
 
-		for (GuildModifier m : branch.getModifierKeys()) {
-			BranchModifier mod = branch.getModifier(m);
-			if (mod == null) continue;
+			for (GuildModifier m : branch.getModifierKeys()) {
+				BranchModifier mod = branch.getModifier(m);
+				if (mod == null) continue;
 
-			lore.add(StringFormatter.formatHex(
-				"§f - " + m.getName()
-				+ "#d6cf69:"
-				+ (m.isPositive() ? " #4fd945" : " #cf493a")
-				+ (mod.getCurrent(branch.getLevel())
-				+ " #575150("
-				+ (m.isPositive() ? "#4fd945" : "#cf493a")
-				+ mod.getPerLevel()
-				+ "#87807f/level#575150)")
-			));
+				lore.add(StringFormatter.formatHex(
+					"§f - " + m.getName()
+					+ "#d6cf69:"
+					+ (m.isPositive() ? " #4fd945" : " #cf493a")
+					+ (mod.getCurrent(branch.getLevel())
+					+ " #575150("
+					+ (m.isPositive() ? "#4fd945" : "#cf493a")
+					+ mod.getPerLevel()
+					+ "#87807f/level#575150)")
+				));
+			}
 		}
 
 		meta.getPersistentDataContainer().set(Keys.BRANCH_ID, PersistentDataType.STRING, branch.getId());
@@ -233,20 +239,24 @@ public class GuildCreator {
 		lore.add(StringFormatter.formatHex(
 			"#f2e5c2Upgrade Cost#d6cf69: #ccbb76" + guild.getExpansionCost() + "d"
 		));
+		if(!guild.hasCapital()) {
+			lore.add("");
+			lore.add(StringFormatter.formatHex("#ed1313No capital!"));
+		} else {
+			double deltaIncome =
+				SimpleFactions.getInstance()
+				.getProvinceManager()
+				.previewUpgradeIncomeExact(guild, branch);
 
-		double deltaIncome =
-			SimpleFactions.getInstance()
-			.getProvinceManager()
-			.previewUpgradeIncomeExact(guild, branch);
-
-		lore.add("");
-		lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Trade Income: #7fbd73"+guild.getTradeBreakdown().getNetTradeIncome()));
-		lore.add(StringFormatter.formatHex(
-			"#f2e5c2Estimated Income Change#d6cf69: "
-			+ (deltaIncome >= 0 ? "#4fd945+" : "#cf493a")
-			+ String.format("%.2f", deltaIncome)
-			+ "d/day"
-		));
+			lore.add("");
+			lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Trade Income: #7fbd73"+guild.getTradeBreakdown().getNetTradeIncome()));
+			lore.add(StringFormatter.formatHex(
+				"#f2e5c2Estimated Income Change#d6cf69: "
+				+ (deltaIncome >= 0 ? "#4fd945+" : "#cf493a")
+				+ String.format("%.2f", deltaIncome)
+				+ "d/day"
+			));
+		}
 
 		lore.add("");
 		lore.add(StringFormatter.formatHex("#50e846§lClick to Upgrade"));
@@ -276,18 +286,22 @@ public class GuildCreator {
 			lore.add(StringFormatter.formatHex("#c95644Downgrade Effects:"));
 			lore.add(StringFormatter.formatHex("#7a706aStats will decrease by one level."));
 			lore.add("");
-
-			double deltaIncome =
-				SimpleFactions.getInstance()
-				.getProvinceManager()
-				.previewDowngradeIncomeExact(guild, branch);
-			lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Trade Income: #7fbd73"+guild.getTradeBreakdown().getNetTradeIncome()));
-			lore.add(StringFormatter.formatHex(
-				"#f2e5c2Estimated Income Change#d6cf69: "
-				+ (deltaIncome >= 0 ? "#4fd945+" : "#cf493a")
-				+ String.format("%.2f", deltaIncome)
-				+ "d/day"
-			));
+			if(!guild.hasCapital()) {
+				lore.add("");
+				lore.add(StringFormatter.formatHex("#ed1313No capital!"));
+			} else {
+				double deltaIncome =
+					SimpleFactions.getInstance()
+					.getProvinceManager()
+					.previewDowngradeIncomeExact(guild, branch);
+				lore.add(StringFormatter.formatHex("#d4c9aeCurrent Net Trade Income: #7fbd73"+guild.getTradeBreakdown().getNetTradeIncome()));
+				lore.add(StringFormatter.formatHex(
+					"#f2e5c2Estimated Income Change#d6cf69: "
+					+ (deltaIncome >= 0 ? "#4fd945+" : "#cf493a")
+					+ String.format("%.2f", deltaIncome)
+					+ "d/day"
+				));
+			}
 
 			lore.add("");
 
@@ -661,8 +675,8 @@ public class GuildCreator {
 		ItemStack i = new ItemStack(Material.FILLED_MAP);
 		ItemMeta meta = i.getItemMeta();
 		meta.setDisplayName(StringFormatter.formatHex(factionChange ? 
-			"#d4c9ae§lRelocate Guild to "+target.getName() : 
-			"#d4c9ae§lRelocate Guild within "+guild.getFaction().getName()));
+			"#d4c9aeRelocate Guild to "+target.getName() : 
+			"#d4c9aeRelocate Guild within "+guild.getFaction().getName()));
 		List<String> lore = new ArrayList<>();
 		if(factionChange) {
 			lore.add(StringFormatter.formatHex("#d4c9aeRelocate your guild to "+target.getName()));
@@ -679,7 +693,31 @@ public class GuildCreator {
 		double cost = guild.getRelocationCost(province);
 		lore.add(StringFormatter.formatHex("#d4c9aeCost: #ccbb76"+cost+"d"));
 		lore.add("");
-		lore.add(StringFormatter.formatHex("#50e846§lClick to Relocate"));
+		lore.add(StringFormatter.formatHex("#50e846Click to Relocate"));
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createElevationItem(Player p, Guild guild) {
+		ItemStack i = new ItemStack(Material.BLACK_DYE);
+		ItemMeta meta = i.getItemMeta();
+		meta.setCustomModelData(13);
+		meta.setDisplayName(StringFormatter.formatHex("#d4c9aeElevate Guild to Faction Status"));
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#d4c9aeThis will make the guild an "+RelationLoader.getElevationTarget().getName()));
+		lore.add(StringFormatter.formatHex("#d4c9aeof our faction, giving them their own laws and government."));
+		lore.add(StringFormatter.formatHex("#d4c9aethey also get the ability to have guilds and vassals of their own"));
+		lore.add(StringFormatter.formatHex("#e15757The guild capital province will be transferred to the new faction!"));
+		lore.add("");
+		double cost = guild.getElevationCost();
+		lore.add(StringFormatter.formatHex("#d4c9aeCost: §e"+cost+" Administrative Power"));
+		lore.add("");
+		if(guild.canBeElevated(null)) {
+			lore.add(StringFormatter.formatHex("#50e846Click to Elevate"));
+		} else {
+			lore.add(StringFormatter.formatHex("#e15757Unavailable"));
+		}
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;

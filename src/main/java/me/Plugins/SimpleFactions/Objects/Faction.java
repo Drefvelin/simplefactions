@@ -27,6 +27,7 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Diplomacy.DiplomacyHandler;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Loaders.GuildLoader;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.TierLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
@@ -130,6 +131,39 @@ public class Faction {
 		lawHandler.apply();
 		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(new Guild(this));
+		createBanner(bannerPatterns);
+		updatePrestige();
+		updateTier();
+	}
+	public Faction(Guild guild) {
+		this.id = guild.getId();
+		this.name = guild.getName();
+		this.diplomacyHandler = new DiplomacyHandler(this);
+		this.leader = guild.getLeader();
+		this.rulerTitle = "Leader";
+		this.bannerPatterns = guild.getBannerPatterns();
+		this.rank = RankLoader.getLowest();
+		this.governmentType = "Community";
+		this.culture = guild.getFaction().getCulture();
+		this.religion = guild.getFaction().getReligion();
+		this.wealth = 0.0;
+		this.prestige = 0.0;
+		this.extraNodeCapacity = 0;
+		this.rgb = guild.getRGB();
+		this.lawHandler = new LawHandler(this);
+		this.provinceHandler = new ProvinceHandler(this);
+		while(!RandomRGB.isFree(rgb)) {
+			this.rgb = RandomRGB.random();
+		}
+		this.military = new Military(this);
+		this.government = new Government(this);
+		this.taxHandler = new TaxHandler(this, 5, 5, 5, 5, 5);
+		this.guildHandler = new GuildHandler(this);
+		guildHandler.addGuild(guild);
+		int capital = guild.getCapital();
+		guild.convert(GuildLoader.getBaseType());
+		setCapital(capital, true);
+		lawHandler.apply();
 		createBanner(bannerPatterns);
 		updatePrestige();
 		updateTier();
@@ -244,7 +278,11 @@ public class Faction {
 	}
 
 	public void setCapital(int i) {
-		provinceHandler.setCapital(i);
+		setCapital(i, false);
+	}
+
+	public void setCapital(int i, boolean force) {
+		provinceHandler.setCapital(i, force);
 	}
 
 	public double getTaxRate(TaxTarget target, String id, boolean effective) {
@@ -469,10 +507,21 @@ public class Faction {
 	public List<String> getVassalMembers() {
 		List<String> members = new ArrayList<>();
 		for(Faction vassal : RelationManager.getSubjects(this)) {
+			if(vassal == null) continue;
 			members.addAll(vassal.getMembers());
 		}
 		return members;
 	}
+	public List<String> getCompleteMemberList() {
+		List<String> members = new ArrayList<>();
+		members.addAll(getMembers());
+		for(Faction vassal : RelationManager.getSubjects(this)) {
+			if(vassal == null) continue;
+			members.addAll(vassal.getCompleteMemberList());
+		}
+		return members;
+	}
+
 	public void addMember(String m) {
 		getOrCreateMainGuild().addMember(m);
 	}
@@ -1076,5 +1125,64 @@ public class Faction {
 	}
 	public DiplomacyHandler getDiplomacyHandler() {
 		return diplomacyHandler;
+	}
+
+	//dissolution
+
+	public List<Faction> getSubjects() {
+		return RelationManager.getSubjects(this);
+	}
+
+	public boolean canDissolve() {
+		Faction overlord = getOverlord();
+		if(overlord != null) return true;
+		if(getSubjects().size() > 0) return true;
+		return false;
+	}
+
+	public Faction dissolve(List<Faction> vassals, List<Guild> guilds) {
+		Faction overlord = getOverlord();
+		if(overlord != null) {
+			for(int i : provinceHandler.getProvinces()) {
+				overlord.getProvinceHandler().addProvince(i);
+			}
+		}
+		
+		if(overlord != null) {
+			for(Guild guild : guildHandler.getGuilds()) {
+				if(guild.isBase()) continue;
+				guild.relocate(overlord, guild.getCapital());
+			}
+		} else {
+			for(Guild guild : guilds) {
+				if(guild.isBase()) continue;
+				if(!guild.canBeElevated(null)) continue;
+				guild.elevate(false);
+			}
+		}
+		for(Faction vassal : vassals) {
+			if(overlord != null) {
+				RelationManager.transferSubject(vassal, overlord);
+			} else {
+				RelationManager.endVassalage(vassal, this, false);
+			}
+		}
+		if(overlord != null) {
+			for(int i : new ArrayList<>(provinceHandler.getProvinces())) {
+				provinceHandler.removeProvince(i, true);
+			}
+			Guild base = getOrCreateMainGuild();
+			base.convert(GuildLoader.getDefaultType());
+			overlord.getGuildHandler().addGuild(base);
+			//failsafe relocation
+			for(Guild g : FactionManager.getAllGuilds()) {
+				if(g.getFaction().getId().equalsIgnoreCase(id)) {
+					g.relocate(overlord, g.getCapital());
+				}
+			}
+			FactionManager.deleteFaction(this);
+			return overlord;
+		}
+		return this;
 	}
 }

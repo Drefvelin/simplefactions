@@ -34,6 +34,8 @@ public class RelationType {
 	private List<FactionModifier> recieveModifiers = new ArrayList<>();
 	
 	private Threshold threshold;
+
+	private boolean elevationTarget;
 	
 	public RelationType(String key, ConfigurationSection config) {
 		id = key;
@@ -50,6 +52,7 @@ public class RelationType {
 		vassal = config.getBoolean("vassal", false);
 		overlord = config.getBoolean("overlord", false);
 		lock = config.getBoolean("lock", false);
+		elevationTarget = config.getBoolean("elevation-target", false);
 		if(config.isConfigurationSection("threshold")) {
 			threshold = new Threshold(config.getConfigurationSection("threshold"));
 		}
@@ -63,6 +66,10 @@ public class RelationType {
 				recieveModifiers.add(new FactionModifier(s));
 			}
 		}
+	}
+
+	public boolean isElevationTarget() {
+		return elevationTarget;
 	}
 
 	public double getBaseCost() {

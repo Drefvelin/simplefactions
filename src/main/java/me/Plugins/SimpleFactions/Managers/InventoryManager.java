@@ -1,5 +1,6 @@
 package me.Plugins.SimpleFactions.Managers;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -242,6 +243,9 @@ public class InventoryManager implements Listener{
 				if(!gov.hasCouncil() && f.isLeader(p.getName())) {
 					p.sendMessage("§aChange applied!");
 					proposal.apply();
+					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+					taxChange.remove(p);
+					governmentView.governmentView(p, f, null);
 					return;
 				}
 				if(gov.canBeProposed(proposal)) {
@@ -459,6 +463,24 @@ public class InventoryManager implements Listener{
 				p.sendMessage("§cDecrased size of "+r.getName());
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				militaryView(null, p, f, true);
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "dissolve");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if(data != null) {
+				Faction f = confirming.get(p);
+				if(item.getType().equals(Material.RED_CONCRETE)) {
+					factionView(p, f);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					return;
+				}
+				Boolean b = Boolean.parseBoolean(data);
+				if(b) {
+					if(!f.canDissolve()) return;
+					Faction returnView = f.dissolve(f.getSubjects(), new ArrayList<>());
+					factionView(p, returnView);
+					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				}
 				return;
 			}
 		}

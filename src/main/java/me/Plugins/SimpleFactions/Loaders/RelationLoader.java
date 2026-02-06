@@ -29,6 +29,13 @@ public class RelationLoader {
 		}
 		return types.get(0);
 	}
+
+	public static RelationType getElevationTarget() {
+		for(RelationType r : types) {
+			if(r.isElevationTarget()) return r;
+		}
+		return null;
+	}
 	
 	public static Attitude getDefaultAttitude() {
 		for(Attitude a : attitudes) {

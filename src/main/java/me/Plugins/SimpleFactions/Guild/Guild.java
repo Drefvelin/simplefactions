@@ -24,8 +24,10 @@ import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
+import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -37,6 +39,7 @@ import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
+import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -50,7 +53,7 @@ public class Guild {
     private String name;
     private String leader;
     private String rgb;
-    private final GuildType type;
+    private GuildType type;
     private List<String> members = new ArrayList<>();
     private List<String> invites = new ArrayList<>();
     private Map<Integer, Branch> branches = new HashMap<>();
@@ -589,5 +592,85 @@ public class Guild {
         if(owner == null) return Math.max(cost *= 0.15, 100);
         if(owner.getId().equalsIgnoreCase(host.getId())) return Math.max(cost *= 0.05, 100);
         return Math.max(cost *= 0.15, 100);
+    }
+
+    public double getElevationCost() {
+        double cost = getSize()*12;
+        return 25+Math.pow(cost, 1.1);
+    }
+
+    public boolean canBeElevated(Player p) {
+        if(isBase()) {
+            if(p != null) p.sendMessage("§cCannot elevate the main guild");
+            return false;
+        }
+        if(!host.hasFactionRule(Rules.CAN_HAVE_VASSALS)) {
+            if(p != null) p.sendMessage("§cHost faction cannot have vassals");
+            return false;
+        }
+        if(hasCapital() && capital == host.getCapital()) {
+            if(p != null) p.sendMessage("§cGuild capital is the same as the faction capital, move it first");
+            return false;
+        }
+        for(Guild g : host.getGuildHandler().getGuilds()) {
+            if(g.isBase()) continue;
+            if(g.getId().equalsIgnoreCase(id)) continue;
+            if(g.getCapital() == capital) {
+                if(p != null) p.sendMessage("§cAnother guild already has that capital, move it first");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void convert(GuildType type) {
+        if (this.type == GuildLoader.getBaseType()) {
+            this.capital = getCapital();
+            this.id = getId();
+            this.leader = getLeader();
+            this.members = new ArrayList<>(getMembers());
+            this.invites = new ArrayList<>(getInvites());
+            this.name = getName();
+            this.bannerPatterns = new ArrayList<>(getBannerPatterns());
+            this.rgb = getRGB();
+            this.bank = getBank();
+            this.ledger = getLedger();
+            this.wealth = getWealth();
+            this.wealthModifiers = new ArrayList<>(getWealthModifiers());
+            this.breakdown = getTradeBreakdown();
+            this.stance = Stance.NEUTRAL;
+            this.upgradeQueue = new ArrayList<>(getUpgradeQueue());
+            createBanner();
+        }
+
+        this.type = type;
+
+        for (Branch b : branches.values()) {
+            if (!b.isAllowed(type)) {
+                branches.put(
+                    b.getGroup(),
+                    new Branch(BranchLoader.getByGroup(this, b.getGroup()), b.getLevel())
+                );
+            }
+        }
+
+        for (Upgrade u : upgrades.values()) {
+            if (!u.isAllowed(type)) {
+                u.setLevel(0);
+            }
+        }
+    }
+
+    public Faction elevate(boolean subjugate) {
+        if(!canBeElevated(null)) return null;
+        host.getGuildHandler().removeGuild(id);
+        host.getProvinceHandler().removeProvince(capital, false);
+        Faction elevated = new Faction(this);
+        Faction old = host;
+        host = elevated;
+        elevated.getProvinceHandler().addProvince(capital);
+        FactionManager.addFaction(elevated);
+        if(subjugate) RelationManager.setRelation(null, RelationLoader.getElevationTarget(), elevated, old, false);
+        return elevated;
     }
 }
