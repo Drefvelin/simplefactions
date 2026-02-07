@@ -320,15 +320,9 @@ public class GuildView {
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
 					return;
 				}
-				guild.getFaction().getGovernment().spendPower(guild.getElevationCost());
-				Faction newFaction = guild.elevate(true);
-				if(newFaction == null) {
-					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
-					return;
-				}
-				p.sendMessage("§aGuild elevated to Faction!");
-				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
-				inv.factionView(p, newFaction);
+				FactionManager.requestElevation(p, guild);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				p.closeInventory();
 				return;
 			} else if(e.getSlot() == 25) {
 				inv.loanMainView(p, guild);

@@ -30,6 +30,7 @@ import me.Plugins.SimpleFactions.Map.MapSystem;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Objects.PrestigeRank;
+import me.Plugins.SimpleFactions.Objects.Request.ElevateRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelocateRequest;
 import me.Plugins.SimpleFactions.Cache;
@@ -502,7 +503,7 @@ public class FactionManager implements Listener{
 		RequestManager.addRequest(sender, p, new RelocateRequest(g, capital));
 	}
 
-	public static void acceptRequest(Player p) {
+	public static void acceptRelocateRequest(Player p) {
 		RelocateRequest req = (RelocateRequest) RequestManager.getRequest(p);
 		Faction reciever = FactionManager.getByLeader(p.getName());
 		if(reciever == null) {
@@ -521,6 +522,43 @@ public class FactionManager implements Listener{
 		if(sp != null && sp.isOnline()) sp.sendMessage(reciever.getName()+" §aaccepted your request to relocate to their faction");
 		sender.relocate(reciever, req.getNewCapital());
 		p.sendMessage(sender.getName()+"§a has been relocated to your faction");
+	}
+
+	public static void requestElevation(Player sender, Guild target) {
+		Player p = Bukkit.getPlayerExact(target.getLeader());
+		if(p == null) {
+			sender.sendMessage("§cTarget guild leader is not online");
+			return;
+		}
+		p.sendMessage(target.getFaction().getName()+" §7wants to elevate your guild to a faction");
+		p.sendMessage("§7Type §a/faction accept §7to accept");
+		p.sendMessage("§7Request will time out in 60 seconds");
+		sender.sendMessage("§aRelocation request sent to "+target.getName());
+		RequestManager.addRequest(sender, p, new ElevateRequest(target));
+	}
+
+	public static void acceptElevationRequest(Player p) {
+		ElevateRequest req = (ElevateRequest) RequestManager.getRequest(p);
+		Guild guild = FactionManager.getGuildByLeader(p.getName());
+		if(guild == null) {
+			p.sendMessage("§cYou are not the leader of a guild");
+			return;
+		}
+		Guild sender = req.getSender();
+		double cost = guild.getElevationCost();
+		if(guild.getFaction().getGovernment().getPower() < cost) {
+			p.sendMessage("§cCannot afford to elevate");
+			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
+			return;
+		}
+		Faction newFaction = guild.elevate(true);
+		if(newFaction == null) {
+			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
+			return;
+		}
+		sender.getFaction().getGovernment().spendPower(cost);
+		p.sendMessage("§aGuild elevated to Faction!");
+		p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 	}
 
 	//Elections and stuff
