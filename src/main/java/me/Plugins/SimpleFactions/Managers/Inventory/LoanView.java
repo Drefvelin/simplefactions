@@ -170,7 +170,9 @@ public class LoanView {
                 ItemMeta meta = e.getCurrentItem().getItemMeta();
                 if(meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
                     String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
-                    Loan loan = guild.getLoanHandler().getLoanById(id);
+                    String gid = meta.getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+                    Guild issuer = FactionManager.getGuildByString(gid);
+                    Loan loan = issuer.getLoanHandler().getLoanById(id);
                     if(loan == null) return;
                     loanDetailView(p, guild, loan, true);
                     p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
@@ -179,14 +181,15 @@ public class LoanView {
         }
         else if(h.getType() == SFGUI.TAKEN_LOAN_DETAIL_VIEW) {
             e.setCancelled(true);
-            
             // Pay off loan button
             if(e.getSlot() == 11) {
                 // Find the loan by looking at the detail item
                 ItemStack detailItem = e.getCurrentItem();
                 if(detailItem != null && detailItem.hasItemMeta()) {
                     String id = detailItem.getItemMeta().getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
-                    Loan loan = guild.getLoanHandler().getLoanById(id);
+                    String gid = detailItem.getItemMeta().getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+                    Guild issuer = FactionManager.getGuildByString(gid);
+                    Loan loan = issuer.getLoanHandler().getLoanById(id);
                     if(loan == null) return;
                     inv.setPayingLoan(p, loan);
                     p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);

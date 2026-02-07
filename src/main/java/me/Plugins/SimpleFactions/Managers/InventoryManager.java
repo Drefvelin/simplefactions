@@ -217,8 +217,8 @@ public class InventoryManager implements Listener{
 		loanView.loansTakenView(p, guild);
 	}
 
-	public boolean isChanging(Player p) {
-		return taxChange.containsKey(p);
+	public boolean chatTrigger(Player p) {
+		return taxChange.containsKey(p) || loanPayments.containsKey(p);
 	}
 
 	public void setChanging(Faction faction, Player p, TaxTarget target, String id) {
@@ -242,7 +242,7 @@ public class InventoryManager implements Listener{
 	@EventHandler
 	public void setRate(AsyncPlayerChatEvent e) {
 		Player p = e.getPlayer();
-		if(!isChanging(p)) return;
+		if(!chatTrigger(p)) return;
 		e.setCancelled(true);
 		new BukkitRunnable() {
 			@Override
@@ -368,9 +368,11 @@ public class InventoryManager implements Listener{
 			amount = loan.getTotalOwed();
 		}
 
-		double finalAmount = loan.makePayment(amount);
-		p.sendMessage(StringFormatter.formatHex("#87d65cYou have paid off " + String.format("%.2f", finalAmount) + "d #d6cf69of the loan."));
+		double finalAmount = loan.makePayment(amount, true);
+		g.getBank().withdraw(finalAmount);
+		p.sendMessage(StringFormatter.formatHex("#d6cf69You have paid off #87d65c" + String.format("%.2f", finalAmount) + "d #d6cf69of the loan."));
 		p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+		loanPayments.remove(p);
 	}
 	
 	//Confirm

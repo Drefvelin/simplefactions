@@ -7,7 +7,8 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 public class Loan {
     private String id;
     private double amount;
-    private double originalAmount;
+    private double paidInterest;
+    private double unpaidInterest;
     private Guild issuer;
     private Guild borrower;
     private long issueDate;
@@ -16,10 +17,14 @@ public class Loan {
     private double paid;
     private boolean autoPay;
 
+    private double tempPayment = 0; //Used by the ledger to earmark a payment without processing during that calculation cycle
+    private double tempInterestPayment = 0; //Used by the ledger to earmark an interest payment without processing during that calculation cycle
+
     public Loan(double amount, Guild issuer, Guild borrower, long issueDate, int durationInDays, double interestRate, boolean autoPay) {
         id = UUID.randomUUID().toString();
         this.amount = amount;
-        this.originalAmount = amount;
+        this.paidInterest = 0;
+        this.unpaidInterest = 0;
         this.issuer = issuer;
         this.borrower = borrower;
         this.issueDate = issueDate;
@@ -29,10 +34,11 @@ public class Loan {
         this.autoPay = autoPay;
     }
 
-    public Loan(String id, double amount, double originalAmount, Guild issuer, Guild borrower, long issueDate, int durationInDays, double interestRate, boolean autoPay) {
+    public Loan(String id, double amount, double paidInterest, double unpaidInterest, Guild issuer, Guild borrower, long issueDate, int durationInDays, double interestRate, boolean autoPay) {
         this.id = id;
         this.amount = amount;
-        this.originalAmount = originalAmount;
+        this.paidInterest = paidInterest;
+        this.unpaidInterest = unpaidInterest;
         this.issuer = issuer;
         this.borrower = borrower;
         this.issueDate = issueDate;
@@ -50,8 +56,12 @@ public class Loan {
         return amount;
     }
 
-    public double getOriginalAmount() {
-        return originalAmount;
+    public double getPaidInterest() {
+        return paidInterest;
+    }
+
+    public double getUnpaidInterest() {
+        return unpaidInterest;
     }
 
     public Guild getIssuer() {
@@ -82,15 +92,35 @@ public class Loan {
         return autoPay;
     }
 
-    public void tickDay() {
-    double dailyInterest = getDailyInterest();
-
-    if (!autoPay) {
-        // Interest compounds onto the loan
-        amount += dailyInterest;
+    public void setAutoPay(boolean autoPay) {
+        this.autoPay = autoPay;
     }
-}
 
+    public void tickDay() {
+        double dailyInterest = getDailyInterest();
+
+        if (!autoPay) {
+            // Interest compounds onto the loan
+            unpaidInterest += dailyInterest;
+        }
+        if(tempPayment > 0) {
+            makePayment(tempPayment, false);
+            tempPayment = 0;
+        }
+        if(tempInterestPayment > 0) {
+            paidInterest += tempInterestPayment;
+            paid += tempInterestPayment;
+            tempInterestPayment = 0;
+        }
+    }
+        
+    public void setTempPayment(double amount) {
+        this.tempPayment = amount;
+    }
+
+    public void setTempInterestPayment(double amount) {
+        this.tempInterestPayment = amount;
+    }
 
     public double getDailyInterestRate() {
         return interestRate / 7.0;
@@ -101,7 +131,7 @@ public class Loan {
     }
 
     public double getTotalOwed() {
-        return amount - paid;
+        return amount + unpaidInterest + paidInterest - paid;
     }
 
     public int getDaysUntilDue() {
@@ -121,18 +151,29 @@ public class Loan {
         return (getTotalOwed() / getDaysUntilDue())+getDailyInterest();
     }
 
-    public double makePayment(double amount) {
-        if(amount <= 0) return 0.0;
-        
-        // Clamp to what's owed
-        double actualPayment = Math.min(amount, getTotalOwed());
-        
-        // Transfer money from borrower to issuer
-        borrower.getBank().withdraw(actualPayment);
-        issuer.getBank().deposit(actualPayment);
-        
-        // Update paid amount
+    public double makePayment(double paymentAmount, boolean ledger) {
+        if (paymentAmount <= 0) return 0.0;
+
+        double totalOwed = getTotalOwed();
+        if (totalOwed <= 0) return 0.0;
+
+        // Clamp payment to what is owed
+        double actualPayment = Math.min(paymentAmount, totalOwed);
+
+        double remaining = actualPayment;
+
+        if (unpaidInterest > 0) {
+            double interestPaid = Math.min(remaining, unpaidInterest);
+            unpaidInterest -= interestPaid;
+            if (ledger) issuer.getLedger().addInterestPaymentEntry(borrower.getId(), interestPaid);
+            paidInterest += interestPaid; // Move paid interest to the main interest pool
+            remaining -= interestPaid;
+        }
+
+        if (ledger) issuer.getLedger().addLoanPaymentEntry(borrower.getId(), remaining);
+
         paid += actualPayment;
+
         return actualPayment;
     }
 }

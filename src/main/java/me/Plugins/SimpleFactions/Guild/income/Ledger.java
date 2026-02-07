@@ -43,19 +43,19 @@ public class Ledger {
         }
     }
 
-    public void addLoanPaymentEntry(String lenderGuildId, Double amount) {
-        if(loanPayments.containsKey(lenderGuildId)) {
-            loanPayments.put(lenderGuildId, loanPayments.get(lenderGuildId)+amount);
+    public void addLoanPaymentEntry(String payerGuildId, Double amount) {
+        if(loanPayments.containsKey(payerGuildId)) {
+            loanPayments.put(payerGuildId, loanPayments.get(payerGuildId)+amount);
         } else {
-            loanPayments.put(lenderGuildId, amount);
+            loanPayments.put(payerGuildId, amount);
         }
     }
 
-    public void addInterestPaymentEntry(String lenderGuildId, Double amount) {
-        if(interestPayments.containsKey(lenderGuildId)) {
-            interestPayments.put(lenderGuildId, interestPayments.get(lenderGuildId)+amount);
+    public void addInterestPaymentEntry(String payerGuildId, Double amount) {
+        if(interestPayments.containsKey(payerGuildId)) {
+            interestPayments.put(payerGuildId, interestPayments.get(payerGuildId)+amount);
         } else {
-            interestPayments.put(lenderGuildId, amount);
+            interestPayments.put(payerGuildId, amount);
         }
     }
 
@@ -119,11 +119,12 @@ public class Ledger {
             case LOAN_PAYMENTS: {
                 for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
                     if(!loan.isAutoPay()) continue;
-                    amount += loan.getDailyPayment();
+                    amount -= loan.getDailyPayment();
                 }
                 break;
             }
             case LOANS:
+                amount += getAggregatedLoanPayments();
                 for(Loan loan : guild.getLoanHandler().getLoansGiven()) {
                     if(!loan.isAutoPay()) continue;
                     amount += loan.getDailyPayment();
@@ -133,11 +134,12 @@ public class Ledger {
             case INTEREST_PAYMENTS: {
                 for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
                     if(!loan.isAutoPay()) continue;
-                    amount += loan.getDailyInterest();
+                    amount -= loan.getDailyInterest();
                 }
                 break;
             }
             case INTEREST:
+                amount += getAggregatedInterestPayments();
                 for(Loan loan : guild.getLoanHandler().getLoansGiven()) {
                     if(!loan.isAutoPay()) continue;
                     amount += loan.getDailyInterest();
@@ -191,6 +193,22 @@ public class Ledger {
     private double getAggregatedCitizenTax() {
         double total = 0;
         for(Double d : citizenTaxes.values()) {
+            total+=d;
+        }
+        return total;
+    }
+
+    private double getAggregatedLoanPayments() {
+        double total = 0;
+        for(Double d : loanPayments.values()) {
+            total+=d;
+        }
+        return total;
+    }
+
+    private double getAggregatedInterestPayments() {
+        double total = 0;
+        for(Double d : interestPayments.values()) {
             total+=d;
         }
         return total;
@@ -309,6 +327,9 @@ public class Ledger {
         for (Cashflow cf : Cashflow.values()) {
             applySettlementFor(cf, buffer);
         }
+        citizenTaxes.clear();
+        loanPayments.clear();
+        interestPayments.clear();
     }
 
     private void applySettlementFor(Cashflow cf, DailyGuildTransfers buffer) {
@@ -374,6 +395,7 @@ public class Ledger {
                     if(amount <= 0) continue;
                     buffer.add(guild, receiverGuild, amount);
                 }
+                break;
             }
 
             //Loans
@@ -383,6 +405,7 @@ public class Ledger {
                     if(!loan.isAutoPay()) continue;
                     amount += loan.getDailyPayment();
                     if(amount <= 0) continue;
+                    loan.setTempPayment(amount);
                     buffer.add(guild, loan.getIssuer(), amount);
                 }
                 break;
@@ -392,16 +415,21 @@ public class Ledger {
             case INTEREST_PAYMENTS: {
                 for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
                     double amount = 0;
-                    if(!loan.isAutoPay()) {
-                        loan.tickDay(); //tick interest
-                        continue;
-                    }
+                    if(!loan.isAutoPay()) continue;
                     amount += loan.getDailyInterest();
                     if(amount <= 0) continue;
+                    loan.setTempInterestPayment(amount);
                     buffer.add(guild, loan.getIssuer(), amount);
                 }
                 break;
             }
+
+            case LOANS:
+                buffer.addExternalDelta(guild, getAggregatedLoanPayments());
+                break;
+            case INTEREST:
+                buffer.addExternalDelta(guild, getAggregatedInterestPayments());
+                break;
 
             //To be implemented
             case WAR_REPARATIONS_PAYMENT:
@@ -414,8 +442,6 @@ public class Ledger {
             case TRIBUTES:
             case TARIFFS:
             case WAR_REPARATIONS:
-            case LOANS:
-            case INTEREST:
             default:
                 return;
         }

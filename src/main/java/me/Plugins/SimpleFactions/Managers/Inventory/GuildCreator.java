@@ -713,7 +713,7 @@ public class GuildCreator {
 		lore.add(StringFormatter.formatHex("#e15757The guild capital province will be transferred to the new faction!"));
 		lore.add("");
 		double cost = guild.getElevationCost();
-		lore.add(StringFormatter.formatHex("#d4c9aeCost: §e"+cost+" Administrative Power"));
+		lore.add(StringFormatter.formatHex("#d4c9aeCost: §e"+Formatter.formatDouble(cost)+" Administrative Power"));
 		lore.add("");
 		if(guild.canBeElevated(null)) {
 			lore.add(StringFormatter.formatHex("#50e846Click to Elevate"));
@@ -735,9 +735,9 @@ public class GuildCreator {
 		lore.add(StringFormatter.formatHex("#d4c9aeLoans Given: #a19a87"+handler.getLoansGiven().size()));
 		lore.add(StringFormatter.formatHex("#d4c9aeLoans Taken: #a19a87"+handler.getLoansTaken().size()));
 		lore.add("");
-		lore.add(StringFormatter.formatHex("#d4c9aeTotal Lent: #a8db8a"+handler.getTotalLent()+"d"));
-		lore.add(StringFormatter.formatHex("#d4c9aeTotal Owed: #de7657"+handler.getTotalOwed()+"d"));
-		lore.add(StringFormatter.formatHex("#d4c9aeDaily Interest: #de7657"+handler.getDailyInterest()+"d"));
+		lore.add(StringFormatter.formatHex("#d4c9aeTotal Lent: #a8db8a"+Formatter.formatDouble(handler.getTotalLent())+"d"));
+		lore.add(StringFormatter.formatHex("#d4c9aeTotal Owed: #de7657"+Formatter.formatDouble(handler.getTotalOwed())+"d"));
+		lore.add(StringFormatter.formatHex("#d4c9aeDaily Interest: #de7657"+Formatter.formatDouble(handler.getDailyInterest())+"d"));
 		lore.add("");
 		lore.add(StringFormatter.formatHex("#c2be99Credit Score: "+handler.getCreditScoreString()));
 		lore.add(StringFormatter.formatHex("#5d5959Lenders may give higher interest rates if your"));

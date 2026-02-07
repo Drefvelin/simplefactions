@@ -24,6 +24,7 @@ import me.Plugins.SimpleFactions.Diplomacy.Attitude;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Guild.loans.Loan;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Map.MapSystem;
@@ -62,6 +63,19 @@ public class FactionManager implements Listener{
 		}
 		list.add(s);
 		dbRelations.put(f, list);
+		Guild guild = getGuildByString("Taurmark");
+		Guild borrower = FactionManager.getGuildByString("Abasath");
+		if(borrower == null) return;
+		Loan loan = new Loan(
+			1000,
+			guild, 
+			borrower, 
+			System.currentTimeMillis(), 
+			20, 
+			6.1,
+			false
+		);
+		guild.getLoanHandler().issueLoan(loan);
 	}
 	
 	public static void loadRelations() {
@@ -219,6 +233,12 @@ public class FactionManager implements Listener{
 			if (amount == 0.0) continue;
 			if(entry.getKey().getBank() == null) continue;
 			entry.getKey().getBank().deposit(amount);
+		}
+
+		for(Guild g : getAllGuilds()) {
+			for(Loan loan : g.getLoanHandler().getLoansGiven()) {
+				loan.tickDay();
+			}
 		}
 
 		buffer.clear();

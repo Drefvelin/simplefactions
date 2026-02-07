@@ -11,6 +11,7 @@ import org.bukkit.persistence.PersistentDataType;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.loans.Loan;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.TLibs.TLibs;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -56,9 +57,9 @@ public class LoanCreator {
         lore.add(StringFormatter.formatHex("#7a706aView all loans you have borrowed"));
         lore.add("");
         lore.add(StringFormatter.formatHex("#d6cf69Total Owed: #ccbb76" + 
-            String.format("%.2f", guild.getLoanHandler().getTotalOwed()) + "d"));
+            Formatter.formatDouble(guild.getLoanHandler().getTotalOwed()) + "d"));
         lore.add(StringFormatter.formatHex("#d6cf69Daily Interest: #ccbb76" + 
-            String.format("%.2f", guild.getLoanHandler().getDailyInterest()) + "d"));
+            Formatter.formatDouble(guild.getLoanHandler().getDailyInterest()) + "d"));
         lore.add("");
         lore.add(StringFormatter.formatHex("#50e846Click to View"));
         
@@ -89,16 +90,16 @@ public class LoanCreator {
         lore.add(StringFormatter.formatHex("#7a706aBorrower: #c2bea7" + loan.getBorrower().getName()));
         lore.add("");
         lore.add(StringFormatter.formatHex("#d6cf69Original Amount: #ccbb76" + 
-            String.format("%.2f", loan.getOriginalAmount()) + "d"));
+            Formatter.formatDouble(loan.getAmount()) + "d"));
         lore.add(StringFormatter.formatHex("#d6cf69Amount Paid: #4fd945" + 
-            String.format("%.2f", loan.getPaid()) + "d"));
+            Formatter.formatDouble(loan.getPaid()) + "d"));
         lore.add(StringFormatter.formatHex("#d6cf69Amount Owed: #cf493a" + 
-            String.format("%.2f", loan.getTotalOwed()) + "d"));
+            Formatter.formatDouble(loan.getTotalOwed()) + "d"));
         lore.add("");
         lore.add(StringFormatter.formatHex("#d6cf69Interest Rate: #ccbb76" + 
-            String.format("%.2f%%", loan.getInterestRate())));
+            Formatter.formatDouble(loan.getInterestRate()) + "%"));
         lore.add(StringFormatter.formatHex("#d6cf69Daily Interest: #ccbb76" + 
-            String.format("%.2f", loan.getDailyInterest()) + "d"));
+            Formatter.formatDouble(loan.getDailyInterest()) + "d"));
         lore.add(StringFormatter.formatHex("#d6cf69Automatic Payments: " + 
             (loan.isAutoPay() ? (GREEN + CHECK) : (RED + CROSS))));
         lore.add("");
@@ -121,16 +122,16 @@ public class LoanCreator {
         lore.add(StringFormatter.formatHex("#7a706aIssuer: #c2bea7" + loan.getIssuer().getName()));
         lore.add("");
         lore.add(StringFormatter.formatHex("#d6cf69Original Amount: #ccbb76" + 
-            String.format("%.2f", loan.getOriginalAmount()) + "d"));
+            Formatter.formatDouble(loan.getAmount()) + "d"));
         lore.add(StringFormatter.formatHex("#d6cf69Amount Paid: #4fd945" + 
-            String.format("%.2f", loan.getPaid()) + "d"));
+            Formatter.formatDouble(loan.getPaid()) + "d"));
         lore.add(StringFormatter.formatHex("#d6cf69Amount Owed: #cf493a" + 
-            String.format("%.2f", loan.getTotalOwed()) + "d"));
+            Formatter.formatDouble(loan.getTotalOwed()) + "d"));
         lore.add("");
         lore.add(StringFormatter.formatHex("#d6cf69Interest Rate: #ccbb76" + 
-            String.format("%.2f%%", loan.getInterestRate())));
+            Formatter.formatDouble(loan.getInterestRate())));
         lore.add(StringFormatter.formatHex("#d6cf69Daily Interest: #ccbb76" + 
-            String.format("%.2f", loan.getDailyInterest()) + "d"));
+            Formatter.formatDouble(loan.getDailyInterest()) + "d"));
         lore.add(StringFormatter.formatHex("#d6cf69Automatic Payments: " + 
             (loan.isAutoPay() ? (GREEN + CHECK) : (RED + CROSS))));
         lore.add("");
@@ -139,6 +140,7 @@ public class LoanCreator {
         lore.add(StringFormatter.formatHex("#d1bf92Due Date: #d4c9ae" + 
             formatDate(loan.getDueDate())));
         meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, loan.getId());
+        meta.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, loan.getIssuer().getId());
         meta.setLore(lore);
         i.setItemMeta(meta);
         return i;
@@ -163,6 +165,7 @@ public class LoanCreator {
         lore.add("");
         lore.add(StringFormatter.formatHex("#50e846Click to Pay"));
         meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, loan.getId());
+        meta.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, loan.getIssuer().getId());
         meta.setLore(lore);
         i.setItemMeta(meta);
         return i;

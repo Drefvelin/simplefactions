@@ -16,23 +16,15 @@ public class LoanHandler {
 
     public LoanHandler(Guild guild) {
         this.guild = guild;
-        if(guild.getId().equalsIgnoreCase("Abasath")) {
-            Loan loan = new Loan(
-                10000,
-                guild, 
-                FactionManager.getByString("Taurmark").getOrCreateMainGuild(), 
-                System.currentTimeMillis(), 
-                20, 
-                5.0,
-                true
-            );
-            issuedLoans.put(loan.getId(), loan);
-        }
     }
 
     public LoanHandler(Guild guild, int creditScore) {
         this.guild = guild;
         this.creditScore = creditScore;
+    }
+
+    public void issueLoan(Loan loan) {
+        issuedLoans.put(loan.getId(), loan);
     }
 
     public Loan getLoanById(String id) {
