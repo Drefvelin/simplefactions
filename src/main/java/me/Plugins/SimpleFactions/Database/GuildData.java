@@ -35,4 +35,6 @@ public class GuildData {
 
     @SerializedName("wealth modifiers")
     public List<String> wealthModifiers = new ArrayList<>();
+
+    public List<LoanData> loans = new ArrayList<>();
 }

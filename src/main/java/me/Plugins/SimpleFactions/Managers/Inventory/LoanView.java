@@ -105,6 +105,7 @@ public class LoanView {
         
         // Loan details item
         i.setItem(13, isTaken ? creator.createLoanTakenItem(loan) : creator.createLoanGivenItem(loan));
+        i.setItem(12, creator.createToggleAutoPayButton(loan));
         
         // Pay off button (only for loans taken)
         if(isTaken) {
@@ -195,6 +196,20 @@ public class LoanView {
                     p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
                     p.closeInventory();
                     p.sendTitle("", StringFormatter.formatHex("#d6cf69Enter the amount in chat."), 5, 80, 5);;
+                }
+            } else if(e.getSlot() == 12) {
+                // Toggle auto-pay
+                ItemStack detailItem = e.getCurrentItem();
+                if(detailItem != null && detailItem.hasItemMeta()) {
+                    String id = detailItem.getItemMeta().getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+                    String gid = detailItem.getItemMeta().getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+                    Guild issuer = FactionManager.getGuildByString(gid);
+                    Loan loan = issuer.getLoanHandler().getLoanById(id);
+                    if(loan == null) return;
+                    loan.setAutoPay(!loan.isAutoPay());
+                    // Refresh the loan detail view
+                    loanDetailView(p, guild, loan, true);
+                    p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
                 }
             }
         }

@@ -14,6 +14,7 @@ import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
+import me.Plugins.SimpleFactions.Guild.loans.Loan;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Guild.Guild;
@@ -188,6 +189,12 @@ public class Database {
                             }
                         }
 
+                        if(gd.loans != null) {
+                            for (LoanData ld : gd.loans) {
+                                FactionManager.addDBLoan(ld);
+                            }
+                        }
+
                         Guild g = new Guild(
                             gd.id,
                             gd.name,
@@ -342,6 +349,10 @@ public class Database {
                     ued.upgrade = e.getUpgrade().getId();
                     ued.timeLeft = e.getTimeLeft();
                     gd.upgradeQueue.add(ued);
+                }
+
+                for(Loan loan : g.getLoanHandler().getLoansGiven()) {
+                    gd.loans.add(new LoanData(loan));
                 }
 
                 data.guilds.add(gd);

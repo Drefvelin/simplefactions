@@ -2,7 +2,9 @@ package me.Plugins.SimpleFactions.Guild.loans;
 
 import java.util.UUID;
 
+import me.Plugins.SimpleFactions.Database.LoanData;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 
 public class Loan {
     private String id;
@@ -20,6 +22,9 @@ public class Loan {
     private double tempPayment = 0; //Used by the ledger to earmark a payment without processing during that calculation cycle
     private double tempInterestPayment = 0; //Used by the ledger to earmark an interest payment without processing during that calculation cycle
 
+    private boolean defaulted = false;
+    private boolean pausedInterest = false;
+
     public Loan(double amount, Guild issuer, Guild borrower, long issueDate, int durationInDays, double interestRate, boolean autoPay) {
         id = UUID.randomUUID().toString();
         this.amount = amount;
@@ -34,18 +39,23 @@ public class Loan {
         this.autoPay = autoPay;
     }
 
-    public Loan(String id, double amount, double paidInterest, double unpaidInterest, Guild issuer, Guild borrower, long issueDate, int durationInDays, double interestRate, boolean autoPay) {
-        this.id = id;
-        this.amount = amount;
-        this.paidInterest = paidInterest;
-        this.unpaidInterest = unpaidInterest;
-        this.issuer = issuer;
-        this.borrower = borrower;
-        this.issueDate = issueDate;
-        this.dueDate = issueDate + durationInDays * 24 * 60 * 60 * 1000L;
-        this.interestRate = interestRate;
-        this.paid = 0.0;
-        this.autoPay = autoPay;
+    public Loan(LoanData data) {
+        this.id = data.id;
+        this.amount = data.amount;
+        this.paidInterest = data.paidInterest;
+        this.unpaidInterest = data.unpaidInterest;
+        this.issuer = FactionManager.getGuildByString(data.issuer);
+        this.borrower = FactionManager.getGuildByString(data.borrower);
+        this.issueDate = data.issueDate;
+        this.dueDate = data.dueDate;
+        this.interestRate = data.interestRate;
+        this.paid = data.paid;
+        this.autoPay = data.autoPay;
+        this.defaulted = data.defaulted;
+        this.pausedInterest = data.pausedInterest;
+        if(issuer == null || borrower == null) {
+            throw new IllegalArgumentException("Invalid issuer or borrower ID in LoanData");
+        }
     }
 
     public String getId() {
@@ -88,8 +98,24 @@ public class Loan {
         return paid;
     }
 
+    public boolean hasDefaulted() {
+        return defaulted;
+    }
+
+    public boolean isInterestPaused() {
+        return pausedInterest;
+    }
+
     public boolean isAutoPay() {
         return autoPay;
+    }
+
+    public void setDefaulted(boolean defaulted) {
+        this.defaulted = defaulted;
+    }
+
+    public void setPausedInterest(boolean pausedInterest) {
+        this.pausedInterest = pausedInterest;
     }
 
     public void setAutoPay(boolean autoPay) {
@@ -127,6 +153,7 @@ public class Loan {
     }
 
     public double getDailyInterest() {
+        if(pausedInterest) return 0.0;
         return getTotalOwed() * getDailyInterestRate() / 100.0;
     }
 

@@ -170,4 +170,34 @@ public class LoanCreator {
         i.setItemMeta(meta);
         return i;
     }
-}
+
+    public ItemStack createToggleAutoPayButton(Loan loan) {
+        ItemStack i = TLibs.getItemAPI().getCreator().getItemsAdderItem(loan.isAutoPay() ? "mcicons:icon_confirm" : "mcicons:icon_cancel");
+        ItemMeta meta = i.getItemMeta();
+        meta.setDisplayName(StringFormatter.formatHex("#87d65cToggle Automatic Payments"));
+        
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#ccc396Automatic Payments are currently " + (loan.isAutoPay() ? (GREEN + "ON") : (RED + "OFF"))));
+        lore.add(StringFormatter.formatHex("#7a706a§oToggle automatic daily payments for this loan"));
+        lore.add("");
+        lore.add(StringFormatter.formatHex("#50e846Click to Toggle"));
+        meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, loan.getId());
+        meta.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, loan.getIssuer().getId());
+        meta.setLore(lore);
+        i.setItemMeta(meta);
+        return i;
+    }
+
+    public ItemStack createDefaultItem(Loan loan) {
+        ItemStack i = new ItemStack(Material.BARRIER);
+        ItemMeta meta = i.getItemMeta();
+        meta.setDisplayName(StringFormatter.formatHex("#d65c5cDefaulted Loan"));
+        
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#7a706aThis loan has defaulted"));
+        lore.add(StringFormatter.formatHex("#7a706aThe issuer may take action to recover the owed amount"));
+        meta.setLore(lore);
+        i.setItemMeta(meta);
+        return i;
+    }
+} 

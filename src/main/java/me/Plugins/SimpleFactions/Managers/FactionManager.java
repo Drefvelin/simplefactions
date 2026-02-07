@@ -20,6 +20,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.Database.Database;
+import me.Plugins.SimpleFactions.Database.LoanData;
 import me.Plugins.SimpleFactions.Diplomacy.Attitude;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
@@ -50,7 +51,8 @@ public class FactionManager implements Listener{
 
 	public static List<Faction> factions = new ArrayList<Faction>();
 	
-	public static HashMap<Faction, List<String>> dbRelations = new HashMap<>();
+	private static HashMap<Faction, List<String>> dbRelations = new HashMap<>();
+	private static List<LoanData> loans = new ArrayList<>();
 
 	public static int getTimer(){
 		return timer;
@@ -63,19 +65,18 @@ public class FactionManager implements Listener{
 		}
 		list.add(s);
 		dbRelations.put(f, list);
-		Guild guild = getGuildByString("Taurmark");
-		Guild borrower = FactionManager.getGuildByString("Abasath");
-		if(borrower == null) return;
-		Loan loan = new Loan(
-			1000,
-			guild, 
-			borrower, 
-			System.currentTimeMillis(), 
-			20, 
-			6.1,
-			false
-		);
-		guild.getLoanHandler().issueLoan(loan);
+	}
+
+	public static void addDBLoan(LoanData data) {
+		loans.add(data);
+	}
+
+	public static void loadDBLoans() {
+		for(LoanData data : loans) {
+			Loan loan = new Loan(data);
+			loan.getIssuer().getLoanHandler().issueLoan(loan);
+		}
+		loans.clear();
 	}
 	
 	public static void loadRelations() {
@@ -255,6 +256,7 @@ public class FactionManager implements Listener{
 			f.ping();
 		}
 		fixRelations();
+		loadDBLoans();
 	}
 
 	public static boolean guildExists(String id) {
