@@ -27,6 +27,10 @@ public class LoanHandler {
         issuedLoans.put(loan.getId(), loan);
     }
 
+    public void removeLoan(String id) {
+        issuedLoans.remove(id);
+    }
+
     public Loan getLoanById(String id) {
         return issuedLoans.get(id);
     }

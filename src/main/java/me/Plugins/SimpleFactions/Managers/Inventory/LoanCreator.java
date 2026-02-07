@@ -88,6 +88,11 @@ public class LoanCreator {
         
         List<String> lore = new ArrayList<>();
         lore.add(StringFormatter.formatHex("#7a706aBorrower: #c2bea7" + loan.getBorrower().getName()));
+        if(loan.hasDefaulted()) {
+            lore.add(StringFormatter.formatHex("#d65c5c§l§oThis loan is in default"));
+        } else if(loan.isPaidOff()) {
+            lore.add(StringFormatter.formatHex("#87d65c§l§oThis loan is paid off"));
+        }
         lore.add("");
         lore.add(StringFormatter.formatHex("#d6cf69Original Amount: #ccbb76" + 
             Formatter.formatDouble(loan.getAmount()) + "d"));
@@ -120,6 +125,11 @@ public class LoanCreator {
         
         List<String> lore = new ArrayList<>();
         lore.add(StringFormatter.formatHex("#7a706aIssuer: #c2bea7" + loan.getIssuer().getName()));
+        if(loan.hasDefaulted()) {
+            lore.add(StringFormatter.formatHex("#d65c5c§l§oThis loan is in default"));
+        } else if(loan.isPaidOff()) {
+            lore.add(StringFormatter.formatHex("#87d65c§l§oThis loan is paid off"));
+        }
         lore.add("");
         lore.add(StringFormatter.formatHex("#d6cf69Original Amount: #ccbb76" + 
             Formatter.formatDouble(loan.getAmount()) + "d"));
@@ -171,14 +181,66 @@ public class LoanCreator {
         return i;
     }
 
-    public ItemStack createToggleAutoPayButton(Loan loan) {
+    public ItemStack createToggleAutoPayButton(Loan loan, boolean button) {
         ItemStack i = TLibs.getItemAPI().getCreator().getItemsAdderItem(loan.isAutoPay() ? "mcicons:icon_confirm" : "mcicons:icon_cancel");
         ItemMeta meta = i.getItemMeta();
-        meta.setDisplayName(StringFormatter.formatHex("#87d65cToggle Automatic Payments"));
+        meta.setDisplayName(StringFormatter.formatHex(button ? "#87d65cToggle Automatic Payments" : "#87d65cAutomatic Payments"));
         
         List<String> lore = new ArrayList<>();
         lore.add(StringFormatter.formatHex("#ccc396Automatic Payments are currently " + (loan.isAutoPay() ? (GREEN + "ON") : (RED + "OFF"))));
-        lore.add(StringFormatter.formatHex("#7a706a§oToggle automatic daily payments for this loan"));
+        if(button) {
+            lore.add(StringFormatter.formatHex("#7a706a§oToggle automatic daily payments for this loan"));
+            lore.add("");
+            lore.add(StringFormatter.formatHex("#50e846Click to Toggle"));
+        }
+        meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, loan.getId());
+        meta.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, loan.getIssuer().getId());
+        meta.setLore(lore);
+        i.setItemMeta(meta);
+        return i;
+    }
+
+    public ItemStack createDefaultItem(Loan loan) {
+        ItemStack i = TLibs.getItemAPI().getCreator().getItemsAdderItem("iasurvival:sword_skin_bloodnite");
+        ItemMeta meta = i.getItemMeta();
+        meta.setDisplayName(StringFormatter.formatHex(loan.hasDefaulted() ? "#81e072Resume Payments" : "#a94141Default Loan"));
+        
+        List<String> lore = new ArrayList<>();
+        if(loan.hasDefaulted()) {
+            lore.add(StringFormatter.formatHex("#ccc396This loan is currently in default"));
+            lore.add(StringFormatter.formatHex("#ccc396Clicking this will allow you to resume payments"));
+            lore.add(StringFormatter.formatHex("#ccc396However, the credit score hit from defaulting"));
+            lore.add(StringFormatter.formatHex("#ccc396will still apply."));
+        } else {
+            lore.add(StringFormatter.formatHex("#ccc396Defaulting is saying you will not pay this loan"));
+            lore.add(StringFormatter.formatHex("#ccc396You can choose to restart payments later, however"));
+            lore.add(StringFormatter.formatHex("#ccc396the credit score hit is permanent."));
+            lore.add("");
+            lore.add(StringFormatter.formatHex("#7a706aDefaulting on a loan has consequences"));
+            lore.add(StringFormatter.formatHex("#7a706aThe issuer may take action to recover the owed amount"));
+            lore.add(StringFormatter.formatHex("#7a706aYour credit score will suffer"));
+            lore.add("");
+            lore.add(StringFormatter.formatHex("#a94141Defaulting is usually the worst option"));
+            lore.add(StringFormatter.formatHex("#a94141to handle a loan you can't pay."));
+            lore.add(StringFormatter.formatHex("#a94141INTEREST WILL CONTINUE TO ACCRUE WHILE IN DEFAULT"));
+            lore.add(StringFormatter.formatHex("#454343(Unless the issuer pauses interest)"));
+            lore.add("");
+        }
+        lore.add(StringFormatter.formatHex("#50e846Click to " + (loan.hasDefaulted() ? "Resume Payments" : "Default")));
+        meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, loan.getId());
+        meta.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, loan.getIssuer().getId());
+        meta.setLore(lore);
+        i.setItemMeta(meta);
+        return i;
+    }
+
+    public ItemStack createPauseInterestItem(Loan loan) {
+        ItemStack i = TLibs.getItemAPI().getCreator().getItemFromPath("m.currency.handful_of_coins");
+        ItemMeta meta = i.getItemMeta();
+        meta.setDisplayName(StringFormatter.formatHex(loan.isInterestPaused() ? "#81e072Resume Interest" : "#e08172Pause Interest"));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#ccc396Interest is currently "+(loan.isInterestPaused() ? (RED + "PAUSED") : (GREEN + "ENABLED"))));
+        lore.add(StringFormatter.formatHex("#7a706a§oToggle interest accrual on this loan"));
         lore.add("");
         lore.add(StringFormatter.formatHex("#50e846Click to Toggle"));
         meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, loan.getId());
@@ -188,14 +250,26 @@ public class LoanCreator {
         return i;
     }
 
-    public ItemStack createDefaultItem(Loan loan) {
-        ItemStack i = new ItemStack(Material.BARRIER);
+    public ItemStack createForgiveLoanItem(Loan loan) {
+        ItemStack i = TLibs.getItemAPI().getCreator().getItemsAdderItem("iasurvival:sword_skin_vyderlight");
         ItemMeta meta = i.getItemMeta();
-        meta.setDisplayName(StringFormatter.formatHex("#d65c5cDefaulted Loan"));
+        meta.setDisplayName(StringFormatter.formatHex(loan.isPaidOff() ? "#87d65cSettle Loan" : "#d65c5cForgive Loan"));
         
         List<String> lore = new ArrayList<>();
-        lore.add(StringFormatter.formatHex("#7a706aThis loan has defaulted"));
-        lore.add(StringFormatter.formatHex("#7a706aThe issuer may take action to recover the owed amount"));
+        if(loan.isPaidOff()) {
+            lore.add(StringFormatter.formatHex("#ccc396This loan is already paid off"));
+            lore.add(StringFormatter.formatHex("#ccc396Clicking this will remove it from your records"));
+            lore.add(StringFormatter.formatHex("#ccc396This has no consequences"));
+        } else {
+            lore.add(StringFormatter.formatHex("#ccc396Forgiving a loan means the borrower does"));
+            lore.add(StringFormatter.formatHex("#ccc396not have to pay it back, but it also means"));
+            lore.add(StringFormatter.formatHex("#ccc396you won't get the money back either."));
+            lore.add(StringFormatter.formatHex("#ccc396The borrower's credit score will not take a hit."));
+        }
+        lore.add("");
+        lore.add(StringFormatter.formatHex("#50e846Click to " + (loan.isPaidOff() ? "Settle" : "Forgive")));
+        meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, loan.getId());
+        meta.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, loan.getIssuer().getId());
         meta.setLore(lore);
         i.setItemMeta(meta);
         return i;

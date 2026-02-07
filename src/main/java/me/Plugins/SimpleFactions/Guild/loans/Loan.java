@@ -148,11 +148,16 @@ public class Loan {
         this.tempInterestPayment = amount;
     }
 
+    public boolean isPaidOff() {
+        return getTotalOwed() <= 0;
+    }
+
     public double getDailyInterestRate() {
         return interestRate / 7.0;
     }
 
     public double getDailyInterest() {
+        if(isPaidOff()) return 0.0;
         if(pausedInterest) return 0.0;
         return getTotalOwed() * getDailyInterestRate() / 100.0;
     }
@@ -173,12 +178,14 @@ public class Loan {
     }
 
     public double getDailyPayment() {
+        if(isPaidOff()) return 0.0;
         int daysUntilDue = getDaysUntilDue();
         if (daysUntilDue <= 0) return getTotalOwed(); // Due or overdue
         return (getTotalOwed() / getDaysUntilDue())+getDailyInterest();
     }
 
     public double makePayment(double paymentAmount, boolean ledger) {
+        if(isPaidOff()) return 0.0;
         if (paymentAmount <= 0) return 0.0;
 
         double totalOwed = getTotalOwed();

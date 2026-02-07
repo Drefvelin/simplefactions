@@ -119,6 +119,7 @@ public class Ledger {
             case LOAN_PAYMENTS: {
                 for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
                     if(!loan.isAutoPay()) continue;
+                    if(loan.isPaidOff()) continue;
                     amount -= loan.getDailyPayment();
                 }
                 break;
@@ -127,6 +128,7 @@ public class Ledger {
                 amount += getAggregatedLoanPayments();
                 for(Loan loan : guild.getLoanHandler().getLoansGiven()) {
                     if(!loan.isAutoPay()) continue;
+                    if(loan.isPaidOff()) continue;
                     amount += loan.getDailyPayment();
                 }
                 break;
@@ -134,6 +136,7 @@ public class Ledger {
             case INTEREST_PAYMENTS: {
                 for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
                     if(!loan.isAutoPay()) continue;
+                    if(loan.isPaidOff()) continue;
                     amount -= loan.getDailyInterest();
                 }
                 break;
@@ -142,6 +145,7 @@ public class Ledger {
                 amount += getAggregatedInterestPayments();
                 for(Loan loan : guild.getLoanHandler().getLoansGiven()) {
                     if(!loan.isAutoPay()) continue;
+                    if(loan.isPaidOff()) continue;
                     amount += loan.getDailyInterest();
                 }
                 break;
@@ -403,6 +407,7 @@ public class Ledger {
                 for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
                     double amount = 0;
                     if(!loan.isAutoPay()) continue;
+                    if(loan.isPaidOff()) continue;
                     amount += loan.getDailyPayment();
                     if(amount <= 0) continue;
                     loan.setTempPayment(amount);
@@ -416,6 +421,7 @@ public class Ledger {
                 for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
                     double amount = 0;
                     if(!loan.isAutoPay()) continue;
+                    if(loan.isPaidOff()) continue;
                     amount += loan.getDailyInterest();
                     if(amount <= 0) continue;
                     loan.setTempInterestPayment(amount);

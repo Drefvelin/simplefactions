@@ -104,16 +104,16 @@ public class LoanView {
         );
         
         // Loan details item
-        i.setItem(13, isTaken ? creator.createLoanTakenItem(loan) : creator.createLoanGivenItem(loan));
-        i.setItem(12, creator.createToggleAutoPayButton(loan));
+        i.setItem(15, isTaken ? creator.createLoanTakenItem(loan) : creator.createLoanGivenItem(loan));
+        i.setItem(12, creator.createToggleAutoPayButton(loan, isTaken));
         
         // Pay off button (only for loans taken)
         if(isTaken) {
-            ItemStack payButton = creator.createPayOffLoanButton(loan);
-            ItemMeta meta = payButton.getItemMeta();
-            // Store loan reference somehow - we'll use the loan object passed to click handler
-            payButton.setItemMeta(meta);
-            i.setItem(11, payButton);
+            i.setItem(11, creator.createPayOffLoanButton(loan));
+            i.setItem(14, creator.createDefaultItem(loan));
+        } else {
+            i.setItem(13, creator.createPauseInterestItem(loan));
+            i.setItem(14, creator.createForgiveLoanItem(loan));
         }
         
         // Back button
@@ -209,6 +209,54 @@ public class LoanView {
                     loan.setAutoPay(!loan.isAutoPay());
                     // Refresh the loan detail view
                     loanDetailView(p, guild, loan, true);
+                    p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+                }
+            } else if(e.getSlot() == 14) {
+                // Toggle defaulted
+                ItemStack detailItem = e.getCurrentItem();
+                if(detailItem != null && detailItem.hasItemMeta()) {
+                    String id = detailItem.getItemMeta().getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+                    String gid = detailItem.getItemMeta().getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+                    Guild issuer = FactionManager.getGuildByString(gid);
+                    Loan loan = issuer.getLoanHandler().getLoanById(id);
+                    if(loan == null) return;
+                    loan.setDefaulted(!loan.hasDefaulted());
+                    if(loan.hasDefaulted()) {
+                        loan.setAutoPay(false);
+                    }
+                    // Refresh the loan detail view
+                    loanDetailView(p, guild, loan, true);
+                    p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+                }
+            }
+        } else if(h.getType() == SFGUI.ISSUED_LOAN_DETAIL_VIEW) {
+            e.setCancelled(true);
+            // Pay off loan button
+            if(e.getSlot() == 13) {
+                // Toggle interest
+                ItemStack detailItem = e.getCurrentItem();
+                if(detailItem != null && detailItem.hasItemMeta()) {
+                    String id = detailItem.getItemMeta().getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+                    String gid = detailItem.getItemMeta().getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+                    Guild issuer = FactionManager.getGuildByString(gid);
+                    Loan loan = issuer.getLoanHandler().getLoanById(id);
+                    if(loan == null) return;
+                    loan.setPausedInterest(!loan.isInterestPaused());
+                    loanDetailView(p, guild, loan, false);
+                    p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+                }
+            } else if(e.getSlot() == 14) {
+                // Forgive/settle loan
+                ItemStack detailItem = e.getCurrentItem();
+                if(detailItem != null && detailItem.hasItemMeta()) {
+                    String id = detailItem.getItemMeta().getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+                    String gid = detailItem.getItemMeta().getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+                    Guild issuer = FactionManager.getGuildByString(gid);
+                    Loan loan = issuer.getLoanHandler().getLoanById(id);
+                    if(loan == null) return;
+                    issuer.getLoanHandler().removeLoan(loan.getId());
+                    // Refresh the loan detail view
+                    loansGivenView(p, guild);
                     p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
                 }
             }
