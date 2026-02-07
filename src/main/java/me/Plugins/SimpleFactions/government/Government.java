@@ -412,10 +412,17 @@ public class Government {
 
         int day = date.getDayOfMonth();
         int month = date.getMonthValue();
-        String year = Cache.year;
+
+        long timestamp = date
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli();
+
+        String year = Cache.getFantasyYear(timestamp);
 
         return String.format("%02d/%02d %s", day, month, year);
     }
+
 
     public LocalDate getElectionEndDate() {
         // If election never started

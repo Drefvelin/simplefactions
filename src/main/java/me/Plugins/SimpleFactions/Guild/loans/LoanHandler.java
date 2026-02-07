@@ -12,21 +12,36 @@ import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 public class LoanHandler {
     private Guild guild;
     private int creditScore = 50;
-    private List<Loan> issuedLoans = new ArrayList<>();
+    private Map<String, Loan> issuedLoans = new LinkedHashMap<>();
 
     public LoanHandler(Guild guild) {
         this.guild = guild;
+        if(guild.getId().equalsIgnoreCase("Abasath")) {
+            Loan loan = new Loan(
+                10000,
+                guild, 
+                FactionManager.getByString("Taurmark").getOrCreateMainGuild(), 
+                System.currentTimeMillis(), 
+                20, 
+                5.0,
+                true
+            );
+            issuedLoans.put(loan.getId(), loan);
+        }
     }
 
-    public LoanHandler(Guild guild, int creditScore, List<Loan> issuedLoans) {
+    public LoanHandler(Guild guild, int creditScore) {
         this.guild = guild;
         this.creditScore = creditScore;
-        this.issuedLoans = issuedLoans;
+    }
+
+    public Loan getLoanById(String id) {
+        return issuedLoans.get(id);
     }
 
     public List<Loan> getLoansByGuild(Guild g) {
         List<Loan> loans = new ArrayList<>();
-        for(Loan l : issuedLoans) {
+        for(Loan l : issuedLoans.values()) {
             if(l.getBorrower().getId().equalsIgnoreCase(g.getId())) {
                 loans.add(l);
             }
@@ -35,7 +50,7 @@ public class LoanHandler {
     }
 
     public List<Loan> getLoansGiven() {
-        return issuedLoans;
+        return new ArrayList<>(issuedLoans.values());
     }
 
     public List<Loan> getLoansTaken() {
@@ -65,7 +80,7 @@ public class LoanHandler {
 
     public double getTotalLent() {
         double total = 0.0;
-        for(Loan l : issuedLoans) {
+        for(Loan l : issuedLoans.values()) {
             total += l.getTotalOwed();
         }
         return total;

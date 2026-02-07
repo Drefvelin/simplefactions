@@ -11,6 +11,7 @@ import org.bukkit.Bukkit;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.income.entry.PlayerEntry;
+import me.Plugins.SimpleFactions.Guild.loans.Loan;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
@@ -27,6 +28,9 @@ public class Ledger {
 
     private final Map<String, Double> citizenTaxes = new HashMap<>();
 
+    private final Map<String, Double> loanPayments = new HashMap<>();
+    private final Map<String, Double> interestPayments = new HashMap<>();
+
     public Ledger(Guild guild) {
         this.guild = guild;
     }
@@ -36,6 +40,22 @@ public class Ledger {
             citizenTaxes.put(p, citizenTaxes.get(p)+tax);
         } else {
             citizenTaxes.put(p, tax);
+        }
+    }
+
+    public void addLoanPaymentEntry(String lenderGuildId, Double amount) {
+        if(loanPayments.containsKey(lenderGuildId)) {
+            loanPayments.put(lenderGuildId, loanPayments.get(lenderGuildId)+amount);
+        } else {
+            loanPayments.put(lenderGuildId, amount);
+        }
+    }
+
+    public void addInterestPaymentEntry(String lenderGuildId, Double amount) {
+        if(interestPayments.containsKey(lenderGuildId)) {
+            interestPayments.put(lenderGuildId, interestPayments.get(lenderGuildId)+amount);
+        } else {
+            interestPayments.put(lenderGuildId, amount);
         }
     }
 
@@ -87,12 +107,41 @@ public class Ledger {
                 amount = -getTributeTax();
                 break;
             case TRIBUTES:
-                //TODO implement
+                if(!guild.isBase()) return 0;
+                amount = getTributeRecieved();
                 break;
             case OVERLORD_TAX:
                 if(!guild.isBase()) return 0;
                 if(f.getOverlord() == null) return 0;
                 amount = -getOverlordTax();
+                break;
+            //Loans
+            case LOAN_PAYMENTS: {
+                for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
+                    if(!loan.isAutoPay()) continue;
+                    amount += loan.getDailyPayment();
+                }
+                break;
+            }
+            case LOANS:
+                for(Loan loan : guild.getLoanHandler().getLoansGiven()) {
+                    if(!loan.isAutoPay()) continue;
+                    amount += loan.getDailyPayment();
+                }
+                break;
+            //Interest
+            case INTEREST_PAYMENTS: {
+                for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
+                    if(!loan.isAutoPay()) continue;
+                    amount += loan.getDailyInterest();
+                }
+                break;
+            }
+            case INTEREST:
+                for(Loan loan : guild.getLoanHandler().getLoansGiven()) {
+                    if(!loan.isAutoPay()) continue;
+                    amount += loan.getDailyInterest();
+                }
                 break;
             case WAR_REPARATIONS:
                 //TODO implement
@@ -162,6 +211,8 @@ public class Ledger {
                 case TRIBUTES:
                 case DIVIDENDS:
                 case WAR_REPARATIONS:
+                case LOANS:
+                case INTEREST:
                     net += getIncome(cf);
                     break;
 
@@ -176,6 +227,8 @@ public class Ledger {
                 case TARIFF_PAYMENTS:
                 case DIVIDEND_PAYOUT:
                 case WAR_REPARATIONS_PAYMENT:
+                case LOAN_PAYMENTS:
+                case INTEREST_PAYMENTS:
                     net += getIncome(cf); // already negative
                     break;
 
@@ -213,13 +266,28 @@ public class Ledger {
         Faction f = guild.getFaction();
         double base = getGrossTaxableIncome();
         double paid = 0.0;
-
         for (FactionModifier mod : f.getModifiers()) {
             if (mod.getFrom() == null) continue;
             if (!mod.getType().equals(FactionModifiers.TRIBUTE)) continue;
             paid += base * (mod.getAmount() / 100.0);
         }
         return paid;
+    }
+
+    public double getTributeRecieved() {
+        double total = 0.0;
+        for(Faction f : FactionManager.factions) {
+            if(f.getId().equals(guild.getFaction().getId())) continue;
+            for(FactionModifier mod : f.getModifiers()) {
+                if(mod.getFrom() == null) continue;
+                if(!mod.getType().equals(FactionModifiers.TRIBUTE)) continue;
+                if(!mod.getFrom().getId().equals(guild.getFaction().getId())) continue;
+
+                double base = f.getOrCreateMainGuild().getLedger().getGrossTaxableIncome();
+                total += base * (mod.getAmount() / 100.0);
+            }
+        }
+        return total;
     }
 
     public double getGrossTaxableIncome() {
@@ -310,7 +378,28 @@ public class Ledger {
 
             //Loans
             case LOAN_PAYMENTS: {
-                //TODO implement
+                for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
+                    double amount = 0;
+                    if(!loan.isAutoPay()) continue;
+                    amount += loan.getDailyPayment();
+                    if(amount <= 0) continue;
+                    buffer.add(guild, loan.getIssuer(), amount);
+                }
+                break;
+            }
+
+            //Interest
+            case INTEREST_PAYMENTS: {
+                for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
+                    double amount = 0;
+                    if(!loan.isAutoPay()) {
+                        loan.tickDay(); //tick interest
+                        continue;
+                    }
+                    amount += loan.getDailyInterest();
+                    if(amount <= 0) continue;
+                    buffer.add(guild, loan.getIssuer(), amount);
+                }
                 break;
             }
 
@@ -325,6 +414,8 @@ public class Ledger {
             case TRIBUTES:
             case TARIFFS:
             case WAR_REPARATIONS:
+            case LOANS:
+            case INTEREST:
             default:
                 return;
         }

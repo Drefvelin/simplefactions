@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
@@ -95,6 +96,31 @@ public class LoanView {
         player.openInventory(i);
     }
 
+    public void loanDetailView(Player player, Guild guild, Loan loan, boolean isTaken) {
+        Inventory i = SimpleFactions.plugin.getServer().createInventory(
+            new SFInventoryHolder(guild.getId(), isTaken ? SFGUI.TAKEN_LOAN_DETAIL_VIEW : SFGUI.ISSUED_LOAN_DETAIL_VIEW), 
+            27, 
+            "§7Loan Details"
+        );
+        
+        // Loan details item
+        i.setItem(13, isTaken ? creator.createLoanTakenItem(loan) : creator.createLoanGivenItem(loan));
+        
+        // Pay off button (only for loans taken)
+        if(isTaken) {
+            ItemStack payButton = creator.createPayOffLoanButton(loan);
+            ItemMeta meta = payButton.getItemMeta();
+            // Store loan reference somehow - we'll use the loan object passed to click handler
+            payButton.setItemMeta(meta);
+            i.setItem(11, payButton);
+        }
+        
+        // Back button
+        i.setItem(26, inv.createBackButton(isTaken ? SFGUI.LOANS_TAKEN_VIEW : SFGUI.LOANS_GIVEN_VIEW));
+        
+        player.openInventory(i);
+    }
+
     public void click(InventoryClickEvent e, Inventory inventory, Player p) {
         if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
         SFInventoryHolder h = (SFInventoryHolder) inventory.getHolder();
@@ -106,24 +132,68 @@ public class LoanView {
             // Loans Given button
             if(e.getSlot() == 2) {
                 loansGivenView(p, guild);
+                p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+                return;
             }
             // Loans Taken button
             else if(e.getSlot() == 4) {
                 loansTakenView(p, guild);
+                p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+                return;
             }
             // Issue New Loan button
             else if(e.getSlot() == 6) {
                 // TODO: Implement loan creation later
                 p.sendMessage(StringFormatter.formatHex("#d6cf69Loan creation coming soon!"));
+                p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+                return;
             }
         }
         else if(h.getType() == SFGUI.LOANS_GIVEN_VIEW) {
             e.setCancelled(true);
-            // Individual loan interactions can be added here later
+            
+            // Click on a loan to view details
+            ItemMeta meta = e.getCurrentItem().getItemMeta();
+            if(meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
+                String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+                Loan loan = guild.getLoanHandler().getLoanById(id);
+                if(loan == null) return;
+                loanDetailView(p, guild, loan, false);
+                p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+            }
         }
         else if(h.getType() == SFGUI.LOANS_TAKEN_VIEW) {
             e.setCancelled(true);
-            // Individual loan interactions can be added here later
+            
+            // Click on a loan to view details
+            if(e.getCurrentItem() != null && e.getCurrentItem().hasItemMeta()) {
+                ItemMeta meta = e.getCurrentItem().getItemMeta();
+                if(meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
+                    String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+                    Loan loan = guild.getLoanHandler().getLoanById(id);
+                    if(loan == null) return;
+                    loanDetailView(p, guild, loan, true);
+                    p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+                }
+            }
+        }
+        else if(h.getType() == SFGUI.TAKEN_LOAN_DETAIL_VIEW) {
+            e.setCancelled(true);
+            
+            // Pay off loan button
+            if(e.getSlot() == 11) {
+                // Find the loan by looking at the detail item
+                ItemStack detailItem = e.getCurrentItem();
+                if(detailItem != null && detailItem.hasItemMeta()) {
+                    String id = detailItem.getItemMeta().getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+                    Loan loan = guild.getLoanHandler().getLoanById(id);
+                    if(loan == null) return;
+                    inv.setPayingLoan(p, loan);
+                    p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+                    p.closeInventory();
+                    p.sendTitle("", StringFormatter.formatHex("#d6cf69Enter the amount in chat."), 5, 80, 5);;
+                }
+            }
         }
     }
 }
