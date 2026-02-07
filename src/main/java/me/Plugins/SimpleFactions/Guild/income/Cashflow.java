@@ -12,6 +12,8 @@ public enum Cashflow {
     CITIZENS("#c7bf85From tax on #94b572Citizens", false, true),
     TARIFF_PAYMENTS("#5cc46aTariffs", false, false),
     TARIFFS("#5cc46aTariffs", false, true),
+    LOAN_PAYMENTS("#e6bb57Loans", false, false),
+    LOANS("#e6bb57Loans", false, true),
     TRIBUTE_PAYMENTS("#ab8568Tribute Payments", false, false),
     TRIBUTES("#ab8568Tribute Payments", false, true),
     OVERLORD_TAX("#b55e94Overlord Taxes", false, false),

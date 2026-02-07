@@ -29,6 +29,7 @@ import me.Plugins.SimpleFactions.Managers.Inventory.GovernmentView;
 import me.Plugins.SimpleFactions.Managers.Inventory.GuildView;
 import me.Plugins.SimpleFactions.Managers.Inventory.InventoryUpdater;
 import me.Plugins.SimpleFactions.Managers.Inventory.LawView;
+import me.Plugins.SimpleFactions.Managers.Inventory.LoanView;
 import me.Plugins.SimpleFactions.Managers.Inventory.MilitaryView;
 import me.Plugins.SimpleFactions.Managers.Inventory.RelationView;
 import me.Plugins.SimpleFactions.Managers.Inventory.TaxChange;
@@ -126,6 +127,9 @@ public class InventoryManager implements Listener{
 	public void upgradeView(Player player, Guild guild, Inventory i) {
 		guildView.upgradeView(player, guild, i);
 	}
+	public void ledgerView(Player p, Guild guild, Inventory i) {
+		guildView.ledgerView(p, guild, i);
+	}
 
 	//Laws
 	LawView lawView = new LawView(this);
@@ -185,6 +189,21 @@ public class InventoryManager implements Listener{
 
 	public void taxView(Player p, Faction f) {
 		taxView.taxView(p, f);
+	}
+
+	//Loans
+	public LoanView loanView = new LoanView(this);
+
+	public void loanMainView(Player p, Guild guild) {
+		loanView.loanMainView(p, guild);
+	}
+
+	public void loansGivenView(Player p, Guild guild) {
+		loanView.loansGivenView(p, guild);
+	}
+
+	public void loansTakenView(Player p, Guild guild) {
+		loanView.loansTakenView(p, guild);
 	}
 
 	public boolean isChanging(Player p) {
@@ -403,6 +422,15 @@ public class InventoryManager implements Listener{
 					case UPGRADE_VIEW:
 						guildView(p, g);
 						break;
+					case LOAN_MAIN_VIEW:
+						guildView(p, g);
+						break;
+					case LOANS_GIVEN_VIEW:
+						loanMainView(p, g);
+						break;
+					case LOANS_TAKEN_VIEW:
+						loanMainView(p, g);
+						break;
 					default:
 						break;
 				}
@@ -411,6 +439,8 @@ public class InventoryManager implements Listener{
 				factionView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.GUILD_LIST || h.getType() == SFGUI.GUILD_VIEW || h.getType() == SFGUI.UPGRADE_VIEW) {
 				guildView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.LOAN_MAIN_VIEW || h.getType() == SFGUI.LOANS_GIVEN_VIEW || h.getType() == SFGUI.LOANS_TAKEN_VIEW) {
+				loanView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.LAW_VIEW || h.getType() == SFGUI.LAW_SELECT) {
 				lawView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.MILITARY_VIEW) {

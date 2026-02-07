@@ -308,6 +308,12 @@ public class Ledger {
                 }
             }
 
+            //Loans
+            case LOAN_PAYMENTS: {
+                //TODO implement
+                break;
+            }
+
             //To be implemented
             case WAR_REPARATIONS_PAYMENT:
             case DIVIDEND_PAYOUT:

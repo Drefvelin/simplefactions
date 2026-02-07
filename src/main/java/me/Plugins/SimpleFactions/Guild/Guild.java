@@ -20,6 +20,7 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.income.Ledger;
 import me.Plugins.SimpleFactions.Guild.income.TradeBreakdown;
+import me.Plugins.SimpleFactions.Guild.loans.LoanHandler;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
@@ -77,6 +78,8 @@ public class Guild {
 
     private List<UpgradeExpansion> upgradeQueue = new ArrayList<>();
 
+    private final LoanHandler loanHandler;
+
     public Guild(Faction f) {
         host = f;
         id = f.getId();
@@ -101,6 +104,7 @@ public class Guild {
             upgrades.put(u.getId(), new Upgrade(u, 0));
         }
         this.ledger = new Ledger(this);
+        this.loanHandler = new LoanHandler(this);
         createBanner();
     }
 
@@ -130,6 +134,7 @@ public class Guild {
         }
         f.getOrCreateMainGuild().kick(p.getName()); //remove from main guild
         this.ledger = new Ledger(this);
+        this.loanHandler = new LoanHandler(this);
         createBanner();
     }
 
@@ -178,6 +183,7 @@ public class Guild {
         this.wealth = 0.0;
         this.wealthModifiers = wealthModifiers;
         this.ledger = new Ledger(this);
+        this.loanHandler = new LoanHandler(this);
         createBanner();
     }
 
@@ -208,6 +214,10 @@ public class Guild {
 
     public Ledger getLedger() {
         return ledger;
+    }
+    
+    public LoanHandler getLoanHandler() {
+        return loanHandler;
     }
 
     public void dummify(Player p) {

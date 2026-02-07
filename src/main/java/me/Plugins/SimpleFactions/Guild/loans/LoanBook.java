@@ -20,11 +20,8 @@ public class LoanBook {
                         "Amount (d):\n" + 
                         "Duration(days):\n" + 
                         "Interest (%):\n" + 
-                        "Daily Payments:\n" + 
-                        "Extendable:\n" + 
-                        "Free Extension:\n" + 
-                        "Extension Penalty:\n" + 
-                        "\n" + 
+                        "Daily Payments:\n" +
+                        "\n\n\n" +
                         "Estimated Cost: COST\n" + 
                         "\n" + 
                         "For further reading, see next pages.");
@@ -40,8 +37,6 @@ public class LoanBook {
                         "\n" + 
                         "If daily payments is activated the interest is paid automatically alongside your daily payment.");
         meta.addPage("If daily payments are NOT activated interest will accrue on your total and will be subject to compound interest should the loan taker fail to keep up with interest payments.");
-        meta.addPage("Extension:\n" + 
-                        "If the contract allows, an extension to the due date can be given to the loan. If free there will be no extra charge, however if extensions are not free there may be an increase in the interest rate as detailed on page 2.");
         meta.addPage("Signatures:\n" + 
                         "\n" + 
                         "Issuer:\n" + 
