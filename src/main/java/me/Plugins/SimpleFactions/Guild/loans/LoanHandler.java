@@ -35,6 +35,11 @@ public class LoanHandler {
         return issuedLoans.get(id);
     }
 
+    public void changeCreditScore(int amount) {
+        creditScore += amount;
+        creditScore = Math.max(0, Math.min(100, creditScore));
+    }
+
     public List<Loan> getLoansByGuild(Guild g) {
         List<Loan> loans = new ArrayList<>();
         for(Loan l : issuedLoans.values()) {
@@ -66,10 +71,10 @@ public class LoanHandler {
         return total;
     }
 
-    public double getDailyInterest() {
+    public double getDailyInterestChange() {
         double total = 0.0;
         for(Loan l : getLoansTaken()) {
-            total += l.getDailyInterest();
+            total += l.getDailyInterestChange();
         }
         return total;
     }   

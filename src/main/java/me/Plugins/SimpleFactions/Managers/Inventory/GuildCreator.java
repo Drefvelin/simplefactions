@@ -737,7 +737,7 @@ public class GuildCreator {
 		lore.add("");
 		lore.add(StringFormatter.formatHex("#d4c9aeTotal Lent: #a8db8a"+Formatter.formatDouble(handler.getTotalLent())+"d"));
 		lore.add(StringFormatter.formatHex("#d4c9aeTotal Owed: #de7657"+Formatter.formatDouble(handler.getTotalOwed())+"d"));
-		lore.add(StringFormatter.formatHex("#d4c9aeDaily Interest: #de7657"+Formatter.formatDouble(handler.getDailyInterest())+"d"));
+		lore.add(StringFormatter.formatHex("#d4c9aeDaily Interest: #de7657"+Formatter.formatDouble(handler.getDailyInterestChange())+"d"));
 		lore.add("");
 		lore.add(StringFormatter.formatHex("#c2be99Credit Score: "+handler.getCreditScoreString()));
 		lore.add(StringFormatter.formatHex("#5d5959Lenders may give higher interest rates if your"));

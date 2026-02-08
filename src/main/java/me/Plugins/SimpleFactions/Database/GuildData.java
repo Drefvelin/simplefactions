@@ -16,6 +16,8 @@ public class GuildData {
     public String bank;
     public String world;
 
+    public String stance;
+
     @SerializedName("xPos")
     public Double xPos;
 
@@ -37,4 +39,5 @@ public class GuildData {
     public List<String> wealthModifiers = new ArrayList<>();
 
     public List<LoanData> loans = new ArrayList<>();
+    public Integer creditScore;
 }

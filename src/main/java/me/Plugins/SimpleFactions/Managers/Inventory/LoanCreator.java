@@ -10,7 +10,9 @@ import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Guild.loans.CreditCalculator;
 import me.Plugins.SimpleFactions.Guild.loans.Loan;
+import me.Plugins.SimpleFactions.Guild.loans.LoanStatus;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.TLibs.TLibs;
@@ -59,7 +61,7 @@ public class LoanCreator {
         lore.add(StringFormatter.formatHex("#d6cf69Total Owed: #ccbb76" + 
             Formatter.formatDouble(guild.getLoanHandler().getTotalOwed()) + "d"));
         lore.add(StringFormatter.formatHex("#d6cf69Daily Interest: #ccbb76" + 
-            Formatter.formatDouble(guild.getLoanHandler().getDailyInterest()) + "d"));
+            Formatter.formatDouble(guild.getLoanHandler().getDailyInterestChange()) + "d"));
         lore.add("");
         lore.add(StringFormatter.formatHex("#50e846Click to View"));
         
@@ -100,11 +102,15 @@ public class LoanCreator {
             Formatter.formatDouble(loan.getPaid()) + "d"));
         lore.add(StringFormatter.formatHex("#d6cf69Amount Owed: #cf493a" + 
             Formatter.formatDouble(loan.getTotalOwed()) + "d"));
+        if(loan.getUnpaidInterest() > 0) {
+            lore.add(StringFormatter.formatHex("#5a5a53(#cf493a" + 
+                Formatter.formatDouble(loan.getUnpaidInterest()) + "d #5a5a53in unpaid interest)"));
+        }
         lore.add("");
-        lore.add(StringFormatter.formatHex("#d6cf69Interest Rate: #ccbb76" + 
+        lore.add(StringFormatter.formatHex("#d6cf69Weekly Interest Rate: #ccbb76" + 
             Formatter.formatDouble(loan.getInterestRate()) + "%"));
         lore.add(StringFormatter.formatHex("#d6cf69Daily Interest: #ccbb76" + 
-            Formatter.formatDouble(loan.getDailyInterest()) + "d"));
+            Formatter.formatDouble(loan.getDailyInterestChange()) + "d"));
         lore.add(StringFormatter.formatHex("#d6cf69Automatic Payments: " + 
             (loan.isAutoPay() ? (GREEN + CHECK) : (RED + CROSS))));
         lore.add("");
@@ -137,11 +143,15 @@ public class LoanCreator {
             Formatter.formatDouble(loan.getPaid()) + "d"));
         lore.add(StringFormatter.formatHex("#d6cf69Amount Owed: #cf493a" + 
             Formatter.formatDouble(loan.getTotalOwed()) + "d"));
+        if(loan.getUnpaidInterest() > 0) {
+            lore.add(StringFormatter.formatHex("#5a5a53(#cf493a" + 
+                Formatter.formatDouble(loan.getUnpaidInterest()) + "d #5a5a53in unpaid interest)"));
+        }
         lore.add("");
-        lore.add(StringFormatter.formatHex("#d6cf69Interest Rate: #ccbb76" + 
-            Formatter.formatDouble(loan.getInterestRate())));
+        lore.add(StringFormatter.formatHex("#d6cf69Weekly Interest Rate: #ccbb76" + 
+            Formatter.formatDouble(loan.getInterestRate())+"%"));
         lore.add(StringFormatter.formatHex("#d6cf69Daily Interest: #ccbb76" + 
-            Formatter.formatDouble(loan.getDailyInterest()) + "d"));
+            Formatter.formatDouble(loan.getDailyInterestChange()) + "d"));
         lore.add(StringFormatter.formatHex("#d6cf69Automatic Payments: " + 
             (loan.isAutoPay() ? (GREEN + CHECK) : (RED + CROSS))));
         lore.add("");
@@ -172,6 +182,24 @@ public class LoanCreator {
         
         List<String> lore = new ArrayList<>();
         lore.add(StringFormatter.formatHex("#7a706a§oMake a payment on this loan"));
+        lore.add(StringFormatter.formatHex("#d6cf69Total Owed: #ccbb76" + 
+            Formatter.formatDouble(loan.getTotalOwed()) + "d"));
+        if(loan.getStatus() != LoanStatus.PAID_OFF) {
+            lore.add("");
+            int bonus = CreditCalculator.calculatePayoffBonus(loan);
+            if(bonus > 0) {
+                lore.add(StringFormatter.formatHex("#87d65cPaying off this loan now would give "));
+                lore.add(StringFormatter.formatHex("#87d65cyou a credit score bonus of #19be2a" + bonus));
+                lore.add(StringFormatter.formatHex("#454343(Currently "+loan.getBorrower().getLoanHandler().getCreditScoreString()+"#454343)"));
+            } else if(bonus < 0) {
+                lore.add(StringFormatter.formatHex("#87d65cPaying off this loan now would give "));
+                lore.add(StringFormatter.formatHex("#87d65cyou a credit score penalty of #b51717" + bonus));
+                lore.add(StringFormatter.formatHex("#454343(Currently "+loan.getBorrower().getLoanHandler().getCreditScoreString()+"#454343)"));
+            } else {
+                lore.add(StringFormatter.formatHex("#6f776aPaying off this loan now would"));
+                lore.add(StringFormatter.formatHex("#6f776ahave no effect on your credit score"));
+            }
+        }
         lore.add("");
         lore.add(StringFormatter.formatHex("#50e846Click to Pay"));
         meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, loan.getId());
@@ -211,6 +239,8 @@ public class LoanCreator {
             lore.add(StringFormatter.formatHex("#ccc396Clicking this will allow you to resume payments"));
             lore.add(StringFormatter.formatHex("#ccc396However, the credit score hit from defaulting"));
             lore.add(StringFormatter.formatHex("#ccc396will still apply."));
+            lore.add("");
+            lore.add(StringFormatter.formatHex("#454343(Current Credit Score "+loan.getBorrower().getLoanHandler().getCreditScoreString()+"#454343)"));
         } else {
             lore.add(StringFormatter.formatHex("#ccc396Defaulting is saying you will not pay this loan"));
             lore.add(StringFormatter.formatHex("#ccc396You can choose to restart payments later, however"));
@@ -224,6 +254,23 @@ public class LoanCreator {
             lore.add(StringFormatter.formatHex("#a94141to handle a loan you can't pay."));
             lore.add(StringFormatter.formatHex("#a94141INTEREST WILL CONTINUE TO ACCRUE WHILE IN DEFAULT"));
             lore.add(StringFormatter.formatHex("#454343(Unless the issuer pauses interest)"));
+            if(loan.getStatus() != LoanStatus.DEFAULTED) {
+                lore.add("");
+                int penalty = CreditCalculator.calculateDefaultPenalty(loan);
+                if(penalty < 0) {
+                    lore.add(StringFormatter.formatHex("#d88e8eCredit Score Penalty: #b51717" + (-penalty)));
+                    lore.add(StringFormatter.formatHex("#454343(Currently "+loan.getBorrower().getLoanHandler().getCreditScoreString()+"#454343)"));
+                } else {
+                    lore.add(StringFormatter.formatHex("#6f776aDefaulting on this loan now would"));
+                    lore.add(StringFormatter.formatHex("#6f776ahave no effect on your credit score"));
+                }
+            } else if(loan.getStatus() == LoanStatus.DEFAULTED) {
+                lore.add("");
+                lore.add(StringFormatter.formatHex("#921f1fSince you already defaulted before"));
+                lore.add(StringFormatter.formatHex("#921f1fthere's no additional penalty for defaulting again"));
+                lore.add("");
+                lore.add(StringFormatter.formatHex("#454343(Current Credit Score "+loan.getBorrower().getLoanHandler().getCreditScoreString()+"#454343)"));
+            }
             lore.add("");
         }
         lore.add(StringFormatter.formatHex("#50e846Click to " + (loan.hasDefaulted() ? "Resume Payments" : "Default")));

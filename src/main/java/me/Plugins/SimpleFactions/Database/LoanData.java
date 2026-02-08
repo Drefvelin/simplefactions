@@ -1,6 +1,7 @@
 package me.Plugins.SimpleFactions.Database;
 
 import me.Plugins.SimpleFactions.Guild.loans.Loan;
+import me.Plugins.SimpleFactions.Guild.loans.LoanStatus;
 
 public class LoanData {
     public String id;
@@ -21,6 +22,8 @@ public class LoanData {
     public boolean defaulted = false;
     public boolean pausedInterest = false;
 
+    public String status;
+
     public LoanData(Loan loan) {
         this.id = loan.getId();
         this.amount = loan.getAmount();
@@ -35,5 +38,6 @@ public class LoanData {
         this.autoPay = loan.isAutoPay();
         this.defaulted = loan.hasDefaulted();
         this.pausedInterest = loan.isInterestPaused();
+        this.status = loan.getStatus().name();
     }
 }

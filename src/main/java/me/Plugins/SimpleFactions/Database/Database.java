@@ -167,49 +167,13 @@ public class Database {
                 if (data.guilds != null) {
                     for (GuildData gd : data.guilds) {
 
-                        List<Branch> branches = new ArrayList<>();
-                        for (GuildBranchData bd : gd.branches) {
-                            Branch base = BranchLoader.getByString(bd.id);
-                            if (base != null) {
-                                branches.add(
-                                    new Branch(base, bd.level.intValue())
-                                );
-                            }
-                        }
-
-                        List<Upgrade> upgrades = new ArrayList<>();
-                        if(gd.upgrades != null) {
-                            for (GuildBranchData bd : gd.upgrades) {
-                                Upgrade base = UpgradeLoader.getByString(bd.id);
-                                if (base != null) {
-                                    upgrades.add(
-                                        new Upgrade(base, bd.level.intValue())
-                                    );
-                                }
-                            }
-                        }
-
                         if(gd.loans != null) {
                             for (LoanData ld : gd.loans) {
                                 FactionManager.addDBLoan(ld);
                             }
                         }
 
-                        Guild g = new Guild(
-                            gd.id,
-                            gd.name,
-                            gd.leader,
-                            gd.rgb,
-                            gd.capital != null ? gd.capital : -1,
-                            gd.type,
-                            gd.members,
-                            branches,
-                            upgrades,
-                            gd.banner,
-                            loadModifiers(gd.wealthModifiers),
-                            f,
-                            Stance.NEUTRAL
-                        );
+                        Guild g = new Guild(gd, f);
 
                         // --- Bank ---
                         if ("true".equalsIgnoreCase(gd.bank)) {
@@ -311,6 +275,11 @@ public class Database {
                 gd.capital = g.getCapital();
                 gd.members = new ArrayList<>(g.getMembers());
                 gd.banner = new ArrayList<>(g.getBannerPatterns());
+                gd.stance = g.isBase() ? g.getFaction().getOverlord() != null ? 
+                            g.getStance(g.getFaction().getOverlord()).name() : 
+                            g.getStance(g.getFaction()).name() : 
+                            g.getStance(g.getFaction()).name();
+                gd.creditScore = g.getLoanHandler().getCreditScore();
 
                 // --- Bank ---
                 if (g.getBank() != null) {
@@ -381,7 +350,7 @@ public class Database {
      * HELPERS
      * ===================================================== */
 
-    private List<Modifier> loadModifiers(List<String> raw) {
+    public static List<Modifier> loadModifiers(List<String> raw) {
         List<Modifier> list = new ArrayList<>();
         for (String s : raw) {
             String type = s.substring(0, s.indexOf("("));

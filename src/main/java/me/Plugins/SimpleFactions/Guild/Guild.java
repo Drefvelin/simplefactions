@@ -37,6 +37,9 @@ import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
+import me.Plugins.SimpleFactions.Database.Database;
+import me.Plugins.SimpleFactions.Database.GuildBranchData;
+import me.Plugins.SimpleFactions.Database.GuildData;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
@@ -138,32 +141,24 @@ public class Guild {
         createBanner();
     }
 
-    public Guild(
-        String id,
-        String name,
-        String leader,
-        String rgb,
-        int capital,
-        String type,
-        List<String> members,
-        List<Branch> branchList,
-        List<Upgrade> upgradeList,
-        List<String> patterns,
-        List<Modifier> wealthModifiers,
-        Faction host,
-        Stance stance
-    ) {
-        this.type = GuildLoader.getByString(type);
+    public Guild(GuildData data, Faction host) {
+        this.type = GuildLoader.getByString(data.type);
         this.host = host;
-        this.id = id;
-        this.name = name;
-        this.leader = leader;
-        this.rgb = rgb;
-        this.capital = capital;
-        this.stance = stance;
-        this.members = members != null ? members : new ArrayList<>();
-        for(Branch b : branchList) {
-            this.branches.put(b.getGroup(), b);
+        this.id = data.id;
+        this.name = data.name;
+        this.leader = data.leader;
+        this.rgb = data.rgb;
+        this.capital = data.capital;
+        this.stance = data.stance != null ? Stance.valueOf(data.stance) : Stance.NEUTRAL;
+        this.members = data.members != null ? data.members : new ArrayList<>();
+        if(!this.members.contains(leader)) this.members.add(leader);
+        for (GuildBranchData bd : data.branches) {
+            Branch base = BranchLoader.getByString(bd.id);
+            if (base != null) {
+                branches.put(base.getGroup(),
+                    new Branch(base, bd.level.intValue())
+                );
+            }
         }
         int group = 0;
         while(group < 10) {
@@ -173,17 +168,24 @@ public class Guild {
             }
             group++;
         }
-        for(Upgrade u : upgradeList) {
-            upgrades.put(u.getId(), new Upgrade(u, u.getLevel()));
+        if(data.upgrades != null) {
+            for (GuildBranchData bd : data.upgrades) {
+                Upgrade base = UpgradeLoader.getByString(bd.id);
+                if (base != null) {
+                    upgrades.put(base.getId(),
+                        new Upgrade(base, bd.level.intValue())
+                    );
+                }
+            }
         }
         for(Upgrade u : UpgradeLoader.getList()) {
             if(!upgrades.containsKey(u.getId())) upgrades.put(u.getId(), new Upgrade(u, 0));
         }
-        this.bannerPatterns = patterns;
+        this.bannerPatterns = data.banner;
         this.wealth = 0.0;
-        this.wealthModifiers = wealthModifiers;
+        this.wealthModifiers = Database.loadModifiers(data.wealthModifiers);
         this.ledger = new Ledger(this);
-        this.loanHandler = new LoanHandler(this);
+        this.loanHandler = new LoanHandler(this, data.creditScore == null ? 50 : data.creditScore);
         createBanner();
     }
 

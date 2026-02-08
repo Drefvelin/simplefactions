@@ -13,6 +13,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Guild.loans.CreditCalculator;
 import me.Plugins.SimpleFactions.Guild.loans.Loan;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
@@ -105,12 +106,16 @@ public class LoanView {
         
         // Loan details item
         i.setItem(15, isTaken ? creator.createLoanTakenItem(loan) : creator.createLoanGivenItem(loan));
-        i.setItem(12, creator.createToggleAutoPayButton(loan, isTaken));
+        if(!loan.hasDefaulted() && !loan.isPaidOff()) {
+            i.setItem(12, creator.createToggleAutoPayButton(loan, isTaken));
+        } else {
+            i.setItem(12, creator.createToggleAutoPayButton(loan, false));
+        }
         
         // Pay off button (only for loans taken)
         if(isTaken) {
-            i.setItem(11, creator.createPayOffLoanButton(loan));
-            i.setItem(14, creator.createDefaultItem(loan));
+            if(!loan.isPaidOff() && !loan.hasDefaulted()) i.setItem(11, creator.createPayOffLoanButton(loan));
+            if(!loan.isPaidOff()) i.setItem(14, creator.createDefaultItem(loan));
         } else {
             i.setItem(13, creator.createPauseInterestItem(loan));
             i.setItem(14, creator.createForgiveLoanItem(loan));
@@ -206,6 +211,7 @@ public class LoanView {
                     Guild issuer = FactionManager.getGuildByString(gid);
                     Loan loan = issuer.getLoanHandler().getLoanById(id);
                     if(loan == null) return;
+                    if(loan.hasDefaulted() || loan.isPaidOff()) return;
                     loan.setAutoPay(!loan.isAutoPay());
                     // Refresh the loan detail view
                     loanDetailView(p, guild, loan, true);

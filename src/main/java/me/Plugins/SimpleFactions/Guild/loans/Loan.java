@@ -5,6 +5,7 @@ import java.util.UUID;
 import me.Plugins.SimpleFactions.Database.LoanData;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 
 public class Loan {
     private String id;
@@ -24,6 +25,8 @@ public class Loan {
 
     private boolean defaulted = false;
     private boolean pausedInterest = false;
+
+    private LoanStatus status = LoanStatus.ACTIVE; //internal tracker so penalties/bonuses only apply once
 
     public Loan(double amount, Guild issuer, Guild borrower, long issueDate, int durationInDays, double interestRate, boolean autoPay) {
         id = UUID.randomUUID().toString();
@@ -53,6 +56,7 @@ public class Loan {
         this.autoPay = data.autoPay;
         this.defaulted = data.defaulted;
         this.pausedInterest = data.pausedInterest;
+        this.status = data.status != null ? LoanStatus.valueOf(data.status) : LoanStatus.ACTIVE;
         if(issuer == null || borrower == null) {
             throw new IllegalArgumentException("Invalid issuer or borrower ID in LoanData");
         }
@@ -112,6 +116,11 @@ public class Loan {
 
     public void setDefaulted(boolean defaulted) {
         this.defaulted = defaulted;
+        if(status == LoanStatus.ACTIVE && defaulted) {
+            status = LoanStatus.DEFAULTED;
+            int penalty = CreditCalculator.calculateDefaultPenalty(this);
+            borrower.getLoanHandler().changeCreditScore(penalty);
+        }
     }
 
     public void setPausedInterest(boolean pausedInterest) {
@@ -123,7 +132,7 @@ public class Loan {
     }
 
     public void tickDay() {
-        double dailyInterest = getDailyInterest();
+        double dailyInterest = getDailyInterestChange();
 
         if (!autoPay) {
             // Interest compounds onto the loan
@@ -134,8 +143,12 @@ public class Loan {
             tempPayment = 0;
         }
         if(tempInterestPayment > 0) {
-            paidInterest += tempInterestPayment;
-            paid += tempInterestPayment;
+            tempInterestPayment -= dailyInterest; //Remove today's interest from the temp payment to avoid double counting
+            if(tempInterestPayment > 0) {
+                paidInterest += tempInterestPayment;
+                unpaidInterest = Math.max(0, unpaidInterest - tempInterestPayment);
+                paid += tempInterestPayment;
+            }
             tempInterestPayment = 0;
         }
     }
@@ -149,17 +162,26 @@ public class Loan {
     }
 
     public boolean isPaidOff() {
-        return getTotalOwed() <= 0;
+        return Formatter.formatDouble(getTotalOwed()) <= 0;
     }
 
     public double getDailyInterestRate() {
         return interestRate / 7.0;
     }
 
+    public double getDailyInterestChange() {
+        if(isPaidOff()) return 0.0;
+        double today = pausedInterest ? 0 : getTotalOwed() * getDailyInterestRate() / 100.0;
+        return today;
+    }
+
     public double getDailyInterest() {
         if(isPaidOff()) return 0.0;
-        if(pausedInterest) return 0.0;
-        return getTotalOwed() * getDailyInterestRate() / 100.0;
+        double today = getDailyInterestChange();
+        if(unpaidInterest > 0) {
+            today+=Math.min(unpaidInterest, getDailyPayment(false));
+        }
+        return today;
     }
 
     public double getTotalOwed() {
@@ -177,11 +199,19 @@ public class Loan {
         return (int) (diff / (1000 * 60 * 60 * 24));
     }
 
-    public double getDailyPayment() {
+    public double getDailyPayment(boolean subtractInterest) {
         if(isPaidOff()) return 0.0;
         int daysUntilDue = getDaysUntilDue();
         if (daysUntilDue <= 0) return getTotalOwed(); // Due or overdue
-        return (getTotalOwed() / getDaysUntilDue())+getDailyInterest();
+        double payment = (getTotalOwed() / getDaysUntilDue());
+        if(subtractInterest && unpaidInterest > 0) {
+            payment -= Math.min(unpaidInterest, payment);
+        }
+        return payment;
+    }
+
+    public LoanStatus getStatus() {
+        return status;
     }
 
     public double makePayment(double paymentAmount, boolean ledger) {
@@ -207,6 +237,12 @@ public class Loan {
         if (ledger) issuer.getLedger().addLoanPaymentEntry(borrower.getId(), remaining);
 
         paid += actualPayment;
+
+        if(status == LoanStatus.ACTIVE && isPaidOff()) {
+            status = LoanStatus.PAID_OFF;
+            int bonus = CreditCalculator.calculatePayoffBonus(this);
+            borrower.getLoanHandler().changeCreditScore(bonus);
+        }
 
         return actualPayment;
     }

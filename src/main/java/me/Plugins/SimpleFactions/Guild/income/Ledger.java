@@ -120,7 +120,7 @@ public class Ledger {
                 for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
                     if(!loan.isAutoPay()) continue;
                     if(loan.isPaidOff()) continue;
-                    amount -= loan.getDailyPayment();
+                    amount -= loan.getDailyPayment(true);
                 }
                 break;
             }
@@ -129,7 +129,7 @@ public class Ledger {
                 for(Loan loan : guild.getLoanHandler().getLoansGiven()) {
                     if(!loan.isAutoPay()) continue;
                     if(loan.isPaidOff()) continue;
-                    amount += loan.getDailyPayment();
+                    amount += loan.getDailyPayment(true);
                 }
                 break;
             //Interest
@@ -408,7 +408,7 @@ public class Ledger {
                     double amount = 0;
                     if(!loan.isAutoPay()) continue;
                     if(loan.isPaidOff()) continue;
-                    amount += loan.getDailyPayment();
+                    amount += loan.getDailyPayment(true);
                     if(amount <= 0) continue;
                     loan.setTempPayment(amount);
                     buffer.add(guild, loan.getIssuer(), amount);
