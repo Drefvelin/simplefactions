@@ -9,6 +9,8 @@ import java.util.Map;
 import org.bukkit.Bukkit;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.banner.PatternType;
 import org.bukkit.entity.Player;
@@ -316,29 +318,51 @@ public class Guild {
     }
 
     private void createBanner() {
-		ItemStack item = new ItemStack(Material.valueOf(bannerPatterns.get(0).split("\\.")[0].toUpperCase()+"_BANNER"), 1);
-		BannerMeta b = (BannerMeta) item.getItemMeta();
-		b.addItemFlags(ItemFlag.HIDE_POTION_EFFECTS);
-		for(int i = 1; i < bannerPatterns.size(); i++) {
+		ItemStack item = new ItemStack(
+			Material.valueOf(bannerPatterns.get(0).split("\\.")[0].toUpperCase() + "_BANNER"),
+			1
+		);
+
+		BannerMeta meta = (BannerMeta) item.getItemMeta();
+		meta.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+		for (int i = 1; i < bannerPatterns.size(); i++) {
 			String p = bannerPatterns.get(i);
-			String colour = p.split("\\.")[0];
-			String pattern = p.split("\\.")[1];
+			String[] split = p.split("\\.");
+
+			if (split.length != 2) continue;
+
+			String colourName = split[0].toUpperCase();
+			String patternName = split[1].toLowerCase();
+
+			DyeColor dye;
 			try {
-			    PatternType patternType = PatternType.valueOf(pattern.toUpperCase());
-			    DyeColor dyeColor = DyeColor.valueOf(colour.toUpperCase());
-			    b.addPattern(new Pattern(dyeColor, patternType));
+				dye = DyeColor.valueOf(colourName);
 			} catch (IllegalArgumentException e) {
-				try {
-				    PatternType patternType = PatternType.valueOf("tfmc:"+pattern.toLowerCase());
-				    DyeColor dyeColor = DyeColor.valueOf(colour.toUpperCase());
-				    b.addPattern(new Pattern(dyeColor, patternType));
-				} catch (IllegalArgumentException ex) {
-				    // Invalid pattern or color name, skip it
-					Bukkit.getLogger().info(pattern+" is not a valid pattern");
-				}
+				Bukkit.getLogger().warning("Invalid dye color: " + colourName);
+				continue;
 			}
+
+			PatternType patternType = null;
+
+			// 1️⃣ Try vanilla (minecraft namespace)
+			NamespacedKey vanillaKey = NamespacedKey.minecraft(patternName);
+			patternType = Registry.BANNER_PATTERN.get(vanillaKey);
+
+			// 2️⃣ Try custom namespace (tfmc)
+			if (patternType == null) {
+				NamespacedKey customKey = new NamespacedKey("tfmc", patternName);
+				patternType = Registry.BANNER_PATTERN.get(customKey);
+			}
+
+			if (patternType == null) {
+				Bukkit.getLogger().warning("Invalid banner pattern: " + patternName);
+				continue;
+			}
+
+			meta.addPattern(new Pattern(dye, patternType));
 		}
-		item.setItemMeta(b);
+		item.setItemMeta(meta);
+		
 		this.banner = item;
 	}
 

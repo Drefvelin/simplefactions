@@ -194,7 +194,7 @@ public class RelationCreator {
 				if(origin.getRelation(target.getId()).getType().equals(t)) {
 					lore.add(StringFormatter.formatHex("#28ed70Current"));
 					m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-					m.addEnchant(Enchantment.DURABILITY, 1, true);
+					m.addEnchant(Enchantment.UNBREAKING, 1, true);
 				} else if(t.isMutual()) {
 					lore.add(StringFormatter.formatHex("#28ed70Click to request"));
 				} else {

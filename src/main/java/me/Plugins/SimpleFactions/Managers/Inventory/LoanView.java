@@ -15,6 +15,7 @@ import org.bukkit.persistence.PersistentDataType;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.loans.CreditCalculator;
 import me.Plugins.SimpleFactions.Guild.loans.Loan;
+import me.Plugins.SimpleFactions.Guild.loans.LoanBook;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
@@ -150,7 +151,8 @@ public class LoanView {
             // Issue New Loan button
             else if(e.getSlot() == 6) {
                 // TODO: Implement loan creation later
-                p.sendMessage(StringFormatter.formatHex("#d6cf69Loan creation coming soon!"));
+                p.getInventory().setItemInMainHand(LoanBook.getBaseBook(guild));
+                p.closeInventory();
                 p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
                 return;
             }

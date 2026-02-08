@@ -299,6 +299,26 @@ public class CommandManager implements Listener, CommandExecutor{
 				p.sendMessage("§aCapital set!");
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("setbanner") && args.length == 1) {
+				Guild g = FactionManager.getGuildByLeader(p.getName());
+				if(g == null) {
+					p.sendMessage("§cYou must be the leader of a guild to change the banner!");
+					return true;
+				}
+				if(g.isBase()) {
+					p.sendMessage("§cYou cannot change the banner of the base guild!");
+					p.sendMessage("§cUse §e/faction setbanner §cto change the faction banner");
+					return true;
+				}
+				ItemStack i = new ItemStack(p.getInventory().getItemInMainHand());
+				if(i == null || !i.getType().toString().contains("BANNER")) {
+					p.sendMessage("§a[SimpleFactions]§c Error! You must be holding a banner in your main hand!");
+					return true;
+				}
+				i.setAmount(1);
+				g.setBanner(i);
+				p.sendMessage("§aGuild banner changed!");
+				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("setleader") && args.length == 2) {
 				Guild g = FactionManager.getGuildByMember(p.getName());
 				if(g == null) {
@@ -310,7 +330,7 @@ public class CommandManager implements Listener, CommandExecutor{
 					return true;
 				}
 				if(!g.isMember(args[1])) {
-					p.sendMessage("§cPlayer is not in the faction");
+					p.sendMessage("§cPlayer is not in the guild");
 					return true;
 				}
 				if(args[1].equalsIgnoreCase(g.getLeader())) {

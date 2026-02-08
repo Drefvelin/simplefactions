@@ -30,6 +30,13 @@
         </dependency>
         <dependency>
             <groupId>local</groupId>
+            <artifactId>Bungeecord</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>D:/Dokumenter/My Plugins/Reference Libs/Bungeecord.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>local</groupId>
             <artifactId>MMOItems</artifactId>
             <version>6.10</version>
             <scope>system</scope>
@@ -45,9 +52,9 @@
         <dependency>
             <groupId>local</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.20.2-R0.1-SNAPSHOT</version>
+            <version>1.21.8</version>
             <scope>system</scope>
-            <systemPath>D:/Dokumenter/My Plugins/Reference Libs/spigot-api-1.20.2-R0.1-SNAPSHOT.jar</systemPath>
+            <systemPath>D:/Dokumenter/My Plugins/Reference Libs/spigot-api.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>

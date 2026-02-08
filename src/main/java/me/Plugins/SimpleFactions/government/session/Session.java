@@ -138,7 +138,7 @@ public class Session {
             result = VoteResult.PASSED;
             proposals.put(currentProposal, result);
             leader.sendMessage("§aProposal Passed!");
-            displayParticles(Particle.VILLAGER_HAPPY);
+            displayParticles(Particle.HAPPY_VILLAGER);
         } else if (nay > yay) {
             result = VoteResult.FAILED;
             proposals.put(currentProposal, result);
