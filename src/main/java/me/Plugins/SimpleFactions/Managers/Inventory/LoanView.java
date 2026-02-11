@@ -46,7 +46,7 @@ public class LoanView {
         i.setItem(4, creator.createLoansTakenButton(guild));
         
         // Button 3: Issue New Loan
-        i.setItem(6, creator.createIssueNewLoanButton());
+        if(guild.isLeader(player)) i.setItem(6, creator.createIssueNewLoanButton());
         
         // Back button
         i.setItem(8, inv.createBackButton(SFGUI.LOAN_MAIN_VIEW));
@@ -66,7 +66,7 @@ public class LoanView {
         int slot = 0;
         for (Loan loan : loansGiven) {
             if (slot >= 45) break; // Leave space for back button
-            i.setItem(slot, creator.createLoanGivenItem(loan));
+            i.setItem(slot, creator.createLoanItem(loan, true));
             slot++;
         }
         
@@ -88,7 +88,7 @@ public class LoanView {
         int slot = 0;
         for (Loan loan : loansTaken) {
             if (slot >= 45) break; // Leave space for back button
-            i.setItem(slot, creator.createLoanTakenItem(loan));
+            i.setItem(slot, creator.createLoanItem(loan, false));
             slot++;
         }
         
@@ -106,7 +106,7 @@ public class LoanView {
         );
         
         // Loan details item
-        i.setItem(15, isTaken ? creator.createLoanTakenItem(loan) : creator.createLoanGivenItem(loan));
+        i.setItem(15, creator.createLoanItem(loan, !isTaken));
         if(!loan.hasDefaulted() && !loan.isPaidOff()) {
             i.setItem(12, creator.createToggleAutoPayButton(loan, isTaken));
         } else {
@@ -150,7 +150,10 @@ public class LoanView {
             }
             // Issue New Loan button
             else if(e.getSlot() == 6) {
-                // TODO: Implement loan creation later
+                if(!p.getInventory().getItemInMainHand().getType().equals(Material.WRITABLE_BOOK)) {
+                    p.sendMessage("§cYou must have a book and quill in your hand to issue a new loan!");
+                    return;
+                }
                 p.getInventory().setItemInMainHand(LoanBook.getBaseBook(guild));
                 p.closeInventory();
                 p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);

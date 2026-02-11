@@ -83,87 +83,105 @@ public class LoanCreator {
         return i;
     }
 
-    public ItemStack createLoanGivenItem(Loan loan) {
-        ItemStack i = new ItemStack(Material.WRITTEN_BOOK);
-        ItemMeta meta = i.getItemMeta();
-        meta.setDisplayName(StringFormatter.formatHex("#7ad65eLoan to " + loan.getBorrower().getName()));
-        
-        List<String> lore = new ArrayList<>();
-        lore.add(StringFormatter.formatHex("#7a706aBorrower: #c2bea7" + loan.getBorrower().getName()));
-        if(loan.hasDefaulted()) {
-            lore.add(StringFormatter.formatHex("#d65c5c§l§oThis loan is in default"));
-        } else if(loan.isPaidOff()) {
-            lore.add(StringFormatter.formatHex("#87d65c§l§oThis loan is paid off"));
-        }
-        lore.add("");
-        lore.add(StringFormatter.formatHex("#d6cf69Original Amount: #ccbb76" + 
-            Formatter.formatDouble(loan.getAmount()) + "d"));
-        lore.add(StringFormatter.formatHex("#d6cf69Amount Paid: #4fd945" + 
-            Formatter.formatDouble(loan.getPaid()) + "d"));
-        lore.add(StringFormatter.formatHex("#d6cf69Amount Owed: #cf493a" + 
-            Formatter.formatDouble(loan.getTotalOwed()) + "d"));
-        if(loan.getUnpaidInterest() > 0) {
-            lore.add(StringFormatter.formatHex("#5a5a53(#cf493a" + 
-                Formatter.formatDouble(loan.getUnpaidInterest()) + "d #5a5a53in unpaid interest)"));
-        }
-        lore.add("");
-        lore.add(StringFormatter.formatHex("#d6cf69Weekly Interest Rate: #ccbb76" + 
-            Formatter.formatDouble(loan.getInterestRate()) + "%"));
-        lore.add(StringFormatter.formatHex("#d6cf69Daily Interest: #ccbb76" + 
-            Formatter.formatDouble(loan.getDailyInterestChange()) + "d"));
-        lore.add(StringFormatter.formatHex("#d6cf69Automatic Payments: " + 
-            (loan.isAutoPay() ? (GREEN + CHECK) : (RED + CROSS))));
-        lore.add("");
-        lore.add(StringFormatter.formatHex("#d1bf92Issue Date: #d4c9ae" + 
-            formatDate(loan.getIssueDate())));
-        lore.add(StringFormatter.formatHex("#d1bf92Due Date: #d4c9ae" + 
-            formatDate(loan.getDueDate())));
-        meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, loan.getId());
-        meta.setLore(lore);
-        i.setItemMeta(meta);
-        return i;
-    }
+    public ItemStack createLoanItem(Loan loan, boolean asIssuerView) {
 
-    public ItemStack createLoanTakenItem(Loan loan) {
-        ItemStack i = new ItemStack(Material.WRITTEN_BOOK);
-        ItemMeta meta = i.getItemMeta();
-        meta.setDisplayName(StringFormatter.formatHex("#d45b48Loan from " + loan.getIssuer().getName()));
-        
+        ItemStack item = new ItemStack(Material.WRITTEN_BOOK);
+        ItemMeta meta = item.getItemMeta();
+
+        // Determine perspective
+        String otherPartyName = asIssuerView
+                ? loan.getBorrower().getName()
+                : loan.getIssuer().getName();
+
+        String titlePrefix = asIssuerView ? "Loan to " : "Loan from ";
+        String partyLabel = asIssuerView ? "Borrower: " : "Issuer: ";
+
+        meta.setDisplayName(StringFormatter.formatHex(
+                (asIssuerView ? "#7ad65e" : "#d45b48") + titlePrefix + otherPartyName
+        ));
+
         List<String> lore = new ArrayList<>();
-        lore.add(StringFormatter.formatHex("#7a706aIssuer: #c2bea7" + loan.getIssuer().getName()));
-        if(loan.hasDefaulted()) {
+
+        lore.add(StringFormatter.formatHex("#7a706a" + partyLabel + "#c2bea7" + otherPartyName));
+
+        // Status
+        if (loan.hasDefaulted()) {
             lore.add(StringFormatter.formatHex("#d65c5c§l§oThis loan is in default"));
-        } else if(loan.isPaidOff()) {
+        } else if (loan.isPaidOff()) {
             lore.add(StringFormatter.formatHex("#87d65c§l§oThis loan is paid off"));
+        } else if (loan.isOverdue()) {
+            lore.add(StringFormatter.formatHex("#d65c5c§l§oThis loan is overdue"));
         }
+
         lore.add("");
-        lore.add(StringFormatter.formatHex("#d6cf69Original Amount: #ccbb76" + 
-            Formatter.formatDouble(loan.getAmount()) + "d"));
-        lore.add(StringFormatter.formatHex("#d6cf69Amount Paid: #4fd945" + 
-            Formatter.formatDouble(loan.getPaid()) + "d"));
-        lore.add(StringFormatter.formatHex("#d6cf69Amount Owed: #cf493a" + 
-            Formatter.formatDouble(loan.getTotalOwed()) + "d"));
-        if(loan.getUnpaidInterest() > 0) {
-            lore.add(StringFormatter.formatHex("#5a5a53(#cf493a" + 
-                Formatter.formatDouble(loan.getUnpaidInterest()) + "d #5a5a53in unpaid interest)"));
+
+        // Financials
+        lore.add(StringFormatter.formatHex("#d6cf69Original Amount: #ccbb76"
+                + Formatter.formatDouble(loan.getAmount()) + "d"));
+
+        lore.add(StringFormatter.formatHex("#d6cf69Amount Paid: #4fd945"
+                + Formatter.formatDouble(loan.getPaid()) + "d"));
+
+        lore.add(StringFormatter.formatHex("#d6cf69Amount Owed: #cf493a"
+                + Formatter.formatDouble(loan.getTotalOwed()) + "d"));
+
+        if (loan.getUnpaidInterest() > 0) {
+            lore.add(StringFormatter.formatHex("#5a5a53(#cf493a"
+                    + Formatter.formatDouble(loan.getUnpaidInterest())
+                    + "d #5a5a53in unpaid interest)"));
         }
+
+        // Daily penalty (calculate once!)
+        int dailyPenalty = CreditCalculator.calculateDailyOverduePenalty(loan);
+        if (dailyPenalty < 0) {
+            lore.add(StringFormatter.formatHex("#d65c5cDue to being overdue and not in default:"));
+            lore.add(StringFormatter.formatHex("#d65c5cDaily Penalty: #b51717"
+                    + dailyPenalty + " Credit Score"));
+            lore.add(StringFormatter.formatHex("#454343(Currently "
+                    + loan.getBorrower().getLoanHandler().getCreditScoreString()
+                    + "#454343)"));
+        }
+
         lore.add("");
-        lore.add(StringFormatter.formatHex("#d6cf69Weekly Interest Rate: #ccbb76" + 
-            Formatter.formatDouble(loan.getInterestRate())+"%"));
-        lore.add(StringFormatter.formatHex("#d6cf69Daily Interest: #ccbb76" + 
-            Formatter.formatDouble(loan.getDailyInterestChange()) + "d"));
-        lore.add(StringFormatter.formatHex("#d6cf69Automatic Payments: " + 
-            (loan.isAutoPay() ? (GREEN + CHECK) : (RED + CROSS))));
+
+        // Interest
+        lore.add(StringFormatter.formatHex("#d6cf69Weekly Interest Rate: #ccbb76"
+                + Formatter.formatDouble(loan.getInterestRate()) + "%"));
+
+        lore.add(StringFormatter.formatHex("#d6cf69Daily Interest: #ccbb76"
+                + Formatter.formatDouble(loan.getDailyInterestChange()) + "d"));
+
+        lore.add(StringFormatter.formatHex("#d6cf69Automatic Payments: "
+                + (loan.isAutoPay() ? (GREEN + CHECK) : (RED + CROSS))));
+
         lore.add("");
-        lore.add(StringFormatter.formatHex("#d1bf92Issue Date: #d4c9ae" + 
-            formatDate(loan.getIssueDate())));
-        lore.add(StringFormatter.formatHex("#d1bf92Due Date: #d4c9ae" + 
-            formatDate(loan.getDueDate())));
-        meta.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, loan.getId());
-        meta.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, loan.getIssuer().getId());
+
+        // Dates
+        lore.add(StringFormatter.formatHex("#d1bf92Issue Date: #d4c9ae"
+                + formatDate(loan.getIssueDate())));
+
+        lore.add(StringFormatter.formatHex("#d1bf92Due Date: #d4c9ae"
+                + formatDate(loan.getDueDate())));
+
+        // Persistent data
+        meta.getPersistentDataContainer().set(
+                Keys.STRING_KEY,
+                PersistentDataType.STRING,
+                loan.getId()
+        );
+
+        if (!asIssuerView) {
+            meta.getPersistentDataContainer().set(
+                    Keys.SECONDARY_STRING_KEY,
+                    PersistentDataType.STRING,
+                    loan.getIssuer().getId()
+            );
+        }
+
         meta.setLore(lore);
-        i.setItemMeta(meta);
-        return i;
+        item.setItemMeta(meta);
+
+        return item;
     }
 
     private static final DateTimeFormatter DATE_FORMAT =

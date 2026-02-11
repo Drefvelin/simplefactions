@@ -8,6 +8,7 @@ public final class CreditCalculator {
        CONFIG (tweak freely)
        ========================= */
 
+    private static final int MAX_DAILY_OVERDUE_PENALTY = 10;
     private static final int MAX_DEFAULT_PENALTY = 40;
     private static final int MAX_PAYOFF_BONUS = 15;
 
@@ -58,6 +59,32 @@ public final class CreditCalculator {
                 (interestFactor * 0.4);
 
         return (int) Math.round(MAX_PAYOFF_BONUS * scoreFactor);
+    }
+
+    public static int calculateDailyOverduePenalty(Loan loan) {
+
+        if (!loan.isOverdue() || loan.getStatus() == LoanStatus.DEFAULTED) {
+            return 0;
+        }
+
+        if (loan.getAmount() <= 0) return 0;
+
+        // How much principal remains unpaid
+        double principalRemainingRatio =
+                clamp01((loan.getAmount() - loan.getPaid()) / loan.getAmount());
+
+        // How late we are (maxed at 14 days)
+        int daysOverdue = Math.abs(loan.getDaysUntilDue());
+        double latenessFactor = clamp01(daysOverdue / 14.0);
+
+        // Weight principal heavier than time
+        double severity =
+                (principalRemainingRatio * 0.7) +
+                (latenessFactor * 0.3);
+
+        severity = clamp01(severity);
+
+        return -(int) Math.round(MAX_DAILY_OVERDUE_PENALTY * severity);
     }
 
     /* =========================
