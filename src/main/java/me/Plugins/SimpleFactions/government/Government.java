@@ -14,8 +14,10 @@ import java.util.Map;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.checkerframework.checker.units.qual.t;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Database.GovernmentData;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -35,6 +37,7 @@ public class Government {
     private Faction f;
     private Council council;
     private double power;
+    private long grace;
 
     private final Election election;
     private List<Location> votingBooths = new ArrayList<>();
@@ -48,11 +51,12 @@ public class Government {
         this.election = new Election(this, false);
     }
 
-    public Government(Faction f, me.Plugins.SimpleFactions.Database.GovernmentData data) {
+    public Government(Faction f, GovernmentData data) {
         this.f = f;
         this.council = new Council(this, f);
         this.power = data.power != null ? data.power : -1;
         this.lastElectionDate = data.lastElectionDate != null ? new java.util.Date(data.lastElectionDate) : new java.util.Date(0);
+        this.grace = data.grace != null ? data.grace : 0;
         boolean electionActive = false;
 
         // If an election was started less than 7 days ago, it is still active
@@ -73,7 +77,7 @@ public class Government {
         // Restore council members
         if (data.councilMembers != null) {
             for (String member : data.councilMembers) {
-                council.addMember(member);
+                council.addMemberForce(member);
             }
         }
         
@@ -84,8 +88,6 @@ public class Government {
     }
 
     public void ping() {
-        council.reorganize();
-
         if (power == -1) power = f.getMembers().size() * 10;
 
         if (shouldStartElection()) {
@@ -100,6 +102,30 @@ public class Government {
                 election.end();
             }
         }
+    }
+
+    public void resetGrace() {
+        grace = System.currentTimeMillis() + 3600000L; // 1 hour in milliseconds
+    }
+
+    public long getGrace() {
+        long now = System.currentTimeMillis();
+        if (grace > now) {
+            return grace - now;
+        }
+        return 0;
+    }
+
+    public String getGraceString() {
+        long remaining = getGrace();
+        if (remaining <= 0) return "0s";
+        long hours = remaining / 3600000;
+        long minutes = (remaining % 3600000) / 60000;
+        return String.format("%dh %dm", hours, minutes);
+    }
+
+    public boolean hasGrace() {
+        return getGrace() > 0;
     }
 
     // Government
@@ -328,7 +354,7 @@ public class Government {
         for(Faction vassal : RelationManager.getSubjects(f)) {
             stability += vassal.getOrCreateMainGuild().getStabilityModifier(f);
         }
-        if(council.couldBeBigger()) {
+        if(council.couldBeBigger() && !hasGrace()) {
             stability -= getStabilityMalusFromCouncil();
         }
         if(stability < 0) stability = 0;
@@ -527,6 +553,7 @@ public class Government {
         data.electionCandidates = election.serializeCandidates();
         data.electionVotes = election.serializeVotes();
         data.previousVotes = election.serializePreviousVotes();
+        data.grace = this.grace;
         return data;
     }
 }

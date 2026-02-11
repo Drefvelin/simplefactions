@@ -527,7 +527,7 @@ public class Guild {
         effect += 30.0 * Math.min(memberPercentage, 1.0);
 
         // Wealth percentage
-        double totalWealth = host.getWealth() + host.getVassalWealth();
+        double totalWealth = Math.max(0, host.getWealth()) + Math.max(0, host.getVassalWealth());
         if (totalWealth > 0) {
             double wealthPercentage = wealth / totalWealth;
             effect += 20.0 * Math.min(wealthPercentage, 1.0);

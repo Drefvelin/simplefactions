@@ -17,6 +17,7 @@ import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.session.Session;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 
 public class Council {
@@ -40,11 +41,16 @@ public class Council {
     }
 
     public void reorganize() {
+        Bukkit.getPlayerExact("drefvelin").sendMessage("baba");
         int newSize = f.getCouncilSize();
         Rules newType = f.getCouncilType();
 
         boolean typeChanged = newType != type;
         boolean sizeDecreased = newSize < size;
+
+        if(typeChanged && newType.equals(Rules.APPOINTED_COUNCIL)) {
+            f.getGovernment().resetGrace();
+        }
 
         // Trim if size decreased
         if (sizeDecreased && members.size() > newSize) {
@@ -75,13 +81,15 @@ public class Council {
 
             proposalHandler.clearProposals();
         }
-
+        
         // Apply new settings
         setCouncilSize(newSize);
         setCouncilType(newType);
 
-        // 🔑 Let the unified logic handle membership validity & refill
-        replace();
+        if(FactionManager.isLoaded()) {
+            // 🔑 Let the unified logic handle membership validity & refill
+            replace();
+        }
     }
 
     public boolean hasSession() {
@@ -127,15 +135,23 @@ public class Council {
     }
 
     public boolean canRemainMember(String name) {
-        if (f.getLeader().equalsIgnoreCase(name)) return false;
-        if (f.getOrCreateMainGuild().isMember(name)) return true;
+        if (f.getLeader().equalsIgnoreCase(name)) {
+            return false;
+        }
+        if (f.getOrCreateMainGuild().isMember(name)) {
+            return true;
+        }
 
         for (Faction vassal : RelationManager.getSubjects(f)) {
-            if (vassal.isLeader(name)) return true;
+            if (vassal.isLeader(name)) {
+                return true;
+            }
         }
 
         for (Guild guild : f.getGuildHandler().getGuilds()) {
-            if (guild.isLeader(name)) return true;
+            if (guild.isLeader(name)) {
+                return true;
+            }
         }
 
         return false;
@@ -151,7 +167,6 @@ public class Council {
             members.add(name);
         }
     }
-
 
     public void addMember(String member) {
         if(members.size() < size) members.add(member);
@@ -235,6 +250,7 @@ public class Council {
     private void cleanupCouncil() {
         for (String member : new ArrayList<>(getMembers())) {
             if (!canRemainMember(member)) {
+                Bukkit.getPlayer("drefvelin").sendMessage("aaaaaa");
                 getMembers().remove(member);
             }
         }

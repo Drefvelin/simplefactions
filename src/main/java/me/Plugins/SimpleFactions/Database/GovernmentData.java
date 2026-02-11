@@ -26,4 +26,6 @@ public class GovernmentData {
 
     @SerializedName("previous votes")
     public Map<String, Map<String, Integer>> previousVotes = new HashMap<>();
+
+    public Long grace;
 }

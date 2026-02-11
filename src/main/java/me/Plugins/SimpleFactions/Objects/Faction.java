@@ -166,7 +166,6 @@ public class Faction {
 		int capital = guild.getCapital();
 		guild.convert(GuildLoader.getBaseType());
 		setCapital(capital, true);
-		lawHandler.apply();
 		createBanner(bannerPatterns);
 		updatePrestige();
 		updateTier();
