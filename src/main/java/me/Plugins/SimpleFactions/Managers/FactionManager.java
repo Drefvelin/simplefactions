@@ -48,6 +48,11 @@ import net.tfminecraft.DenarEconomy.Enum.Accounts;
 
 public class FactionManager implements Listener{
 	public static int timer = 0;
+	private static boolean loaded = false;
+
+	public static boolean isLoaded() {
+		return loaded;
+	}
 
 	public static List<Faction> factions = new ArrayList<Faction>();
 	
@@ -247,16 +252,18 @@ public class FactionManager implements Listener{
 
 	
 	public void run() {
-		timer = (new Database()).getTimer();	
+		timer = (new Database()).getTimer();
 		loadRelations();
 		tickCycle();	
 		for(Faction f : factions) {
+			f.getLawHandler().apply();
 			f.updatePrestige();
 			f.countyCheck();
 			f.ping();
 		}
 		fixRelations();
 		loadDBLoans();
+		loaded = true;
 	}
 
 	public static boolean guildExists(String id) {

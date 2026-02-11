@@ -177,8 +177,10 @@ public class GovernmentCreator {
         lore.add(StringFormatter.formatHex("#b8ae61Base: #45c46f+"+Formatter.formatDouble(gov.getBaseStability())+"%"));
         double effect = f.getOrCreateMainGuild().getStabilityModifier(f);
         lore.add(StringFormatter.formatHex("#b8ae61From State: " + ( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"));
-        if(gov.getStabilityMalusFromCouncil() > 0) {
+        if(gov.getStabilityMalusFromCouncil() > 0 && !gov.hasGrace()) {
             lore.add(StringFormatter.formatHex("#b8ae61Council too small: #d13530-"+Formatter.formatDouble(gov.getStabilityMalusFromCouncil())+"%"));
+        } else if(gov.hasGrace() && gov.getCouncil().couldBeBigger()) {
+            lore.add(StringFormatter.formatHex("#b8ae61Council too small! #45c46f[Grace Period: "+gov.getGraceString()+"]"));
         }
         lore.add(StringFormatter.formatHex("#93c9a7Stances:"));
         for(Guild guild : f.getGuildHandler().getGuilds()) {
