@@ -46,6 +46,7 @@ public class TabCompletion implements TabCompleter{
 					completions.add("invite");
 					completions.add("setleader");
 					completions.add("rename");
+					completions.add("setbanner");
 				}
 				if(Permissions.isAdmin(sender)) {
 					completions.add("dummify");

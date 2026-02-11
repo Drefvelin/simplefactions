@@ -20,6 +20,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Guild.loans.Loan;
 import me.Plugins.SimpleFactions.Managers.Holder.SFCombinedInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
@@ -29,6 +30,8 @@ import me.Plugins.SimpleFactions.Managers.Inventory.GovernmentView;
 import me.Plugins.SimpleFactions.Managers.Inventory.GuildView;
 import me.Plugins.SimpleFactions.Managers.Inventory.InventoryUpdater;
 import me.Plugins.SimpleFactions.Managers.Inventory.LawView;
+import me.Plugins.SimpleFactions.Managers.Inventory.LoanPayment;
+import me.Plugins.SimpleFactions.Managers.Inventory.LoanView;
 import me.Plugins.SimpleFactions.Managers.Inventory.MilitaryView;
 import me.Plugins.SimpleFactions.Managers.Inventory.RelationView;
 import me.Plugins.SimpleFactions.Managers.Inventory.TaxChange;
@@ -46,10 +49,13 @@ import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxLawChange;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
+import me.Plugins.SimpleFactions.keys.Keys;
+import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class InventoryManager implements Listener{
 	public HashMap<Player, Faction> confirming = new HashMap<>();
 	public HashMap<Player, TaxChange> taxChange = new HashMap<>();
+	public HashMap<Player, LoanPayment> loanPayments = new HashMap<>();
 	
 	InventoryUpdater updater = new InventoryUpdater(this);
 	
@@ -69,6 +75,12 @@ public class InventoryManager implements Listener{
 					if(entry.getValue().tick()) {
 						taxChange.remove(entry.getKey());
 						entry.getKey().sendMessage("§cTax change timed out.");
+					}
+				}
+				for(Map.Entry<Player, LoanPayment> entry : ((HashMap<Player, LoanPayment>) loanPayments.clone()).entrySet()) {
+					if(entry.getValue().tick()) {
+						loanPayments.remove(entry.getKey());
+						entry.getKey().sendMessage("§cLoan payment timed out.");
 					}
 				}
 			}
@@ -125,6 +137,9 @@ public class InventoryManager implements Listener{
 	}
 	public void upgradeView(Player player, Guild guild, Inventory i) {
 		guildView.upgradeView(player, guild, i);
+	}
+	public void ledgerView(Player p, Guild guild, Inventory i) {
+		guildView.ledgerView(p, guild, i);
 	}
 
 	//Laws
@@ -187,90 +202,177 @@ public class InventoryManager implements Listener{
 		taxView.taxView(p, f);
 	}
 
-	public boolean isChanging(Player p) {
-		return taxChange.containsKey(p);
+	//Loans
+	public LoanView loanView = new LoanView(this);
+
+	public void loanMainView(Player p, Guild guild) {
+		loanView.loanMainView(p, guild);
+	}
+
+	public void loansGivenView(Player p, Guild guild) {
+		loanView.loansGivenView(p, guild);
+	}
+
+	public void loansTakenView(Player p, Guild guild) {
+		loanView.loansTakenView(p, guild);
+	}
+
+	public boolean chatTrigger(Player p) {
+		return taxChange.containsKey(p) || loanPayments.containsKey(p);
 	}
 
 	public void setChanging(Faction faction, Player p, TaxTarget target, String id) {
 		taxChange.put(p, new TaxChange(faction, target, id));
 	}
 
+	public boolean isPayingLoan(Player p) {
+		return loanPayments.containsKey(p);
+	}
+
+	public void setPayingLoan(Player p, Loan loan) {
+		Guild guild = FactionManager.getGuildByLeader(p.getName());;
+		if(guild == null) return;
+		loanPayments.put(p, new LoanPayment(guild, loan));
+		p.closeInventory();
+		p.sendMessage(StringFormatter.formatHex("#d6cf69Enter the amount you want to pay (you have #87d65c" + 
+			String.format("%.2f", loan.getBorrower().getBank().getWealth()) + "d#d6cf69, loan owes #d65c5c" + 
+			String.format("%.2f", loan.getTotalOwed()) + "d#d6cf69):"));
+	}
+
 	@EventHandler
 	public void setRate(AsyncPlayerChatEvent e) {
 		Player p = e.getPlayer();
-		if(!isChanging(p)) return;
+		if(!chatTrigger(p)) return;
 		e.setCancelled(true);
 		new BukkitRunnable() {
 			@Override
 			public void run() {
-				if(!taxChange.containsKey(p)) return;
-				Faction f = taxChange.get(p).getFaction();
-				if(f == null) {
-					taxChange.remove(p);
-					return;
-				}
-				if(e.getMessage().equalsIgnoreCase("cancel")) {
-					p.sendMessage("§cTax change cancelled.");
-					taxChange.remove(p);
-					governmentView.governmentView(p, f, null);
-					return;
-				}
-				TaxChange change = taxChange.get(p);
-				double amount = 0;
-				try {
-					amount = Double.parseDouble(e.getMessage());
-				} catch (Exception e) {
-					p.sendMessage("§cError inputting the amount, use the format §e15.67 §cfor 15.67% tax (example)");
-					p.sendMessage("§4Type 'cancel' to cancel.");
-					return;
-				}
-				amount = Math.round(amount*100.0)/100.0;
-				amount = Math.min(100.0, amount);
-				TaxHandler handler = f.getTaxHandler();
-				if(amount > handler.getMax(change.getTarget())) {
-					p.sendMessage("§cThe maximum tax rate you can set for "+change.getTarget().getDisplayName()+" is §e"+handler.getMax(change.getTarget())+"%");
-					p.sendMessage("§4Type 'cancel' to cancel.");
-					return;
-				} else if(amount < handler.getMin(change.getTarget())) {
-					p.sendMessage("§cThe minimum tax rate you can set for "+change.getTarget().getDisplayName()+" is §e"+handler.getMin(change.getTarget())+"%");
-					p.sendMessage("§4Type 'cancel' to cancel.");
-					return;
-				}
-				Government gov = f.getGovernment();
-				Proposal proposal = new Proposal(p.getName(), gov);
-				TaxLawChange tax = new TaxLawChange(change.getTarget(), change.getId(), amount);
-				proposal.setTaxProposal(tax);
-				if(!gov.hasCouncil() && f.isLeader(p.getName())) {
-					p.sendMessage("§aChange applied!");
-					proposal.apply();
-					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
-					taxChange.remove(p);
-					governmentView.governmentView(p, f, null);
-					return;
-				}
-				if(gov.canBeProposed(proposal)) {
-					if(gov.canPropose(p)) {
-						gov.propose(proposal);
-						p.sendTitle("", "§aProposal Added", 20, 80, 20);
-						p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
-					} else if(gov.canProposeOrStartMovement(p)) {
-						//movement start
-						p.sendTitle("", "§cMovement Started", 20, 80, 20);
-					} else {
-						p.sendMessage("§cYou can no longer propose this change.");
-						taxChange.remove(p);
-						return;
-					}
-				} else {
-					p.sendMessage("§cThere is already a proposal active for this target.");
-					taxChange.remove(p);
-					return;
-				}
-				//something changed so you cant do anything anymore :)
-				taxChange.remove(p);
-				governmentView.governmentView(p, f, null);
+				if(taxChange.containsKey(p)) taxChat(p, e);;
+				if(loanPayments.containsKey(p)) loanPaymentChat(p, e);
 			}
 		}.runTask(SimpleFactions.plugin);
+	}
+
+	public void taxChat(Player p, AsyncPlayerChatEvent e) {
+		Faction f = taxChange.get(p).getFaction();
+		if(f == null) {
+			taxChange.remove(p);
+			return;
+		}
+		if(e.getMessage().equalsIgnoreCase("cancel")) {
+			p.sendMessage("§cTax change cancelled.");
+			taxChange.remove(p);
+			governmentView.governmentView(p, f, null);
+			return;
+		}
+		TaxChange change = taxChange.get(p);
+		double amount = 0;
+		try {
+			amount = Double.parseDouble(e.getMessage());
+		} catch (Exception ex) {
+			p.sendMessage("§cError inputting the amount, use the format §e15.67 §cfor 15.67% tax (example)");
+			p.sendMessage("§4Type 'cancel' to cancel.");
+			return;
+		}
+		amount = Math.round(amount*100.0)/100.0;
+		amount = Math.min(100.0, amount);
+		TaxHandler handler = f.getTaxHandler();
+		if(amount > handler.getMax(change.getTarget())) {
+			p.sendMessage("§cThe maximum tax rate you can set for "+change.getTarget().getDisplayName()+" is §e"+handler.getMax(change.getTarget())+"%");
+			p.sendMessage("§4Type 'cancel' to cancel.");
+			return;
+		} else if(amount < handler.getMin(change.getTarget())) {
+			p.sendMessage("§cThe minimum tax rate you can set for "+change.getTarget().getDisplayName()+" is §e"+handler.getMin(change.getTarget())+"%");
+			p.sendMessage("§4Type 'cancel' to cancel.");
+			return;
+		}
+		Government gov = f.getGovernment();
+		Proposal proposal = new Proposal(p.getName(), gov);
+		TaxLawChange tax = new TaxLawChange(change.getTarget(), change.getId(), amount);
+		proposal.setTaxProposal(tax);
+		if(!gov.hasCouncil() && f.isLeader(p.getName())) {
+			p.sendMessage("§aChange applied!");
+			proposal.apply();
+			p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+			taxChange.remove(p);
+			governmentView.governmentView(p, f, null);
+			return;
+		}
+		if(gov.canBeProposed(proposal)) {
+			if(gov.canPropose(p)) {
+				gov.propose(proposal);
+				p.sendTitle("", "§aProposal Added", 20, 80, 20);
+				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+			} else if(gov.canProposeOrStartMovement(p)) {
+				//movement start
+				p.sendTitle("", "§cMovement Started", 20, 80, 20);
+			} else {
+				p.sendMessage("§cYou can no longer propose this change.");
+				taxChange.remove(p);
+				return;
+			}
+		} else {
+			p.sendMessage("§cThere is already a proposal active for this target.");
+			taxChange.remove(p);
+			return;
+		}
+		//something changed so you cant do anything anymore :)
+		taxChange.remove(p);
+		governmentView.governmentView(p, f, null);
+	}
+
+	public void loanPaymentChat(Player p, AsyncPlayerChatEvent e) {
+		Guild g = loanPayments.get(p).getGuild();
+		Guild compare = FactionManager.getGuildByLeader(p.getName());
+		if(compare == null) {
+			loanPayments.remove(p); //player left guild
+			return;
+		}
+		if(!g.getId().equalsIgnoreCase(compare.getId())) {
+			loanPayments.remove(p); //player changed guild
+			return;
+		}
+
+		if(e.getMessage().equalsIgnoreCase("cancel")) {
+			p.sendMessage("§cLoan payment cancelled.");
+			loanPayments.remove(p);
+			loanView.loanMainView(p, g);
+			return;
+		}
+
+		LoanPayment payment = loanPayments.get(p);
+		Loan loan = payment.getLoan();
+		double amount = 0;
+		try {
+			amount = Double.parseDouble(e.getMessage());
+		} catch (Exception ex) {
+			p.sendMessage("§cError inputting the amount, use the format §e1500.00 §cfor 1500.00d (example)");
+			p.sendMessage("§4Type 'cancel' to cancel.");
+			return;
+		}
+
+		amount = Math.round(amount*100.0)/100.0;
+		if(amount <= 0) {
+			p.sendMessage("§cYou must pay a positive amount.");
+			p.sendMessage("§4Type 'cancel' to cancel.");
+			return;
+		}
+
+		if(amount > g.getBank().getWealth()) {
+			p.sendMessage("§cYour guild does not have enough funds to pay that amount.");
+			p.sendMessage("§4Type 'cancel' to cancel.");
+			return;
+		}
+
+		if(amount > loan.getTotalOwed()) {
+			amount = loan.getTotalOwed();
+		}
+
+		double finalAmount = loan.makePayment(amount, true);
+		g.getBank().withdraw(finalAmount);
+		p.sendMessage(StringFormatter.formatHex("#d6cf69You have paid off #87d65c" + String.format("%.2f", finalAmount) + "d #d6cf69of the loan."));
+		p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+		loanPayments.remove(p);
 	}
 	
 	//Confirm
@@ -403,6 +505,21 @@ public class InventoryManager implements Listener{
 					case UPGRADE_VIEW:
 						guildView(p, g);
 						break;
+					case LOAN_MAIN_VIEW:
+						guildView(p, g);
+						break;
+					case LOANS_GIVEN_VIEW:
+						loanMainView(p, g);
+						break;
+					case LOANS_TAKEN_VIEW:
+						loanMainView(p, g);
+						break;
+					case ISSUED_LOAN_DETAIL_VIEW:
+						loansGivenView(p, g);
+						break;
+					case TAKEN_LOAN_DETAIL_VIEW:
+						loansTakenView(p, g);
+						break;
 					default:
 						break;
 				}
@@ -411,6 +528,12 @@ public class InventoryManager implements Listener{
 				factionView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.GUILD_LIST || h.getType() == SFGUI.GUILD_VIEW || h.getType() == SFGUI.UPGRADE_VIEW) {
 				guildView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.LOAN_MAIN_VIEW 
+				|| h.getType() == SFGUI.LOANS_GIVEN_VIEW 
+				|| h.getType() == SFGUI.LOANS_TAKEN_VIEW
+				|| h.getType() == SFGUI.TAKEN_LOAN_DETAIL_VIEW
+				|| h.getType() == SFGUI.ISSUED_LOAN_DETAIL_VIEW) {
+				loanView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.LAW_VIEW || h.getType() == SFGUI.LAW_SELECT) {
 				lawView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.MILITARY_VIEW) {

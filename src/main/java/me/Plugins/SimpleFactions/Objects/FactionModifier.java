@@ -131,4 +131,9 @@ public class FactionModifier {
 		boolean goodOutcome = type.isPositiveGood() ? positive : !positive;
 		return goodOutcome;
 	}
+
+	@Override
+	public String toString() {
+		return type.name() + "{from=" + (from != null ? from.getId() : "null") + ", amount=" + amount + "}";
+	}
 }

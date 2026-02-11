@@ -108,6 +108,21 @@ public class GuildView {
 		p.openInventory(inv);
 	}
 
+	public void ledgerView(Player player, Guild guild, Inventory i) {
+		boolean open = i == null;
+		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(guild.getId(), SFGUI.LEDGER_VIEW), 27, "§7Ledger for "+guild.getName());
+		i.clear();
+		if(guild.isBase()) {
+			i.setItem(10, creator.createLedgerCitizensItem(guild));
+			i.setItem(11, creator.createLedgerGuildsItem(guild));
+			i.setItem(12, creator.createLedgerVassalsItem(guild));
+			i.setItem(13, creator.createLedgerTributesItem(guild));
+			i.setItem(14, creator.createLedgerTariffsItem(guild));
+		}
+		i.setItem(26, inv.createBackButton(SFGUI.LEDGER_VIEW));
+		if(open) player.openInventory(i);
+	}
+
 
 	public void guildView(Player player, Guild guild) {
 		Inventory i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(guild.getId(), SFGUI.GUILD_VIEW), 54, "§7Guild View");
@@ -130,6 +145,7 @@ public class GuildView {
 		i.setItem(12, creator.createMenuItem(player, guild, MenuItemType.WEALTH));
 		i.setItem(15, creator.createMenuItem(player, guild, MenuItemType.MEMBERS));
 		if(guild.hasUpgrades()) i.setItem(16, creator.createUpgradesItem(player, guild));
+		i.setItem(25, creator.createLoansItem(player, guild));
 		Faction target = FactionManager.getMap().getRelocationTarget(player);
 		if(target != null) {
 			i.setItem(34, creator.createRelocateItem(player, target, guild));
@@ -299,14 +315,18 @@ public class GuildView {
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
 					return;
 				}
-				Faction newFaction = guild.elevate(true);
-				if(newFaction == null) {
+				if(guild.getFaction().getGovernment().getPower() < guild.getElevationCost()) {
+					p.sendMessage("§cCannot afford to elevate");
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
 					return;
 				}
-				p.sendMessage("§aGuild elevated to Faction!");
-				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
-				inv.factionView(p, newFaction);
+				FactionManager.requestElevation(p, guild);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				p.closeInventory();
+				return;
+			} else if(e.getSlot() == 25) {
+				inv.loanMainView(p, guild);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				return;
 			}
 			ItemStack item = e.getCurrentItem();

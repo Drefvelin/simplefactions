@@ -1,29 +1,31 @@
 package me.Plugins.SimpleFactions.Managers;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scheduler.BukkitRunnable;
 
+import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
-import me.Plugins.SimpleFactions.Guild.income.Cashflow;
-import me.Plugins.SimpleFactions.Guild.income.entry.FactionEntry;
-import me.Plugins.SimpleFactions.Guild.income.entry.PlayerEntry;
+import me.Plugins.SimpleFactions.Guild.loans.Loan;
+import me.Plugins.SimpleFactions.Guild.loans.LoanBook;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
-import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
-import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
-import me.Plugins.TLibs.Utils.ParseUtils;
+import me.Plugins.SimpleFactions.keys.Keys;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
-import net.tfminecraft.DenarEconomy.Data.PlayerData;
 import net.tfminecraft.DenarEconomy.Enum.Accounts;
 import net.tfminecraft.DenarEconomy.Item.Coin;
-import net.tfminecraft.DenarEconomy.Managers.MoneyManager;
 import net.tfminecraft.DenarEconomy.event.PlayerBankPulseEvent;
 import net.tfminecraft.DenarEconomy.event.PlayerDepositMaterialsEvent;
 import net.tfminecraft.DenarEconomy.event.PlayerEarnMoneyEvent;
@@ -32,6 +34,116 @@ public class PlayerManager implements Listener{
     @EventHandler
     public void joinEvent(PlayerJoinEvent e) {
         FactionCleanup.ping(e.getPlayer().getName());
+    }
+
+    //Loans and stuff
+    @EventHandler
+    public void signBook(PlayerEditBookEvent e) {
+        if(!e.isSigning()) return;
+        BookMeta meta = e.getPreviousBookMeta();
+        BookMeta newMeta = e.getNewBookMeta();
+        Player p = e.getPlayer();
+        String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+        if(id == null) return;
+        Guild issuer = FactionManager.getGuildByString(id);
+        if(issuer == null) return;
+        Integer stage = meta.getPersistentDataContainer().get(Keys.INT, PersistentDataType.INTEGER);
+        if(stage == null) return;
+        if(stage == 1) {
+            e.setCancelled(true);
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    Long time = newMeta.getPersistentDataContainer().get(Keys.LONG, PersistentDataType.LONG);
+                    if(time != null && time < System.currentTimeMillis()) {
+                        p.sendMessage("§cThis loan contract has expired! Unable to process.");
+                        p.getInventory().setItemInMainHand(new ItemStack(Material.WRITABLE_BOOK));
+                        return;
+                    }
+                    p.getInventory().setItemInMainHand(LoanBook.getEstimatedBook(LoanBook.createLoanFromBook(newMeta, null)));
+                }
+            }.runTaskLater(SimpleFactions.plugin, 1L);
+        }
+        else if(stage == 2) {
+            e.setCancelled(true);
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    Long time = newMeta.getPersistentDataContainer().get(Keys.LONG, PersistentDataType.LONG);
+                    if(time != null && time < System.currentTimeMillis()) {
+                        p.sendMessage("§cThis loan contract has expired! Unable to process.");
+                        p.getInventory().setItemInMainHand(new ItemStack(Material.WRITABLE_BOOK));
+                        return;
+                    }
+                    p.getInventory().setItemInMainHand(LoanBook.getLoanBook(LoanBook.createLoanFromBook(newMeta, null)));
+                }
+            }.runTaskLater(SimpleFactions.plugin, 1L);
+        } else if(stage == 3) {
+            e.setCancelled(true);
+            Guild borrowerGuild = FactionManager.getGuildByLeader(p.getName());
+            Loan loan = LoanBook.createLoanFromBook(newMeta, borrowerGuild);
+            String validate = newMeta.getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+            Long time = newMeta.getPersistentDataContainer().get(Keys.LONG, PersistentDataType.LONG);
+            if(time != null && time < System.currentTimeMillis()) {
+                p.sendMessage("§cThis loan contract has expired! Unable to process.");
+                p.getInventory().setItemInMainHand(new ItemStack(Material.WRITABLE_BOOK));
+                return;
+            }
+            if(validate == null) {
+                p.sendMessage("§cThis loan contract has been tampered with! Unable to process.");
+                new BukkitRunnable() {
+                @Override
+                    public void run() {
+                        p.getInventory().setItemInMainHand(new ItemStack(Material.WRITABLE_BOOK));
+                    }
+                }.runTaskLater(SimpleFactions.plugin, 1L);
+                return;
+            }
+            Loan validation = LoanBook.createLoanFromString(validate, issuer, borrowerGuild);
+            if(validation == null || !loan.validate(validation)) {
+                p.sendMessage("§cThis loan contract has been tampered with! Unable to process.");
+                new BukkitRunnable() {
+                @Override
+                    public void run() {
+                        p.getInventory().setItemInMainHand(new ItemStack(Material.WRITABLE_BOOK));
+                    }
+                }.runTaskLater(SimpleFactions.plugin, 1L);
+                return;
+            }
+            if(borrowerGuild == null) {
+                p.sendMessage("§cYou must be the leader of a guild to sign a loan contract!");
+                return;
+            }
+            if(issuer.getBank().getWealth() < loan.getAmount()) {
+                p.sendMessage("§cThe issuer cannot afford this loan!");
+                return;
+            }
+            borrowerGuild.getBank().deposit(loan.getAmount());
+            issuer.getBank().withdraw(loan.getAmount());
+            issuer.getLoanHandler().issueLoan(loan);
+            p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+            p.sendMessage("§aLoan taken!");
+            Player lender = Bukkit.getPlayer(issuer.getLeader());
+            if(lender != null && lender.isOnline()) {
+                lender.sendMessage("§aYour loan has been accepted by "+borrowerGuild.getName()+"!");
+                lender.playSound(lender, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+            }
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    ItemStack i = new ItemStack(Material.WRITTEN_BOOK);
+                    BookMeta m = (BookMeta) i.getItemMeta();
+                    ItemStack complete = LoanBook.getLoanBook(loan);
+                    BookMeta completeMeta = (BookMeta) complete.getItemMeta();
+                    m.setPages(completeMeta.getPages());
+                    m.setDisplayName("§6Loan Agreement §7"+Cache.getFantasyDate(System.currentTimeMillis()));
+                    m.setTitle("§6Loan Agreement §7"+Cache.getFantasyDate(System.currentTimeMillis()));
+                    m.setAuthor(issuer.getLeader()+" and "+p.getName());
+                    i.setItemMeta(m);
+                    p.getInventory().setItemInMainHand(i);
+                }
+            }.runTaskLater(SimpleFactions.plugin, 5L);
+        }
     }
 
     @EventHandler

@@ -70,13 +70,17 @@ public class DiplomacyHandler {
         for(Map.Entry<String, Relation> entry : relations.entrySet()) {
             Relation r = entry.getValue();
             if(r.getType().hasRecieveModifiers()) {
-                mods.addAll(r.getType().getRecieveModifiers());
+                for(FactionModifier mod : r.getType().getRecieveModifiers()) {
+                    mods.add(new FactionModifier(FactionManager.getByString(entry.getKey()), mod));
+                }
             }
             Faction other = FactionManager.getByString(entry.getKey());
             if(other == null) continue;
             Relation back = other.getRelation(f.getId());
             if(back.getType().hasGiveModifiers()) {
-                mods.addAll(back.getType().getGiveModifiers());
+                for(FactionModifier mod : back.getType().getGiveModifiers()) {
+                    mods.add(new FactionModifier(FactionManager.getByString(entry.getKey()), mod));
+                }
             }
         }
         return mods;

@@ -23,6 +23,8 @@ import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.Branch.BranchModifier;
 import me.Plugins.SimpleFactions.Guild.income.Cashflow;
 import me.Plugins.SimpleFactions.Guild.income.Ledger;
+import me.Plugins.SimpleFactions.Guild.loans.Loan;
+import me.Plugins.SimpleFactions.Guild.loans.LoanHandler;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
@@ -711,13 +713,37 @@ public class GuildCreator {
 		lore.add(StringFormatter.formatHex("#e15757The guild capital province will be transferred to the new faction!"));
 		lore.add("");
 		double cost = guild.getElevationCost();
-		lore.add(StringFormatter.formatHex("#d4c9aeCost: §e"+cost+" Administrative Power"));
+		lore.add(StringFormatter.formatHex("#d4c9aeCost: §e"+Formatter.formatDouble(cost)+" Administrative Power"));
 		lore.add("");
 		if(guild.canBeElevated(null)) {
 			lore.add(StringFormatter.formatHex("#50e846Click to Elevate"));
 		} else {
 			lore.add(StringFormatter.formatHex("#e15757Unavailable"));
 		}
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createLoansItem(Player p, Guild guild) {
+		ItemStack i = new ItemStack(Material.BLACK_DYE);
+		ItemMeta meta = i.getItemMeta();
+		meta.setCustomModelData(26);
+		meta.setDisplayName(StringFormatter.formatHex("#e8c65fLoans"));
+		List<String> lore = new ArrayList<>();
+		LoanHandler handler = guild.getLoanHandler();
+		lore.add(StringFormatter.formatHex("#d4c9aeLoans Given: #a19a87"+handler.getLoansGiven().size()));
+		lore.add(StringFormatter.formatHex("#d4c9aeLoans Taken: #a19a87"+handler.getLoansTaken().size()));
+		lore.add("");
+		lore.add(StringFormatter.formatHex("#d4c9aeTotal Lent: #a8db8a"+Formatter.formatDouble(handler.getTotalLent())+"d"));
+		lore.add(StringFormatter.formatHex("#d4c9aeTotal Owed: #de7657"+Formatter.formatDouble(handler.getTotalOwed())+"d"));
+		lore.add(StringFormatter.formatHex("#d4c9aeDaily Interest: #de7657"+Formatter.formatDouble(handler.getDailyInterestChange())+"d"));
+		lore.add("");
+		lore.add(StringFormatter.formatHex("#c2be99Credit Score: "+handler.getCreditScoreString()));
+		lore.add(StringFormatter.formatHex("#5d5959Lenders may give higher interest rates if your"));
+		lore.add(StringFormatter.formatHex("#5d5959score is low, or lower rates if it's high"));
+		lore.add("");
+		lore.add(StringFormatter.formatHex("#50e846Click to View Details"));
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;

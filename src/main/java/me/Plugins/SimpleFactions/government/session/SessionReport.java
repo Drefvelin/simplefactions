@@ -55,7 +55,7 @@ public class SessionReport {
         Calendar cal = Calendar.getInstance();
         int day = cal.get(Calendar.DAY_OF_MONTH);
         int month = cal.get(Calendar.MONTH) + 1;
-        String dateStr = String.format("%02d/%02d/"+Cache.year, day, month);
+        String dateStr = String.format("%02d/%02d/"+Cache.baseYear, day, month);
         meta.setDisplayName(StringFormatter.formatHex("#68ab6fCouncil Session #819483" + dateStr));
         meta.setTitle(StringFormatter.formatHex("#68ab6fCouncil Session #819483" + dateStr));
         meta.setAuthor(faction.getRulerTitle() + " " + leaderName);

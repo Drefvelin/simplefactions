@@ -9,6 +9,8 @@ import java.util.Map;
 import org.bukkit.Bukkit;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.banner.PatternType;
 import org.bukkit.entity.Player;
@@ -20,6 +22,7 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.income.Ledger;
 import me.Plugins.SimpleFactions.Guild.income.TradeBreakdown;
+import me.Plugins.SimpleFactions.Guild.loans.LoanHandler;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
@@ -36,6 +39,9 @@ import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
+import me.Plugins.SimpleFactions.Database.Database;
+import me.Plugins.SimpleFactions.Database.GuildBranchData;
+import me.Plugins.SimpleFactions.Database.GuildData;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
@@ -77,6 +83,8 @@ public class Guild {
 
     private List<UpgradeExpansion> upgradeQueue = new ArrayList<>();
 
+    private final LoanHandler loanHandler;
+
     public Guild(Faction f) {
         host = f;
         id = f.getId();
@@ -101,6 +109,7 @@ public class Guild {
             upgrades.put(u.getId(), new Upgrade(u, 0));
         }
         this.ledger = new Ledger(this);
+        this.loanHandler = new LoanHandler(this);
         createBanner();
     }
 
@@ -130,35 +139,28 @@ public class Guild {
         }
         f.getOrCreateMainGuild().kick(p.getName()); //remove from main guild
         this.ledger = new Ledger(this);
+        this.loanHandler = new LoanHandler(this);
         createBanner();
     }
 
-    public Guild(
-        String id,
-        String name,
-        String leader,
-        String rgb,
-        int capital,
-        String type,
-        List<String> members,
-        List<Branch> branchList,
-        List<Upgrade> upgradeList,
-        List<String> patterns,
-        List<Modifier> wealthModifiers,
-        Faction host,
-        Stance stance
-    ) {
-        this.type = GuildLoader.getByString(type);
+    public Guild(GuildData data, Faction host) {
+        this.type = GuildLoader.getByString(data.type);
         this.host = host;
-        this.id = id;
-        this.name = name;
-        this.leader = leader;
-        this.rgb = rgb;
-        this.capital = capital;
-        this.stance = stance;
-        this.members = members != null ? members : new ArrayList<>();
-        for(Branch b : branchList) {
-            this.branches.put(b.getGroup(), b);
+        this.id = data.id;
+        this.name = data.name;
+        this.leader = data.leader;
+        this.rgb = data.rgb;
+        this.capital = data.capital;
+        this.stance = data.stance != null ? Stance.valueOf(data.stance) : Stance.NEUTRAL;
+        this.members = data.members != null ? data.members : new ArrayList<>();
+        if(!this.members.contains(leader)) this.members.add(leader);
+        for (GuildBranchData bd : data.branches) {
+            Branch base = BranchLoader.getByString(bd.id);
+            if (base != null) {
+                branches.put(base.getGroup(),
+                    new Branch(base, bd.level.intValue())
+                );
+            }
         }
         int group = 0;
         while(group < 10) {
@@ -168,16 +170,24 @@ public class Guild {
             }
             group++;
         }
-        for(Upgrade u : upgradeList) {
-            upgrades.put(u.getId(), new Upgrade(u, u.getLevel()));
+        if(data.upgrades != null) {
+            for (GuildBranchData bd : data.upgrades) {
+                Upgrade base = UpgradeLoader.getByString(bd.id);
+                if (base != null) {
+                    upgrades.put(base.getId(),
+                        new Upgrade(base, bd.level.intValue())
+                    );
+                }
+            }
         }
         for(Upgrade u : UpgradeLoader.getList()) {
             if(!upgrades.containsKey(u.getId())) upgrades.put(u.getId(), new Upgrade(u, 0));
         }
-        this.bannerPatterns = patterns;
+        this.bannerPatterns = data.banner;
         this.wealth = 0.0;
-        this.wealthModifiers = wealthModifiers;
+        this.wealthModifiers = Database.loadModifiers(data.wealthModifiers);
         this.ledger = new Ledger(this);
+        this.loanHandler = new LoanHandler(this, data.creditScore == null ? 50 : data.creditScore);
         createBanner();
     }
 
@@ -208,6 +218,10 @@ public class Guild {
 
     public Ledger getLedger() {
         return ledger;
+    }
+    
+    public LoanHandler getLoanHandler() {
+        return loanHandler;
     }
 
     public void dummify(Player p) {
@@ -304,29 +318,51 @@ public class Guild {
     }
 
     private void createBanner() {
-		ItemStack item = new ItemStack(Material.valueOf(bannerPatterns.get(0).split("\\.")[0].toUpperCase()+"_BANNER"), 1);
-		BannerMeta b = (BannerMeta) item.getItemMeta();
-		b.addItemFlags(ItemFlag.HIDE_POTION_EFFECTS);
-		for(int i = 1; i < bannerPatterns.size(); i++) {
+		ItemStack item = new ItemStack(
+			Material.valueOf(bannerPatterns.get(0).split("\\.")[0].toUpperCase() + "_BANNER"),
+			1
+		);
+
+		BannerMeta meta = (BannerMeta) item.getItemMeta();
+		meta.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+		for (int i = 1; i < bannerPatterns.size(); i++) {
 			String p = bannerPatterns.get(i);
-			String colour = p.split("\\.")[0];
-			String pattern = p.split("\\.")[1];
+			String[] split = p.split("\\.");
+
+			if (split.length != 2) continue;
+
+			String colourName = split[0].toUpperCase();
+			String patternName = split[1].toLowerCase();
+
+			DyeColor dye;
 			try {
-			    PatternType patternType = PatternType.valueOf(pattern.toUpperCase());
-			    DyeColor dyeColor = DyeColor.valueOf(colour.toUpperCase());
-			    b.addPattern(new Pattern(dyeColor, patternType));
+				dye = DyeColor.valueOf(colourName);
 			} catch (IllegalArgumentException e) {
-				try {
-				    PatternType patternType = PatternType.valueOf("tfmc:"+pattern.toLowerCase());
-				    DyeColor dyeColor = DyeColor.valueOf(colour.toUpperCase());
-				    b.addPattern(new Pattern(dyeColor, patternType));
-				} catch (IllegalArgumentException ex) {
-				    // Invalid pattern or color name, skip it
-					Bukkit.getLogger().info(pattern+" is not a valid pattern");
-				}
+				Bukkit.getLogger().warning("Invalid dye color: " + colourName);
+				continue;
 			}
+
+			PatternType patternType = null;
+
+			// 1️⃣ Try vanilla (minecraft namespace)
+			NamespacedKey vanillaKey = NamespacedKey.minecraft(patternName);
+			patternType = Registry.BANNER_PATTERN.get(vanillaKey);
+
+			// 2️⃣ Try custom namespace (tfmc)
+			if (patternType == null) {
+				NamespacedKey customKey = new NamespacedKey("tfmc", patternName);
+				patternType = Registry.BANNER_PATTERN.get(customKey);
+			}
+
+			if (patternType == null) {
+				Bukkit.getLogger().warning("Invalid banner pattern: " + patternName);
+				continue;
+			}
+
+			meta.addPattern(new Pattern(dye, patternType));
 		}
-		item.setItemMeta(b);
+		item.setItemMeta(meta);
+		
 		this.banner = item;
 	}
 
