@@ -182,6 +182,9 @@ public class GovernmentCreator {
         } else if(gov.hasGrace() && gov.getCouncil().couldBeBigger()) {
             lore.add(StringFormatter.formatHex("#b8ae61Council too small! #45c46f[Grace Period: "+gov.getGraceString()+"]"));
         }
+        if(f.getOrCreateMainGuild().isBankrupt()) {
+            lore.add(StringFormatter.formatHex("#b8ae61State is bankrupt! #d13530-100%"));
+        }
         lore.add(StringFormatter.formatHex("#93c9a7Stances:"));
         for(Guild guild : f.getGuildHandler().getGuilds()) {
             if(guild.isBase()) continue;

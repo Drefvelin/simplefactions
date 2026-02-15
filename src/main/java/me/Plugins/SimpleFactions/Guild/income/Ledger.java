@@ -61,6 +61,7 @@ public class Ledger {
 
     public double getIncome(Cashflow cashflow) {
         double amount = 0;
+        if(guild.isBankrupt()) return 0.0; //bankrupt guilds dont pay or receive money, they need to get our of bankrupcy first
         Faction f = guild.getFaction();
         switch (cashflow) {
             case GUILDS:
@@ -220,6 +221,7 @@ public class Ledger {
 
     public double getNetIncome() {
         double net = 0.0;
+        if(guild.isBankrupt()) return 0.0; //bankrupt guilds dont pay or receive money, they need to get our of bankrupcy first
 
         for (Cashflow cf : Cashflow.values()) {
             switch (cf) {
@@ -313,6 +315,7 @@ public class Ledger {
     }
 
     public double getGrossTaxableIncome() {
+        if(guild.isBankrupt()) return 0.0; //bankrupt guilds dont pay or receive money, they need to get our of bankrupcy first
         double total = 0.0;
         for (Cashflow cf : Cashflow.values()) {
             if(!cf.isGrossCounted()) continue;
@@ -328,6 +331,13 @@ public class Ledger {
     }
 
     public void populateDailyTransfers(DailyGuildTransfers buffer) {
+        if(guild.isBankrupt()) {
+            for(Loan loan : guild.getLoanHandler().getLoansTaken()) {
+                if(!loan.isAutoPay()) continue;
+                if(loan.isPaidOff()) continue;
+                loan.setAutoPay(false);
+            }
+        }
         for (Cashflow cf : Cashflow.values()) {
             applySettlementFor(cf, buffer);
         }
@@ -337,7 +347,7 @@ public class Ledger {
     }
 
     private void applySettlementFor(Cashflow cf, DailyGuildTransfers buffer) {
-
+        if(guild.isBankrupt()) return; //bankrupt guilds dont pay or receive money, they need to get our of bankrupcy first
         switch (cf) {
             // --------- INTERNAL (single guild) ----------
             // These should NOT be computed by reading getIncome() from some other guild.

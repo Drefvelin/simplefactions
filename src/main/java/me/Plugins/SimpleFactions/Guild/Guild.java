@@ -484,10 +484,21 @@ public class Guild {
         return Math.round(total * 100.0) / 100.0;
     }
 
+    public double getTotalPossibleRefund() {
+        int size = getSize();
+        if (size <= 0) return 0.0;
+
+        double baseCost = Cache.branchUpgradeCost;
+        double r = Cache.branchUpgradeExponent;
+
+        double totalRefund = 0.8 * baseCost * (Math.pow(r, size) - 1) / (r - 1);
+        return Math.round(totalRefund * 100.0) / 100.0;
+    }
+
     public double getRefund() {
         int size = getSize()-1;
         double baseCost = Cache.branchUpgradeCost;
-        double cost = baseCost*Math.pow(Cache.branchUpgradeExponent, size);
+        double cost = baseCost*Math.pow(Cache.branchUpgradeExponent, size)*0.8;
         return Math.round(cost * 100.0) / 100.0;
     }
 
@@ -708,5 +719,23 @@ public class Guild {
         FactionManager.addFaction(elevated);
         if(subjugate) RelationManager.setRelation(null, RelationLoader.getElevationTarget(), elevated, old, false);
         return elevated;
+    }
+
+    public boolean isBankrupt() {
+        return bank.getWealth() < 0;
+    }
+
+    public boolean canLiquidate() {
+        return getSize() > 0;
+    }
+
+    public void liquidateRandom() {
+        if(!canLiquidate()) return;
+        int target = (int) Math.floor(Math.random()*branches.size());
+        Branch b = branches.values().stream().filter(br -> br.getGroup() == target && br.getLevel() > 0).findFirst().orElse(null);
+        if(b == null) return;
+        b.levelDown();
+        double refund = getRefund();
+        bank.deposit(refund);
     }
 }

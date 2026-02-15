@@ -357,6 +357,9 @@ public class Government {
         if(council.couldBeBigger() && !hasGrace()) {
             stability -= getStabilityMalusFromCouncil();
         }
+        if(f.getOrCreateMainGuild().isBankrupt()) {
+            stability -= 100;
+        }
         if(stability < 0) stability = 0;
         if(stability > 100) stability = 100;
         return Formatter.formatDouble(stability);
