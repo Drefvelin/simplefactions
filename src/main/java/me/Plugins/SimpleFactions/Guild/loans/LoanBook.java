@@ -1,5 +1,9 @@
 package me.Plugins.SimpleFactions.Guild.loans;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -10,6 +14,7 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.keys.Keys;
+import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -19,6 +24,7 @@ public class LoanBook {
     public static ItemStack getLoanBook(Loan loan) {
         ItemStack book = new ItemStack(Material.WRITABLE_BOOK);
         BookMeta meta = (BookMeta) book.getItemMeta();
+        
         // Page 1
         meta.addPage("§6§l[LOAN AGREEMENT]\n" + //
                         loan.getIssuer().getName()+"§0 hereby\n" + //

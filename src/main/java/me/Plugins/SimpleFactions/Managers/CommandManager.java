@@ -182,6 +182,53 @@ public class CommandManager implements Listener, CommandExecutor{
 					}
 				}
 				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("leave") && args.length == 1) {
+				if(FactionManager.getGuildByMember(p.getName()) == null) {
+					p.sendMessage("§cYou are not in a guild");
+					return true;
+				}
+				if(FactionManager.getGuildByLeader(p.getName()) != null) {
+					p.sendMessage("§cCant leave if you are the leader");
+					p.sendMessage("§cUse /guild delete first");
+					return true;
+				}
+				Guild g = FactionManager.getGuildByMember(p.getName());
+				g.kick(p.getName());
+				p.sendMessage("§aLeft "+g.getName());
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("delete") && args.length == 2) {
+				Guild g = FactionManager.getGuildByString(args[1]);
+				if(g == null) {
+					p.sendMessage("§a[SimpleFactions]§c Error! guild does not exist!");
+					return true;
+				}
+				if(!Permissions.isAdmin(sender)) {
+					if(!g.getMembers().contains(p.getName())) {
+						p.sendMessage("§cCannot delete a guild you are not part of!");
+						return true;
+					}
+					if(g.isBankrupt()) {
+						p.sendMessage("§cCannot delete a guild that is in bankruptcy!");
+						return true;
+					}
+					if(!p.getName().equalsIgnoreCase(g.getLeader())) {
+						p.sendMessage("§cOnly the guild leader can delete the guild!");
+						return true;
+					}
+					if(g.getBank() != null && g.getBank().getWealth() > 0){
+						p.sendMessage("§cCannot delete a guild while the bank balance is above 0");
+						return true;
+					}
+					if(g.getLoanHandler().getLoansTaken().size() > 0) {
+						p.sendMessage("§cCannot delete a guild with active loans");
+						return true;
+					}
+				}
+
+				Faction host = g.getFaction();
+				host.getGuildHandler().removeGuild(g.getId());
+				p.sendMessage("§aGuild "+g.getName()+" §adeleted!");
+				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("setbank") && args.length == 1) {
 				if(FactionManager.getGuildByLeader(p.getName()) != null) {
 					Guild g = FactionManager.getGuildByLeader(p.getName());
@@ -452,6 +499,14 @@ public class CommandManager implements Listener, CommandExecutor{
 				if(!Permissions.isAdmin(sender)) {
 					if(!f.getMembers().contains(p.getName())) {
 						p.sendMessage("§cCannot delete a faction you are not part of!");
+						return true;
+					}
+					if(f.getOrCreateMainGuild().isBankrupt()) {
+						p.sendMessage("§cCannot delete a faction in bankruptcy!");
+						return true;
+					}
+					if(f.getOrCreateMainGuild().getLoanHandler().getLoansTaken().size() > 0) {
+						p.sendMessage("§cCannot delete a faction with active loans");
 						return true;
 					}
 					if(!p.getName().equalsIgnoreCase(f.getLeader())) {

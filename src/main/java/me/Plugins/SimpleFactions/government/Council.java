@@ -41,7 +41,6 @@ public class Council {
     }
 
     public void reorganize() {
-        Bukkit.getPlayerExact("drefvelin").sendMessage("baba");
         int newSize = f.getCouncilSize();
         Rules newType = f.getCouncilType();
 
@@ -250,7 +249,6 @@ public class Council {
     private void cleanupCouncil() {
         for (String member : new ArrayList<>(getMembers())) {
             if (!canRemainMember(member)) {
-                Bukkit.getPlayer("drefvelin").sendMessage("aaaaaa");
                 getMembers().remove(member);
             }
         }
