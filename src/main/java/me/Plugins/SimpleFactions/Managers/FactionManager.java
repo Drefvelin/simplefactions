@@ -235,10 +235,14 @@ public class FactionManager implements Listener{
 
 		// Phase 3: apply atomically
 		for (var entry : deltas.entrySet()) {
+			Guild guild = entry.getKey();
 			double amount = Formatter.formatDouble(entry.getValue());
 			if (amount == 0.0) continue;
-			if(entry.getKey().getBank() == null) continue;
-			entry.getKey().getBank().deposit(amount);
+			if(guild.getBank() == null) continue;
+			guild.getBank().deposit(amount);
+			while(guild.isBankrupt() && guild.canLiquidate()) {
+				guild.liquidateRandom();
+			} 
 		}
 
 		for(Guild g : getAllGuilds()) {
