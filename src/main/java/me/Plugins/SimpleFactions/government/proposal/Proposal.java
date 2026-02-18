@@ -14,6 +14,7 @@ import me.Plugins.SimpleFactions.Utils.EconomicImpact;
 import me.Plugins.SimpleFactions.laws.LawGroup;
 
 import me.Plugins.SimpleFactions.government.Government;
+import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
 import me.Plugins.SimpleFactions.laws.Law;
 
 public class Proposal {
@@ -22,8 +23,9 @@ public class Proposal {
 
     private Law law;
     private TaxLawChange tax;
+    private PoliticalAction politicalAction;
 
-    public Proposal(String proposer,Government gov) {
+    public Proposal(String proposer, Government gov) {
         this.gov = gov;
         this.proposer = proposer;
     }
@@ -60,12 +62,23 @@ public class Proposal {
     public void setTaxProposal(TaxLawChange tax) {
         this.tax = tax;
     }
+    public boolean isPoliticalActionProposal() {
+        return politicalAction != null;
+    }
+    public PoliticalAction getPoliticalAction() {
+        return politicalAction;
+    }
+    public void setPoliticalActionProposal(PoliticalAction politicalAction) {
+        this.politicalAction = politicalAction;
+    }
 
     public boolean affectsEconomy() {
         if (isLawProposal()) {
             return law.affectsEconomy();
         } else if (isTaxProposal()) {
             return true;
+        } else if (isPoliticalActionProposal()) {
+            return false;
         }
         return false;
     }
@@ -78,7 +91,7 @@ public class Proposal {
         ItemStack item = new ItemStack(Material.WRITTEN_BOOK);
         BookMeta meta = (BookMeta) item.getItemMeta();
 
-        String title = isLawProposal() ? "Law Proposal" : "Tax Proposal";
+        String title = isLawProposal() ? "Law Proposal" : isTaxProposal() ? "Tax Proposal" : "Political Action Proposal";
         if (title.length() > 32) title = title.substring(0, 32);
         meta.setTitle(title);
         meta.setAuthor(proposer != null ? proposer : "Unknown");
