@@ -16,5 +16,37 @@ public class Movement {
     private double organization;
 
     private List<Cause> causes = new ArrayList<>();
+
+    private Pool supporters = new Pool();
     
+    private List<Faction> foreignBackers = new ArrayList<>();
+
+    public Movement(String leader, Cause cause) {
+        this.leader = leader;
+        addCause(cause);
+    }
+
+    public String getLeader() {
+        return leader;
+    }
+
+    public double getOrganization() {
+        return organization;
+    }
+
+    public List<Cause> getCauses() {
+        return causes;
+    }
+
+    public Pool getSupporters() {
+        return supporters;
+    }
+
+    public List<Faction> getForeignBackers() {
+        return foreignBackers;
+    }
+
+    public void addCause(Cause cause) {
+        causes.add(cause);
+    }
 }

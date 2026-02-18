@@ -10,6 +10,7 @@ import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.ConfigLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
 import me.Plugins.SimpleFactions.Loaders.LawLoader;
+import me.Plugins.SimpleFactions.Loaders.PoliticalActionLoader;
 import me.Plugins.SimpleFactions.Loaders.ProvinceLoader;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.RegimentLoader;
@@ -49,6 +50,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final GuildLoader guildLoader = new GuildLoader();
 	private final LawLoader lawLoader = new LawLoader();
 	private final ProvinceLoader provinceLoader = new ProvinceLoader();
+	private final PoliticalActionLoader politicalActionLoader = new PoliticalActionLoader();
 	
 	//Managers
 	private final ProvinceManager provinceManager = new ProvinceManager();
@@ -114,6 +116,7 @@ public class SimpleFactions extends JavaPlugin{
 		regimentLoader.loadRegiments(new File(getDataFolder(), "regiments.yml"));
 		relationLoader.loadRelationTypes(new File(getDataFolder(), "diplomacy.yml"));
 		relationLoader.loadAttitudes(new File(getDataFolder(), "diplomacy.yml"));
+		politicalActionLoader.load(new File(getDataFolder(), "political-actions.yml"));
 		lawLoader.load(new File(getDataFolder(), "laws.yml"));
 		tierLoader.load(new File(getDataFolder(), "tiers.yml"));
 		goalLoader.load(new File(getDataFolder(), "wargoals.yml"));
@@ -162,6 +165,7 @@ public class SimpleFactions extends JavaPlugin{
 				"config.yml",
 				"tiers.yml",
 				"laws.yml",
+				"political-actions.yml",
 				"Guilds/guild-types.yml",
 				"Guilds/branches.yml",
 				"Guilds/upgrades.yml",

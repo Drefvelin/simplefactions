@@ -14,7 +14,7 @@ import me.Plugins.SimpleFactions.Utils.EconomicImpact;
 import me.Plugins.SimpleFactions.laws.LawGroup;
 
 import me.Plugins.SimpleFactions.government.Government;
-import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
+import me.Plugins.SimpleFactions.government.movement.Action;
 import me.Plugins.SimpleFactions.laws.Law;
 
 public class Proposal {
@@ -23,7 +23,7 @@ public class Proposal {
 
     private Law law;
     private TaxLawChange tax;
-    private PoliticalAction politicalAction;
+    private Action action;
 
     public Proposal(String proposer, Government gov) {
         this.gov = gov;
@@ -63,13 +63,13 @@ public class Proposal {
         this.tax = tax;
     }
     public boolean isPoliticalActionProposal() {
-        return politicalAction != null;
+        return action != null;
     }
-    public PoliticalAction getPoliticalAction() {
-        return politicalAction;
+    public Action getPoliticalAction() {
+        return action;
     }
-    public void setPoliticalActionProposal(PoliticalAction politicalAction) {
-        this.politicalAction = politicalAction;
+    public void setPoliticalActionProposal(Action action) {
+        this.action = action;
     }
 
     public boolean affectsEconomy() {

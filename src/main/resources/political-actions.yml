@@ -6,24 +6,12 @@ change_leader:
         - members
         - guilds
         - vassals
-      supporters:
-        - members
-        - guilds
-        - vassals
-      foreign_backers:
-        - factions
 nationhood:
     name: "#62ccd1Nationhood"
     description: "Elevate members to nationhood."
     pools:
       members:
         - guilds
-      supporters:
-        - members
-        - guilds
-        - vassals
-      foreign_backers:
-        - factions
 independence:
     name: "#62ccd1Independence"
     description: "Members are granted independence."
@@ -31,12 +19,14 @@ independence:
       members:
         - guilds
         - vassals
-      supporters:
+snap_elections:
+    name: "#62ccd1Snap Elections"
+    description: "Elections will be held immediately."
+    pools:
+      members:
         - members
         - guilds
         - vassals
-      foreign_backers:
-        - factions
 dissolve:
     name: "#62ccd1Dissolve"
     description: "Target faction is dissolved"
@@ -45,9 +35,3 @@ dissolve:
         - members
         - guilds
         - vassals
-      supporters:
-        - members
-        - guilds
-        - vassals
-      foreign_backers:
-        - factions
