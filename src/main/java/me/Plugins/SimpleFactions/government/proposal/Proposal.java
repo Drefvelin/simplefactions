@@ -107,6 +107,13 @@ public class Proposal {
         return action != null;
     }
     public PoliticalAction getPoliticalAction() {
+        if(action == null) {
+            if(isLawProposal()) {
+                return new PoliticalAction(Action.LAW_CHANGE);
+            } else if(isTaxProposal()) {
+                return new PoliticalAction(Action.TAX_CHANGE);
+            }
+        }
         return action;
     }
     public void setPoliticalActionProposal(PoliticalAction action) {

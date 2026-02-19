@@ -50,6 +50,7 @@ public class GovernmentView {
 		i.setItem(12, creator.createCouncilItem(f));
 		i.setItem(15, creator.createProposalItem(player, f));
 		i.setItem(24, creator.createProposalListItem(player, f));
+		i.setItem(33, creator.createMovementListItem(player, f));
 		Government gov = f.getGovernment();
 		if(gov.hasElections()) i.setItem(14, creator.createElectionItem(player, f));
 		if(gov.getCouncil().canHostSession() && f.getLeader().equalsIgnoreCase(player.getName())) {
@@ -124,6 +125,7 @@ public class GovernmentView {
 		i.clear();
 		int x = 0;
 		for(Action action : Action.values()) {
+			if(action == Action.TAX_CHANGE || action == Action.LAW_CHANGE) continue; //handled by other views
 			if(!f.getGovernment().canProposePolitical(player, action)) continue;
 			i.setItem(x, creator.createPoliticalProposalTypeItem(player, f, action));
 			x++;
@@ -227,6 +229,9 @@ public class GovernmentView {
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			} else if(slot == 24) {
 				proposalList(p, f, null);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			} else if(slot == 33) {
+				inv.movementListView(p, f, null);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			} else if(slot == 23) {
 				if(!f.getGovernment().hasCouncil()) return;
@@ -367,9 +372,12 @@ public class GovernmentView {
 				gov.propose(proposal);
 				gov.spendPower(cost);
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
-				governmentView(p, f, null);;
+				governmentView(p, f, null);
 			} else if(gov.canProposeOrStartMovement(p)) {
-				//TODO: Movement creation
+				gov.startMovement(p.getName(), proposal);
+				p.sendMessage("§aMovement started! Rally support for your proposal by sharing it with your faction and allies!");
+				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				governmentView(p, f, null);
 			}
 		} else if (h.getType() == SFGUI.PROPOSALS) {
 			e.setCancelled(true);

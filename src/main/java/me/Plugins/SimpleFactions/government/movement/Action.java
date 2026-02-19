@@ -6,6 +6,8 @@ public enum Action {
     INDEPENDENCE("#c5e0e3Declare Independence"),
     SNAP_ELECTIONS("#c5e0e3Call Snap Elections"),
     DISSOLVE("#c5e0e3Dissolve Faction"),
+    TAX_CHANGE("#c5e0e3Change Tax"),
+    LAW_CHANGE("#c5e0e3Change Law"),
     NONE("#c5e0e3Do Nothing");
 
     private String displayName;

@@ -1,6 +1,7 @@
 package me.Plugins.SimpleFactions.government.movement;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +40,7 @@ public class PoliticalAction {
         this.icon = "v.paper";
         this.name = action.getDisplay();
         this.description = new ArrayList<>();
-        this.pools = new ArrayList<>();
+        this.pools = Arrays.asList("members", "guilds", "factions");
     }
  
     public Action getAction() {

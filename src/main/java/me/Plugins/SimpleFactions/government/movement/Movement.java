@@ -144,6 +144,15 @@ public class Movement {
         return causes;
     }
 
+    public Cause getCauseByLeader(String leaderName) {
+        for (Cause cause : causes) {
+            if (cause.getLeader().equalsIgnoreCase(leaderName)) {
+                return cause;
+            }
+        }
+        return null;
+    }
+
     public Pool getSupporters() {
         return supporters;
     }

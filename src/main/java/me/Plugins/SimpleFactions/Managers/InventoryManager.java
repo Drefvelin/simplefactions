@@ -33,6 +33,7 @@ import me.Plugins.SimpleFactions.Managers.Inventory.LawView;
 import me.Plugins.SimpleFactions.Managers.Inventory.LoanPayment;
 import me.Plugins.SimpleFactions.Managers.Inventory.LoanView;
 import me.Plugins.SimpleFactions.Managers.Inventory.MilitaryView;
+import me.Plugins.SimpleFactions.Managers.Inventory.MovementView;
 import me.Plugins.SimpleFactions.Managers.Inventory.RelationView;
 import me.Plugins.SimpleFactions.Managers.Inventory.TaxChange;
 import me.Plugins.SimpleFactions.Managers.Inventory.TaxView;
@@ -152,6 +153,21 @@ public class InventoryManager implements Listener{
 	GovernmentView governmentView = new GovernmentView(this);
 	public void governmentView(Player player, Faction f, Inventory i) {
 		governmentView.governmentView(player, f, i);
+	}
+	
+	//Movements
+	MovementView movementView = new MovementView(this);
+	public void movementView(Player player, Faction f, me.Plugins.SimpleFactions.government.movement.Movement movement, Inventory i) {
+		movementView.movementView(player, f, movement, i);
+	}
+	public void movementListView(Player player, Faction f, Inventory i) {
+		movementView.movementListView(player, f, i);
+	}
+	public void causesView(Player player, Faction f, me.Plugins.SimpleFactions.government.movement.Movement movement, Inventory i) {
+		movementView.causesView(player, f, movement, i);
+	}
+	public void causeView(Player player, Faction f, me.Plugins.SimpleFactions.government.movement.Movement movement, me.Plugins.SimpleFactions.government.movement.cause.Cause cause, Inventory i) {
+		movementView.causeView(player, f, movement, cause, i);
 	}
 	
 	//Tiers
@@ -495,8 +511,26 @@ public class InventoryManager implements Listener{
 						break;
 					case COUNCIL_SELECT:
 						governmentView.councilView(p, f, null);
-						break;
-					case LEDGER_VIEW:
+						break;				case MOVEMENT_VIEW:
+					movementListView(p, f, null);
+					break;
+				case MOVEMENT_LIST:
+					governmentView(p, f, null);
+					break;
+				case CAUSES_VIEW:
+					{
+						me.Plugins.SimpleFactions.government.movement.Movement movement = f.getGovernment().getMovementByMember(p.getName());
+						if (movement == null) movement = f.getGovernment().getMovementByLeader(p.getName());
+						if (movement != null) movementView(p, f, movement, null);
+					}
+					break;
+				case CAUSE_VIEW:
+					{
+						me.Plugins.SimpleFactions.government.movement.Movement movement = f.getGovernment().getMovementByMember(p.getName());
+						if (movement == null) movement = f.getGovernment().getMovementByLeader(p.getName());
+						if (movement != null) causesView(p, f, movement, null);
+					}
+					break;					case LEDGER_VIEW:
 						factionView(p, f);
 						break;
 					case TAX_VIEW_SPECIFIC:
@@ -551,6 +585,11 @@ public class InventoryManager implements Listener{
 				|| h.getType() == SFGUI.COUNCIL_VIEW
 				|| h.getType() == SFGUI.COUNCIL_SELECT) {
 				governmentView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.MOVEMENT_VIEW
+				|| h.getType() == SFGUI.MOVEMENT_LIST
+				|| h.getType() == SFGUI.CAUSES_VIEW
+				|| h.getType() == SFGUI.CAUSE_VIEW) {
+				movementView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.DIPLOMACY_VIEW || h.getType() == SFGUI.ATTITUDE_VIEW || h.getType() == SFGUI.RELATION_VIEW) {
 				relationView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.ELECTION_VIEW || h.getType() == SFGUI.ELECTION_VOTING_VIEW) {

@@ -364,6 +364,24 @@ public class GovernmentCreator {
         return item;
     }
 
+    public ItemStack createMovementListItem(Player p, Faction f) {
+        ItemStack item = new ItemStack(Material.BLAZE_POWDER);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#d1743bActive Movements"));
+        List<String> lore = new ArrayList<String>();
+        Government gov = f.getGovernment();
+        int count = gov.getMovements().size();
+        lore.add(StringFormatter.formatHex("#85c265Active Movements§7: §e"+count));
+        lore.add("");
+        lore.add(StringFormatter.formatHex("#7a7a7aMovements represent organized"));
+        lore.add(StringFormatter.formatHex("#7a7a7aefforts to enact political change."));
+        lore.add("");
+        lore.add(StringFormatter.formatHex("#28ed70Click to view"));
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
     public ItemStack createCouncilMemberItem(Player player, Faction f, int slot) {
         Council council = f.getGovernment().getCouncil();
         List<String> members = council.getMembers();

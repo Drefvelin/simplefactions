@@ -17,7 +17,7 @@ public class Cause {
 
     private String leader;
     
-    private Pool members;
+    private Pool members = new Pool();
 
     public Cause(Movement movement, Proposal proposal, String leader) {
         this.movement = movement;
