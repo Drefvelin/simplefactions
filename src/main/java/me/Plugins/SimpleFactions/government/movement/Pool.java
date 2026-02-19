@@ -56,4 +56,18 @@ public class Pool {
         }
         return formattedList;
     }
+
+    public void remove(String pool, String member) {
+        switch(pool) {
+            case "members":
+                members.remove(member);
+                break;
+            case "guilds":
+                guilds.removeIf(g -> g.getId().equals(member));
+                break;
+            case "factions":
+                factions.removeIf(f -> f.getId().equals(member));
+                break;
+        }
+    }
 }

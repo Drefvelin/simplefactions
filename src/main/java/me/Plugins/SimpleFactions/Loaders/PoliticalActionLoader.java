@@ -24,7 +24,7 @@ public class PoliticalActionLoader {
     public static List<PoliticalAction> getList(){
 		return new ArrayList<>(map.values());
 	}
-	public static PoliticalAction getByString(Action id) {
+	public static PoliticalAction getByAction(Action id) {
 		for(PoliticalAction r : map.values()) {
 			if(r.getAction() == id) return r;
 		}
@@ -41,7 +41,7 @@ public class PoliticalActionLoader {
 		Set<String> set = config.getKeys(false);
 
 		List<String> list = new ArrayList<>(set);
-		
+		map.put(Action.NONE, new PoliticalAction(Action.NONE));
 		for(String key : list) {
 			PoliticalAction r = new PoliticalAction(key, config.getConfigurationSection(key));
 			map.put(r.getAction(), r);

@@ -9,13 +9,14 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
 
 import me.Plugins.TLibs.TLibs;
+import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class PoliticalAction {
     private Action action;
     private String name;
     private String icon;
     private List<String> description = new ArrayList<>();
-    private Map<String, List<String>> pools = new LinkedHashMap<>();
+    private List<String> pools = new ArrayList<>();
 
     public PoliticalAction(String key, ConfigurationSection config) {
         try {
@@ -24,13 +25,23 @@ public class PoliticalAction {
             throw new IllegalArgumentException("Invalid political action key: " + key);
         }
         this.icon = config.getString("icon", "v.paper");
-        this.name = config.getString("name", key);
-        this.description = config.getStringList("description");
-        for (String poolKey : config.getConfigurationSection("pools").getKeys(false)) {
-            pools.put(poolKey, config.getStringList("pools." + poolKey));
+        this.name = StringFormatter.formatHex(config.getString("name", key));
+        for (String line : config.getStringList("description")) {
+            description.add(StringFormatter.formatHex(line));
+        }
+        for (String pool : config.getStringList("pools")) {
+            pools.add(pool);
         }
     }
 
+    public PoliticalAction(Action action) {
+        this.action = action;
+        this.icon = "v.paper";
+        this.name = action.getDisplay();
+        this.description = new ArrayList<>();
+        this.pools = new ArrayList<>();
+    }
+ 
     public Action getAction() {
         return action;
     }
@@ -51,19 +62,19 @@ public class PoliticalAction {
         return description;
     }
 
-    public Map<String, List<String>> getPools() {
+    public List<String> getPools() {
         return pools;
     }
 
-    public boolean allowMembers(String pool) {
-        return pools.containsKey(pool) && pools.get(pool).contains("members");
+    public boolean allowMembers() {
+        return pools.contains("members");
     }
 
-    public boolean allowGuilds(String pool) {
-        return pools.containsKey(pool) && pools.get(pool).contains("guilds");
+    public boolean allowGuilds() {
+        return pools.contains("guilds");
     }
 
-    public boolean allowFactions(String pool) {
-        return pools.containsKey(pool) && pools.get(pool).contains("factions");
+    public boolean allowFactions() {
+        return pools.contains("factions");
     }
 }

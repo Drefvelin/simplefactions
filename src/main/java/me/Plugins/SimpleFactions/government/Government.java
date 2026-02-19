@@ -19,15 +19,20 @@ import org.checkerframework.checker.units.qual.t;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Database.GovernmentData;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Loaders.PoliticalActionLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Wealth;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
+import me.Plugins.SimpleFactions.enums.Member;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.government.election.Candidate;
 import me.Plugins.SimpleFactions.government.election.Election;
+import me.Plugins.SimpleFactions.government.movement.Action;
+import me.Plugins.SimpleFactions.government.movement.Movement;
+import me.Plugins.SimpleFactions.government.movement.cause.Cause;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.laws.LawGroup;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -43,6 +48,8 @@ public class Government {
     private List<Location> votingBooths = new ArrayList<>();
 
     private Date lastElectionDate = new Date(0);
+
+    private List<Movement> movements = new ArrayList<>();
 
     public Government(Faction f) {
         this.f = f;
@@ -102,6 +109,52 @@ public class Government {
                 election.end();
             }
         }
+    }
+
+    //Movements
+
+    public boolean hasMovements() {
+        return !movements.isEmpty();
+    }
+
+    public List<Movement> getMovements() {
+        return movements;
+    }
+
+    public void startMovement(String leader, Proposal cause) {
+        Movement movement = new Movement(f, leader, cause);
+        movements.add(movement);
+    }
+
+    public void endMovement(Movement movement) {
+        movements.remove(movement);
+    }
+
+    public Movement getMovementByLeader(String leader) {
+        for (Movement movement : movements) {
+            if (movement.getLeader().equalsIgnoreCase(leader)) {
+                return movement;
+            }
+        }
+        return null;
+    }
+
+    public Movement getMovementByMember(String member) {
+        for (Movement movement : movements) {
+            if (movement.getAllMembers().contains(member)) {
+                return movement;
+            }
+        }
+        return null;
+    }
+
+    public Movement getMovementByForeignBacker(Faction backer) {
+        for (Movement movement : movements) {
+            if (movement.getForeignBackers().contains(backer)) {
+                return movement;
+            }
+        }
+        return null;
     }
 
     public void resetGrace() {
@@ -180,6 +233,9 @@ public class Government {
 
 
     public void tick() {
+        for(Movement movement : movements) {
+            movement.tick();
+        }
         election.tick();
         if(!hasElections()) lastElectionDate = new Date(0);
         replace();
@@ -255,6 +311,35 @@ public class Government {
 
     public boolean canBeProposed(Proposal proposal) {
         return council.canBeProposed(proposal);
+    }
+
+    public boolean canProposePolitical(Player p, Action action) {
+        if(action == Action.NONE) return false;
+        String name = p.getName();
+        if(name.equalsIgnoreCase(f.getLeader())) return false;
+        if(council.isMember(name)) return false;
+        if(action == Action.SNAP_ELECTIONS && !hasElections()) return false;
+        Member relation = f.getRelationToFaction(name);
+        switch (relation) {
+            case LEADER:
+            case VASSAL_MEMBER:
+            case FOREIGNER:
+                return false;
+            case MEMBER:
+                if(!PoliticalActionLoader.getByAction(action).allowMembers()) return false;
+                return true;
+            case GUILD_MEMBER:
+                if(action == Action.NATIONHOOD) return false; //only leaders can demand that
+            case GUILD_LEADER:
+                if(action == Action.NATIONHOOD && !FactionManager.getGuildByMember(p.getName()).canBeElevated(null)) return false;
+                if(!PoliticalActionLoader.getByAction(action).allowGuilds()) return false;
+            case VASSAL_LEADER:
+                if(!PoliticalActionLoader.getByAction(action).allowFactions()) return false;
+            default:
+                break;
+            
+        }
+        return true;
     }
 
     public Council getCouncil() {

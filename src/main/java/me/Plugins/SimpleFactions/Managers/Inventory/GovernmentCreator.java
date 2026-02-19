@@ -15,6 +15,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Loaders.PoliticalActionLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
@@ -27,6 +28,8 @@ import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.SimpleFactions.government.Council;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.election.Candidate;
+import me.Plugins.SimpleFactions.government.movement.Action;
+import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxLawChange;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
@@ -573,7 +576,27 @@ public class GovernmentCreator {
             lore.add(StringFormatter.formatHex("#b8ae61Create a proposal to change"));
             lore.add(StringFormatter.formatHex("#b8ae61the tax rate in your faction."));
             m.setLore(lore);
+        } else if(type.equalsIgnoreCase("political")) {
+            m.setDisplayName(StringFormatter.formatHex("#93c9a7Political Proposal"));
+            List<String> lore = new ArrayList<String>();
+            lore.add(StringFormatter.formatHex("#b8ae61Create a proposal to change"));
+            lore.add(StringFormatter.formatHex("#b8ae61the political landscape in your faction."));
+            m.setLore(lore);
         }
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createPoliticalProposalTypeItem(Player p, Faction f, Action action) {
+        ItemStack item = new ItemStack(Material.PAPER);
+        ItemMeta m = item.getItemMeta();
+        String actionDisplay = action.getDisplay();
+        m.setDisplayName(StringFormatter.formatHex("#93c9a7"+actionDisplay));
+        List<String> lore = new ArrayList<String>();
+        lore.add(StringFormatter.formatHex("#b8ae61Create a proposal to "+actionDisplay));
+        PoliticalAction politicalAction = PoliticalActionLoader.getByAction(action);
+        lore.addAll(politicalAction.getDescription());
+        m.setLore(lore);
         item.setItemMeta(m);
         return item;
     }

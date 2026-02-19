@@ -20,6 +20,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.government.Council;
 import me.Plugins.SimpleFactions.government.Government;
+import me.Plugins.SimpleFactions.government.movement.Action;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.keys.Keys;
@@ -111,7 +112,23 @@ public class GovernmentView {
 		i.clear();
 		i.setItem(0, creator.createProposalTypeItem("law"));
 		i.setItem(1, creator.createProposalTypeItem("tax"));
+		if(!f.getGovernment().canPropose(player) && f.getGovernment().canProposeOrStartMovement(player))
+			i.setItem(2, creator.createProposalTypeItem("political")); //only for movements
 		i.setItem(8, inv.createBackButton(SFGUI.PROPOSAL_VIEW));
+		if(open) player.openInventory(i);
+	}
+
+	public void politicalProposalView(Player player, Faction f, Inventory i) {
+		boolean open = i == null;
+		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.POLITICAL_PROPOSAL_VIEW), 27, "§7Select Political Change");
+		i.clear();
+		int x = 0;
+		for(Action action : Action.values()) {
+			if(!f.getGovernment().canProposePolitical(player, action)) continue;
+			i.setItem(x, creator.createPoliticalProposalTypeItem(player, f, action));
+			x++;
+		}
+		i.setItem(26, inv.createBackButton(SFGUI.POLITICAL_PROPOSAL_VIEW));
 		if(open) player.openInventory(i);
 	}
 
@@ -236,6 +253,9 @@ public class GovernmentView {
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			} else if(slot == 1) {
 				taxProposalView(p, f, null);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			} else if(slot == 2) {
+				politicalProposalView(p, f, null);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			}
 		} else if (h.getType() == SFGUI.TAX_PROPOSAL_VIEW) {

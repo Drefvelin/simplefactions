@@ -9,12 +9,14 @@ import org.bukkit.Material;
 import java.util.ArrayList;
 import java.util.List;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.EconomicImpact;
 import me.Plugins.SimpleFactions.laws.LawGroup;
 
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.movement.Action;
+import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
 import me.Plugins.SimpleFactions.laws.Law;
 
 public class Proposal {
@@ -23,7 +25,8 @@ public class Proposal {
 
     private Law law;
     private TaxLawChange tax;
-    private Action action;
+    private PoliticalAction action;
+    private String target;
 
     public Proposal(String proposer, Government gov) {
         this.gov = gov;
@@ -42,6 +45,44 @@ public class Proposal {
             TaxTarget target = tax.getTarget();
             gov.getFaction().getTaxHandler().setTaxRate(target, tax.getId(), tax.getNewTax());
         }
+    }
+
+    public void tick() {
+        //checking if target is still valid
+        if(hasTarget()) {
+            if (!checkTarget()) {
+                target = null;
+            }
+        }
+    }
+
+    public boolean checkTarget() {
+        if (!needsTarget()) return true;
+        if (target == null) return false;
+        // For CHANGE_LEADER, target must be a current member of the faction
+        if (isPoliticalActionProposal() && action.getAction() == Action.CHANGE_LEADER) {
+            if(!gov.getFaction().isMember(target)) return false;
+            if(gov.getFaction().isLeader(target)) return false; // Can't target current leader
+            if(FactionManager.getGuildByLeader(target) != null) return false; // Can't be leader if they lead a guild
+            return true;
+        }
+        return false;
+    }
+
+    public boolean hasTarget() {
+        return target != null;
+    }
+
+    public String getTarget() {
+        return target;
+    }
+
+    public void setTarget(String target) {
+        this.target = target;
+    }
+
+    public boolean needsTarget() {
+        return isPoliticalActionProposal() && action.getAction() == Action.CHANGE_LEADER;
     }
 
     public boolean isLawProposal() {
@@ -65,10 +106,10 @@ public class Proposal {
     public boolean isPoliticalActionProposal() {
         return action != null;
     }
-    public Action getPoliticalAction() {
+    public PoliticalAction getPoliticalAction() {
         return action;
     }
-    public void setPoliticalActionProposal(Action action) {
+    public void setPoliticalActionProposal(PoliticalAction action) {
         this.action = action;
     }
 

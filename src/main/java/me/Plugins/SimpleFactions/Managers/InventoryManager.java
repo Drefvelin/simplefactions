@@ -472,6 +472,9 @@ public class InventoryManager implements Listener{
 					case PROPOSAL_VIEW:
 						governmentView(p, f, null);
 						break;
+					case POLITICAL_PROPOSAL_VIEW:
+						governmentView.proposalView(p, f, null);
+						break;
 					case LAW_PROPOSAL_VIEW:
 						governmentView.proposalView(p, f, null);
 						break;
