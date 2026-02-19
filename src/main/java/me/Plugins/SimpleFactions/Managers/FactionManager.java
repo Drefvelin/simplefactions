@@ -263,6 +263,7 @@ public class FactionManager implements Listener{
 			f.getLawHandler().apply();
 			f.updatePrestige();
 			f.countyCheck();
+			f.getGovernment().loadMovements();
 			f.ping();
 		}
 		fixRelations();

@@ -3,6 +3,7 @@ package me.Plugins.SimpleFactions.government.movement.cause;
 import java.util.List;
 import me.Plugins.SimpleFactions.government.movement.Movement;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.enums.Member;
 import me.Plugins.SimpleFactions.enums.Stance;
@@ -24,6 +25,16 @@ public class Cause {
         this.proposal = proposal;
         action = proposal.getPoliticalAction().getAction();
         this.leader = leader;
+        Member relation = movement.getFaction().getRelationToFaction(leader);
+        if (relation == Member.GUILD_LEADER || relation == Member.GUILD_MEMBER) {
+            members.addGuild(FactionManager.getGuildByMember(leader));
+        } else if (relation == Member.VASSAL_LEADER || relation == Member.VASSAL_MEMBER) {
+            members.addFaction(FactionManager.getByMember(leader));
+        } else if (relation == Member.MEMBER) {
+            members.addMember(leader);
+        } else {
+            this.leader = null;
+        }
     }
 
     public void tick() {
@@ -77,6 +88,10 @@ public class Cause {
 
     public Pool getMembers() {
         return members;
+    }
+
+    public void setMembers(Pool members) {
+        this.members = members;
     }
 
     public List<String> getMembersList() {

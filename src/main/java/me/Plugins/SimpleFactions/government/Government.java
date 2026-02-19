@@ -18,6 +18,7 @@ import org.checkerframework.checker.units.qual.t;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Database.GovernmentData;
+import me.Plugins.SimpleFactions.Database.MovementData;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.PoliticalActionLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
@@ -32,9 +33,12 @@ import me.Plugins.SimpleFactions.government.election.Candidate;
 import me.Plugins.SimpleFactions.government.election.Election;
 import me.Plugins.SimpleFactions.government.movement.Action;
 import me.Plugins.SimpleFactions.government.movement.Movement;
+import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
+import me.Plugins.SimpleFactions.government.movement.Pool;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.laws.LawGroup;
+import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 
@@ -50,6 +54,7 @@ public class Government {
     private Date lastElectionDate = new Date(0);
 
     private List<Movement> movements = new ArrayList<>();
+    private List<MovementData> movementData = new ArrayList<>();
 
     public Government(Faction f) {
         this.f = f;
@@ -91,6 +96,18 @@ public class Government {
         // Restore proposals
         if (data.proposals != null) {
             council.getProposalHandler().restoreProposals(f, data.proposals);
+        }
+        
+        // Restore movements
+        if (data.movements != null && !data.movements.isEmpty()) {
+            movementData = data.movements;
+        }
+    }
+
+    public void loadMovements() {
+        for (MovementData md : movementData) {
+            Movement movement = new Movement(f, md);
+            movements.add(movement);
         }
     }
 
@@ -632,8 +649,99 @@ public class Government {
         return election;
     }
 
-    public me.Plugins.SimpleFactions.Database.GovernmentData serialize() {
-        me.Plugins.SimpleFactions.Database.GovernmentData data = new me.Plugins.SimpleFactions.Database.GovernmentData();
+    private java.util.List<me.Plugins.SimpleFactions.Database.MovementData> serializeMovements() {
+        java.util.List<me.Plugins.SimpleFactions.Database.MovementData> result = new java.util.ArrayList<>();
+        
+        for (Movement m : movements) {
+            me.Plugins.SimpleFactions.Database.MovementData data = new me.Plugins.SimpleFactions.Database.MovementData();
+            data.leader = m.getLeader();
+            data.organization = m.getOrganization();
+            
+            // Serialize causes
+            for (Cause cause : m.getCauses()) {
+                me.Plugins.SimpleFactions.Database.CauseData causeData = new me.Plugins.SimpleFactions.Database.CauseData();
+                causeData.leader = cause.getLeader();
+                causeData.action = cause.getAction().toString();
+                
+                // Serialize proposal
+                Proposal proposal = cause.getProposal();
+                causeData.proposal = serializeProposal(proposal);
+                
+                // Serialize members pool
+                Pool memberPool = cause.getMembers();
+                causeData.members = serializePool(memberPool);
+                
+                data.causes.add(causeData);
+            }
+            
+            // Serialize supporters pool
+            Pool supportersPool = m.getSupporters();
+            data.supporters = serializePool(supportersPool);
+            
+            // Serialize foreign backers
+            for (Faction backer : m.getForeignBackers()) {
+                data.foreignBackers.add(backer.getId());
+            }
+            
+            result.add(data);
+        }
+        
+        return result;
+    }
+
+    private me.Plugins.SimpleFactions.Database.PoolData serializePool(Pool pool) {
+        me.Plugins.SimpleFactions.Database.PoolData data = new me.Plugins.SimpleFactions.Database.PoolData();
+        data.members = new java.util.ArrayList<>(pool.getMembers());
+        
+        for (Guild guild : pool.getGuilds()) {
+            data.guilds.add(guild.getId());
+        }
+        
+        for (Faction faction : pool.getFactions()) {
+            data.factions.add(faction.getId());
+        }
+        
+        return data;
+    }
+
+    private me.Plugins.SimpleFactions.Database.ProposalData serializeProposal(Proposal p) {
+        me.Plugins.SimpleFactions.Database.ProposalData data = new me.Plugins.SimpleFactions.Database.ProposalData();
+        data.proposer = p.getProposer();
+        
+        if (p.isLawProposal() && p.getLaw() != null) {
+            data.type = "law";
+            data.groupId = p.getLaw().getGroup();
+            data.lawId = p.getLaw().getId();
+        } else if (p.isTaxProposal() && p.getTaxChange() != null) {
+            data.type = "tax";
+            me.Plugins.SimpleFactions.government.proposal.TaxLawChange tax = p.getTaxChange();
+            data.taxTarget = tax.getTarget().name();
+            data.taxId = tax.getId();
+            data.newTax = tax.getNewTax();
+        } else if (p.isPoliticalActionProposal() && p.getPoliticalAction() != null) {
+            data.type = "political";
+            data.actionKey = p.getPoliticalAction().getAction().toString();
+            data.target = p.getTarget();
+        }
+        
+        return data;
+    }
+
+    public void deserializeMovements(Faction faction, List<MovementData> movementDataList) {
+        movements.clear();
+        
+        for (MovementData movementData : movementDataList) {
+            try {
+                Movement movement = new Movement(faction, movementData);
+                movements.add(movement);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public GovernmentData serialize() {
+        GovernmentData data = new GovernmentData();
         data.power = this.power >= 0 ? this.power : null;
         data.lastElectionDate = this.lastElectionDate.getTime();
         data.councilMembers = new java.util.ArrayList<>(council.getMembers());
@@ -642,6 +750,7 @@ public class Government {
         data.electionVotes = election.serializeVotes();
         data.previousVotes = election.serializePreviousVotes();
         data.grace = this.grace;
+        data.movements = serializeMovements();
         return data;
     }
 }

@@ -20,6 +20,18 @@ public class Pool {
         this.factions = factions;
     }
 
+    public void addMember(String member) {
+        members.add(member);
+    }
+
+    public void addGuild(Guild guild) {
+        guilds.add(guild);
+    }
+
+    public void addFaction(Faction faction) {
+        factions.add(faction);
+    }
+
     public List<String> getMembers() {
         return members;
     }
@@ -46,7 +58,7 @@ public class Pool {
     public List<String> getFormattedList() {
         List<String> formattedList = new ArrayList<>();
         for (String member : members) {
-            formattedList.add(StringFormatter.formatHex(member + " #77d1a3(Member)"));
+            formattedList.add(StringFormatter.formatHex(member + " #77d1a3(Citizen)"));
         }
         for (Guild guild : guilds) {
             formattedList.add(StringFormatter.formatHex(guild.getName() + " #d1b83b(Guild)"));

@@ -74,7 +74,7 @@ public class MovementView {
         List<Cause> causes = movement.getCauses();
         for (int slot : SLOTS) {
             if (x >= causes.size()) break;
-            i.setItem(slot, creator.createCauseItem(causes.get(x)));
+            i.setItem(slot, creator.createCauseItem(causes.get(x), x));
             x++;
         }
         
@@ -214,9 +214,9 @@ public class MovementView {
         if (movement == null) return;
         
         // Check if a cause was clicked
-        if (meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
-            String leaderName = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
-            Cause cause = movement.getCauseByLeader(leaderName);
+        if (meta.getPersistentDataContainer().has(Keys.INT, PersistentDataType.INTEGER)) {
+            int index = meta.getPersistentDataContainer().get(Keys.INT, PersistentDataType.INTEGER);
+            Cause cause = movement.getCauses().get(index);
             if (cause != null) {
                 causeView(p, f, movement, cause, null);
                 p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);

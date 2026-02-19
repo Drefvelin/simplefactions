@@ -94,10 +94,10 @@ public class MovementCreator {
         return item;
     }
     
-    public ItemStack createCauseItem(Cause cause) {
+    public ItemStack createCauseItem(Cause cause, int index) {
         ItemStack item = new ItemStack(Material.WRITABLE_BOOK);
         ItemMeta m = item.getItemMeta();
-        m.setDisplayName(StringFormatter.formatHex("#c5e0e3"+cause.getLeader()+"'s Cause"));
+        m.setDisplayName(StringFormatter.formatHex("#c5e0e3"+(cause.hasLeader() ? cause.getLeader()+"'s Cause" : "Disorganized Cause")));
         List<String> lore = new ArrayList<>();
         lore.add(StringFormatter.formatHex("#9c9775Action: #c2bea7" + cause.getAction().getDisplay()));
         if (cause.hasLeader()) {
@@ -108,10 +108,13 @@ public class MovementCreator {
         lore.add(" ");
         int memberCount = cause.getMembersList().size();
         lore.add(StringFormatter.formatHex("#9c9775Members: #c2bea7" + memberCount));
+        for(String member : cause.getMembers().getFormattedList()) {
+            lore.add(StringFormatter.formatHex("#7a7a7a- " + member));
+        }
         lore.add(" ");
         lore.add(StringFormatter.formatHex("#7a7a7aClick to view details"));
         m.setLore(lore);
-        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, cause.getLeader());
+        m.getPersistentDataContainer().set(Keys.INT, PersistentDataType.INTEGER, index);
         item.setItemMeta(m);
         return item;
     }

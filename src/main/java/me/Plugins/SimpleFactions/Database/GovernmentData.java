@@ -28,4 +28,6 @@ public class GovernmentData {
     public Map<String, Map<String, Integer>> previousVotes = new HashMap<>();
 
     public Long grace;
+
+    public List<MovementData> movements = new ArrayList<>();
 }

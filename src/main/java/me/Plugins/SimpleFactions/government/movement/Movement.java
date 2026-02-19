@@ -5,13 +5,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import me.Plugins.SimpleFactions.Database.CauseData;
+import me.Plugins.SimpleFactions.Database.MovementData;
+import me.Plugins.SimpleFactions.Database.PoolData;
+import me.Plugins.SimpleFactions.Database.ProposalData;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.enums.Member;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
+import me.Plugins.SimpleFactions.laws.Law;
+import me.Plugins.SimpleFactions.laws.LawGroup;
 
 public class Movement {
     private Faction f;
@@ -30,6 +37,51 @@ public class Movement {
         this.f = f;
         this.leader = leader;
         addCause(new Cause(this, cause, leader));
+    }
+
+    public Movement(Faction f, MovementData data) {
+        this.f = f;
+        this.leader = data.leader;
+        this.organization = data.organization != null ? data.organization : 0;
+        this.causes = new ArrayList<>();
+        this.supporters = new Pool();
+        this.foreignBackers = new ArrayList<>();
+        
+        // Deserialize all causes
+        if (data.causes != null) {
+            for (CauseData causeData : data.causes) {
+                try {
+                    Proposal proposal = deserializeProposal(f, causeData.proposal);
+                    if (proposal == null) continue;
+                    
+                    Cause cause = new Cause(this, proposal, causeData.leader);
+                    
+                    // Restore members pool if available
+                    if (causeData.members != null) {
+                        cause.setMembers(deserializePool(f, causeData.members));
+                    }
+                    
+                    causes.add(cause);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        // Deserialize supporters pool
+        if (data.supporters != null) {
+            supporters = deserializePool(f, data.supporters);
+        }
+        
+        // Deserialize foreign backers
+        if (data.foreignBackers != null) {
+            for (String backerId : data.foreignBackers) {
+                Faction backer = FactionManager.getByString(backerId);
+                if (backer != null) {
+                    foreignBackers.add(backer);
+                }
+            }
+        }
     }
 
     public Faction getFaction() {
@@ -172,5 +224,71 @@ public class Movement {
 
     public void addCause(Cause cause) {
         causes.add(cause);
+    }
+
+    private Proposal deserializeProposal(Faction faction, ProposalData proposalData) {
+        if (proposalData == null) return null;
+        
+        Proposal p = new Proposal(proposalData.proposer, faction.getGovernment());
+        
+        try {
+            if ("law".equals(proposalData.type)) {
+                LawGroup group = faction.getLawHandler().getGroup(proposalData.groupId);
+                if (group != null) {
+                    Law law = group.getLaw(proposalData.lawId);
+                    if (law != null) {
+                        p.setLawProposal(law);
+                        return p;
+                    }
+                }
+            } else if ("tax".equals(proposalData.type)) {
+                me.Plugins.SimpleFactions.government.proposal.TaxTarget target = 
+                    me.Plugins.SimpleFactions.government.proposal.TaxTarget.valueOf(proposalData.taxTarget);
+                me.Plugins.SimpleFactions.government.proposal.TaxLawChange tax = 
+                    new me.Plugins.SimpleFactions.government.proposal.TaxLawChange(target, proposalData.taxId, proposalData.newTax);
+                p.setTaxProposal(tax);
+                return p;
+            } else if ("political".equals(proposalData.type)) {
+                Action action = Action.valueOf(proposalData.actionKey);
+                PoliticalAction politicalAction = new PoliticalAction(action);
+                p.setPoliticalActionProposal(politicalAction);
+                p.setTarget(proposalData.target);
+                return p;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        return null;
+    }
+
+    private Pool deserializePool(Faction faction, PoolData poolData) {
+        Pool pool = new Pool();
+        
+        if (poolData.members != null) {
+            for (String member : poolData.members) {
+                pool.addMember(member);
+            }
+        }
+        
+        if (poolData.guilds != null) {
+            for (String guildId : poolData.guilds) {
+                Guild guild = faction.getGuildHandler().getGuild(guildId);
+                if (guild != null) {
+                    pool.addGuild(guild);
+                }
+            }
+        }
+        
+        if (poolData.factions != null) {
+            for (String factionId : poolData.factions) {
+                Faction f = FactionManager.getByString(factionId);
+                if (f != null) {
+                    pool.addFaction(f);
+                }
+            }
+        }
+        
+        return pool;
     }
 }
