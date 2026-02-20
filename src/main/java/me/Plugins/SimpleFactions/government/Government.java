@@ -320,6 +320,10 @@ public class Government {
                 if(guild.getLeader().equalsIgnoreCase(name))return true; //Guild leader of a guild in the faction
             }
         }
+        Faction faction = FactionManager.getByLeader(name);
+        if(faction != null) {
+            if(faction.getOverlord() != null && faction.getOverlord().getId().equalsIgnoreCase(f.getId())) return true;
+        }
         return false;
     }
 
@@ -362,6 +366,7 @@ public class Government {
             case GUILD_LEADER:
                 if(action == Action.NATIONHOOD && !FactionManager.getGuildByMember(p.getName()).canBeElevated(null)) return false;
                 if(!PoliticalActionLoader.getByAction(action).allowGuilds()) return false;
+                break;
             case VASSAL_LEADER:
                 if(!PoliticalActionLoader.getByAction(action).allowFactions()) return false;
             default:
@@ -473,6 +478,9 @@ public class Government {
         }
         if(f.getOrCreateMainGuild().isBankrupt()) {
             stability -= 100;
+        }
+        if(hasElections() && votingBooths.size() == 0) {
+            stability -= 75;
         }
         if(stability < 0) stability = 0;
         if(stability > 100) stability = 100;

@@ -12,10 +12,12 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.government.movement.Movement;
 import me.Plugins.SimpleFactions.government.movement.Phase;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
+import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.TLibs.TLibs;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -69,15 +71,24 @@ public class MovementCreator {
     }
     
     public ItemStack createJoinAsSupporterButton(Player player, Movement movement) {
-        ItemStack item = new ItemStack(Material.GREEN_BANNER);
+        boolean isSupporter = movement.getSupporters().getAllMembers().contains(player.getName());
+        ItemStack item = new ItemStack(isSupporter ? Material.RED_BANNER : Material.GREEN_BANNER);
         ItemMeta m = item.getItemMeta();
-        m.setDisplayName(StringFormatter.formatHex("#45afc4Join as Supporter"));
+        m.setDisplayName(StringFormatter.formatHex(isSupporter ? "#c74d32Leave as Supporter" : "#45afc4Join as Supporter"));
         List<String> lore = new ArrayList<>();
-        lore.add(StringFormatter.formatHex("#7a7a7aSupport the movement without"));
-        lore.add(StringFormatter.formatHex("#7a7a7acommitting to specific causes."));
+        if (isSupporter) {
+            lore.add(StringFormatter.formatHex("#7a7a7aLeave general support for"));
+            lore.add(StringFormatter.formatHex("#7a7a7athis movement."));
+        } else {
+            lore.add(StringFormatter.formatHex("#7a7a7aSupport the movement without"));
+            lore.add(StringFormatter.formatHex("#7a7a7acommitting to specific causes."));
+        }
         lore.add(" ");
         int supporterCount = movement.getSupporters().getAllMembers().size();
         lore.add(StringFormatter.formatHex("#9c9775Current Supporters: #c2bea7" + supporterCount));
+        for(String supporter : movement.getSupporters().getFormattedList()) {
+            lore.add(StringFormatter.formatHex("#7a7a7a- " + supporter));
+        }
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
         item.setItemMeta(m);
@@ -85,15 +96,25 @@ public class MovementCreator {
     }
     
     public ItemStack createJoinAsForeignBackerButton(Player player, Movement movement) {
-        ItemStack item = new ItemStack(Material.YELLOW_BANNER);
+        Faction playerFaction = FactionManager.getByMember(player.getName());
+        boolean isBacker = playerFaction != null && movement.getForeignBackers().contains(playerFaction);
+        ItemStack item = new ItemStack(isBacker ? Material.RED_BANNER : Material.YELLOW_BANNER);
         ItemMeta m = item.getItemMeta();
-        m.setDisplayName(StringFormatter.formatHex("#d1b83b Join as Foreign Backer"));
+        m.setDisplayName(StringFormatter.formatHex(isBacker ? "#c74d32Leave as Foreign Backer" : "#d1b83b Join as Foreign Backer"));
         List<String> lore = new ArrayList<>();
-        lore.add(StringFormatter.formatHex("#7a7a7aProvide foreign support to"));
-        lore.add(StringFormatter.formatHex("#7a7a7athe movement from outside."));
+        if (isBacker) {
+            lore.add(StringFormatter.formatHex("#7a7a7aWithdraw foreign support"));
+            lore.add(StringFormatter.formatHex("#7a7a7afrom this movement."));
+        } else {
+            lore.add(StringFormatter.formatHex("#7a7a7aProvide foreign support to"));
+            lore.add(StringFormatter.formatHex("#7a7a7athe movement from outside."));
+        }
         lore.add(" ");
         int backerCount = movement.getForeignBackers().size();
         lore.add(StringFormatter.formatHex("#9c9775Current Backers: #c2bea7" + backerCount));
+        for(Faction backer : movement.getForeignBackers()) {
+            lore.add(StringFormatter.formatHex("#7a7a7a- " + backer.getName()));
+        }
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
         item.setItemMeta(m);
@@ -191,12 +212,18 @@ public class MovementCreator {
     }
     
     public ItemStack createJoinCauseButton(Player player, Cause cause) {
-        ItemStack item = new ItemStack(Material.GREEN_WOOL);
+        boolean isMember = cause.getFullMemberList().contains(player.getName());
+        ItemStack item = new ItemStack(isMember ? Material.RED_WOOL : Material.GREEN_WOOL);
         ItemMeta m = item.getItemMeta();
-        m.setDisplayName(StringFormatter.formatHex("#45afc4Join Cause"));
+        m.setDisplayName(StringFormatter.formatHex(isMember ? "#c74d32Leave Cause" : "#45afc4Join Cause"));
         List<String> lore = new ArrayList<>();
-        lore.add(StringFormatter.formatHex("#7a7a7aCommit to supporting this"));
-        lore.add(StringFormatter.formatHex("#7a7a7aspecific cause."));
+        if (isMember) {
+            lore.add(StringFormatter.formatHex("#7a7a7aLeave this cause and"));
+            lore.add(StringFormatter.formatHex("#7a7a7awithdraw your support."));
+        } else {
+            lore.add(StringFormatter.formatHex("#7a7a7aCommit to supporting this"));
+            lore.add(StringFormatter.formatHex("#7a7a7aspecific cause."));
+        }
         lore.add(" ");
         int memberCount = cause.getFullMemberList().size();
         lore.add(StringFormatter.formatHex("#9c9775Current Members: #c2bea7" + memberCount));
@@ -247,7 +274,7 @@ public class MovementCreator {
         ItemStack item = new ItemStack(Material.RED_CONCRETE);
         if(phase == movement.getPhase()) {
             item = new ItemStack(Material.GREEN_CONCRETE);
-        } else if(phase.getIndex() > 0 && phase.getIndex() == movement.getPhase().getIndex()-1) {
+        } else if(phase.getIndex() == movement.getPhase().getIndex()-1) {
             item = new ItemStack(Material.YELLOW_CONCRETE);
         } else if(phase.getIndex() < 4 && phase.getIndex() == movement.getPhase().getIndex()+1 && movement.getOrganization() >= movement.getPhase().getMaxOrganization()) {
             item = new ItemStack(Material.YELLOW_CONCRETE);
@@ -412,6 +439,62 @@ public class MovementCreator {
         lore.add(StringFormatter.formatHex("#d65c5cClick to Decline"));
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createTargetButton(Player p, Cause cause) {
+        Proposal proposal = cause.getProposal();
+        ItemStack item;
+        
+        if (proposal.hasTarget()) {
+            item = new ItemStack(Material.PLAYER_HEAD);
+        } else {
+            item = new ItemStack(Material.YELLOW_CONCRETE);
+        }
+        
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#c5e0e3Change Leader Target"));
+        List<String> lore = new ArrayList<>();
+        
+        if (proposal.hasTarget()) {
+            lore.add(StringFormatter.formatHex("#9c9775Target: #c2bea7" + proposal.getTarget()));
+        } else {
+            lore.add(StringFormatter.formatHex("#c74d32No Target Selected"));
+            lore.add(StringFormatter.formatHex("#d65c5c-5 Organization Gain Penalty"));
+        }
+        
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#7a7a7aThe player who will become"));
+        lore.add(StringFormatter.formatHex("#7a7a7athe new faction leader."));
+        
+        if (cause.hasLeader() && cause.getLeader().equals(p.getName())) {
+            lore.add(" ");
+            lore.add(StringFormatter.formatHex("#50e846Click to select target"));
+        } else {
+            lore.add(" ");
+            lore.add(StringFormatter.formatHex("#c74d32Only the cause leader can select a target"));
+        }
+        
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.INT, PersistentDataType.INTEGER, cause.getIndex());
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, cause.getMovement().getId());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createPotentialTargetItem(Player player, Faction f, String member, int causeIndex) {
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#c5e0e3" + member));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#7a7a7aSelect this player as the"));
+        lore.add(StringFormatter.formatHex("#7a7a7atarget for leadership change."));
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#50e846Click to select"));
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, member);
+        m.getPersistentDataContainer().set(Keys.INT, PersistentDataType.INTEGER, causeIndex);
         item.setItemMeta(m);
         return item;
     }

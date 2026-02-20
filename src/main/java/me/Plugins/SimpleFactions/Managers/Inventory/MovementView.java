@@ -42,7 +42,7 @@ public class MovementView {
     public void movementView(Player player, Faction f, Movement movement, Inventory i) {
         boolean open = i == null;
         if (i == null) {
-            i = Bukkit.createInventory(new SFInventoryHolder(f.getId(), SFGUI.MOVEMENT_VIEW), 54, "Movement: " + movement.getLeader());
+            i = Bukkit.createInventory(new SFInventoryHolder(movement.getId(), SFGUI.MOVEMENT_VIEW), 54, "Movement: " + movement.getLeader());
         }
         i.clear();
         
@@ -83,7 +83,7 @@ public class MovementView {
     public void causesView(Player player, Faction f, Movement movement, Inventory i) {
         boolean open = i == null;
         if (i == null) {
-            i = Bukkit.createInventory(new SFInventoryHolder(f.getId(), SFGUI.CAUSES_VIEW), 54, "Causes");
+            i = Bukkit.createInventory(new SFInventoryHolder(movement.getId(), SFGUI.CAUSES_VIEW), 54, "Causes");
         }
         i.clear();
         
@@ -117,7 +117,7 @@ public class MovementView {
     public void causeView(Player player, Faction f, Movement movement, Cause cause, Inventory i) {
         boolean open = i == null;
         if (i == null) {
-            i = Bukkit.createInventory(new SFInventoryHolder(f.getId(), SFGUI.CAUSE_VIEW), 54, "Cause Details");
+            i = Bukkit.createInventory(new SFInventoryHolder(movement.getId(), SFGUI.CAUSE_VIEW, cause.getIndex()), 54, "Cause Details");
         }
         i.clear();
         
@@ -130,9 +130,39 @@ public class MovementView {
         // Join cause button
         i.setItem(14, creator.createJoinCauseButton(player, cause));
         
+        // Target selection button (2 rows below leader icon at slot 10)
+        // Only show if this is a CHANGE_LEADER action
+        if (cause.getProposal().needsTarget()) {
+            i.setItem(28, creator.createTargetButton(player, cause));
+        }
+        
         // Back button
         i.setItem(53, inv.createBackButton(SFGUI.CAUSE_VIEW));
         
+        if (open) {
+            player.openInventory(i);
+        }
+    }
+
+    public void targetSelectionView(Player player, Faction f, Movement movement, Cause cause, Inventory i) {
+        boolean open = i == null;
+        if (i == null) {
+            i = Bukkit.createInventory(new SFInventoryHolder(movement.getId(), SFGUI.TARGET_SELECT, cause.getIndex()), 54, "§7Select New Leader");
+        }
+        i.clear();
+        
+        int x = 0;
+        List<String> members = f.getMembers();
+        members.addAll(f.getVassalMembers());
+        
+        for (String member : members) {
+            if (!f.canBecomeLeader(member)) continue;
+            if (x >= SLOTS.size()) break;
+            i.setItem(SLOTS.get(x), creator.createPotentialTargetItem(player, f, member, cause.getIndex()));
+            x++;
+        }
+        
+        i.setItem(53, inv.createBackButton(SFGUI.TARGET_SELECT));
         if (open) {
             player.openInventory(i);
         }
@@ -164,7 +194,7 @@ public class MovementView {
     public void demandsView(Player player, Faction f, Movement movement, Inventory i) {
         boolean open = i == null;
         if (i == null) {
-            i = Bukkit.createInventory(new SFInventoryHolder(f.getId(), SFGUI.MOVEMENT_DEMANDS), 54, "Movement Demands");
+            i = Bukkit.createInventory(new SFInventoryHolder(movement.getId(), SFGUI.MOVEMENT_DEMANDS), 54, "Movement Demands");
         }
         i.clear();
         
@@ -199,19 +229,30 @@ public class MovementView {
         SFInventoryHolder holder = (SFInventoryHolder) inventory.getHolder();
         if (holder == null) return;
         
-        Faction f = FactionManager.getByString(holder.getId());
-        if (f == null) return;
-        
         e.setCancelled(true);
         
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return;
         
         SFGUI gui = holder.getType();
+        Faction f = null;
         Movement movement = null;
-        if (meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
-            String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
-            movement = f.getGovernment().getMovementById(id);
+        
+        // MOVEMENT_LIST stores faction ID in holder, movement ID in item metadata
+        if (gui == SFGUI.MOVEMENT_LIST) {
+            f = FactionManager.getByString(holder.getId());
+            if (f == null) return;
+            
+            if (meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
+                String movementId = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+                movement = f.getGovernment().getMovementById(movementId);
+            }
+        } else {
+            // Other movement GUIs store movement ID in holder
+            movement = FactionManager.getMovementById(holder.getId());
+            if (movement == null) return;
+            f = movement.getFaction();
+            if (f == null) return;
         }
 
         if (movement == null) {
@@ -233,6 +274,9 @@ public class MovementView {
                 break;
             case MOVEMENT_DEMANDS:
                 handleDemandsViewClick(e, movement, p, f, inventory, meta);
+                break;
+            case TARGET_SELECT:
+                handleTargetSelectClick(e, movement, p, f, inventory, meta);
                 break;
             default:
                 break;
@@ -263,6 +307,16 @@ public class MovementView {
         }
         // Join as supporter button
         else if (slot == 15) {
+            Object supporter = getSupporterObject(p, movement);
+            if (supporter != null) {
+                movement.leave(supporter, null);
+                if (movement.isLeader(p.getName())) {
+                    movement.setLeader(null);
+                }
+                movementView(p, f, movement, inventory);
+                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
+                return;
+            }
             if(!quickJoinCheck(p, movement)) return;
             Object joiningAs = getJoiningAs(p, movement);
             if(joiningAs == null) return;
@@ -274,7 +328,16 @@ public class MovementView {
         else if (slot == 16) {
             Faction playerFaction = FactionManager.getByMember(p.getName());
             if (playerFaction != null && !playerFaction.getId().equals(f.getId())) {
-                movement.joinAsForeignBacker(playerFaction);
+                if (movement.getForeignBackers().contains(playerFaction)) {
+                    if (getSupporterObject(p, movement) != null) {
+                        p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+                        p.sendMessage(StringFormatter.formatHex("§cYou cannot leave as a foreign backer while you are a supporter."));
+                        return;
+                    }
+                    movement.leaveAsForeignBacker(playerFaction);
+                } else {
+                    movement.joinAsForeignBacker(playerFaction);
+                }
                 movementView(p, f, movement, inventory);
                 p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
             }
@@ -286,9 +349,9 @@ public class MovementView {
                 if (factionLeader != null && factionLeader.isOnline()) {
                     demandsView(factionLeader, f, movement, null);
                     p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1.5f);
-                    p.sendMessage(StringFormatter.formatHex("&7Demands sent to " + f.getLeader()));
+                    p.sendMessage(StringFormatter.formatHex("§7Demands sent to " + f.getLeader()));
                 } else {
-                    p.sendMessage(StringFormatter.formatHex("&cThe faction leader must be online to send demands!"));
+                    p.sendMessage(StringFormatter.formatHex("§cThe faction leader must be online to send demands!"));
                     p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
                 }
             }
@@ -305,7 +368,7 @@ public class MovementView {
                             movement.setPhase(targetPhase);
                             movementView(p, f, movement, inventory);
                             p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1.5f);
-                            p.sendMessage(StringFormatter.formatHex("&7Phase changed to " + targetPhase.getDisplayName()));
+                            p.sendMessage(StringFormatter.formatHex("§7Phase changed to " + targetPhase.getDisplayName()));
                         }
                     } catch (IllegalArgumentException ex) {
                         ex.printStackTrace();
@@ -332,8 +395,7 @@ public class MovementView {
             meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
             String action = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
             if ("CREATE_CAUSE".equals(action)) {
-                createNewCause(p, movement, f);
-                causesView(p, f, movement, inventory);
+                inv.proposalView(p, f, null);
                 p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
                 return;
             }
@@ -370,14 +432,65 @@ public class MovementView {
             }
         }
         // Join cause button
-        if (slot == 14) {
-            if(!quickJoinCheck(p, movement)) return;
+        else if (slot == 14) {
             Object joiningAs = getJoiningAs(p, movement);
             if(joiningAs == null) return;
+            if (cause.getFullMemberList().contains(p.getName())) {
+                movement.leave(joiningAs, cause);
+                if (cause.hasLeader() && cause.getLeader().equals(p.getName())) {
+                    cause.setLeader(null);
+                }
+                if (movement.isLeader(p.getName())) {
+                    movement.setLeader(null);
+                }
+                causeView(p, f, movement, cause, inventory);
+                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
+                return;
+            }
+            if(!quickJoinCheck(p, movement)) return;
             movement.join(joiningAs, cause);
             causeView(p, f, movement, cause, inventory);
             p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
         }
+        // Target selection button
+        else if (slot == 28) {
+            if (cause.getProposal().needsTarget() && cause.hasLeader() && cause.getLeader().equals(p.getName())) {
+                targetSelectionView(p, f, movement, cause, null);
+                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
+            }
+        }
+    }
+
+    private void handleTargetSelectClick(InventoryClickEvent e, Movement movement, Player p, Faction f, Inventory inventory, ItemMeta meta) {
+        ItemStack item = e.getCurrentItem();
+        if (item == null) return;
+        
+        if (!meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) return;
+        if (!meta.getPersistentDataContainer().has(Keys.INT, PersistentDataType.INTEGER)) return;
+        
+        String targetName = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+        int causeIndex = meta.getPersistentDataContainer().get(Keys.INT, PersistentDataType.INTEGER);
+        
+        if (causeIndex >= movement.getCauses().size()) return;
+        Cause cause = movement.getCauses().get(causeIndex);
+        
+        if (cause == null) return;
+        if (!cause.hasLeader() || !cause.getLeader().equals(p.getName())) return;
+        
+        // Validate target can become leader
+        if (!f.canBecomeLeader(targetName)) {
+            p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+            p.sendMessage(StringFormatter.formatHex("§c" + targetName + " cannot become the faction leader!"));
+            return;
+        }
+        
+        // Set target
+        cause.getProposal().setTarget(targetName);
+        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1.5f);
+        p.sendMessage(StringFormatter.formatHex("§aTarget set to " + targetName));
+        
+        // Return to cause view
+        causeView(p, f, movement, cause, null);
     }
 
     private void handleDemandsViewClick(InventoryClickEvent e, Movement movement, Player p, Faction f, Inventory inventory, ItemMeta meta) {

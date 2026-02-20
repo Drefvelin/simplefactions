@@ -3,6 +3,11 @@
 
 ## Politics
 - Movements
+- Remove votes from members who left
+- Kick guilds somehow? eviction using AP, dissolve releases guilds (eviction is landless)
+- expand grace to stance change
+- tell player why they cant join movement
+- movement invite
 
 ## Diplomacy
 - Federations (Faction)

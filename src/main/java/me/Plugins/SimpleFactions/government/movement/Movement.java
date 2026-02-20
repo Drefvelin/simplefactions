@@ -131,7 +131,7 @@ public class Movement {
         if (targetPhase == phase) return false;
         
         // Can go back one phase
-        if (targetPhase.getIndex() > 0 && targetPhase.getIndex() == phase.getIndex() - 1) {
+        if (targetPhase.getIndex() == phase.getIndex() - 1) {
             return true;
         }
         
@@ -155,6 +155,10 @@ public class Movement {
         for(Cause cause : causes) {
             if(!cause.hasLeader()) {
                 base *= 0.6;
+            }
+            // Apply penalty if CHANGE_LEADER action has no target
+            if(cause.getProposal().needsTarget() && !cause.getProposal().hasTarget()) {
+                base -= 5;
             }
         }
         if(!hasLeader()) {
@@ -398,6 +402,14 @@ public class Movement {
         if (causes.size() >= 3) return; // Max 3 causes
         Cause newCause = new Cause(this, proposal, leader);
         addCause(newCause);
+        Member relation = f.getRelationToFaction(leader);
+        if (relation == Member.GUILD_LEADER || relation == Member.GUILD_MEMBER) {
+            supporters.removeGuild(FactionManager.getGuildByMember(leader));
+        } else if (relation == Member.VASSAL_LEADER || relation == Member.VASSAL_MEMBER) {
+            supporters.removeFaction(FactionManager.getByMember(leader));
+        } else if (relation == Member.MEMBER) {
+            supporters.removeCitizen(leader);
+        }
     }
 
     private Proposal deserializeProposal(Faction faction, ProposalData proposalData) {

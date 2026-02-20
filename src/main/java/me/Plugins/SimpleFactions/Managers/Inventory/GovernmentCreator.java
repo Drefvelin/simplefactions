@@ -188,6 +188,9 @@ public class GovernmentCreator {
         if(f.getOrCreateMainGuild().isBankrupt()) {
             lore.add(StringFormatter.formatHex("#b8ae61State is bankrupt! #d13530-100%"));
         }
+        if(gov.hasElections() && gov.getVotingBooths().isEmpty()) {
+            lore.add(StringFormatter.formatHex("#b8ae61No voting booths! #d13530-75%"));
+        }
         lore.add(StringFormatter.formatHex("#93c9a7Stances:"));
         for(Guild guild : f.getGuildHandler().getGuilds()) {
             if(guild.isBase()) continue;
@@ -342,7 +345,7 @@ public class GovernmentCreator {
             lore.add(StringFormatter.formatHex("#b8ae61ultimatum to the council."));
             lore.add(StringFormatter.formatHex("§7(#812222Potential Civil War§7)"));
         }
-        if(gov.canProposeOrStartMovement(p)) lore.add(StringFormatter.formatHex("#28ed70Click to start"));
+        if(gov.canProposeOrStartMovement(p) && gov.getMovementByMember(p.getName()) == null) lore.add(StringFormatter.formatHex("#28ed70Click to start"));
         else lore.add(StringFormatter.formatHex("#89504eYou cannot start a new proposal/movement at this time."));
         m.setLore(lore);
         item.setItemMeta(m);
@@ -615,6 +618,7 @@ public class GovernmentCreator {
         PoliticalAction politicalAction = PoliticalActionLoader.getByAction(action);
         lore.addAll(politicalAction.getDescription());
         m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, action.name());
         item.setItemMeta(m);
         return item;
     }

@@ -9,6 +9,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.checkerframework.checker.units.qual.g;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
@@ -18,9 +19,12 @@ import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.enums.SFGUI;
+import me.Plugins.SimpleFactions.Loaders.PoliticalActionLoader;
 import me.Plugins.SimpleFactions.government.Council;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.movement.Action;
+import me.Plugins.SimpleFactions.government.movement.Movement;
+import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.keys.Keys;
@@ -221,7 +225,7 @@ public class GovernmentView {
 				}
 			} else if(slot == 15) {
 				Government gov = f.getGovernment();
-				if(!gov.canProposeOrStartMovement(p)) {
+				if(!gov.canProposeOrStartMovement(p) || gov.getMovementByMember(p.getName()) != null) {
 					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
 					return;
 				}
@@ -374,10 +378,71 @@ public class GovernmentView {
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 				governmentView(p, f, null);
 			} else if(gov.canProposeOrStartMovement(p)) {
+				Movement movement = gov.getMovementByMember(p.getName());
+				if(movement != null) {
+					if(!gov.canBeProposed(proposal)) {
+						p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+						return;
+					}
+					movement.createCause(p.getName(), proposal);
+					p.sendMessage("§aProposal added to your movement! Rally support for your proposal by sharing it with your faction and allies!");
+					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+					governmentView(p, f, null);
+					return;
+				}
 				gov.startMovement(p.getName(), proposal);
 				p.sendMessage("§aMovement started! Rally support for your proposal by sharing it with your faction and allies!");
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 				governmentView(p, f, null);
+			}
+		} else if (h.getType() == SFGUI.POLITICAL_PROPOSAL_VIEW) {
+			e.setCancelled(true);
+			ItemStack item = e.getCurrentItem();
+			ItemMeta meta = item.getItemMeta();
+			if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
+			SFInventoryHolder holder = (SFInventoryHolder) inventory.getHolder();
+			Faction f = FactionManager.getByString(holder.getId());
+			if(f == null) return;
+			String actionName = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+			if(actionName == null) return;
+			
+			try {
+				Action action = Action.valueOf(actionName);
+				Government gov = f.getGovernment();
+				
+				if(!gov.canProposePolitical(p, action)) {
+					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					return;
+				}
+				
+				Proposal proposal = new Proposal(p.getName(), gov);
+				PoliticalAction politicalAction = PoliticalActionLoader.getByAction(action);
+				proposal.setPoliticalActionProposal(politicalAction);
+				
+				if(gov.canProposeOrStartMovement(p)) {
+					Movement movement = gov.getMovementByMember(p.getName());
+					if(movement != null) {
+						if(!gov.canBeProposed(proposal)) {
+							p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+							return;
+						}
+						movement.createCause(p.getName(), proposal);
+						p.sendMessage("§aProposal added to your movement! Rally support for your proposal by sharing it with your faction and allies!");
+						p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+						governmentView(p, f, null);
+						return;
+					}
+					gov.startMovement(p.getName(), proposal);
+					p.sendMessage("§aMovement started! Rally support for your proposal by sharing it with your faction and allies!");
+					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+					governmentView(p, f, null);
+				} else {
+					p.sendMessage("§cYou cannot start a movement for this action.");
+					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				}
+			} catch (IllegalArgumentException ex) {
+				p.sendMessage("§cInvalid action.");
+				p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
 			}
 		} else if (h.getType() == SFGUI.PROPOSALS) {
 			e.setCancelled(true);

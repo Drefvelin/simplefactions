@@ -1044,6 +1044,56 @@ public class CommandManager implements Listener, CommandExecutor{
 				f.setBank(null);
 				p.sendMessage("§eBank removed");
 				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("startelection") && args.length == 2) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Faction f = FactionManager.getByString(args[1]);
+				if(f == null) {
+					p.sendMessage("§cFaction does not exist!");
+					return true;
+				}
+				if(!f.getGovernment().hasElections()) {
+					p.sendMessage("§cThis faction does not have elections enabled!");
+					return true;
+				}
+				if(f.getGovernment().getElection().isActive()) {
+					p.sendMessage("§cElection is already active!");
+					return true;
+				}
+				f.getGovernment().getElection().start();
+				p.sendMessage("§aElection started for " + f.getName() + "!");
+				for(Player pl : Bukkit.getOnlinePlayers()) {
+					if(f.getMembers().contains(pl.getName())) {
+						pl.sendMessage("§a§lElection Started! §7Apply at voting booths or faction menu!");
+						pl.playSound(pl.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+					}
+				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("endelection") && args.length == 2) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Faction f = FactionManager.getByString(args[1]);
+				if(f == null) {
+					p.sendMessage("§cFaction does not exist!");
+					return true;
+				}
+				if(!f.getGovernment().getElection().isActive()) {
+					p.sendMessage("§cNo active election for this faction!");
+					return true;
+				}
+				f.getGovernment().getElection().end();
+				p.sendMessage("§aElection ended for " + f.getName() + "!");
+				for(Player pl : Bukkit.getOnlinePlayers()) {
+					if(f.getMembers().contains(pl.getName())) {
+						pl.sendMessage("§e§lElection Ended! §7Results have been applied!");
+						pl.playSound(pl.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1.5f);
+					}
+				}
+				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("getglobalwealth") && args.length == 1) {
 				if(!Permissions.isAdmin(sender)) {
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");

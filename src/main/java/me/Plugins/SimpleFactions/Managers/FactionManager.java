@@ -499,6 +499,15 @@ public class FactionManager implements Listener{
 	    }
 	}
 
+	public static me.Plugins.SimpleFactions.government.movement.Movement getMovementById(String movementId) {
+		if (movementId == null) return null;
+		for (Faction f : factions) {
+			me.Plugins.SimpleFactions.government.movement.Movement movement = f.getGovernment().getMovementById(movementId);
+			if (movement != null) return movement;
+		}
+		return null;
+	}
+
     public static Title usurp(Player p, Faction usurping, Faction losing) {
         Title t = losing.getHighestTitle();
 		if(t == null){

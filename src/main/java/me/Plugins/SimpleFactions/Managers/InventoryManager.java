@@ -47,6 +47,8 @@ import me.Plugins.SimpleFactions.War.Participant;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.government.Government;
+import me.Plugins.SimpleFactions.government.movement.Movement;
+import me.Plugins.SimpleFactions.government.movement.cause.Cause;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxLawChange;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
@@ -153,6 +155,9 @@ public class InventoryManager implements Listener{
 	GovernmentView governmentView = new GovernmentView(this);
 	public void governmentView(Player player, Faction f, Inventory i) {
 		governmentView.governmentView(player, f, i);
+	}
+	public void proposalView(Player player, Faction f, Inventory i) {
+		governmentView.proposalView(player, f, i);
 	}
 	
 	//Movements
@@ -320,8 +325,22 @@ public class InventoryManager implements Listener{
 				p.sendTitle("", "§aProposal Added", 20, 80, 20);
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 			} else if(gov.canProposeOrStartMovement(p)) {
-				//movement start
+				Movement movement = gov.getMovementByMember(p.getName());
+				if(movement != null) {
+					if(!gov.canBeProposed(proposal)) {
+						p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+						return;
+					}
+					movement.createCause(p.getName(), proposal);
+					p.sendMessage("§aProposal added to your movement! Rally support for your proposal by sharing it with your faction and allies!");
+					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+					governmentView(p, f, null);
+					return;
+				}
+				gov.startMovement(p.getName(), proposal);
 				p.sendTitle("", "§cMovement Started", 20, 80, 20);
+				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				p.sendMessage("§aMovement started! Rally support for your proposal by sharing it with your faction and allies!");
 			} else {
 				p.sendMessage("§cYou can no longer propose this change.");
 				taxChange.remove(p);
@@ -444,8 +463,28 @@ public class InventoryManager implements Listener{
 		if(inv.getHolder() instanceof SFInventoryHolder) {
 			e.setCancelled(true);
 			SFInventoryHolder h = (SFInventoryHolder) inv.getHolder();
-			Faction f = FactionManager.getByString(h.getId());
-			Guild g = FactionManager.getGuildByString(h.getId());
+			Faction f = null;
+			Guild g = null;
+			Movement movement = null;
+			
+			// Determine faction, guild, and movement based on GUI type
+			if (h.getType() == SFGUI.MOVEMENT_VIEW || h.getType() == SFGUI.CAUSES_VIEW || 
+			    h.getType() == SFGUI.CAUSE_VIEW || h.getType() == SFGUI.TARGET_SELECT || 
+			    h.getType() == SFGUI.MOVEMENT_DEMANDS) {
+				// These GUIs store movement ID in holder
+				movement = FactionManager.getMovementById(h.getId());
+				if (movement != null) {
+					f = movement.getFaction();
+				}
+			} else if (h.getType() == SFGUI.MOVEMENT_LIST) {
+				// MOVEMENT_LIST stores faction ID
+				f = FactionManager.getByString(h.getId());
+			} else {
+				// Other GUIs use faction/guild ID
+				f = FactionManager.getByString(h.getId());
+				g = FactionManager.getGuildByString(h.getId());
+			}
+			
 			if(e.getCurrentItem().getType().equals(Material.BARRIER)) {
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				switch(h.getType()) {
@@ -511,26 +550,36 @@ public class InventoryManager implements Listener{
 						break;
 					case COUNCIL_SELECT:
 						governmentView.councilView(p, f, null);
-						break;				case MOVEMENT_VIEW:
-					movementListView(p, f, null);
-					break;
-				case MOVEMENT_LIST:
-					governmentView(p, f, null);
-					break;
-				case CAUSES_VIEW:
-					{
-						me.Plugins.SimpleFactions.government.movement.Movement movement = f.getGovernment().getMovementByMember(p.getName());
-						if (movement == null) movement = f.getGovernment().getMovementByLeader(p.getName());
-						if (movement != null) movementView(p, f, movement, null);
-					}
-					break;
-				case CAUSE_VIEW:
-					{
-						me.Plugins.SimpleFactions.government.movement.Movement movement = f.getGovernment().getMovementByMember(p.getName());
-						if (movement == null) movement = f.getGovernment().getMovementByLeader(p.getName());
-						if (movement != null) causesView(p, f, movement, null);
-					}
-					break;					case LEDGER_VIEW:
+						break;				
+					case MOVEMENT_VIEW:
+						movementListView(p, f, null);
+						break;
+					case MOVEMENT_LIST:
+						governmentView(p, f, null);
+						break;
+					case CAUSES_VIEW:
+						if (movement != null && f != null) movementView(p, f, movement, null);
+						else if (f != null) governmentView(p, f, null);
+						break;
+					case CAUSE_VIEW:
+						if (movement != null && f != null) causesView(p, f, movement, null);
+						else if (f != null) governmentView(p, f, null);
+						break;			
+					case TARGET_SELECT:
+						if (movement != null && f != null) {
+							if(h.getPage() != -1) {
+								Cause cause = movement.getCauses().get(h.getPage());
+								if(cause != null) {
+									causeView(p, f, movement, cause, inv);
+								}
+							} else {
+								movementView(p, f, movement, null);
+							}
+						} else if (f != null) {
+							governmentView(p, f, null);
+						}
+						break;			
+					case LEDGER_VIEW:
 						factionView(p, f);
 						break;
 					case TAX_VIEW_SPECIFIC:
@@ -582,6 +631,7 @@ public class InventoryManager implements Listener{
 				|| h.getType() == SFGUI.LAW_PROPOSAL_SELECT
 				|| h.getType() == SFGUI.TAX_PROPOSAL_VIEW
 				|| h.getType() == SFGUI.SPECIFIC_TAX_PROPOSAL_VIEW
+				|| h.getType() == SFGUI.POLITICAL_PROPOSAL_VIEW
 				|| h.getType() == SFGUI.COUNCIL_VIEW
 				|| h.getType() == SFGUI.COUNCIL_SELECT) {
 				governmentView.click(e, inv, p);
@@ -589,7 +639,8 @@ public class InventoryManager implements Listener{
 				|| h.getType() == SFGUI.MOVEMENT_LIST
 				|| h.getType() == SFGUI.CAUSES_VIEW
 				|| h.getType() == SFGUI.CAUSE_VIEW
-				|| h.getType() == SFGUI.MOVEMENT_DEMANDS) {
+				|| h.getType() == SFGUI.MOVEMENT_DEMANDS
+				|| h.getType() == SFGUI.TARGET_SELECT) {
 				movementView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.DIPLOMACY_VIEW || h.getType() == SFGUI.ATTITUDE_VIEW || h.getType() == SFGUI.RELATION_VIEW) {
 				relationView.click(e, inv, p);

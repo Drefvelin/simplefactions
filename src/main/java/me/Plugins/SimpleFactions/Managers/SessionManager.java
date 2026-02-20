@@ -34,7 +34,7 @@ public class SessionManager implements Listener{
 
     public void end() {
         for(Session session : sessions.values()) {
-            session.end();
+            session.kill();
         }
     }
 
@@ -74,12 +74,12 @@ public class SessionManager implements Listener{
         if (clickedBlock == null) return;
         if (!clickedBlock.getType().equals(Material.LANTERN)) return;
         
-        Faction faction = FactionManager.getByLeader(player.getName());
+        Faction faction = FactionManager.getByMember(player.getName());
         if (faction == null) return;
         
         Council council = faction.getGovernment().getCouncil();
         Session session = getSession(council);
-        if (session != null && session.getLeader().equals(player)) {
+        if (session != null && (faction.getLeader().equals(player.getName()) || faction.getGovernment().isCouncilMember(player))) {
             if(session.isStarted() && clickedBlock.equals(session.getLantern())) {
                 event.setCancelled(true);
                 Proposal currentProposal = session.getCurrentProposal();
@@ -109,7 +109,7 @@ public class SessionManager implements Listener{
                 if (event.getPlayer() != null) {
                     event.getPlayer().sendMessage("§cSession ended!");
                 }
-                session.end();
+                session.kill();
                 return;
             }
         }
@@ -125,11 +125,7 @@ public class SessionManager implements Listener{
         Player player = event.getPlayer();
         String playerName = player.getName();
         
-        Faction faction = FactionManager.getByLeader(playerName);
-        if (faction == null) {
-            // Try getting by member
-            faction = FactionManager.getByMember(playerName);
-        }
+        Faction faction = FactionManager.getByMember(playerName);
         if (faction == null) return;
         
         Council council = faction.getGovernment().getCouncil();
@@ -179,7 +175,7 @@ public class SessionManager implements Listener{
         // Check if this player is a session leader
         for (Session session : sessions.values()) {
             if (session.getLeader().getName().equals(playerName)) {
-                session.end();
+                session.kill();
                 return;
             }
         }
