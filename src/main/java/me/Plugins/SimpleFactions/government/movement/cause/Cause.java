@@ -102,15 +102,15 @@ public class Cause {
     public boolean canJoin(Object obj) {
 
         if (obj instanceof String) {
-            return canMemberJoin((String) obj);
+            return canMemberJoin((String) obj, true);
         }
 
         if (obj instanceof Guild) {
-            return canGuildJoin((Guild) obj);
+            return canGuildJoin((Guild) obj, true);
         }
 
         if (obj instanceof Faction) {
-            return canFactionJoin((Faction) obj);
+            return canFactionJoin((Faction) obj, true);
         }
 
         return false;
@@ -119,46 +119,46 @@ public class Cause {
     public void checkMembers(Pool pool) {
 
         for (String citizen : new ArrayList<>(pool.getCitizens())) {
-            if (!canMemberJoin(citizen)) {
+            if (!canMemberJoin(citizen, false)) {
                 pool.remove("citizens", citizen);
             }
         }
 
         for (Guild guild : new ArrayList<>(pool.getGuilds())) {
-            if (!canGuildJoin(guild)) {
+            if (!canGuildJoin(guild, false)) {
                 pool.remove("guild", guild.getName());
             }
         }
 
         for (Faction faction : new ArrayList<>(pool.getFactions())) {
-            if (!canFactionJoin(faction)) {
+            if (!canFactionJoin(faction, false)) {
                 pool.remove("faction", faction.getName());
             }
         }
     }
 
-    public boolean canMemberJoin(String playerName) {
+    public boolean canMemberJoin(String playerName, boolean checkExisting) {
         Member relation = movement.getFaction().getRelationToFaction(playerName);
 
         if (relation != Member.MEMBER) return false;
         if (!proposal.getPoliticalAction().allowCitizens()) return false;
-        if (movement.isMember(playerName)) return false;
+        if (checkExisting && movement.isMember(playerName)) return false;
 
         return true;
     }
 
-    public boolean canGuildJoin(Guild guild) {
+    public boolean canGuildJoin(Guild guild, boolean checkExisting) {
         if (!proposal.getPoliticalAction().allowGuilds()) return false;
         if (guild.isBase()) return false;
         if (!guild.getFaction().getId().equalsIgnoreCase(movement.getFaction().getId())) return false;
         if (guild.getStance(movement.getFaction()) == Stance.SUPPORT) return false;
         if (!guild.canBeElevated(null) && proposal.getPoliticalAction().getAction() == Action.NATIONHOOD) return false;
-        if (movement.isMember(guild.getLeader())) return false;
+        if (checkExisting && movement.isMember(guild.getLeader())) return false;
 
         return true;
     }
 
-    public boolean canFactionJoin(Faction faction) {
+    public boolean canFactionJoin(Faction faction, boolean checkExisting) {
         if (!proposal.getPoliticalAction().allowFactions()) return false;
         if (faction.getId().equalsIgnoreCase(movement.getFaction().getId())) return false;
 
@@ -169,7 +169,7 @@ public class Cause {
         if (faction.getOrCreateMainGuild().getStance(movement.getFaction()) == Stance.SUPPORT)
             return false;
 
-        if (movement.isMember(faction.getLeader())) return false;
+        if (checkExisting && movement.isMember(faction.getLeader())) return false;
 
         return true;
     }

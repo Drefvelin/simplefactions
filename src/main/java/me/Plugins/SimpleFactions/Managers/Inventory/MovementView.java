@@ -24,6 +24,7 @@ import me.Plugins.SimpleFactions.government.movement.Phase;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.keys.Keys;
+import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class MovementView {
     public InventoryManager inv;
@@ -159,6 +160,37 @@ public class MovementView {
             player.openInventory(i);
         }
     }
+
+    public void demandsView(Player player, Faction f, Movement movement, Inventory i) {
+        boolean open = i == null;
+        if (i == null) {
+            i = Bukkit.createInventory(new SFInventoryHolder(f.getId(), SFGUI.MOVEMENT_DEMANDS), 54, "Movement Demands");
+        }
+        i.clear();
+        
+        // Display each cause/demand
+        int slot = 10;
+        for (Cause cause : movement.getCauses()) {
+            i.setItem(slot, creator.createDemandItem(cause, movement));
+            slot++;
+        }
+        
+        // Power display
+        i.setItem(13, creator.createMovementPowerItem(movement));
+        
+        // Warning item
+        i.setItem(22, creator.createDecliningWarningItem());
+        
+        // Accept button (green concrete)
+        i.setItem(29, creator.createAcceptDemandsButton(movement));
+        
+        // Decline button (red concrete)
+        i.setItem(33, creator.createDeclineDemandsButton(movement));
+        
+        if (open) {
+            player.openInventory(i);
+        }
+    }
     
     public void click(InventoryClickEvent e, Inventory inventory, Player p) {
         ItemStack item = e.getCurrentItem();
@@ -198,6 +230,9 @@ public class MovementView {
                 break;
             case CAUSE_VIEW:
                 handleCauseViewClick(e, movement, p, f, inventory, meta);
+                break;
+            case MOVEMENT_DEMANDS:
+                handleDemandsViewClick(e, movement, p, f, inventory, meta);
                 break;
             default:
                 break;
@@ -244,7 +279,40 @@ public class MovementView {
                 p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
             }
         }
-
+        // Send demands button
+        else if (slot == 19) {
+            if (movement.isLeader(p.getName()) && movement.getOrganization() >= 100) {
+                Player factionLeader = Bukkit.getPlayer(f.getLeader());
+                if (factionLeader != null && factionLeader.isOnline()) {
+                    demandsView(factionLeader, f, movement, null);
+                    p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1.5f);
+                    p.sendMessage(StringFormatter.formatHex("&7Demands sent to " + f.getLeader()));
+                } else {
+                    p.sendMessage(StringFormatter.formatHex("&cThe faction leader must be online to send demands!"));
+                    p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+                }
+            }
+        }
+        // Phase buttons (slots 28-31)
+        else if (slot >= 28 && slot <= 31) {
+            ItemStack item = e.getCurrentItem();
+            if (item != null && item.getType() == Material.YELLOW_CONCRETE) {
+                if (meta.getPersistentDataContainer().has(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING)) {
+                    String phaseName = meta.getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
+                    try {
+                        Phase targetPhase = Phase.valueOf(phaseName);
+                        if (movement.canChangeToPhase(targetPhase)) {
+                            movement.setPhase(targetPhase);
+                            movementView(p, f, movement, inventory);
+                            p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1.5f);
+                            p.sendMessage(StringFormatter.formatHex("&7Phase changed to " + targetPhase.getDisplayName()));
+                        }
+                    } catch (IllegalArgumentException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        }
         else if (slot == 34) {
             if(movement.isLeader(p.getName())) {
                 // End movement
@@ -309,6 +377,51 @@ public class MovementView {
             movement.join(joiningAs, cause);
             causeView(p, f, movement, cause, inventory);
             p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
+        }
+    }
+
+    private void handleDemandsViewClick(InventoryClickEvent e, Movement movement, Player p, Faction f, Inventory inventory, ItemMeta meta) {
+        int slot = e.getSlot();
+        
+        // Accept button (green concrete)
+        if (slot == 29) {
+            if (p.getName().equalsIgnoreCase(f.getLeader())) {
+                p.sendMessage(StringFormatter.formatHex("&aYou have accepted the movement's demands."));
+                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 2f);
+                
+                // Notify movement leader if online
+                if (movement.hasLeader()) {
+                    Player movementLeader = Bukkit.getPlayer(movement.getLeader());
+                    if (movementLeader != null && movementLeader.isOnline()) {
+                        movementLeader.sendMessage(StringFormatter.formatHex("&a" + f.getLeader() + " has accepted your demands!"));
+                    }
+                }
+                
+                // End movement
+                f.getGovernment().endMovement(movement);
+                p.closeInventory();
+            }
+        }
+        // Decline button (red concrete)
+        else if (slot == 33) {
+            if (p.getName().equalsIgnoreCase(f.getLeader())) {
+                p.sendMessage(StringFormatter.formatHex("&cYou have declined the movement's demands."));
+                p.sendMessage(StringFormatter.formatHex("&7A civil war has begun!"));
+                p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1, 0.8f);
+                
+                // Notify movement leader if online
+                if (movement.hasLeader()) {
+                    Player movementLeader = Bukkit.getPlayer(movement.getLeader());
+                    if (movementLeader != null && movementLeader.isOnline()) {
+                        movementLeader.sendMessage(StringFormatter.formatHex("&c" + f.getLeader() + " has declined your demands!"));
+                        movementLeader.sendMessage(StringFormatter.formatHex("&7A civil war has begun!"));
+                    }
+                }
+                
+                // End movement (civil war effects will be added later)
+                f.getGovernment().endMovement(movement);
+                p.closeInventory();
+            }
         }
     }
 

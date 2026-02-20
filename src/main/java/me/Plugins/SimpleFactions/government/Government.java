@@ -262,7 +262,7 @@ public class Government {
 
 
     public void tick() {
-        for(Movement movement : movements) {
+        for(Movement movement : new ArrayList<>(movements)) {
             movement.tick();
         }
         election.tick();

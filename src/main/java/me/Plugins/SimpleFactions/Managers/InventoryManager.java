@@ -588,7 +588,8 @@ public class InventoryManager implements Listener{
 			} else if(h.getType() == SFGUI.MOVEMENT_VIEW
 				|| h.getType() == SFGUI.MOVEMENT_LIST
 				|| h.getType() == SFGUI.CAUSES_VIEW
-				|| h.getType() == SFGUI.CAUSE_VIEW) {
+				|| h.getType() == SFGUI.CAUSE_VIEW
+				|| h.getType() == SFGUI.MOVEMENT_DEMANDS) {
 				movementView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.DIPLOMACY_VIEW || h.getType() == SFGUI.ATTITUDE_VIEW || h.getType() == SFGUI.RELATION_VIEW) {
 				relationView.click(e, inv, p);

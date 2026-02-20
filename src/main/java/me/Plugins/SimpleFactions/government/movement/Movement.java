@@ -118,6 +118,32 @@ public class Movement {
         return phase;
     }
 
+    public void setPhase(Phase newPhase) {
+        this.phase = newPhase;
+        // Reset organization when changing phase
+        if (organization > phase.getMaxOrganization()) {
+            organization = phase.getMaxOrganization();
+        }
+    }
+
+    public boolean canChangeToPhase(Phase targetPhase) {
+        // Can't change to current phase
+        if (targetPhase == phase) return false;
+        
+        // Can go back one phase
+        if (targetPhase.getIndex() > 0 && targetPhase.getIndex() == phase.getIndex() - 1) {
+            return true;
+        }
+        
+        // Can advance one phase if organization is at max
+        if (targetPhase.getIndex() < 4 && targetPhase.getIndex() == phase.getIndex() + 1 
+            && organization >= phase.getMaxOrganization()) {
+            return true;
+        }
+        
+        return false;
+    }
+
     public Faction getFaction() {
         return f;
     }
@@ -142,11 +168,12 @@ public class Movement {
     }
 
     public void tick() {
-        for (Cause cause : causes) {
+        for (Cause cause : new ArrayList<>(causes)) {
             cause.tick();
         }
         checkSupporters();
         checkForeignBackers();
+        changeOrganization(getOrganizationGain());
         if(causes.size() == 0) {
             f.getGovernment().endMovement(this);
         }

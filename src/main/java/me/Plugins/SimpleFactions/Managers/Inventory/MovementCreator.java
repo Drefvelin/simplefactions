@@ -273,6 +273,7 @@ public class MovementCreator {
         }
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
+        m.getPersistentDataContainer().set(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING, phase.name());
         item.setItemMeta(m);
         return item;
     }
@@ -328,6 +329,89 @@ public class MovementCreator {
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.INT, PersistentDataType.INTEGER, index);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, "CREATE_CAUSE");
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createDemandItem(Cause cause, Movement movement) {
+        ItemStack item = new ItemStack(Material.PAPER);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#c5e0e3Demand: " + (cause.hasLeader() ? cause.getLeader() : "Leaderless")));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#9c9775Action: #c2bea7" + cause.getAction().getDisplay()));
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#7a7a7aThis cause demands the following"));
+        lore.add(StringFormatter.formatHex("#7a7a7apolitical change:"));
+        for (String desc : cause.getProposal().getPoliticalAction().getDescription()) {
+            lore.add(StringFormatter.formatHex("#7a7a7a" + desc));
+        }
+        lore.add(" ");
+        int memberCount = cause.getFullMemberList().size();
+        lore.add(StringFormatter.formatHex("#9c9775Supporters: #c2bea7" + memberCount));
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.INT, PersistentDataType.INTEGER, cause.getIndex());
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createMovementPowerItem(Movement movement) {
+        ItemStack item = new ItemStack(Material.NETHER_STAR);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#d1b83bMovement Power"));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#9c9775Power: #c2bea7" + movement.getPower() + "%"));
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#7a7a7aThe movement's power represents"));
+        lore.add(StringFormatter.formatHex("#7a7a7ahow much of the faction supports"));
+        lore.add(StringFormatter.formatHex("#7a7a7athis movement's demands."));
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createDecliningWarningItem() {
+        ItemStack item = new ItemStack(Material.BARRIER);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#d65c5cWarning"));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#c74d32Declining these demands will"));
+        lore.add(StringFormatter.formatHex("#c74d32trigger a Civil War!"));
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#7a7a7aThe movement will rise up against"));
+        lore.add(StringFormatter.formatHex("#7a7a7athe faction leadership."));
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createAcceptDemandsButton(Movement movement) {
+        ItemStack item = new ItemStack(Material.GREEN_CONCRETE);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#50e846Accept Demands"));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#7a7a7aAccept the movement's demands"));
+        lore.add(StringFormatter.formatHex("#7a7a7aand implement their changes."));
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#45afc4Click to Accept"));
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createDeclineDemandsButton(Movement movement) {
+        ItemStack item = new ItemStack(Material.RED_CONCRETE);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#c74d32Decline Demands"));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#7a7a7aDecline the movement's demands"));
+        lore.add(StringFormatter.formatHex("#7a7a7aand face a civil war."));
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#d65c5cClick to Decline"));
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
         item.setItemMeta(m);
         return item;
     }
