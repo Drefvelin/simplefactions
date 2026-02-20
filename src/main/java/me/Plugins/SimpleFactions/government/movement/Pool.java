@@ -8,20 +8,20 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Pool {
-    private List<String> members = new ArrayList<>();
+    private List<String> citizens = new ArrayList<>();
     private List<Guild> guilds = new ArrayList<>();
     private List<Faction> factions = new ArrayList<>();
 
     public Pool() {}
 
-    public Pool(List<String> members, List<Guild> guilds, List<Faction> factions) {
-        this.members = members;
+    public Pool(List<String> citizens, List<Guild> guilds, List<Faction> factions) {
+        this.citizens = citizens;
         this.guilds = guilds;
         this.factions = factions;
     }
 
-    public void addMember(String member) {
-        members.add(member);
+    public void addCitizen(String citizen) {
+        citizens.add(citizen);
     }
 
     public void addGuild(Guild guild) {
@@ -32,8 +32,20 @@ public class Pool {
         factions.add(faction);
     }
 
-    public List<String> getMembers() {
-        return members;
+    public void removeCitizen(String citizen) {
+        citizens.remove(citizen);
+    }
+
+    public void removeGuild(Guild guild) {
+        guilds.remove(guild);
+    }
+
+    public void removeFaction(Faction faction) {
+        factions.remove(faction);
+    }
+
+    public List<String> getCitizens() {
+        return citizens;
     }
 
     public List<Guild> getGuilds() {
@@ -45,7 +57,7 @@ public class Pool {
     }
 
     public List<String> getAllMembers() {
-        List<String> allMembers = new ArrayList<>(members);
+        List<String> allMembers = new ArrayList<>(citizens);
         for (Guild guild : guilds) {
             allMembers.addAll(guild.getMembers());
         }
@@ -57,8 +69,8 @@ public class Pool {
 
     public List<String> getFormattedList() {
         List<String> formattedList = new ArrayList<>();
-        for (String member : members) {
-            formattedList.add(StringFormatter.formatHex(member + " #77d1a3(Citizen)"));
+        for (String citizen : citizens) {
+            formattedList.add(StringFormatter.formatHex(citizen + " #77d1a3(Citizen)"));
         }
         for (Guild guild : guilds) {
             formattedList.add(StringFormatter.formatHex(guild.getName() + " #d1b83b(Guild)"));
@@ -71,8 +83,8 @@ public class Pool {
 
     public void remove(String pool, String member) {
         switch(pool) {
-            case "members":
-                members.remove(member);
+            case "citizens":
+                citizens.remove(member);
                 break;
             case "guilds":
                 guilds.removeIf(g -> g.getId().equals(member));

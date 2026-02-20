@@ -1,5 +1,6 @@
 package me.Plugins.SimpleFactions.government.movement.cause;
 
+import java.util.ArrayList;
 import java.util.List;
 import me.Plugins.SimpleFactions.government.movement.Movement;
 import me.Plugins.SimpleFactions.Guild.Guild;
@@ -18,7 +19,7 @@ public class Cause {
 
     private String leader;
     
-    private Pool members = new Pool();
+    private Pool pool = new Pool();
 
     public Cause(Movement movement, Proposal proposal, String leader) {
         this.movement = movement;
@@ -27,26 +28,58 @@ public class Cause {
         this.leader = leader;
         Member relation = movement.getFaction().getRelationToFaction(leader);
         if (relation == Member.GUILD_LEADER || relation == Member.GUILD_MEMBER) {
-            members.addGuild(FactionManager.getGuildByMember(leader));
+            pool.addGuild(FactionManager.getGuildByMember(leader));
         } else if (relation == Member.VASSAL_LEADER || relation == Member.VASSAL_MEMBER) {
-            members.addFaction(FactionManager.getByMember(leader));
+            pool.addFaction(FactionManager.getByMember(leader));
         } else if (relation == Member.MEMBER) {
-            members.addMember(leader);
+            pool.addCitizen(leader);
         } else {
             this.leader = null;
         }
     }
 
     public void tick() {
-        movement.checkMembers(members, proposal, true);
-        if(hasLeader() && !checkLeader()) {
+        checkMembers(pool);
+        if(hasLeader() && !canBeLeader(leader)) {
             leader = null;
+        }
+        if(isEmpty()) {
+            remove();
         }
     }
 
-    public boolean checkLeader() {
-        if(!members.getAllMembers().contains(leader)) return false;
-        Member relation = movement.getFaction().getRelationToFaction(leader);
+    public boolean isEmpty() {
+        return pool.getAllMembers().isEmpty();
+    }
+
+    public void remove() {
+        movement.removeCause(this);
+    }
+
+    public void join(Object o) {
+        if(!canJoin(o)) return;
+        if (o instanceof Guild guild) {
+            pool.addGuild(guild);
+        } else if (o instanceof Faction faction) {
+            pool.addFaction(faction);
+        } else if (o instanceof String citizen) {
+            pool.addCitizen(citizen);
+        }
+    }
+
+    public void leave(Object o) {
+        if (o instanceof Guild guild) {
+            pool.removeGuild(guild);
+        } else if (o instanceof Faction faction) {
+            pool.removeFaction(faction);
+        } else if (o instanceof String citizen) {
+            pool.removeCitizen(citizen);
+        }
+    }
+
+    public boolean canBeLeader(String p) {
+        if(!pool.getAllMembers().contains(p)) return false;
+        Member relation = movement.getFaction().getRelationToFaction(p);
         switch(relation) {
             case LEADER:
             case FOREIGNER:
@@ -58,12 +91,91 @@ public class Cause {
             case VASSAL_LEADER:
                 if(!proposal.getPoliticalAction().allowFactions()) return false;
             case MEMBER:
-                if(!proposal.getPoliticalAction().allowMembers()) return false;
+                if(!proposal.getPoliticalAction().allowCitizens()) return false;
                 return true;
             default:
                 break;
         }
         return false;
+    }
+
+    public boolean canJoin(Object obj) {
+
+        if (obj instanceof String) {
+            return canMemberJoin((String) obj);
+        }
+
+        if (obj instanceof Guild) {
+            return canGuildJoin((Guild) obj);
+        }
+
+        if (obj instanceof Faction) {
+            return canFactionJoin((Faction) obj);
+        }
+
+        return false;
+    }
+
+    public void checkMembers(Pool pool) {
+
+        for (String citizen : new ArrayList<>(pool.getCitizens())) {
+            if (!canMemberJoin(citizen)) {
+                pool.remove("citizens", citizen);
+            }
+        }
+
+        for (Guild guild : new ArrayList<>(pool.getGuilds())) {
+            if (!canGuildJoin(guild)) {
+                pool.remove("guild", guild.getName());
+            }
+        }
+
+        for (Faction faction : new ArrayList<>(pool.getFactions())) {
+            if (!canFactionJoin(faction)) {
+                pool.remove("faction", faction.getName());
+            }
+        }
+    }
+
+    public boolean canMemberJoin(String playerName) {
+        Member relation = movement.getFaction().getRelationToFaction(playerName);
+
+        if (relation != Member.MEMBER) return false;
+        if (!proposal.getPoliticalAction().allowCitizens()) return false;
+        if (movement.isMember(playerName)) return false;
+
+        return true;
+    }
+
+    public boolean canGuildJoin(Guild guild) {
+        if (!proposal.getPoliticalAction().allowGuilds()) return false;
+        if (guild.isBase()) return false;
+        if (!guild.getFaction().getId().equalsIgnoreCase(movement.getFaction().getId())) return false;
+        if (guild.getStance(movement.getFaction()) == Stance.SUPPORT) return false;
+        if (!guild.canBeElevated(null) && proposal.getPoliticalAction().getAction() == Action.NATIONHOOD) return false;
+        if (movement.isMember(guild.getLeader())) return false;
+
+        return true;
+    }
+
+    public boolean canFactionJoin(Faction faction) {
+        if (!proposal.getPoliticalAction().allowFactions()) return false;
+        if (faction.getId().equalsIgnoreCase(movement.getFaction().getId())) return false;
+
+        if (faction.getOverlord() == null ||
+            !faction.getOverlord().getId().equalsIgnoreCase(movement.getFaction().getId()))
+            return false;
+
+        if (faction.getOrCreateMainGuild().getStance(movement.getFaction()) == Stance.SUPPORT)
+            return false;
+
+        if (movement.isMember(faction.getLeader())) return false;
+
+        return true;
+    }
+
+    public int getIndex() {
+        return movement.getCauses().indexOf(this);
     }
 
     public Movement getMovement() {
@@ -78,6 +190,10 @@ public class Cause {
         return proposal;
     }
 
+    public void setLeader(String leader) {
+        this.leader = leader;
+    }
+
     public String getLeader() {
         return leader;
     }
@@ -86,15 +202,19 @@ public class Cause {
         return leader != null;
     }
 
-    public Pool getMembers() {
-        return members;
+    public Pool getPool() {
+        return pool;
     }
 
-    public void setMembers(Pool members) {
-        this.members = members;
+    public List<String> getFullMemberList() {
+        return pool.getAllMembers();
     }
 
-    public List<String> getMembersList() {
-        return members.getMembers();
+    public void setPool(Pool pool) {
+        this.pool = pool;
+    }
+
+    public List<String> getCitizenList() {
+        return pool.getCitizens();
     }
 }

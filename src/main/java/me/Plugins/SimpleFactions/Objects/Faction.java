@@ -591,6 +591,12 @@ public class Faction {
 		return Formatter.formatDouble(total);
 	}
 
+	public double getTotalTradePower() {
+		double total = getGuildHandler().getTotalTradePower();
+		total += getVassalTradePower();
+		return Formatter.formatDouble(total);
+	}
+
 	public double getVassalTradePower() {
 		double total = 0.0;
 		for(Faction vassal : RelationManager.getSubjects(this)) {

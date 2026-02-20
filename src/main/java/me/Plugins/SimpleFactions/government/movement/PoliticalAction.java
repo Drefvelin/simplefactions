@@ -40,7 +40,7 @@ public class PoliticalAction {
         this.icon = "v.paper";
         this.name = action.getDisplay();
         this.description = new ArrayList<>();
-        this.pools = Arrays.asList("members", "guilds", "factions");
+        this.pools = Arrays.asList("citizens", "guilds", "factions");
     }
  
     public Action getAction() {
@@ -67,8 +67,8 @@ public class PoliticalAction {
         return pools;
     }
 
-    public boolean allowMembers() {
-        return pools.contains("members");
+    public boolean allowCitizens() {
+        return pools.contains("citizens");
     }
 
     public boolean allowGuilds() {

@@ -17,8 +17,11 @@ import org.bukkit.entity.Player;
 import org.checkerframework.checker.units.qual.t;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Database.CauseData;
 import me.Plugins.SimpleFactions.Database.GovernmentData;
 import me.Plugins.SimpleFactions.Database.MovementData;
+import me.Plugins.SimpleFactions.Database.PoolData;
+import me.Plugins.SimpleFactions.Database.ProposalData;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.PoliticalActionLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
@@ -150,6 +153,15 @@ public class Government {
     public Movement getMovementByLeader(String leader) {
         for (Movement movement : movements) {
             if (movement.getLeader().equalsIgnoreCase(leader)) {
+                return movement;
+            }
+        }
+        return null;
+    }
+
+    public Movement getMovementById(String id) {
+        for (Movement movement : movements) {
+            if (movement.getId().equalsIgnoreCase(id)) {
                 return movement;
             }
         }
@@ -343,7 +355,7 @@ public class Government {
             case FOREIGNER:
                 return false;
             case MEMBER:
-                if(!PoliticalActionLoader.getByAction(action).allowMembers()) return false;
+                if(!PoliticalActionLoader.getByAction(action).allowCitizens()) return false;
                 return true;
             case GUILD_MEMBER:
                 if(action == Action.NATIONHOOD) return false; //only leaders can demand that
@@ -649,17 +661,18 @@ public class Government {
         return election;
     }
 
-    private java.util.List<me.Plugins.SimpleFactions.Database.MovementData> serializeMovements() {
-        java.util.List<me.Plugins.SimpleFactions.Database.MovementData> result = new java.util.ArrayList<>();
+    private List<MovementData> serializeMovements() {
+        List<MovementData> result = new ArrayList<>();
         
         for (Movement m : movements) {
-            me.Plugins.SimpleFactions.Database.MovementData data = new me.Plugins.SimpleFactions.Database.MovementData();
-            data.leader = m.getLeader();
+            MovementData data = new MovementData();
+            if(m.hasLeader()) data.leader = m.getLeader();
             data.organization = m.getOrganization();
-            
+            data.phase = m.getPhase().name();
+            data.id = m.getId();
             // Serialize causes
             for (Cause cause : m.getCauses()) {
-                me.Plugins.SimpleFactions.Database.CauseData causeData = new me.Plugins.SimpleFactions.Database.CauseData();
+                CauseData causeData = new CauseData();
                 causeData.leader = cause.getLeader();
                 causeData.action = cause.getAction().toString();
                 
@@ -668,7 +681,7 @@ public class Government {
                 causeData.proposal = serializeProposal(proposal);
                 
                 // Serialize members pool
-                Pool memberPool = cause.getMembers();
+                Pool memberPool = cause.getPool();
                 causeData.members = serializePool(memberPool);
                 
                 data.causes.add(causeData);
@@ -689,9 +702,9 @@ public class Government {
         return result;
     }
 
-    private me.Plugins.SimpleFactions.Database.PoolData serializePool(Pool pool) {
-        me.Plugins.SimpleFactions.Database.PoolData data = new me.Plugins.SimpleFactions.Database.PoolData();
-        data.members = new java.util.ArrayList<>(pool.getMembers());
+    private PoolData serializePool(Pool pool) {
+        PoolData data = new PoolData();
+        data.citizens = new java.util.ArrayList<>(pool.getCitizens());
         
         for (Guild guild : pool.getGuilds()) {
             data.guilds.add(guild.getId());
@@ -704,8 +717,8 @@ public class Government {
         return data;
     }
 
-    private me.Plugins.SimpleFactions.Database.ProposalData serializeProposal(Proposal p) {
-        me.Plugins.SimpleFactions.Database.ProposalData data = new me.Plugins.SimpleFactions.Database.ProposalData();
+    private ProposalData serializeProposal(Proposal p) {
+        ProposalData data = new ProposalData();
         data.proposer = p.getProposer();
         
         if (p.isLawProposal() && p.getLaw() != null) {

@@ -3,6 +3,7 @@ package me.Plugins.SimpleFactions.Managers.Inventory;
 import java.util.List;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -11,13 +12,17 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
+import me.Plugins.SimpleFactions.enums.Member;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.government.movement.Movement;
+import me.Plugins.SimpleFactions.government.movement.Phase;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
+import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.keys.Keys;
 
 public class MovementView {
@@ -41,7 +46,7 @@ public class MovementView {
         i.clear();
         
         // Movement leader icon
-        i.setItem(10, creator.createMovementLeaderItem(movement));
+        i.setItem(10, creator.createMovementLeaderItem(player, movement));
         
         // Organization icon
         i.setItem(11, creator.createOrganizationItem(movement));
@@ -54,6 +59,17 @@ public class MovementView {
         
         // Join as foreign backer button
         i.setItem(16, creator.createJoinAsForeignBackerButton(player, movement));
+
+        if(movement.isLeader(player.getName())) {
+            i.setItem(19, creator.createSendDemandsItem(movement));
+            i.setItem(34, creator.createEndMovmentItem(movement));
+        }
+
+        int x = 28;
+        for(Phase phase : Phase.values()) {
+            i.setItem(x, creator.createPhaseItem(phase, movement));
+            x++;
+        }
         
         // Back button
         i.setItem(53, inv.createBackButton(SFGUI.MOVEMENT_VIEW));
@@ -70,12 +86,23 @@ public class MovementView {
         }
         i.clear();
         
-        int x = 0;
         List<Cause> causes = movement.getCauses();
-        for (int slot : SLOTS) {
-            if (x >= causes.size()) break;
-            i.setItem(slot, creator.createCauseItem(causes.get(x), x));
-            x++;
+        final int MAX_CAUSES = 3;
+        
+        // Display up to 3 cause slots
+        for (int index = 0; index < MAX_CAUSES; index++) {
+            int slot = SLOTS.get(index);
+            
+            if (index < causes.size()) {
+                // Active cause
+                i.setItem(slot, creator.createCauseItem(causes.get(index)));
+            } else if (index == causes.size() && canPlayerCreateCause(player, movement)) {
+                // Available slot for new cause
+                i.setItem(slot, creator.createAvailableCauseSlot(movement, index));
+            } else {
+                // Empty slot (locked)
+                i.setItem(slot, creator.createEmptyCauseSlot(index));
+            }
         }
         
         // Back button
@@ -94,7 +121,7 @@ public class MovementView {
         i.clear();
         
         // Cause leader icon
-        i.setItem(10, creator.createCauseLeaderItem(cause));
+        i.setItem(10, creator.createCauseLeaderItem(player, cause));
         
         // Proposal icon
         i.setItem(12, creator.createCauseProposalItem(cause));
@@ -149,45 +176,50 @@ public class MovementView {
         if (meta == null) return;
         
         SFGUI gui = holder.getType();
+        Movement movement = null;
+        if (meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
+            String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+            movement = f.getGovernment().getMovementById(id);
+        }
+
+        if (movement == null) {
+            return;
+        }
         
         switch (gui) {
             case MOVEMENT_LIST:
-                handleMovementListClick(e, p, f, inventory, meta);
+                handleMovementListClick(e, movement, p, f, inventory, meta);
                 break;
             case MOVEMENT_VIEW:
-                handleMovementViewClick(e, p, f, inventory, meta);
+                handleMovementViewClick(e, movement, p, f, inventory, meta);
                 break;
             case CAUSES_VIEW:
-                handleCausesViewClick(e, p, f, inventory, meta);
+                handleCausesViewClick(e, movement,  p, f, inventory, meta);
                 break;
             case CAUSE_VIEW:
-                handleCauseViewClick(e, p, f, inventory, meta);
+                handleCauseViewClick(e, movement, p, f, inventory, meta);
                 break;
             default:
                 break;
         }
     }
     
-    private void handleMovementListClick(InventoryClickEvent e, Player p, Faction f, Inventory inventory, ItemMeta meta) {
+    private void handleMovementListClick(InventoryClickEvent e, Movement movement, Player p, Faction f, Inventory inventory, ItemMeta meta) {
         // Check if a movement was clicked
-        if (meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
-            String leaderName = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
-            Movement movement = f.getGovernment().getMovementByLeader(leaderName);
-            if (movement != null) {
-                movementView(p, f, movement, null);
+        movementView(p, f, movement, null);
+        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
+    }
+    
+    private void handleMovementViewClick(InventoryClickEvent e, Movement movement, Player p, Faction f, Inventory inventory, ItemMeta meta) {
+        int slot = e.getSlot();
+        //leader
+        if (slot == 10) {
+            if(!movement.hasLeader() && movement.canBeLeader(p.getName())) {
+                movement.setLeader(p.getName());
+                movementView(p, f, movement, inventory);
                 p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
             }
         }
-    }
-    
-    private void handleMovementViewClick(InventoryClickEvent e, Player p, Faction f, Inventory inventory, ItemMeta meta) {
-        Movement movement = f.getGovernment().getMovementByMember(p.getName());
-        if (movement == null) {
-            movement = f.getGovernment().getMovementByLeader(p.getName());
-        }
-        if (movement == null) return;
-        
-        int slot = e.getSlot();
         
         // Causes button
         if (slot == 13) {
@@ -196,41 +228,170 @@ public class MovementView {
         }
         // Join as supporter button
         else if (slot == 15) {
-            // TODO: Implement join logic
+            if(!quickJoinCheck(p, movement)) return;
+            Object joiningAs = getJoiningAs(p, movement);
+            if(joiningAs == null) return;
+            movement.join(joiningAs, null);
+            movementView(p, f, movement, inventory);
             p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
         }
         // Join as foreign backer button
         else if (slot == 16) {
-            // TODO: Implement join logic
+            Faction playerFaction = FactionManager.getByMember(p.getName());
+            if (playerFaction != null && !playerFaction.getId().equals(f.getId())) {
+                movement.joinAsForeignBacker(playerFaction);
+                movementView(p, f, movement, inventory);
+                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
+            }
+        }
+
+        else if (slot == 34) {
+            if(movement.isLeader(p.getName())) {
+                // End movement
+                movement.getFaction().getGovernment().endMovement(movement);
+            }
+            movementListView(p, f, null);
             p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
         }
     }
     
-    private void handleCausesViewClick(InventoryClickEvent e, Player p, Faction f, Inventory inventory, ItemMeta meta) {
-        Movement movement = f.getGovernment().getMovementByMember(p.getName());
-        if (movement == null) {
-            movement = f.getGovernment().getMovementByLeader(p.getName());
+    private void handleCausesViewClick(InventoryClickEvent e, Movement movement, Player p, Faction f, Inventory inventory, ItemMeta meta) {
+        ItemStack item = e.getCurrentItem();
+        if (item == null) return;
+        
+        // Check if clicking on an available cause slot
+        if (item.getType() == Material.YELLOW_CONCRETE && 
+            meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
+            String action = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+            if ("CREATE_CAUSE".equals(action)) {
+                createNewCause(p, movement, f);
+                causesView(p, f, movement, inventory);
+                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
+                return;
+            }
         }
-        if (movement == null) return;
         
         // Check if a cause was clicked
         if (meta.getPersistentDataContainer().has(Keys.INT, PersistentDataType.INTEGER)) {
             int index = meta.getPersistentDataContainer().get(Keys.INT, PersistentDataType.INTEGER);
-            Cause cause = movement.getCauses().get(index);
-            if (cause != null) {
-                causeView(p, f, movement, cause, null);
-                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
+            if (index < movement.getCauses().size()) {
+                Cause cause = movement.getCauses().get(index);
+                if (cause != null) {
+                    causeView(p, f, movement, cause, null);
+                    p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
+                }
             }
         }
     }
     
-    private void handleCauseViewClick(InventoryClickEvent e, Player p, Faction f, Inventory inventory, ItemMeta meta) {
+    private void handleCauseViewClick(InventoryClickEvent e, Movement movement, Player p, Faction f, Inventory inventory, ItemMeta meta) {
         int slot = e.getSlot();
-        
+        Cause cause = null;
+        if (meta.getPersistentDataContainer().has(Keys.INT, PersistentDataType.INTEGER)) {
+            int index = meta.getPersistentDataContainer().get(Keys.INT, PersistentDataType.INTEGER);
+            cause = movement.getCauses().get(index);
+        }
+        if (cause == null) {
+            return;
+        }
+        if(slot == 10) {
+            if(!cause.hasLeader() && cause.canBeLeader(p.getName())) {
+                cause.setLeader(p.getName());
+                causeView(p, f, movement, cause, inventory);
+                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
+            }
+        }
         // Join cause button
         if (slot == 14) {
-            // TODO: Implement join logic
+            if(!quickJoinCheck(p, movement)) return;
+            Object joiningAs = getJoiningAs(p, movement);
+            if(joiningAs == null) return;
+            movement.join(joiningAs, cause);
+            causeView(p, f, movement, cause, inventory);
             p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
         }
+    }
+
+    private boolean quickJoinCheck(Player p, Movement movement) {
+        if(movement.isMember(p.getName())) return false;
+        Member relation = movement.getFaction().getRelationToFaction(p.getName());
+        switch(relation) {
+            case FOREIGNER:
+            case GUILD_MEMBER:
+            case LEADER:
+            case VASSAL_MEMBER:
+            default:
+                return false;
+            case MEMBER:
+            case VASSAL_LEADER:
+            case GUILD_LEADER:
+                return true;
+            
+        }
+    }
+
+    private Object getJoiningAs(Player p, Movement movement) {
+        Member relation = movement.getFaction().getRelationToFaction(p.getName());
+        if (relation == Member.GUILD_LEADER || relation == Member.GUILD_MEMBER) {
+            return FactionManager.getGuildByMember(p.getName());
+        } else if (relation == Member.VASSAL_LEADER) {
+            return FactionManager.getByMember(p.getName());
+        } else if (relation == Member.MEMBER) {
+            return p.getName();
+        }
+        return null;
+    }
+
+    private boolean canPlayerCreateCause(Player p, Movement movement) {
+        // Check if player is a supporter
+        Object supporter = getSupporterObject(p, movement);
+        if (supporter == null) return false;
+        
+        // Check if movement has room for more causes
+        if (movement.getCauses().size() >= 3) return false;
+        
+        return true;
+    }
+
+    private Object getSupporterObject(Player p, Movement movement) {
+        String playerName = p.getName();
+        
+        // Check if player is in supporters as a citizen
+        if (movement.getSupporters().getCitizens().contains(playerName)) {
+            return playerName;
+        }
+        
+        // Check if player's guild is a supporter
+        Member relation = movement.getFaction().getRelationToFaction(playerName);
+        if (relation == Member.GUILD_LEADER || relation == Member.GUILD_MEMBER) {
+            Guild guild = FactionManager.getGuildByMember(playerName);
+            if (guild != null && movement.getSupporters().getGuilds().contains(guild)) {
+                return guild;
+            }
+        }
+        
+        // Check if player's faction is a supporter
+        if (relation == Member.VASSAL_LEADER || relation == Member.VASSAL_MEMBER) {
+            Faction faction = FactionManager.getByMember(playerName);
+            if (faction != null && movement.getSupporters().getFactions().contains(faction)) {
+                return faction;
+            }
+        }
+        
+        return null;
+    }
+
+    private void createNewCause(Player p, Movement movement, Faction f) {
+        Object supporter = getSupporterObject(p, movement);
+        if (supporter == null) return;
+        
+        // Get the proposal from the first cause (all causes in a movement share the same proposal type)
+        if (movement.getCauses().isEmpty()) return;
+        
+        Proposal proposal = movement.getCauses().get(0).getProposal();
+        
+        // Remove from supporters and create new cause
+        movement.leave(supporter, null);
+        movement.createCause(p.getName(), proposal);
     }
 }
