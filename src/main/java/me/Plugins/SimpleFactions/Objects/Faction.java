@@ -52,6 +52,7 @@ import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.Brackets;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
+import me.Plugins.SimpleFactions.enums.Member;
 import me.Plugins.SimpleFactions.enums.Region;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Scope;
@@ -587,6 +588,12 @@ public class Faction {
 		for(Faction vassal : RelationManager.getSubjects(this)) {
 			total += vassal.getWealth();
 		}
+		return Formatter.formatDouble(total);
+	}
+
+	public double getTotalTradePower() {
+		double total = getGuildHandler().getTotalTradePower();
+		total += getVassalTradePower();
 		return Formatter.formatDouble(total);
 	}
 
@@ -1209,5 +1216,20 @@ public class Faction {
 			return overlord;
 		}
 		return this;
+	}
+
+	public Member getRelationToFaction(String member) {
+		if(isLeader(member)) return Member.LEADER;
+		if(getOrCreateMainGuild().isMember(member)) return Member.MEMBER;
+		for(Guild g : guildHandler.getGuilds()) {
+			if(g.isBase()) continue;
+			if(g.isLeader(member)) return Member.GUILD_LEADER;
+			if(g.isMember(member)) return Member.GUILD_MEMBER;
+		}
+		for(Faction vassal : getSubjects()) {
+			if(vassal.isLeader(member)) return Member.VASSAL_LEADER;
+			if(vassal.isMember(member)) return Member.VASSAL_MEMBER;
+		}
+		return Member.FOREIGNER;
 	}
 }

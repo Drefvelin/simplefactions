@@ -15,6 +15,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Loaders.PoliticalActionLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
@@ -27,6 +28,8 @@ import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.SimpleFactions.government.Council;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.election.Candidate;
+import me.Plugins.SimpleFactions.government.movement.Action;
+import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxLawChange;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
@@ -185,6 +188,9 @@ public class GovernmentCreator {
         if(f.getOrCreateMainGuild().isBankrupt()) {
             lore.add(StringFormatter.formatHex("#b8ae61State is bankrupt! #d13530-100%"));
         }
+        if(gov.hasElections() && gov.getVotingBooths().isEmpty()) {
+            lore.add(StringFormatter.formatHex("#b8ae61No voting booths! #d13530-75%"));
+        }
         lore.add(StringFormatter.formatHex("#93c9a7Stances:"));
         for(Guild guild : f.getGuildHandler().getGuilds()) {
             if(guild.isBase()) continue;
@@ -339,7 +345,7 @@ public class GovernmentCreator {
             lore.add(StringFormatter.formatHex("#b8ae61ultimatum to the council."));
             lore.add(StringFormatter.formatHex("§7(#812222Potential Civil War§7)"));
         }
-        if(gov.canProposeOrStartMovement(p)) lore.add(StringFormatter.formatHex("#28ed70Click to start"));
+        if(gov.canProposeOrStartMovement(p) && gov.getMovementByMember(p.getName()) == null) lore.add(StringFormatter.formatHex("#28ed70Click to start"));
         else lore.add(StringFormatter.formatHex("#89504eYou cannot start a new proposal/movement at this time."));
         m.setLore(lore);
         item.setItemMeta(m);
@@ -354,6 +360,24 @@ public class GovernmentCreator {
         Government gov = f.getGovernment();
         int count = gov.getCouncil().getProposalHandler().getProposals().size();
         lore.add(StringFormatter.formatHex("#85c265Active Proposals§7: §e"+count));
+        lore.add("");
+        lore.add(StringFormatter.formatHex("#28ed70Click to view"));
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createMovementListItem(Player p, Faction f) {
+        ItemStack item = new ItemStack(Material.BLAZE_POWDER);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#d1743bActive Movements"));
+        List<String> lore = new ArrayList<String>();
+        Government gov = f.getGovernment();
+        int count = gov.getMovements().size();
+        lore.add(StringFormatter.formatHex("#85c265Active Movements§7: §e"+count));
+        lore.add("");
+        lore.add(StringFormatter.formatHex("#7a7a7aMovements represent organized"));
+        lore.add(StringFormatter.formatHex("#7a7a7aefforts to enact political change."));
         lore.add("");
         lore.add(StringFormatter.formatHex("#28ed70Click to view"));
         m.setLore(lore);
@@ -573,7 +597,28 @@ public class GovernmentCreator {
             lore.add(StringFormatter.formatHex("#b8ae61Create a proposal to change"));
             lore.add(StringFormatter.formatHex("#b8ae61the tax rate in your faction."));
             m.setLore(lore);
+        } else if(type.equalsIgnoreCase("political")) {
+            m.setDisplayName(StringFormatter.formatHex("#93c9a7Political Proposal"));
+            List<String> lore = new ArrayList<String>();
+            lore.add(StringFormatter.formatHex("#b8ae61Create a proposal to change"));
+            lore.add(StringFormatter.formatHex("#b8ae61the political landscape in your faction."));
+            m.setLore(lore);
         }
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createPoliticalProposalTypeItem(Player p, Faction f, Action action) {
+        ItemStack item = new ItemStack(Material.PAPER);
+        ItemMeta m = item.getItemMeta();
+        String actionDisplay = action.getDisplay();
+        m.setDisplayName(StringFormatter.formatHex("#93c9a7"+actionDisplay));
+        List<String> lore = new ArrayList<String>();
+        lore.add(StringFormatter.formatHex("#b8ae61Create a proposal to "+actionDisplay));
+        PoliticalAction politicalAction = PoliticalActionLoader.getByAction(action);
+        lore.addAll(politicalAction.getDescription());
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, action.name());
         item.setItemMeta(m);
         return item;
     }

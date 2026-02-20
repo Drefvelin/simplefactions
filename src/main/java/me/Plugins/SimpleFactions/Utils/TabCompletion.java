@@ -99,6 +99,8 @@ public class TabCompletion implements TabCompleter{
 					completions.add("transfersubject");
 					completions.add("setrelation");
 					completions.add("usurp");
+					completions.add("startelection");
+					completions.add("endelection");
 				}
 				TabCleaner.cleanTab(completions, args);
 				return completions;

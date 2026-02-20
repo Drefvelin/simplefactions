@@ -186,9 +186,6 @@ public class Election {
                 // Must be faction member (any guild)
                 if (!gov.getFaction().isMember(player))
                     return false;
-                // Cannot already be faction leader
-                if (gov.getFaction().isLeader(player))
-                    return false;
                 Guild g = gov.getFaction().getGuild(player);
                 if (g != null && !g.isBase() && g.isLeader(player)) {
                     return false;

@@ -192,6 +192,12 @@ public class Session {
         started = true;
     }
 
+    public void kill() {
+        if (hologram != null) {
+            hologram.destroy();
+        }
+    }
+
     public void end() {
         // Create session report
         SessionReport report = new SessionReport(leader.getName(), f);

@@ -110,6 +110,7 @@ public class Guild {
         }
         this.ledger = new Ledger(this);
         this.loanHandler = new LoanHandler(this);
+        this.bank = new Bank(this);
         createBanner();
     }
 
@@ -183,6 +184,7 @@ public class Guild {
         for(Upgrade u : UpgradeLoader.getList()) {
             if(!upgrades.containsKey(u.getId())) upgrades.put(u.getId(), new Upgrade(u, 0));
         }
+        this.bank = new Bank(this);
         this.bannerPatterns = data.banner;
         this.wealth = 0.0;
         this.wealthModifiers = Database.loadModifiers(data.wealthModifiers);

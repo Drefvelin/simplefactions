@@ -263,6 +263,7 @@ public class FactionManager implements Listener{
 			f.getLawHandler().apply();
 			f.updatePrestige();
 			f.countyCheck();
+			f.getGovernment().loadMovements();
 			f.ping();
 		}
 		fixRelations();
@@ -496,6 +497,15 @@ public class FactionManager implements Listener{
 	    } catch (NumberFormatException e) {
 	        return 2;
 	    }
+	}
+
+	public static me.Plugins.SimpleFactions.government.movement.Movement getMovementById(String movementId) {
+		if (movementId == null) return null;
+		for (Faction f : factions) {
+			me.Plugins.SimpleFactions.government.movement.Movement movement = f.getGovernment().getMovementById(movementId);
+			if (movement != null) return movement;
+		}
+		return null;
 	}
 
     public static Title usurp(Player p, Faction usurping, Faction losing) {
