@@ -8,6 +8,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Objects.Request.ElevateRequest;
+import me.Plugins.SimpleFactions.Objects.Request.MovementJoinRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelocateRequest;
 import me.Plugins.SimpleFactions.Objects.Request.Request;
@@ -54,6 +55,8 @@ public class RequestManager {
 			FactionManager.acceptRelocateRequest(p);
 		} else if(req instanceof ElevateRequest) {
 			FactionManager.acceptElevationRequest(p);
+		} else if(req instanceof MovementJoinRequest) {
+			FactionManager.acceptMovementJoinRequest(p);
 		}
 		requests.remove(p);
 	}

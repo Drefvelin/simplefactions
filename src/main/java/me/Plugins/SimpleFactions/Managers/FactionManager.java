@@ -33,6 +33,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Objects.PrestigeRank;
 import me.Plugins.SimpleFactions.Objects.Request.ElevateRequest;
+import me.Plugins.SimpleFactions.Objects.Request.MovementJoinRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelocateRequest;
 import me.Plugins.SimpleFactions.Cache;
@@ -42,6 +43,8 @@ import me.Plugins.SimpleFactions.Utils.DailyGuildTransfers;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.government.Government;
+import me.Plugins.SimpleFactions.government.movement.Movement;
+import me.Plugins.SimpleFactions.government.movement.cause.Cause;
 import me.Plugins.TLibs.TLibs;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
 import net.tfminecraft.DenarEconomy.Enum.Accounts;
@@ -602,6 +605,60 @@ public class FactionManager implements Listener{
 		sender.getFaction().getGovernment().spendPower(cost);
 		p.sendMessage("§aGuild elevated to Faction!");
 		p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+	}
+
+	public static void requestMovementJoin(Player sender, Movement movement, String type, Cause cause) {
+		Player p = Bukkit.getPlayerExact(movement.getLeader());
+		if(p == null) {
+			sender.sendMessage("§cTarget movement leader is not online");
+			return;
+		}
+		p.sendMessage(sender.getName()+" §7wants to join your movement as a "+type);
+		p.sendMessage("§7Type §a/faction accept §7to accept");
+		p.sendMessage("§7Request will time out in 60 seconds");
+		sender.sendMessage("§aJoin request sent to "+movement.getLeader());
+		RequestManager.addRequest(sender, p, new MovementJoinRequest(null, sender.getName(), type, movement.getFaction().getId(), cause == null ? -1 : cause.getIndex()));
+	}
+
+	public static void acceptMovementJoinRequest(Player p) {
+		MovementJoinRequest req = (MovementJoinRequest) RequestManager.getRequest(p);
+		String sender = req.getPlayer();
+		Player sp = Bukkit.getPlayerExact(sender);
+		if(sp == null || !sp.isOnline()) {
+			p.sendMessage("§cRequest sender is not online");
+			return;
+		}
+		Faction f = getByString(req.getTargetFactionId());
+		if(f == null) {
+			p.sendMessage("§cTarget faction no longer exists");
+			return;
+		}
+		Movement target = f.getGovernment().getMovementByLeader(p.getName());
+		if(target == null) {
+			p.sendMessage("§cYou are not the leader of a movement");
+			return;
+		}
+		Object o = target.getJoiningAs(sp);
+		Cause cause = null;
+		if(req.getCauseIndex() != -1) {
+			cause = target.getCauses().get(req.getCauseIndex());
+			if(cause == null) {
+				p.sendMessage("§cSpecified cause no longer exists");
+				return;
+			}
+		}
+		if(!target.canJoin(o, cause)) {
+			if(o instanceof Faction fac) {
+				if(target.canForeignBackerJoin(fac, false)) {
+					target.joinAsForeignBacker(fac);
+					p.sendMessage("§a"+sender+" has joined your movement as a "+req.getType()+"!");
+				}
+			}
+			p.sendMessage("§cSender cannot join movement as a "+req.getType());
+			return;
+		}
+		target.join(o, cause);
+		p.sendMessage("§a"+sender+" has joined your movement as a "+req.getType()+"!");
 	}
 
 	//Elections and stuff

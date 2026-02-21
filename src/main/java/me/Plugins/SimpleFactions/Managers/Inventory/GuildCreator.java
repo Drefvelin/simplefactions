@@ -705,7 +705,7 @@ public class GuildCreator {
 		ItemStack i = new ItemStack(Material.BLACK_DYE);
 		ItemMeta meta = i.getItemMeta();
 		meta.setCustomModelData(13);
-		meta.setDisplayName(StringFormatter.formatHex("#d4c9aeElevate Guild to Faction Status"));
+		meta.setDisplayName(StringFormatter.formatHex("#6ade9cElevate Guild to Faction Status"));
 		List<String> lore = new ArrayList<>();
 		lore.add(StringFormatter.formatHex("#d4c9aeThis will make the guild an "+RelationLoader.getElevationTarget().getName()));
 		lore.add(StringFormatter.formatHex("#d4c9aeof our faction, giving them their own laws and government."));
@@ -717,6 +717,28 @@ public class GuildCreator {
 		lore.add("");
 		if(guild.canBeElevated(null)) {
 			lore.add(StringFormatter.formatHex("#50e846Click to Elevate"));
+		} else {
+			lore.add(StringFormatter.formatHex("#e15757Unavailable"));
+		}
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createEvictionItem(Player p, Guild guild) {
+		ItemStack i = TLibs.getItemAPI().getCreator().getItemsAdderItem("mcicons:icon_cancel");
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex("#deb46aEvict guild from faction"));
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#d4c9aeThis will remove the guild from the faction."));
+		lore.add(StringFormatter.formatHex("#d4c9aeThe guild will no longer be part of the faction."));
+		lore.add(StringFormatter.formatHex("#d4c9aeThey will become their own landless faction."));
+		lore.add("");
+		double cost = guild.getEvictionCost();
+		lore.add(StringFormatter.formatHex("#d4c9aeCost: §e"+Formatter.formatDouble(cost)+" Administrative Power"));
+		lore.add("");
+		if(guild.canBeEvicted(null)) {
+			lore.add(StringFormatter.formatHex("#50e846Click to Evict"));
 		} else {
 			lore.add(StringFormatter.formatHex("#e15757Unavailable"));
 		}

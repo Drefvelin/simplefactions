@@ -648,6 +648,22 @@ public class Guild {
         return 25+Math.pow(cost, 1.1);
     }
 
+    public double getEvictionCost() {
+        return getElevationCost()*2;
+    }
+
+    public boolean canBeEvicted(Player p) {
+        if(isBase()) {
+            if(p != null) p.sendMessage("§cCannot evict the main guild");
+            return false;
+        }
+        if(host.getGovernment().getMovementByMember(leader) != null) {
+            if(p != null) p.sendMessage("§cGuild is currently involved in a movement");
+            return false;
+        }
+        return true;
+    }
+
     public boolean canBeElevated(Player p) {
         if(isBase()) {
             if(p != null) p.sendMessage("§cCannot elevate the main guild");
@@ -708,6 +724,17 @@ public class Guild {
                 u.setLevel(0);
             }
         }
+    }
+
+    public Faction toLandless(boolean subjugate) {
+        setCapital(-1);
+        host.getGuildHandler().removeGuild(id);
+        Faction landless = new Faction(this);
+        Faction old = host;
+        host = landless;
+        FactionManager.addFaction(landless);
+        if(subjugate) RelationManager.setRelation(null, RelationLoader.getElevationTarget(), landless, old, false);
+        return landless;
     }
 
     public Faction elevate(boolean subjugate) {

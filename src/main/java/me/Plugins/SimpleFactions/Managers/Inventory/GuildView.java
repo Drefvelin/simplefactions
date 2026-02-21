@@ -150,8 +150,11 @@ public class GuildView {
 		if(target != null) {
 			i.setItem(34, creator.createRelocateItem(player, target, guild));
 		}
-		if(guild.getFaction().isLeader(player.getName()) && !guild.isBase() && guild.hasCapital()) {
-			i.setItem(43, creator.createElevationItem(player, guild));
+		if(guild.getFaction().isLeader(player.getName()) && !guild.isBase()) {
+			if(guild.hasCapital()) {
+				i.setItem(43, creator.createElevationItem(player, guild));
+			}
+			i.setItem(34, creator.createEvictionItem(player, guild));
 		}
 		int group = 0;
 		while(guild.getBranch(group) != null || group > 10) {
@@ -274,40 +277,56 @@ public class GuildView {
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				return;
 			} else if(e.getSlot() == 34) {
-				if(!guild.isLeader(p)) return;
-				if(guild.isBase()) return;
-				Faction target = FactionManager.getMap().getRelocationTarget(p);
-				if(target == null)  return;
-				int province = RestServer.getProvince(p);
-				Province prov = SimpleFactions.getInstance().getProvinceManager().get(province);
-				if(prov == null || !prov.isValid() || prov.isSea()) return;
-				double cost = guild.getRelocationCost(province);
-				if(guild.getBank().getWealth() < cost) {	
-					p.sendMessage("§cCannot afford to relocate");
-					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-					return;
-				}
-				if(!target.getId().equalsIgnoreCase(guild.getFaction().getId())) {
-					FactionManager.requestRelocation(p, guild, target, province);
-				} else {
-					if(target.hasProvince(province)) {
-						guild.setCapital(province);
-					} else {
-						int old = guild.getCapital();
-						guild.setCapital(-1);
-						FactionManager.getMap().claim(p, target, province, true);
-						if(!target.hasProvince(province)) {
-							guild.setCapital(old);
-							p.sendMessage("§cRelocation failed, cannot claim province!");
-							p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-							return;
-						}
-						guild.setCapital(province);
+				if(guild.isLeader(p)) {
+					if(guild.isBase()) return;
+					Faction target = FactionManager.getMap().getRelocationTarget(p);
+					if(target == null)  return;
+					int province = RestServer.getProvince(p);
+					Province prov = SimpleFactions.getInstance().getProvinceManager().get(province);
+					if(prov == null || !prov.isValid() || prov.isSea()) return;
+					double cost = guild.getRelocationCost(province);
+					if(guild.getBank().getWealth() < cost) {	
+						p.sendMessage("§cCannot afford to relocate");
+						p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+						return;
 					}
-					guild.getBank().withdraw(cost);
+					if(!target.getId().equalsIgnoreCase(guild.getFaction().getId())) {
+						FactionManager.requestRelocation(p, guild, target, province);
+					} else {
+						if(target.hasProvince(province)) {
+							guild.setCapital(province);
+						} else {
+							int old = guild.getCapital();
+							guild.setCapital(-1);
+							FactionManager.getMap().claim(p, target, province, true);
+							if(!target.hasProvince(province)) {
+								guild.setCapital(old);
+								p.sendMessage("§cRelocation failed, cannot claim province!");
+								p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+								return;
+							}
+							guild.setCapital(province);
+						}
+						guild.getBank().withdraw(cost);
+					}
+					guildView(p, guild, inventory);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				} else if(guild.getFaction().isLeader(p.getName())) {
+					if(!guild.canBeEvicted(p)) {
+						p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
+						return;
+					}
+					double cost = guild.getEvictionCost();
+					if(guild.getFaction().getGovernment().getPower() < cost) {
+						p.sendMessage("§cCannot afford to evict");
+						p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
+						return;
+					}
+					guild.toLandless(false);
+					guild.getFaction().getGovernment().spendPower(cost);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					p.closeInventory();
 				}
-				guildView(p, guild, inventory);
-				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				return;
 			} else if(e.getSlot() == 43) {
 				if(!guild.getFaction().isLeader(p.getName())) return;
@@ -315,11 +334,13 @@ public class GuildView {
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
 					return;
 				}
-				if(guild.getFaction().getGovernment().getPower() < guild.getElevationCost()) {
+				double cost = guild.getElevationCost();
+				if(guild.getFaction().getGovernment().getPower() < cost) {
 					p.sendMessage("§cCannot afford to elevate");
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
 					return;
 				}
+				guild.getFaction().getGovernment().spendPower(cost);
 				FactionManager.requestElevation(p, guild);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				p.closeInventory();

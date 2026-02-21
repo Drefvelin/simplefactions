@@ -358,7 +358,7 @@ public class GovernmentView {
 				}
 				p.sendMessage("§aChange applied!");
 				gov.spendPower(cost);
-				proposal.apply();
+				proposal.apply(null);
 				governmentView(p, f, null);
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 				return;

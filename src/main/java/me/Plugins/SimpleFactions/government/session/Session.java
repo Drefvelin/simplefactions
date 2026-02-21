@@ -223,7 +223,7 @@ public class Session {
         for(Proposal p : proposals.keySet()) {
             VoteResult result = proposals.get(p);
             if (result.equals(VoteResult.PASSED)) {
-                p.apply();
+                p.apply(null);
             }
         }
         

@@ -21,6 +21,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.Utils.EconomicImpact;
 import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.Utils.LoreWriter;
 import me.Plugins.SimpleFactions.Utils.Represents;
 import me.Plugins.SimpleFactions.Utils.Wealth;
 import me.Plugins.SimpleFactions.enums.Rules;
@@ -526,57 +527,7 @@ public class GovernmentCreator {
         m.setDisplayName(StringFormatter.formatHex(proposal.isLawProposal() ? "#93c9a7Law Proposal" : "#93c9a7Tax Proposal"));
         List<String> lore = new ArrayList<String>();
         lore.add(StringFormatter.formatHex("#85c265Proposed by: #c2bea7"+proposal.getProposer()));
-        if(proposal.isLawProposal()) {
-            Law law = proposal.getLaw();
-            LawGroup group = f.getLawHandler().getGroup(law.getGroup());
-            lore.add(StringFormatter.formatHex("#b8ae61Group: #c2bea7"+group.getName()));
-            lore.add(StringFormatter.formatHex(group.getCurrent().getName()+" §7-> "+law.getName()));
-            // ---- Economic preview ----
-            if (law.affectsEconomy()) {
-                EconomicImpact.applyEconomicChange(lore, p, f, group, law);
-            }
-        } else if(proposal.isTaxProposal()) {
-            TaxLawChange taxChange = proposal.getTaxChange();
-            TaxTarget target = taxChange.getTarget();
-            String name = "";
-            String type = "";
-            if(target == TaxTarget.GUILD_ID) {
-                Guild guild = FactionManager.getGuildByString(taxChange.getId());
-                name = guild.getName();
-                type = guild.getType().getName();
-            } else if(target == TaxTarget.VASSAL_ID) {
-                name = FactionManager.getByString(taxChange.getId()).getName();
-                type = "#4269a8Vassal";
-            } else if(target == TaxTarget.TARIFF_ID) {
-                name = FactionManager.getByString(taxChange.getId()).getName();
-                type = "#79bf6dTariff";
-            } else{
-                name = target.getDisplayName();
-            }
-            String oldRate = "";
-            if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) {
-                double rate = f.getTaxRate(target, taxChange.getId(), false);
-                if(rate == -1.0) {
-                    oldRate = String.valueOf(f.getTaxRate(target, null, false));
-                } else {
-                    oldRate = String.valueOf(rate);
-                }
-            } else {
-                oldRate = String.valueOf(f.getTaxRate(target, null, false));
-            }
-            double baseRate = f.getTaxRate(target, null, false);
-            lore.add(StringFormatter.formatHex("#b8ae61Target: #c2bea7"+name+
-                (type.isEmpty() ? "" : " §7("+type+"§7)")));
-            lore.add(StringFormatter.formatHex("#b8ae61Change: #c2bea7"+oldRate+"% §7-> #c2bea7"+taxChange.getNewTax()+"%"));
-            if(target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID) {
-                lore.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a"+baseRate+"%#3f4040)"));
-            }
-            if(target == TaxTarget.TARIFFS || target == TaxTarget.TARIFF_ID) {
-                EconomicImpact.applyTariffImpact(lore, p, f, taxChange.getNewTax());
-            } else {
-                EconomicImpact.applyTaxImpact(lore, p, f, target, taxChange.getId(), taxChange.getNewTax());
-            }
-        }
+        LoreWriter.applyProposalLore(proposal, lore, p, f);
         m.setLore(lore);
         item.setItemMeta(m);
         return item;
