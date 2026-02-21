@@ -56,6 +56,7 @@ public class GovernmentView {
 		i.setItem(24, creator.createProposalListItem(player, f));
 		i.setItem(33, creator.createMovementListItem(player, f));
 		Government gov = f.getGovernment();
+		if(gov.getCouncil().canBeMember(player.getName(), true, true)) i.setItem(21, creator.createToggleRefuseButton(player, f));
 		if(gov.hasElections()) i.setItem(14, creator.createElectionItem(player, f));
 		if(gov.getCouncil().canHostSession() && f.getLeader().equalsIgnoreCase(player.getName())) {
 			i.setItem(23, creator.createStartCouncilButton(player, f));
@@ -92,7 +93,7 @@ public class GovernmentView {
 		members.removeAll(f.getGovernment().getCouncil().getMembers());
 		members.addAll(f.getVassalMembers());
 		for(String member : members) {
-			if(!council.canBeMember(member, true)) continue;
+			if(!council.canBeMember(member, true, false)) continue;
 			i.setItem(x, creator.createPotentialMemberItem(player, f, member, slot));
 			x++;
 		}
@@ -230,6 +231,11 @@ public class GovernmentView {
 					return;
 				}
 				proposalView(p, f, null);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			} else if(slot == 21) {
+				Government gov = f.getGovernment();
+				gov.getCouncil().toggleRefuse(p.getName());
+				governmentView(p, f, inventory);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			} else if(slot == 24) {
 				proposalList(p, f, null);

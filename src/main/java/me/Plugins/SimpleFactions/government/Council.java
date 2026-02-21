@@ -26,6 +26,8 @@ public class Council {
     private Rules type;
     private int size;
 
+    private List<String> refuses = new ArrayList<>();
+
     private ProposalHandler proposalHandler;
 
     public Council(Government gov, Faction f) {
@@ -46,10 +48,6 @@ public class Council {
 
         boolean typeChanged = newType != type;
         boolean sizeDecreased = newSize < size;
-
-        if(typeChanged && newType.equals(Rules.APPOINTED_COUNCIL)) {
-            f.getGovernment().resetGrace();
-        }
 
         // Trim if size decreased
         if (sizeDecreased && members.size() > newSize) {
@@ -119,10 +117,25 @@ public class Council {
         this.size = size;
     }
 
-    public boolean canBeMember(String name, boolean ignoreSize) {
+    public boolean refuses(String name) {
+        return refuses.contains(name);
+    }
+
+    public boolean toggleRefuse(String name) {
+        if(refuses.contains(name)) {
+            refuses.remove(name);
+            return true;
+        } else {
+            refuses.add(name);
+            return true;
+        }
+    }
+
+    public boolean canBeMember(String name, boolean ignoreSize, boolean ignoreRefuses) {
         if(members.contains(name)) return false;
         if(f.getLeader().equalsIgnoreCase(name)) return false;
         if(!ignoreSize && getCurrentSize() >= getMaxSize()) return false;
+        if(!ignoreRefuses && refuses.contains(name)) return false;
         if(f.getOrCreateMainGuild().isMember(name)) return true;
         for(Faction vassal : RelationManager.getSubjects(f)) {
             if(vassal.isLeader(name)) return true;
@@ -252,6 +265,11 @@ public class Council {
                 getMembers().remove(member);
             }
         }
+        for(String refuser : refuses) {
+            if(!canBeMember(refuser, true, true)) {
+                refuses.remove(refuser);
+            }
+        }
     }
 
     private void refillCouncil() {
@@ -299,7 +317,7 @@ public class Council {
 
         for (String name : richest) {
             if (getCurrentSize() >= getMaxSize()) break;
-            if (!isMember(name) && canBeMember(name, false)) {
+            if (!isMember(name) && canBeMember(name, false, false)) {
                 addMemberForce(name);
             }
         }

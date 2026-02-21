@@ -20,6 +20,7 @@ import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.enums.Member;
 import me.Plugins.SimpleFactions.enums.SFGUI;
+import me.Plugins.SimpleFactions.government.StabilityModifier;
 import me.Plugins.SimpleFactions.government.movement.Movement;
 import me.Plugins.SimpleFactions.government.movement.Phase;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
@@ -69,7 +70,7 @@ public class MovementView {
 
         int x = 28;
         for(Phase phase : Phase.values()) {
-            i.setItem(x, creator.createPhaseItem(phase, movement));
+            i.setItem(x, creator.createPhaseItem(player, phase, movement));
             x++;
         }
         
@@ -371,7 +372,7 @@ public class MovementView {
         // Phase buttons (slots 28-31)
         else if (slot >= 28 && slot <= 31) {
             ItemStack item = e.getCurrentItem();
-            if (item != null && item.getType() == Material.YELLOW_CONCRETE) {
+            if (item != null && item.getType() == Material.YELLOW_CONCRETE && movement.getLeader().equalsIgnoreCase(p.getName())) {
                 if (meta.getPersistentDataContainer().has(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING)) {
                     String phaseName = meta.getPersistentDataContainer().get(Keys.SECONDARY_STRING_KEY, PersistentDataType.STRING);
                     try {
@@ -522,6 +523,9 @@ public class MovementView {
                         movementLeader.sendMessage(StringFormatter.formatHex("§a" + f.getLeader() + " has accepted your demands!"));
                     }
                 }
+
+                StabilityModifier modifier = new StabilityModifier("Caved to Movement", movement.getStabilityEffect(), 1); // stability effect lasts 6 hours
+				f.getGovernment().addStabilityModifier(modifier);
 
                 for(Cause cause : movement.getCauses()) {
                     Proposal proposal = cause.getProposal();

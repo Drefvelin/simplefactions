@@ -17,6 +17,9 @@ public class GovernmentData {
     public List<String> councilMembers = new ArrayList<>();
     
     public List<String> proposals = new ArrayList<>();
+
+    @SerializedName("eligible voters")
+    public List<String> eligibleVoters = new ArrayList<>();
     
     @SerializedName("election candidates")
     public Map<String, List<String>> electionCandidates = new HashMap<>();
@@ -27,7 +30,8 @@ public class GovernmentData {
     @SerializedName("previous votes")
     public Map<String, Map<String, Integer>> previousVotes = new HashMap<>();
 
-    public Long grace;
+    @SerializedName("stability modifiers")
+    public List<StabilityModifierData> stabilityModifiers = new ArrayList<>();
 
     public List<MovementData> movements = new ArrayList<>();
 }

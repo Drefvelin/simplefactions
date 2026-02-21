@@ -275,13 +275,13 @@ public class MovementCreator {
         return item;
     }
 
-    public ItemStack createPhaseItem(Phase phase, Movement movement) {
+    public ItemStack createPhaseItem(Player p, Phase phase, Movement movement) {
         ItemStack item = new ItemStack(Material.RED_CONCRETE);
         if(phase == movement.getPhase()) {
             item = new ItemStack(Material.GREEN_CONCRETE);
-        } else if(phase.getIndex() == movement.getPhase().getIndex()-1) {
+        } else if(phase.getIndex() == movement.getPhase().getIndex()-1 && movement.getLeader().equalsIgnoreCase(p.getName())) {
             item = new ItemStack(Material.YELLOW_CONCRETE);
-        } else if(phase.getIndex() < 4 && phase.getIndex() == movement.getPhase().getIndex()+1 && movement.getOrganization() >= movement.getPhase().getMaxOrganization()) {
+        } else if(phase.getIndex() < 4 && phase.getIndex() == movement.getPhase().getIndex()+1 && movement.getOrganization() >= movement.getPhase().getMaxOrganization() && movement.getLeader().equalsIgnoreCase(p.getName())) {
             item = new ItemStack(Material.YELLOW_CONCRETE);
         }
         ItemMeta m = item.getItemMeta();
@@ -293,15 +293,19 @@ public class MovementCreator {
         lore.add(StringFormatter.formatHex("#7a7a7aThe current phase of the movement"));
         lore.add(StringFormatter.formatHex("#7a7a7awhich determines its max organization level"));
         lore.add("");
-        if(item.getType().equals(Material.RED_CONCRETE)) {
-            lore.add(StringFormatter.formatHex("#c74d32Unavailable"));
-            if(phase.getIndex() > 0 && movement.getPhase().getIndex() == phase.getIndex()-1) {
-                lore.add(StringFormatter.formatHex("§7(Organization " + movement.getOrganization() + "/" + movement.getPhase().getMaxOrganization() + "§7)"));
+        if(movement.getLeader().equalsIgnoreCase(p.getName())) {
+            if(item.getType().equals(Material.RED_CONCRETE)) {
+                lore.add(StringFormatter.formatHex("#c74d32Unavailable"));
+                if(phase.getIndex() > 0 && movement.getPhase().getIndex() == phase.getIndex()-1) {
+                    lore.add(StringFormatter.formatHex("§7(Organization " + movement.getOrganization() + "/" + movement.getPhase().getMaxOrganization() + "§7)"));
+                }
+            } else if(item.getType().equals(Material.YELLOW_CONCRETE)) {
+                lore.add(StringFormatter.formatHex("#d1b83bClick to change"));
+            } else if(item.getType().equals(Material.GREEN_CONCRETE)) {
+                lore.add(StringFormatter.formatHex("#65c97cCurrent Phase"));
             }
-        } else if(item.getType().equals(Material.YELLOW_CONCRETE)) {
-            lore.add(StringFormatter.formatHex("#d1b83bClick to change"));
-        } else if(item.getType().equals(Material.GREEN_CONCRETE)) {
-            lore.add(StringFormatter.formatHex("#65c97cCurrent Phase"));
+        } else {
+            lore.add(StringFormatter.formatHex("#7a7a7aOnly the movement leader can change the phase."));
         }
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
@@ -338,7 +342,6 @@ public class MovementCreator {
         m.setDisplayName(StringFormatter.formatHex("#7a7a7aEmpty Cause Slot"));
         List<String> lore = new ArrayList<>();
         lore.add(StringFormatter.formatHex("#7a7a7aThis slot is locked."));
-        lore.add(StringFormatter.formatHex("#7a7a7aCauses must be created in order."));
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.INT, PersistentDataType.INTEGER, index);
         item.setItemMeta(m);
@@ -425,6 +428,8 @@ public class MovementCreator {
         List<String> lore = new ArrayList<>();
         lore.add(StringFormatter.formatHex("#7a7a7aAccept the movement's demands"));
         lore.add(StringFormatter.formatHex("#7a7a7aand implement their changes."));
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#e15757Will reduce stability by §4"+Formatter.formatDouble(movement.getStabilityEffect())+"%! §7(disappears over time)"));
         lore.add(" ");
         lore.add(StringFormatter.formatHex("#45afc4Click to Accept"));
         m.setLore(lore);

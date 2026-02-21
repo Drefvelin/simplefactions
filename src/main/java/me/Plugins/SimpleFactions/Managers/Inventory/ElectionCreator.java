@@ -51,7 +51,7 @@ public class ElectionCreator {
         } else {
             lore.add(StringFormatter.formatHex("#28ed70Click to sign up"));
         }
-        if(gov.hasElection() && f.canVote(p)){
+        if(gov.hasElection() && e.canVote(p.getName())){
             if(!e.hasVoted(c, p.getName())) {
                 lore.add(StringFormatter.formatHex("#28ed70Click to view candidates"));
             } else {

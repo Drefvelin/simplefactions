@@ -30,6 +30,7 @@ import me.Plugins.SimpleFactions.Utils.FactionRanker;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
 import me.Plugins.SimpleFactions.enums.RankType;
 import me.Plugins.SimpleFactions.enums.SFGUI;
+import me.Plugins.SimpleFactions.government.StabilityModifier;
 import me.Plugins.SimpleFactions.keys.Keys;
 
 public class GuildView {
@@ -322,6 +323,8 @@ public class GuildView {
 						p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
 						return;
 					}
+					StabilityModifier modifier = new StabilityModifier("Evicted Guild", guild.getStabilityEffect(), 1); // stability effect lasts 6 hours
+					guild.getFaction().getGovernment().addStabilityModifier(modifier);
 					guild.toLandless(false);
 					guild.getFaction().getGovernment().spendPower(cost);
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
