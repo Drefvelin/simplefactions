@@ -3,7 +3,6 @@
 
 ## Politics
 - Remove votes from members who left
-- Kick guilds somehow? eviction using AP, dissolve releases guilds (eviction is landless)
 - expand grace to stance change
 - refuse to be on council
 - favoured/repressed guilds and vassals
