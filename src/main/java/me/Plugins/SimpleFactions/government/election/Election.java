@@ -10,6 +10,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
@@ -18,6 +19,8 @@ public class Election {
     private boolean active;
 
     private int notify = 0;
+
+    private List<String> eligibleVoters = new ArrayList<>();
 
     private Map<Candidate, List<String>> candidates = new HashMap<>() {{
         put(Candidate.LEADER, new ArrayList<>());
@@ -41,12 +44,15 @@ public class Election {
 
     public void start() {
         this.active = true;
+        getEligibleVoters();
+        notify = 0;
         gov.setLastElectionDate();
         clearVotes();
     }
 
     public void end() {
         this.active = false;
+        validateVotes();
         for(Candidate c : Candidate.values()) {
             for(String candidate : candidates.get(c)) {
                 previousVotes.get(c).put(candidate, getVotes(c, candidate));
@@ -55,6 +61,53 @@ public class Election {
         gov.applyElectionResults();
         clearCandidates();
         clearVotes();
+    }
+
+    public List<String> getStoredEligibleVoters() {
+        return eligibleVoters;
+    }
+
+    public void getEligibleVoters() {
+        eligibleVoters.clear();
+        for(String member : gov.getFaction().getMembers()) {
+            if(gov.getFaction().canVote(member)) eligibleVoters.add(member);
+        }
+        if(gov.getFaction().hasFactionRule(Rules.VASSAL_VOTING_RIGHTS)) {
+            for(String vassalMember : gov.getFaction().getVassalMembers()) {
+                if(gov.getFaction().canVote(vassalMember)) eligibleVoters.add(vassalMember);
+            }
+        }
+    }
+
+    public boolean canVote(String player) {
+        return eligibleVoters.contains(player) && gov.getFaction().canVote(player) && !hasVoted(player);
+    }
+
+    public void validateCandidates() {
+        for (Candidate c : Candidate.values()) {
+            for (String candidate : new ArrayList<>(candidates.get(c))) {
+                if (!canBeCandidate(c, candidate, false)) {
+                    removeCandidate(c, candidate);
+                }
+            }
+        }
+    }
+
+    public void validateVotes() {
+        for (Candidate c : Candidate.values()) {
+            if(!gov.hasElections(c)) continue;
+            Map<String, String> voteMap = votes.get(c);
+            for(String voter : new ArrayList<>(voteMap.keySet())) {
+                if(!canVote(voter)) {
+                    voteMap.remove(voter);
+                } else {
+                    String candidate = voteMap.get(voter);
+                    if(!candidates.get(c).contains(candidate)) {
+                        voteMap.remove(voter);
+                    }
+                }
+            }
+        }
     }
 
     public void cancel(Candidate type) {
@@ -208,7 +261,7 @@ public class Election {
         if(active) {
             if(notify == 300) {
                 for(Player p : Bukkit.getOnlinePlayers()) {
-                    if(gov.getFaction().canVote(p) && !hasVoted(p.getName()) && gov.getVotingBooths().size() > 0) {
+                    if(canVote(p.getName()) && gov.getVotingBooths().size() > 0) {
                         p.sendMessage("§e=================================");
                         p.sendMessage("§a§lActive Election! §7Head to a §e§lVoting Booth §7to vote!");
                         p.sendMessage("§eBooths:");
@@ -225,13 +278,7 @@ public class Election {
                 notify++;
             }
         }
-        for (Candidate c : Candidate.values()) {
-            for (String candidate : new ArrayList<>(candidates.get(c))) {
-                if (!canBeCandidate(c, candidate, false)) {
-                    removeCandidate(c, candidate);
-                }
-            }
-        }
+        validateCandidates();
     }
 
     public boolean hasAnyCandidates() {
@@ -292,7 +339,7 @@ public class Election {
         return votes.get(type).get(voter);
     }
 
-    public void restoreFromData(Map<String, List<String>> candidatesData, Map<String, Map<String, String>> votesData, Map<String, Map<String, Integer>> previousVotesData) {
+    public void restoreFromData(Map<String, List<String>> candidatesData, Map<String, Map<String, String>> votesData, Map<String, Map<String, Integer>> previousVotesData, List<String> eligibleVotersData) {
         if (candidatesData != null) {
             for (Map.Entry<String, List<String>> entry : candidatesData.entrySet()) {
                 try {
@@ -324,6 +371,9 @@ public class Election {
                     // Skip invalid candidate types
                 }
             }
+        }
+        if (eligibleVotersData != null) {
+            eligibleVoters = new ArrayList<>(eligibleVotersData);
         }
     }
 

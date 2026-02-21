@@ -2,12 +2,8 @@
 - Trade Agreements
 
 ## Politics
-- Remove votes from members who left
-- expand grace to stance change
-- refuse to be on council
 - favoured/repressed guilds and vassals
 - open/closed borders (can guilds invite their own members)
-- stability modifier that slowly goes away
 
 ## Diplomacy
 - Federations (Faction)

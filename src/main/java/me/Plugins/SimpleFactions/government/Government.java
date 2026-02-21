@@ -22,6 +22,7 @@ import me.Plugins.SimpleFactions.Database.GovernmentData;
 import me.Plugins.SimpleFactions.Database.MovementData;
 import me.Plugins.SimpleFactions.Database.PoolData;
 import me.Plugins.SimpleFactions.Database.ProposalData;
+import me.Plugins.SimpleFactions.Database.StabilityModifierData;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.PoliticalActionLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
@@ -49,7 +50,7 @@ public class Government {
     private Faction f;
     private Council council;
     private double power;
-    private long grace;
+    private List<StabilityModifier> stabilityModifiers = new ArrayList<>();
 
     private final Election election;
     private List<Location> votingBooths = new ArrayList<>();
@@ -71,7 +72,11 @@ public class Government {
         this.council = new Council(this, f);
         this.power = data.power != null ? data.power : -1;
         this.lastElectionDate = data.lastElectionDate != null ? new java.util.Date(data.lastElectionDate) : new java.util.Date(0);
-        this.grace = data.grace != null ? data.grace : 0;
+        if (data.stabilityModifiers != null) {
+            for (StabilityModifierData smd : data.stabilityModifiers) {
+                stabilityModifiers.add(new StabilityModifier(smd.name, smd.modifier, smd.decay));
+            }
+        }
         boolean electionActive = false;
 
         // If an election was started less than 7 days ago, it is still active
@@ -85,8 +90,8 @@ public class Government {
 
         this.election = new Election(this, electionActive);
         // Restore election candidates and votes
-        if (data.electionCandidates != null || data.electionVotes != null || data.previousVotes != null) {
-            election.restoreFromData(data.electionCandidates, data.electionVotes, data.previousVotes);
+        if (data.electionCandidates != null || data.electionVotes != null || data.previousVotes != null || data.eligibleVoters != null) {
+            election.restoreFromData(data.electionCandidates, data.electionVotes, data.previousVotes, data.eligibleVoters);
         }
         
         // Restore council members
@@ -186,28 +191,25 @@ public class Government {
         return null;
     }
 
-    public void resetGrace() {
-        grace = System.currentTimeMillis() + 3600000L; // 1 hour in milliseconds
-    }
-
-    public long getGrace() {
-        long now = System.currentTimeMillis();
-        if (grace > now) {
-            return grace - now;
+    public StabilityModifier getByName(String name) {
+        for (StabilityModifier modifier : stabilityModifiers) {
+            if (modifier.getName().equalsIgnoreCase(name)) {
+                return modifier;
+            }
         }
-        return 0;
+        return null;
     }
 
-    public String getGraceString() {
-        long remaining = getGrace();
-        if (remaining <= 0) return "0s";
-        long hours = remaining / 3600000;
-        long minutes = (remaining % 3600000) / 60000;
-        return String.format("%dh %dm", hours, minutes);
+    public void addStabilityModifier(StabilityModifier modifier) {
+        if(getByName(modifier.getName()) != null) {
+            getByName(modifier.getName()).increaseModifier(modifier.getModifier());
+            return;
+        }
+        stabilityModifiers.add(modifier);
     }
 
-    public boolean hasGrace() {
-        return getGrace() > 0;
+    public List<StabilityModifier> getStabilityModifiers() {
+        return stabilityModifiers;
     }
 
     // Government
@@ -245,14 +247,14 @@ public class Government {
 
             for (String name : winners) {
                 if (council.getCurrentSize() >= maxSize) break;
-                if (council.canBeMember(name, true)) {
+                if (council.canBeMember(name, true, false)) {
                     council.addMemberForce(name);
                 }
             }
 
             for (String name : oldCouncil) {
                 if (council.getCurrentSize() >= maxSize) break;
-                if (council.canBeMember(name, true)) {
+                if (council.canBeMember(name, true, false)) {
                     council.addMemberForce(name);
                 }
             }
@@ -271,9 +273,14 @@ public class Government {
     }
 
     public void powerTick() {
-        power += getPowerGain();
+        for(StabilityModifier modifier : new ArrayList<>(stabilityModifiers)) {
+            if(modifier.tick()) {
+                stabilityModifiers.remove(modifier);
+            }
+        }
         double maxPower = getMaxPower();
-        if (power > maxPower) power = maxPower;
+        if (power > maxPower && getPower() > 0) return; //cant overstack but it can decline
+        power += getPowerGain();
     }
 
     public void replace() {
@@ -424,9 +431,6 @@ public class Government {
     }
 
     public double getPower() {
-        if(power > getMaxPower()) {
-            power = getMaxPower();
-        }
         return Formatter.formatDouble(power);
     }
 
@@ -473,7 +477,7 @@ public class Government {
         for(Faction vassal : RelationManager.getSubjects(f)) {
             stability += vassal.getOrCreateMainGuild().getStabilityModifier(f);
         }
-        if(council.couldBeBigger() && !hasGrace()) {
+        if(council.couldBeBigger()) {
             stability -= getStabilityMalusFromCouncil();
         }
         if(f.getOrCreateMainGuild().isBankrupt()) {
@@ -481,6 +485,9 @@ public class Government {
         }
         if(hasElections() && votingBooths.size() == 0) {
             stability -= 75;
+        }
+        for(StabilityModifier modifier : stabilityModifiers) {
+            stability += modifier.getModifier();
         }
         if(stability < 0) stability = 0;
         if(stability > 100) stability = 100;
@@ -765,12 +772,20 @@ public class Government {
         GovernmentData data = new GovernmentData();
         data.power = this.power >= 0 ? this.power : null;
         data.lastElectionDate = this.lastElectionDate.getTime();
-        data.councilMembers = new java.util.ArrayList<>(council.getMembers());
+        data.councilMembers = new ArrayList<>(council.getMembers());
         data.proposals = council.getProposalHandler().serializeProposals();
         data.electionCandidates = election.serializeCandidates();
         data.electionVotes = election.serializeVotes();
         data.previousVotes = election.serializePreviousVotes();
-        data.grace = this.grace;
+        data.eligibleVoters = new ArrayList<>(election.getStoredEligibleVoters());
+        data.stabilityModifiers = new ArrayList<>();
+        for (StabilityModifier modifier : stabilityModifiers) {
+            StabilityModifierData modifierData = new StabilityModifierData();
+            modifierData.name = modifier.getName();
+            modifierData.modifier = modifier.getModifier();
+            modifierData.decay = modifier.getDecay();
+            data.stabilityModifiers.add(modifierData);
+        }
         data.movements = serializeMovements();
         return data;
     }

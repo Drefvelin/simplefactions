@@ -28,6 +28,7 @@ import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.SimpleFactions.government.Council;
 import me.Plugins.SimpleFactions.government.Government;
+import me.Plugins.SimpleFactions.government.StabilityModifier;
 import me.Plugins.SimpleFactions.government.election.Candidate;
 import me.Plugins.SimpleFactions.government.movement.Action;
 import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
@@ -144,7 +145,7 @@ public class GovernmentCreator {
                     String color;
                     if (gov.getCouncil().isMember(name)) {
                         color = "#45c46f"; // green – current council member
-                    } else if (gov.getCouncil().canBeMember(name, true)) {
+                    } else if (gov.getCouncil().canBeMember(name, true, false)) {
                         color = "#9bb6c9"; // eligible
                     } else {
                         color = "#c74d32"; // ineligible
@@ -181,10 +182,11 @@ public class GovernmentCreator {
         lore.add(StringFormatter.formatHex("#b8ae61Base: #45c46f+"+Formatter.formatDouble(gov.getBaseStability())+"%"));
         double effect = f.getOrCreateMainGuild().getStabilityModifier(f);
         lore.add(StringFormatter.formatHex("#b8ae61From State: " + ( effect >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(effect)+"%"));
-        if(gov.getStabilityMalusFromCouncil() > 0 && !gov.hasGrace()) {
+        if(gov.getStabilityMalusFromCouncil() > 0) {
             lore.add(StringFormatter.formatHex("#b8ae61Council too small: #d13530-"+Formatter.formatDouble(gov.getStabilityMalusFromCouncil())+"%"));
-        } else if(gov.hasGrace() && gov.getCouncil().couldBeBigger()) {
-            lore.add(StringFormatter.formatHex("#b8ae61Council too small! #45c46f[Grace Period: "+gov.getGraceString()+"]"));
+        }
+        for(StabilityModifier modifier : gov.getStabilityModifiers()) {
+            lore.add(StringFormatter.formatHex("#b8ae61"+modifier.getName()+": " + ( modifier.getModifier() >= 0 ? "#45c46f+" : "#d13530")+Formatter.formatDouble(modifier.getModifier())+"%" + " §7("+(modifier.getDecay() >= 0 ? "+#45c46f+" : "#d13530")+Formatter.formatDouble(modifier.getDecay())+"%/hour§7)"));
         }
         if(f.getOrCreateMainGuild().isBankrupt()) {
             lore.add(StringFormatter.formatHex("#b8ae61State is bankrupt! #d13530-100%"));
@@ -255,6 +257,25 @@ public class GovernmentCreator {
         lore.add(StringFormatter.formatHex("#28ed70Click to change"));
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, guild.getId());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createToggleRefuseButton(Player p, Faction f) {
+        boolean refuse = f.getGovernment().getCouncil().refuses(p.getName());
+        ItemStack item = TLibs.getItemAPI().getCreator().getItemsAdderItem(refuse ? "mcicons:icon_cancel" : "mcicons:icon_confirm");
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#a27cbfToggle Council Stance"));
+        List<String> lore = new ArrayList<String>();
+        if(refuse) {
+            lore.add(StringFormatter.formatHex("#c74d32You are currently refusing to join the council."));
+        } else {
+            lore.add(StringFormatter.formatHex("#45c46fYou are currently open to joining the council."));
+        }
+        lore.add("");
+        lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, f.getId());
         item.setItemMeta(m);
         return item;
     }

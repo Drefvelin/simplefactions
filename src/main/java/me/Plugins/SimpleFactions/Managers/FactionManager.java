@@ -679,7 +679,7 @@ public class FactionManager implements Listener{
 		Faction f = getByVotingBooth(b);
 		if(f == null) return;
 		e.setCancelled(true);
-		if(!f.canVote(p)) {
+		if(!f.canVote(p.getName())) {
 			p.sendMessage("§cYou have no voting rights in this faction");
 			p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
 			return;

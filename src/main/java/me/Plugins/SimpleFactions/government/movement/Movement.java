@@ -634,4 +634,12 @@ public class Movement {
             
         }
     }
+
+    public double getStabilityEffect() {
+        double effect = 100-getPower();
+        if(effect < 0) effect = 0;
+        effect /=3;
+        effect += 50;
+        return Formatter.formatDouble(effect);
+    }
 }

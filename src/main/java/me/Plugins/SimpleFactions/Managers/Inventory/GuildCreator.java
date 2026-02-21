@@ -736,6 +736,7 @@ public class GuildCreator {
 		lore.add("");
 		double cost = guild.getEvictionCost();
 		lore.add(StringFormatter.formatHex("#d4c9aeCost: §e"+Formatter.formatDouble(cost)+" Administrative Power"));
+		lore.add(StringFormatter.formatHex("#e15757Will reduce stability by §4"+Formatter.formatDouble(guild.getStabilityEffect())+"%! §7(disappears over time)"));
 		lore.add("");
 		if(guild.canBeEvicted(null)) {
 			lore.add(StringFormatter.formatHex("#50e846Click to Evict"));
