@@ -14,6 +14,7 @@ import org.bukkit.persistence.PersistentDataType;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.Utils.LoreWriter;
 import me.Plugins.SimpleFactions.government.movement.Movement;
 import me.Plugins.SimpleFactions.government.movement.Phase;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
@@ -136,7 +137,7 @@ public class MovementCreator {
         return item;
     }
     
-    public ItemStack createCauseItem(Cause cause) {
+    public ItemStack createCauseItem(Cause cause, Player p, Faction f) {
         ItemStack item = new ItemStack(Material.WRITABLE_BOOK);
         ItemMeta m = item.getItemMeta();
         m.setDisplayName(StringFormatter.formatHex("#c5e0e3"+(cause.hasLeader() ? cause.getLeader()+"'s Cause" : "Disorganized Cause")));
@@ -147,6 +148,8 @@ public class MovementCreator {
         } else {
             lore.add(StringFormatter.formatHex("#c74d32No Leader"));
         }
+        lore.add(" ");
+        LoreWriter.applyProposalLore(cause.getProposal(), lore, p, f);
         lore.add(" ");
         int memberCount = cause.getFullMemberList().size();
         lore.add(StringFormatter.formatHex("#9c9775Members: #c2bea7" + memberCount));
@@ -192,7 +195,7 @@ public class MovementCreator {
         return item;
     }
     
-    public ItemStack createCauseProposalItem(Cause cause) {
+    public ItemStack createCauseProposalItem(Cause cause, Player p, Faction f) {
         ItemStack item = cause.getProposal().getPoliticalAction().getIcon();
         ItemMeta m = item.getItemMeta();
         if (m == null) {
@@ -201,6 +204,8 @@ public class MovementCreator {
         m.setDisplayName(StringFormatter.formatHex("#85c265Proposal"));
         List<String> lore = new ArrayList<>();
         lore.add(StringFormatter.formatHex("#9c9775Action: #c2bea7" + cause.getAction().getDisplay()));
+        lore.add(" ");
+        LoreWriter.applyProposalLore(cause.getProposal(), lore, p, f);
         lore.add(" ");
         lore.add(StringFormatter.formatHex("#7a7a7aThe political action this"));
         lore.add(StringFormatter.formatHex("#7a7a7acause is working towards."));

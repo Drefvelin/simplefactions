@@ -710,6 +710,17 @@ public class Guild {
         }
     }
 
+    public Faction toLandless(boolean subjugate) {
+        setCapital(-1);
+        host.getGuildHandler().removeGuild(id);
+        Faction landless = new Faction(this);
+        Faction old = host;
+        host = landless;
+        FactionManager.addFaction(landless);
+        if(subjugate) RelationManager.setRelation(null, RelationLoader.getElevationTarget(), landless, old, false);
+        return landless;
+    }
+
     public Faction elevate(boolean subjugate) {
         if(!canBeElevated(null)) return null;
         host.getGuildHandler().removeGuild(id);

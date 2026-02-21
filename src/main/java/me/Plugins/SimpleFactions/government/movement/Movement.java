@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Database.CauseData;
 import me.Plugins.SimpleFactions.Database.MovementData;
@@ -183,20 +184,30 @@ public class Movement {
         }
     }
 
-    public boolean canForeignBackerJoin(Faction faction) {
-        if (RelationManager.sameRealm(faction, f)) return false;
-
-        if (faction.getRelation(f.getId()).getType().getId()
-            .equalsIgnoreCase("ally"))
+    public boolean canForeignBackerJoin(Faction faction, boolean feedback) {
+        Player p = Bukkit.getPlayer(faction.getLeader());
+        if (RelationManager.sameRealm(faction, f)) {
+            if(p != null && feedback) {
+                p.sendMessage("§cYou cannot join as a foreign backer from the same realm.");
+            }
             return false;
-
-        if (faction.getId().equalsIgnoreCase(f.getId()))
+        }
+        if (faction.getId().equalsIgnoreCase(f.getId())) {
+            if(p != null && feedback) {
+                p.sendMessage("§cYour own faction cannot be a foreign backer.");
+            }
             return false;
-
+        }
+            
         // Check if already backing another movement in this faction
         for (Movement otherMovement : f.getGovernment().getMovements()) {
             if (otherMovement.getId().equals(this.id)) continue;
-            if (otherMovement.getForeignBackers().contains(faction)) return false;
+            if (otherMovement.getForeignBackers().contains(faction)) {
+                if(p != null && feedback) {
+                    p.sendMessage("§cYour faction is already backing another movement in this faction.");
+                }
+                return false;
+            }
         }
 
         return true;
@@ -207,68 +218,134 @@ public class Movement {
     }
 
     public void checkForeignBackers() {
-        foreignBackers.removeIf(faction -> !canForeignBackerJoin(faction));
+        foreignBackers.removeIf(faction -> !canForeignBackerJoin(faction, false));
     }
 
     public void checkSupporters() {
-        supporters.getCitizens().removeIf(citizen -> !canCitizenBeSupporter(citizen));
-        supporters.getGuilds().removeIf(guild -> !canGuildBeSupporter(guild));
-        supporters.getFactions().removeIf(faction -> !canFactionBeSupporter(faction));
+        supporters.getCitizens().removeIf(citizen -> !canCitizenBeSupporter(citizen, false));
+        supporters.getGuilds().removeIf(guild -> !canGuildBeSupporter(guild, false));
+        supporters.getFactions().removeIf(faction -> !canFactionBeSupporter(faction, false));
     }
 
-    public boolean canCitizenBeSupporter(String playerName) {
+    public boolean canCitizenBeSupporter(String playerName, boolean feedback) {
         Member relation = f.getRelationToFaction(playerName);
-        
+        Player p = Bukkit.getPlayer(playerName);
         // Must be a member of the faction
-        if (relation != Member.MEMBER) return false;
+        if (relation != Member.MEMBER) {
+            if(p != null && feedback) {
+                p.sendMessage("§cYou must be a member of the movement's faction to support it.");
+            }
+            return false;
+        }
         
         // Check if already in another movement in this faction
         for (Movement otherMovement : f.getGovernment().getMovements()) {
             if (otherMovement.getId().equals(this.id)) continue;
-            if (otherMovement.isMember(playerName)) return false;
+            if (otherMovement.isMember(playerName)) {
+                if(p != null && feedback) {
+                    p.sendMessage("§cYou are already supporting another movement in this faction.");
+                }
+                return false;
+            }
         }
         
         return true;
     }
 
-    public boolean canGuildBeSupporter(Guild guild) {
+    public boolean canGuildBeSupporter(Guild guild, boolean feedback) {
+        Player p = Bukkit.getPlayer(guild.getLeader());
         // Guild must belong to this faction
-        if (!guild.getFaction().getId().equalsIgnoreCase(f.getId())) return false;
+        if (!guild.getFaction().getId().equalsIgnoreCase(f.getId())) {
+            if(p != null && feedback) {
+                p.sendMessage("§cYour guild must belong to the movement's faction to support it.");
+            }
+            return false;
+        }
         
         // Guild cannot be the base guild
-        if (guild.isBase()) return false;
+        if (guild.isBase()) {
+            if(p != null && feedback) {
+                p.sendMessage("§cYour guild cannot be the base guild to support the movement.");
+            }
+            return false;
+        }
         
         // Guild cannot have SUPPORT stance towards faction
-        if (guild.getStance(f) == Stance.SUPPORT) return false;
+        if (guild.getStance(f) == Stance.SUPPORT) {
+            if(p != null && feedback) {
+                p.sendMessage("§cYour guild cannot have SUPPORT stance towards the movement's faction.");
+            }
+            return false;
+        }
         
         // Check if guild members are already in another movement in this faction
         for (Movement otherMovement : f.getGovernment().getMovements()) {
             if (otherMovement.getId().equals(this.id)) continue;
             for (String member : guild.getMembers()) {
-                if (otherMovement.isMember(member)) return false;
+                if (otherMovement.isMember(member)) {
+                    if(p != null && feedback) {
+                        p.sendMessage("§cA member of your guild is already supporting another movement in this faction.");
+                    }
+                    return false;
+                }
             }
         }
         
         return true;
     }
 
-    public boolean canFactionBeSupporter(Faction faction) {
+    public boolean canFactionBeSupporter(Faction faction, boolean feedback) {
+        Player p = Bukkit.getPlayer(faction.getLeader());
         // Faction must be a vassal of this faction
         if (faction.getOverlord() == null || 
-            !faction.getOverlord().getId().equalsIgnoreCase(f.getId())) return false;
+            !faction.getOverlord().getId().equalsIgnoreCase(f.getId())) {
+                if(p != null && feedback) {
+                    p.sendMessage("§cYour faction must be a vassal of the movement's faction to support it.");
+                }
+                return false;
+            }
         
         // Faction main guild cannot have SUPPORT stance
-        if (faction.getOrCreateMainGuild().getStance(f) == Stance.SUPPORT) return false;
+        if (faction.getOrCreateMainGuild().getStance(f) == Stance.SUPPORT) {
+            if(p != null && feedback) {
+                p.sendMessage("§cYour faction cannot have SUPPORT stance towards the movement's faction.");
+            }
+            return false;
+        }
         
         // Check if faction members are already in another movement in this faction
         for (Movement otherMovement : f.getGovernment().getMovements()) {
             if (otherMovement.getId().equals(this.id)) continue;
             for (String member : faction.getMembers()) {
-                if (otherMovement.isMember(member)) return false;
+                if (otherMovement.isMember(member)) {
+                    if(p != null && feedback) {
+                        p.sendMessage("§cA member of your faction is already supporting another movement in this faction.");
+                    }
+                    return false;
+                }
             }
         }
         
         return true;
+    }
+
+    public boolean canJoin(Object obj, Cause cause, boolean feedback) {
+        if(cause == null) {
+            if (obj instanceof String) {
+                return canCitizenBeSupporter((String) obj, feedback);
+            } else if (obj instanceof Guild) {
+                return canGuildBeSupporter((Guild) obj, feedback);
+            } else if (obj instanceof Faction) {
+                return canFactionBeSupporter((Faction) obj, feedback);
+            }
+        } else {
+            return cause.canJoin(obj, feedback);
+        }
+        return false;
+    }
+
+    public boolean canJoin(Object obj, Cause cause) {
+        return canJoin(obj, cause, false);
     }
 
     public void join(Object obj, Cause cause) {
@@ -276,18 +353,18 @@ public class Movement {
         if(cause == null) {
             // Joining as general supporter
             if (obj instanceof String) {
-                if (!canCitizenBeSupporter((String) obj)) return;
+                if (!canCitizenBeSupporter((String) obj, false)) return;
                 supporters.addCitizen((String) obj);
             } else if (obj instanceof Guild) {
-                if (!canGuildBeSupporter((Guild) obj)) return;
+                if (!canGuildBeSupporter((Guild) obj, false)) return;
                 supporters.addGuild((Guild) obj);
             } else if (obj instanceof Faction) {
-                if (!canFactionBeSupporter((Faction) obj)) return;
+                if (!canFactionBeSupporter((Faction) obj, false)) return;
                 supporters.addFaction((Faction) obj);
             }
         } else {
             // Joining a specific cause
-            if (!cause.canJoin(obj)) return;
+            if (!cause.canJoin(obj, false)) return;
             cause.join(obj);
         }
         double powerDiff = getPower() - power;
@@ -314,7 +391,7 @@ public class Movement {
     }
 
     public void joinAsForeignBacker(Faction backer) {
-        if (!canForeignBackerJoin(backer)) return;
+        if (!canForeignBackerJoin(backer, false)) return;
         
         // Check if already backing another movement in this faction
         for (Movement otherMovement : f.getGovernment().getMovements()) {
@@ -526,5 +603,35 @@ public class Movement {
             total += backer.getTotalTradePower()/4.0; //backers contribute a quarter of their trade power
         }
         return Formatter.formatDouble(total);
+    }
+
+    public Object getJoiningAs(Player p) {
+        Member relation = f.getRelationToFaction(p.getName());
+        if (relation == Member.GUILD_LEADER || relation == Member.GUILD_MEMBER) {
+            return FactionManager.getGuildByMember(p.getName());
+        } else if (relation == Member.VASSAL_LEADER) {
+            return FactionManager.getByMember(p.getName());
+        } else if (relation == Member.MEMBER) {
+            return p.getName();
+        }
+        return null;
+    }
+
+    public boolean quickJoinCheck(Player p) {
+        if(isMember(p.getName())) return false;
+        Member relation = f.getRelationToFaction(p.getName());
+        switch(relation) {
+            case FOREIGNER:
+            case GUILD_MEMBER:
+            case LEADER:
+            case VASSAL_MEMBER:
+            default:
+                return false;
+            case MEMBER:
+            case VASSAL_LEADER:
+            case GUILD_LEADER:
+                return true;
+            
+        }
     }
 }

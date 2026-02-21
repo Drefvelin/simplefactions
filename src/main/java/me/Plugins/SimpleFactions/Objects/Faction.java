@@ -58,6 +58,10 @@ import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.election.Candidate;
+import me.Plugins.SimpleFactions.government.movement.Action;
+import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
+import me.Plugins.SimpleFactions.government.movement.cause.Cause;
+import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawEffect;
@@ -939,6 +943,57 @@ public class Faction {
 		}
 	}
 
+	public void applyPoliticalAction(Cause cause, Proposal proposal) {
+		if(!proposal.isPoliticalActionProposal()) return;
+		PoliticalAction politicalAction = proposal.getPoliticalAction();
+		Action action = politicalAction.getAction();
+		switch (action) {
+			case CHANGE_LEADER:
+				String target = proposal.getTarget();
+				if(target == null) return;
+				if(!canBecomeLeader(target)) return;
+				promoteToLeader(target);
+				break;
+			case DISSOLVE:
+				dissolve(getVassals(), getGuildHandler().getGuilds());
+				break;
+			case INDEPENDENCE:
+				if(cause == null) return; //no cause = no members to give independence to
+				for(Guild guild : cause.getPool().getGuilds()) {
+					if(guild.canBeElevated(null)) {
+						guild.elevate(false);
+					} else {
+						guild.toLandless(false);
+					}
+				}
+				for(Faction vassal : getVassals()) {
+					RelationManager.endVassalage(vassal, this, false);
+				}
+				break;
+			case NATIONHOOD:
+				if(cause == null) return; //no cause = no members to give nationhood
+				for(Guild guild : cause.getPool().getGuilds()) {
+					if(guild.canBeElevated(null)) {
+						guild.elevate(true);
+					} else {
+						guild.toLandless(true);
+					}
+				}
+				break;
+			case SNAP_ELECTIONS:
+				if(!government.hasElections()) return;
+				if(government.getElection().isActive()) return; //already running
+				government.getElection().start();
+				break;
+			//Handled elsewhere
+			case NONE:
+			case LAW_CHANGE:
+			case TAX_CHANGE:
+			default:
+				break;
+		}
+	}
+
 	private void cancelInvalidElections() {
 		Government gov = getGovernment();
 
@@ -1168,6 +1223,7 @@ public class Faction {
 	public boolean canDissolve() {
 		Faction overlord = getOverlord();
 		if(overlord != null) return true;
+		if(guildHandler.getGuilds().size() > 1) return true;
 		if(getSubjects().size() > 0) return true;
 		return false;
 	}
@@ -1188,8 +1244,11 @@ public class Faction {
 		} else {
 			for(Guild guild : guilds) {
 				if(guild.isBase()) continue;
-				if(!guild.canBeElevated(null)) continue;
-				guild.elevate(false);
+				if(guild.canBeElevated(null)){
+					guild.elevate(false);
+				} else {
+					guild.toLandless(false);
+				}
 			}
 		}
 		for(Faction vassal : vassals) {

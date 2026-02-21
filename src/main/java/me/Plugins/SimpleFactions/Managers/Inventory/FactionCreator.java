@@ -165,21 +165,19 @@ public class FactionCreator {
 		}
 		else {
 
-			/*
 			// Guilds becoming factions
 			for (Guild g : f.getGuildHandler().getGuilds()) {
 				if (g.isBase()) continue;
 
 				lore.add(StringFormatter.formatHex(
 					"#b8a58a• " + g.getName() + " §7(" +g.getType().getName()+ "§7)" +
-					" #d4c9aebecomes an independent faction"
+					" #d4c9aebecomes an independent faction" + (!g.canBeElevated(null) ? "§7(#946538Landless§7)" : "")
 				));
 			}
 
 			if (f.getGuildHandler().getGuilds().stream().anyMatch(g -> !g.isBase())) {
 				lore.add("");
 			}
-			*/
 
 			// Vassals released
 			for (Faction vassal : f.getSubjects()) {

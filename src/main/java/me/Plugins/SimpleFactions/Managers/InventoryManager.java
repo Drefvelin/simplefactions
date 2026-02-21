@@ -313,7 +313,7 @@ public class InventoryManager implements Listener{
 		proposal.setTaxProposal(tax);
 		if(!gov.hasCouncil() && f.isLeader(p.getName())) {
 			p.sendMessage("§aChange applied!");
-			proposal.apply();
+			proposal.apply(null);
 			p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 			taxChange.remove(p);
 			governmentView.governmentView(p, f, null);

@@ -17,6 +17,7 @@ import me.Plugins.SimpleFactions.laws.LawGroup;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.movement.Action;
 import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
+import me.Plugins.SimpleFactions.government.movement.cause.Cause;
 import me.Plugins.SimpleFactions.laws.Law;
 
 public class Proposal {
@@ -37,13 +38,15 @@ public class Proposal {
         return proposer;
     }
 
-    public void apply() {
+    public void apply(Cause cause) {
         if (isLawProposal()) {
             LawGroup group = gov.getFaction().getLawHandler().getGroup(law.getGroup());
             gov.getFaction().applyLaw(law, group);
         } else if (isTaxProposal()) {
             TaxTarget target = tax.getTarget();
             gov.getFaction().getTaxHandler().setTaxRate(target, tax.getId(), tax.getNewTax());
+        } else if (isPoliticalActionProposal()) {
+            gov.getFaction().applyPoliticalAction(cause, this);
         }
     }
 
@@ -191,6 +194,32 @@ public class Proposal {
             if (f != null && (target == TaxTarget.GUILD_ID || target == TaxTarget.VASSAL_ID || target == TaxTarget.TARIFF_ID)) {
                 double baseRate = f.getTaxRate(target, null, false);
                 first.add(StringFormatter.formatHex("#3f4040(#767a77Base Rate: #928d7a" + baseRate + "%#3f4040)"));
+            }
+        } else if(isPoliticalActionProposal()) {
+            Action action = getPoliticalAction().getAction();
+            first.add(StringFormatter.formatHex("#b8ae61Action: #c2bea7"+action.getDisplay()));
+            switch(action) {
+                case CHANGE_LEADER:
+                    first.add(StringFormatter.formatHex("#d4c9aeTarget: "+ (hasTarget() ? "#51e0a2"+ target : "#a3462cNo target")));
+                    break;
+                case DISSOLVE:
+                    first.add(StringFormatter.formatHex("#d4c9aeDissolves the faction as if the #c9655e'Dissolve Faction' #d4c9aebutton was clicked"));
+                    break;
+                case INDEPENDENCE:
+                    first.add(StringFormatter.formatHex("#d4c9aeMembers of the cause are granted independence"));
+                    break;
+                case NATIONHOOD:
+                    first.add(StringFormatter.formatHex("#d4c9aeMembers of the cause are elevated to nationhood"));
+                    break;
+                case SNAP_ELECTIONS:
+                    first.add(StringFormatter.formatHex("#d4c9aeElections will immediately begin, voting lasts for a week"));
+                    break;
+                //handled outside or none
+                case TAX_CHANGE:
+                case LAW_CHANGE:
+                case NONE:
+                default:
+                    break;
             }
         }
 

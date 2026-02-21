@@ -11,6 +11,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.checkerframework.checker.units.qual.C;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -96,7 +97,7 @@ public class MovementView {
             
             if (index < causes.size()) {
                 // Active cause
-                i.setItem(slot, creator.createCauseItem(causes.get(index)));
+                i.setItem(slot, creator.createCauseItem(causes.get(index), player, f));
             } else if (index == causes.size() && canPlayerCreateCause(player, movement)) {
                 // Available slot for new cause
                 i.setItem(slot, creator.createAvailableCauseSlot(movement, index));
@@ -125,7 +126,7 @@ public class MovementView {
         i.setItem(10, creator.createCauseLeaderItem(player, cause));
         
         // Proposal icon
-        i.setItem(12, creator.createCauseProposalItem(cause));
+        i.setItem(12, creator.createCauseProposalItem(cause, player, f));
         
         // Join cause button
         i.setItem(14, creator.createJoinCauseButton(player, cause));
@@ -317,10 +318,11 @@ public class MovementView {
                 p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
                 return;
             }
-            if(!quickJoinCheck(p, movement)) return;
-            Object joiningAs = getJoiningAs(p, movement);
+            if(!movement.quickJoinCheck(p)) return;
+            Object joiningAs = movement.getJoiningAs(p);
             if(joiningAs == null) return;
-            movement.join(joiningAs, null);
+            if(!movement.canJoin(joiningAs, null, true)) return;
+            FactionManager.requestMovementJoin(p, movement, "supporter", null);
             movementView(p, f, movement, inventory);
             p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
         }
@@ -336,7 +338,8 @@ public class MovementView {
                     }
                     movement.leaveAsForeignBacker(playerFaction);
                 } else {
-                    movement.joinAsForeignBacker(playerFaction);
+                    if(!movement.canForeignBackerJoin(playerFaction, true)) return;
+                    FactionManager.requestMovementJoin(p, movement, "foreign_backer", null);
                 }
                 movementView(p, f, movement, inventory);
                 p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
@@ -345,6 +348,15 @@ public class MovementView {
         // Send demands button
         else if (slot == 19) {
             if (movement.isLeader(p.getName()) && movement.getOrganization() >= 100) {
+                for(Cause cause : movement.getCauses()) {
+                    if(cause.getProposal().isPoliticalActionProposal() && cause.getProposal().needsTarget()) {
+                        if(!cause.getProposal().hasTarget()) {
+                            p.sendMessage(StringFormatter.formatHex("§cOne or more causes lack a target!"));
+                            p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+                            return;
+                        }
+                    }
+                }
                 Player factionLeader = Bukkit.getPlayer(f.getLeader());
                 if (factionLeader != null && factionLeader.isOnline()) {
                     demandsView(factionLeader, f, movement, null);
@@ -433,7 +445,7 @@ public class MovementView {
         }
         // Join cause button
         else if (slot == 14) {
-            Object joiningAs = getJoiningAs(p, movement);
+            Object joiningAs = movement.getJoiningAs(p);
             if(joiningAs == null) return;
             if (cause.getFullMemberList().contains(p.getName())) {
                 movement.leave(joiningAs, cause);
@@ -447,8 +459,9 @@ public class MovementView {
                 p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
                 return;
             }
-            if(!quickJoinCheck(p, movement)) return;
-            movement.join(joiningAs, cause);
+            if(!movement.quickJoinCheck(p)) return;
+            if(!movement.canJoin(joiningAs, cause, true)) return;
+            FactionManager.requestMovementJoin(p, movement, "member", null);
             causeView(p, f, movement, cause, inventory);
             p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
         }
@@ -499,15 +512,20 @@ public class MovementView {
         // Accept button (green concrete)
         if (slot == 29) {
             if (p.getName().equalsIgnoreCase(f.getLeader())) {
-                p.sendMessage(StringFormatter.formatHex("&aYou have accepted the movement's demands."));
+                p.sendMessage(StringFormatter.formatHex("§aYou have accepted the movement's demands."));
                 p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 2f);
                 
                 // Notify movement leader if online
                 if (movement.hasLeader()) {
                     Player movementLeader = Bukkit.getPlayer(movement.getLeader());
                     if (movementLeader != null && movementLeader.isOnline()) {
-                        movementLeader.sendMessage(StringFormatter.formatHex("&a" + f.getLeader() + " has accepted your demands!"));
+                        movementLeader.sendMessage(StringFormatter.formatHex("§a" + f.getLeader() + " has accepted your demands!"));
                     }
+                }
+
+                for(Cause cause : movement.getCauses()) {
+                    Proposal proposal = cause.getProposal();
+                    proposal.apply(null);
                 }
                 
                 // End movement
@@ -518,54 +536,26 @@ public class MovementView {
         // Decline button (red concrete)
         else if (slot == 33) {
             if (p.getName().equalsIgnoreCase(f.getLeader())) {
-                p.sendMessage(StringFormatter.formatHex("&cYou have declined the movement's demands."));
-                p.sendMessage(StringFormatter.formatHex("&7A civil war has begun!"));
+                p.sendMessage(StringFormatter.formatHex("§cYou have declined the movement's demands."));
+                p.sendMessage(StringFormatter.formatHex("§7A civil war has begun!"));
                 p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1, 0.8f);
                 
                 // Notify movement leader if online
                 if (movement.hasLeader()) {
                     Player movementLeader = Bukkit.getPlayer(movement.getLeader());
                     if (movementLeader != null && movementLeader.isOnline()) {
-                        movementLeader.sendMessage(StringFormatter.formatHex("&c" + f.getLeader() + " has declined your demands!"));
-                        movementLeader.sendMessage(StringFormatter.formatHex("&7A civil war has begun!"));
+                        movementLeader.sendMessage(StringFormatter.formatHex("§c" + f.getLeader() + " has declined your demands!"));
+                        movementLeader.sendMessage(StringFormatter.formatHex("§7A civil war has begun!"));
                     }
                 }
+
+                //TODO civil war start
                 
                 // End movement (civil war effects will be added later)
                 f.getGovernment().endMovement(movement);
                 p.closeInventory();
             }
         }
-    }
-
-    private boolean quickJoinCheck(Player p, Movement movement) {
-        if(movement.isMember(p.getName())) return false;
-        Member relation = movement.getFaction().getRelationToFaction(p.getName());
-        switch(relation) {
-            case FOREIGNER:
-            case GUILD_MEMBER:
-            case LEADER:
-            case VASSAL_MEMBER:
-            default:
-                return false;
-            case MEMBER:
-            case VASSAL_LEADER:
-            case GUILD_LEADER:
-                return true;
-            
-        }
-    }
-
-    private Object getJoiningAs(Player p, Movement movement) {
-        Member relation = movement.getFaction().getRelationToFaction(p.getName());
-        if (relation == Member.GUILD_LEADER || relation == Member.GUILD_MEMBER) {
-            return FactionManager.getGuildByMember(p.getName());
-        } else if (relation == Member.VASSAL_LEADER) {
-            return FactionManager.getByMember(p.getName());
-        } else if (relation == Member.MEMBER) {
-            return p.getName();
-        }
-        return null;
     }
 
     private boolean canPlayerCreateCause(Player p, Movement movement) {
@@ -605,19 +595,5 @@ public class MovementView {
         }
         
         return null;
-    }
-
-    private void createNewCause(Player p, Movement movement, Faction f) {
-        Object supporter = getSupporterObject(p, movement);
-        if (supporter == null) return;
-        
-        // Get the proposal from the first cause (all causes in a movement share the same proposal type)
-        if (movement.getCauses().isEmpty()) return;
-        
-        Proposal proposal = movement.getCauses().get(0).getProposal();
-        
-        // Remove from supporters and create new cause
-        movement.leave(supporter, null);
-        movement.createCause(p.getName(), proposal);
     }
 }
