@@ -669,7 +669,7 @@ public class GovernmentCreator {
         return item;
     }
 
-    public ItemStack createFavourRepressGuildItem(Faction f, Guild guild, boolean isFavourMode) {
+    public ItemStack createFavourRepressGuildItem(Player p, Faction f, Guild guild, boolean isFavourMode) {
         ItemStack item = guild.getBanner().clone();
         ItemMeta m = item.getItemMeta();
         m.setDisplayName(StringFormatter.formatHex("#93c9a7"+guild.getName()));
@@ -685,9 +685,16 @@ public class GovernmentCreator {
             }
             
             if(gov.canFavour(guild)) {
-                lore.add("");
-                lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
-            } else {
+                lore.add(StringFormatter.formatHex("#eddda8If Toggled:"));
+                EconomicImpact.applyFavourRepressChange(lore, p, f, guild, isFavourMode);
+                if(f.isLeader(p.getName())) {
+                    if(!guild.isFavoured()) {
+                        lore.add(StringFormatter.formatHex("#eddda8Upkeep: §e" + guild.getRepressFavourCost()+" Administrative Power"));
+                    }
+                    lore.add("");
+                    lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
+                }
+            } else if(f.isLeader(p.getName())) {
                 lore.add("");
                 if(guild.isRepressed()) {
                     lore.add(StringFormatter.formatHex("#89504eCannot favour: Guild is repressed"));
@@ -703,9 +710,16 @@ public class GovernmentCreator {
             }
             
             if(gov.canRepress(guild)) {
-                lore.add("");
-                lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
-            } else {
+                lore.add(StringFormatter.formatHex("#eddda8If Toggled:"));
+                EconomicImpact.applyFavourRepressChange(lore, p, f, guild, isFavourMode);
+                if(f.isLeader(p.getName())) {
+                    if(!guild.isRepressed()) {
+                        lore.add(StringFormatter.formatHex("#eddda8Upkeep: §e" + guild.getRepressFavourCost()+" Administrative Power"));
+                    }
+                    lore.add("");
+                    lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
+                }
+            } else if(f.isLeader(p.getName())) {
                 lore.add("");
                 if(guild.isFavoured()) {
                     lore.add(StringFormatter.formatHex("#89504eCannot repress: Guild is favoured"));
@@ -721,7 +735,7 @@ public class GovernmentCreator {
         return item;
     }
 
-    public ItemStack createFavourRepressVassalItem(Faction f, Faction vassal, boolean isFavourMode) {
+    public ItemStack createFavourRepressVassalItem(Player p, Faction f, Faction vassal, boolean isFavourMode) {
         Guild mainGuild = vassal.getOrCreateMainGuild();
         ItemStack item = vassal.getBanner().clone();
         ItemMeta m = item.getItemMeta();
@@ -738,9 +752,16 @@ public class GovernmentCreator {
             }
             
             if(gov.canFavour(mainGuild)) {
-                lore.add("");
-                lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
-            } else {
+                lore.add(StringFormatter.formatHex("#eddda8If Toggled:"));
+                EconomicImpact.applyFavourRepressChange(lore, p, f, mainGuild, isFavourMode);
+                if(f.isLeader(p.getName())) {
+                    if(!mainGuild.isFavoured()) {
+                        lore.add(StringFormatter.formatHex("#eddda8Upkeep: §e" + mainGuild.getRepressFavourCost()+" Administrative Power"));
+                    }
+                    lore.add("");
+                    lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
+                }
+            } else if(f.isLeader(p.getName())) {
                 lore.add("");
                 if(mainGuild.isRepressed()) {
                     lore.add(StringFormatter.formatHex("#89504eCannot favour: Vassal is repressed"));
@@ -756,9 +777,16 @@ public class GovernmentCreator {
             }
             
             if(gov.canRepress(mainGuild)) {
-                lore.add("");
-                lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
-            } else {
+                lore.add(StringFormatter.formatHex("#eddda8If Toggled:"));
+                EconomicImpact.applyFavourRepressChange(lore, p, f, mainGuild, isFavourMode);
+                if(f.isLeader(p.getName())) {
+                    lore.add("");
+                    if(!mainGuild.isRepressed()) {
+                        lore.add(StringFormatter.formatHex("#eddda8Upkeep: §e" + mainGuild.getRepressFavourCost()+" Administrative Power"));
+                    }
+                    lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
+                }
+            } else if(f.isLeader(p.getName())) {
                 lore.add("");
                 if(mainGuild.isFavoured()) {
                     lore.add(StringFormatter.formatHex("#89504eCannot repress: Vassal is favoured"));

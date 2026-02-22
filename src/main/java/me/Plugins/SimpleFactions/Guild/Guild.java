@@ -44,9 +44,11 @@ import me.Plugins.SimpleFactions.Database.GuildBranchData;
 import me.Plugins.SimpleFactions.Database.GuildData;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
+import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.SFGUI;
+import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
@@ -529,6 +531,10 @@ public class Guild {
         }
     }
 
+    public double getRepressFavourCost() {
+        return Formatter.formatDouble(getStabilityEffect()*0.5);
+    }
+
     public double getMemberPercentage() {
         int totalMembers = host.getMembers().size() + host.getVassalMembers().size();
         if (totalMembers <= 0) {
@@ -570,6 +576,7 @@ public class Guild {
         } else if(stance == Stance.OPPOSE) {
             stability *= -1;
         }
+        stability *= f.getModifier(FactionModifiers.STABILITY_INFLUENCE, id, isBase() ? Scope.VASSALS : Scope.DOMESTIC_GUILDS, null);
         if(isBase()) stability *= (host.getGovernment().getStability()/100.0);
         return stability;
     }

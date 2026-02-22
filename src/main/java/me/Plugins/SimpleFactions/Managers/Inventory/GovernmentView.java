@@ -18,6 +18,7 @@ import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.Loaders.PoliticalActionLoader;
 import me.Plugins.SimpleFactions.government.Council;
@@ -53,7 +54,7 @@ public class GovernmentView {
 		i.setItem(11, creator.createStabilityItem(f));
 		i.setItem(12, creator.createCouncilItem(f));
 		i.setItem(15, creator.createProposalItem(player, f));
-		i.setItem(16, creator.createFavourRepressEntryButton());
+		if(f.hasFactionRule(Rules.CAN_FAVOUR) | f.hasFactionRule(Rules.CAN_REPRESS)) i.setItem(16, creator.createFavourRepressEntryButton());
 		i.setItem(24, creator.createProposalListItem(player, f));
 		i.setItem(33, creator.createMovementListItem(player, f));
 		Government gov = f.getGovernment();
@@ -212,8 +213,8 @@ public class GovernmentView {
 		boolean open = i == null;
 		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.FAVOUR_REPRESS_MAIN), 9, "§7Favour & Repress");
 		i.clear();
-		i.setItem(3, creator.createFavourButton());
-		i.setItem(5, creator.createRepressButton());
+		if(f.hasFactionRule(Rules.CAN_FAVOUR)) i.setItem(3, creator.createFavourButton());
+		if(f.hasFactionRule(Rules.CAN_REPRESS)) i.setItem(5, creator.createRepressButton());
 		i.setItem(8, inv.createBackButton(SFGUI.FAVOUR_REPRESS_MAIN));
 		if(open) player.openInventory(i);
 	}
@@ -239,14 +240,15 @@ public class GovernmentView {
 		int slot = 0;
 		if(isGuilds) {
 			for(Guild guild : f.getGuildHandler().getGuilds()) {
+				if(guild.isBase()) continue;
 				if(slot >= 53) break;
-				i.setItem(slot, creator.createFavourRepressGuildItem(f, guild, isFavourMode));
+				i.setItem(slot, creator.createFavourRepressGuildItem(player, f, guild, isFavourMode));
 				slot++;
 			}
 		} else {
 			for(Faction vassal : f.getSubjects()) {
 				if(slot >= 53) break;
-				i.setItem(slot, creator.createFavourRepressVassalItem(f, vassal, isFavourMode));
+				i.setItem(slot, creator.createFavourRepressVassalItem(player, f, vassal, isFavourMode));
 				slot++;
 			}
 		}
@@ -602,6 +604,8 @@ public class GovernmentView {
 			
 			Faction f = FactionManager.getByString(h.getId());
 			if(f == null) return;
+
+			if(!f.isLeader(p.getName())) return;
 			
 			String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
 			if(id == null) return;

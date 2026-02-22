@@ -76,6 +76,9 @@ public class FactionModifier {
 			case DE_JURE:
 				prefix = "#7bd481De Jure Requirement";
 				break;
+			case STABILITY_INFLUENCE:
+				prefix = "#d64d66Stability Influence";
+				break;
 			case TRADE_POWER:
 				prefix = "#92d665Trade Power";
 				break;

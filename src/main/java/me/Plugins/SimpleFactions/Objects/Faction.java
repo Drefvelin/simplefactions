@@ -1097,6 +1097,13 @@ public class Faction {
 	
 	//Modifiers
 
+	public double getModifier(FactionModifiers m, String id, Scope scope, Region region) {
+		for(FactionModifier mod : getModifiers(id, scope, region)) {
+			if(mod.getType() == m) return 1+mod.getAmount()/100.0;
+		}
+		return 1.0;
+	}
+
 	public List<FactionModifier> getModifiers(String id, Scope scope, Region region) {
 		return lawHandler.getLawModifiers(id, scope, region);
 	}

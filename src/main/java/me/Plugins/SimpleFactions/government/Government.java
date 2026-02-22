@@ -409,6 +409,12 @@ public class Government {
         for(LawGroup group : f.getLawHandler().getGroupList()) {
             total += group.getCurrent().getUpkeep();
         }
+        for(Guild guild : getFavoured()) {
+            total += guild.getRepressFavourCost();
+        }
+        for(Guild guild : getRepressed()) {
+            total += guild.getRepressFavourCost();
+        }
         total *= 3-getStability()/50.0;
         return total;
     }
@@ -789,6 +795,30 @@ public class Government {
         }
         data.movements = serializeMovements();
         return data;
+    }
+
+    public List<Guild> getFavoured() {
+        List<Guild> favoured = new ArrayList<>();
+        for(Guild guild : f.getGuildHandler().getGuilds()) {
+            if(guild.isFavoured()) favoured.add(guild);
+        }
+        for(Faction vassal : f.getSubjects()) {
+            Guild main = vassal.getOrCreateMainGuild();
+            if(main.isFavoured()) favoured.add(main);
+        }
+        return favoured;
+    }
+
+    public List<Guild> getRepressed() {
+        List<Guild> repressed = new ArrayList<>();
+        for(Guild guild : f.getGuildHandler().getGuilds()) {
+            if(guild.isRepressed()) repressed.add(guild);
+        }
+        for(Faction vassal : f.getSubjects()) {
+            Guild main = vassal.getOrCreateMainGuild();
+            if(main.isRepressed()) repressed.add(main);
+        }
+        return repressed;
     }
 
     public boolean canFavour(Guild guild) {
