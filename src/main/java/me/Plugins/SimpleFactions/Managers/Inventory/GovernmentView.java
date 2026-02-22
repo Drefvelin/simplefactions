@@ -53,6 +53,7 @@ public class GovernmentView {
 		i.setItem(11, creator.createStabilityItem(f));
 		i.setItem(12, creator.createCouncilItem(f));
 		i.setItem(15, creator.createProposalItem(player, f));
+		i.setItem(16, creator.createFavourRepressEntryButton());
 		i.setItem(24, creator.createProposalListItem(player, f));
 		i.setItem(33, creator.createMovementListItem(player, f));
 		Government gov = f.getGovernment();
@@ -207,6 +208,53 @@ public class GovernmentView {
 		i.setItem(26, inv.createBackButton(SFGUI.LAW_PROPOSAL_SELECT));
 	}
 
+	public void favourRepressMainView(Player player, Faction f, Inventory i) {
+		boolean open = i == null;
+		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.FAVOUR_REPRESS_MAIN), 9, "§7Favour & Repress");
+		i.clear();
+		i.setItem(3, creator.createFavourButton());
+		i.setItem(5, creator.createRepressButton());
+		i.setItem(8, inv.createBackButton(SFGUI.FAVOUR_REPRESS_MAIN));
+		if(open) player.openInventory(i);
+	}
+
+	public void favourRepressTypeView(Player player, Faction f, boolean isFavourMode, Inventory i) {
+		boolean open = i == null;
+		String title = isFavourMode ? "§7Favour - Select Type" : "§7Repress - Select Type";
+		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.FAVOUR_REPRESS_TYPE, 0, isFavourMode), 9, title);
+		i.clear();
+		i.setItem(3, creator.createGuildsTypeButton(isFavourMode));
+		i.setItem(5, creator.createVassalsTypeButton(isFavourMode));
+		i.setItem(8, inv.createBackButton(SFGUI.FAVOUR_REPRESS_TYPE));
+		if(open) player.openInventory(i);
+	}
+
+	public void favourRepressSelectView(Player player, Faction f, boolean isFavourMode, boolean isGuilds, Inventory i) {
+		boolean open = i == null;
+		String title = isFavourMode ? "§7Favour - " : "§7Repress - ";
+		title += isGuilds ? "Guilds" : "Vassals";
+		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.FAVOUR_REPRESS_SELECT, isGuilds ? 1 : 0, isFavourMode), 54, title);
+		i.clear();
+		
+		int slot = 0;
+		if(isGuilds) {
+			for(Guild guild : f.getGuildHandler().getGuilds()) {
+				if(slot >= 53) break;
+				i.setItem(slot, creator.createFavourRepressGuildItem(f, guild, isFavourMode));
+				slot++;
+			}
+		} else {
+			for(Faction vassal : f.getSubjects()) {
+				if(slot >= 53) break;
+				i.setItem(slot, creator.createFavourRepressVassalItem(f, vassal, isFavourMode));
+				slot++;
+			}
+		}
+		
+		i.setItem(53, inv.createBackButton(SFGUI.FAVOUR_REPRESS_SELECT));
+		if(open) player.openInventory(i);
+	}
+
 	public void click(InventoryClickEvent e, Inventory inventory, Player p) {
 		SFInventoryHolder h = (SFInventoryHolder) inventory.getHolder();
 		if (h.getType() == SFGUI.GOVERNMENT_VIEW) {
@@ -257,6 +305,9 @@ public class GovernmentView {
 				Government gov = f.getGovernment();
 				if(!gov.hasCouncil()) return;
 				councilView(p, f, null);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			} else if(slot == 16) {
+				favourRepressMainView(p, f, null);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			}
 		} else if (h.getType() == SFGUI.PROPOSAL_VIEW) {
@@ -515,6 +566,94 @@ public class GovernmentView {
 			}
 			councilView(p, f, null);
 			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+		} else if (h.getType() == SFGUI.FAVOUR_REPRESS_MAIN) {
+			e.setCancelled(true);
+			int slot = e.getSlot();
+			Faction f = FactionManager.getByString(h.getId());
+			if(f == null) return;
+			
+			if(slot == 3) { // Favour button
+				favourRepressTypeView(p, f, true, null);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			} else if(slot == 5) { // Repress button
+				favourRepressTypeView(p, f, false, null);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			}
+		} else if (h.getType() == SFGUI.FAVOUR_REPRESS_TYPE) {
+			e.setCancelled(true);
+			int slot = e.getSlot();
+			Faction f = FactionManager.getByString(h.getId());
+			if(f == null) return;
+			boolean isFavourMode = h.getFlag();
+			
+			if(slot == 3) { // Guilds button
+				favourRepressSelectView(p, f, isFavourMode, true, null);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			} else if(slot == 5) { // Vassals button
+				favourRepressSelectView(p, f, isFavourMode, false, null);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			}
+		} else if (h.getType() == SFGUI.FAVOUR_REPRESS_SELECT) {
+			e.setCancelled(true);
+			ItemStack item = e.getCurrentItem();
+			if(item == null) return;
+			ItemMeta meta = item.getItemMeta();
+			if(meta == null) return;
+			
+			Faction f = FactionManager.getByString(h.getId());
+			if(f == null) return;
+			
+			String id = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+			if(id == null) return;
+			
+			boolean isFavourMode = h.getFlag();
+			boolean isGuilds = h.getPage() == 1;
+			Government gov = f.getGovernment();
+			
+			if(isGuilds) {
+				Guild guild = FactionManager.getGuildByString(id);
+				if(guild == null) return;
+				
+				if(isFavourMode) {
+					if(gov.canFavour(guild)) {
+						gov.toggleFavour(guild);
+						favourRepressSelectView(p, f, isFavourMode, isGuilds, inventory);
+						p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					} else {
+						p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					}
+				} else {
+					if(gov.canRepress(guild)) {
+						gov.toggleRepress(guild);
+						favourRepressSelectView(p, f, isFavourMode, isGuilds, inventory);
+						p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					} else {
+						p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					}
+				}
+			} else {
+				Faction vassal = FactionManager.getByString(id);
+				if(vassal == null) return;
+				Guild mainGuild = vassal.getOrCreateMainGuild();
+				
+				if(isFavourMode) {
+					if(gov.canFavour(mainGuild)) {
+						gov.toggleFavour(mainGuild);
+						favourRepressSelectView(p, f, isFavourMode, isGuilds, inventory);
+						p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					} else {
+						p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					}
+				} else {
+					if(gov.canRepress(mainGuild)) {
+						gov.toggleRepress(mainGuild);
+						favourRepressSelectView(p, f, isFavourMode, isGuilds, inventory);
+						p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					} else {
+						p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					}
+				}
+			}
 		}
 	}
 }

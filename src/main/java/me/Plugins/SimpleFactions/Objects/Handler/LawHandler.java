@@ -5,7 +5,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.LawLoader;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Utils.ModifierMerger;
@@ -80,8 +83,37 @@ public class LawHandler {
         return lawGroup.getLaws().getOrDefault(law, null);
     }
 
-    public List<FactionModifier> getLawModifiers(Scope scope, Region region) {
+    public List<FactionModifier> getLawModifiers(String id, Scope scope, Region region) {
         List<FactionModifier> result = new ArrayList<>();
+
+        if(id != null && (scope == Scope.DOMESTIC_GUILDS || scope == Scope.VASSALS || scope == Scope.VASSAL_GUILDS)) {
+            // Add base effects for guild scopes
+            Scope secondary = Scope.FACTION;
+            Guild guild = FactionManager.getGuildByString(id);
+            switch (scope) {
+                case DOMESTIC_GUILDS:
+                    if(guild.isFavoured()) secondary = Scope.FAVOURED_GUILDS;
+                    else if(guild.isRepressed()) secondary = Scope.REPRESSED_GUILDS;
+                case VASSALS:
+                    if(guild.isFavoured()) secondary = Scope.FAVOURED_VASSALS;
+                    else if(guild.isRepressed()) secondary = Scope.REPRESSED_VASSALS;
+                case VASSAL_GUILDS:
+                    if(guild.isFavoured()) secondary = Scope.FAVOURED_VASSALS;
+                    else if(guild.isRepressed()) secondary = Scope.REPRESSED_VASSALS;
+                default:
+                    break;
+            }
+            if(secondary != Scope.FACTION) {
+                LawEffect baseEffect = Cache.baseEffects.get(secondary);
+                if(baseEffect != null) {
+                    if(baseEffect.hasGlobalModifiers()) result.addAll(baseEffect.getGlobalModifiers());
+                    if(region != null && baseEffect.hasRegionModifiers()) {
+                        List<FactionModifier> regionMods = baseEffect.getRegionModifiers().get(region);
+                        if(regionMods != null) result.addAll(regionMods);
+                    }
+                }
+            }
+        }
 
         for (LawGroup group : laws.values()) {
 

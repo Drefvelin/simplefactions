@@ -17,6 +17,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Utils.EconomicImpact;
 import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.Utils.LoreWriter;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.enums.Brackets;
 import me.Plugins.SimpleFactions.enums.Region;
@@ -65,81 +66,7 @@ public class LawCreator {
 
 				Scope scope = entry.getKey();
 				LawEffect effect = entry.getValue();
-				boolean factionScope = scope == Scope.FACTION;
-
-				// Scope header
-				if (!factionScope) {
-					lore.add(StringFormatter.formatHex("  "+GRAY + scope.getDisplay() + ":"));
-				}
-
-				String indent = factionScope ? "  " : "    ";
-
-				// ---- Rules ----
-				if (effect.hasRules()) {
-					for (Map.Entry<Rules, Boolean> ruleEntry : effect.getRules().entrySet()) {
-
-						Rules rule = ruleEntry.getKey();
-						boolean value = ruleEntry.getValue();
-
-						String symbol = value ? GREEN + CHECK : RED + CROSS;
-
-						lore.add(StringFormatter.formatHex(
-								indent + symbol + " #d4c9ae" + rule.getDisplay()
-						));
-					}
-				}
-
-				// ---- Brackets ----
-				if (effect.hasBrackets()) {
-					for (Map.Entry<Brackets, Bracket> bracketEntry
-							: effect.getBrackets().entrySet()) {
-
-						Brackets type = bracketEntry.getKey();
-						Bracket bracket = bracketEntry.getValue();
-
-						lore.add(StringFormatter.formatHex(
-								indent + LIGHT_GRAY + type.getDisplay() + " §7Range: "
-						) + bracket.getString());
-					}
-				}
-
-				// ---- Regiments ----
-				if (effect.hasRegiments()) {
-					for (Map.Entry<Regiment, Integer> regimentEntry
-							: effect.getRegiments().entrySet()) {
-
-						Regiment reg = regimentEntry.getKey();
-						int amount = regimentEntry.getValue();
-
-						lore.add(StringFormatter.formatHex(
-								indent + LIGHT_GRAY + "Free " + reg.getName() + LIGHT_GRAY +" Regiments§7: " + GREEN
-						) + amount);
-					}
-				}
-
-				// ---- Global modifiers ----
-				if (effect.hasGlobalModifiers()) {
-					for (FactionModifier mod : effect.getGlobalModifiers()) {
-						lore.add(indent + mod.getString());
-					}
-				}
-
-				// ---- Region modifiers ----
-				if (effect.hasRegionModifiers()) {
-					for (Map.Entry<Region, List<FactionModifier>> regionEntry
-							: effect.getRegionModifiers().entrySet()) {
-
-						Region region = regionEntry.getKey();
-
-						lore.add(StringFormatter.formatHex(
-								indent + LIGHT_GRAY + region.getDisplay() + ":"
-						));
-
-						for (FactionModifier mod : regionEntry.getValue()) {
-							lore.add(indent + "  " + mod.getString());
-						}
-					}
-				}
+				LoreWriter.writeEffect(scope, effect, lore);
 			}
 			lore.add("");
 		}

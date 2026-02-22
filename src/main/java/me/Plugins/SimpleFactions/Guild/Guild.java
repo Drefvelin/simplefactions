@@ -85,6 +85,9 @@ public class Guild {
 
     private final LoanHandler loanHandler;
 
+    private boolean favoured = false;
+    private boolean repressed = false;
+
     public Guild(Faction f) {
         host = f;
         id = f.getId();
@@ -190,6 +193,8 @@ public class Guild {
         this.wealthModifiers = Database.loadModifiers(data.wealthModifiers);
         this.ledger = new Ledger(this);
         this.loanHandler = new LoanHandler(this, data.creditScore == null ? 50 : data.creditScore);
+        if(data.favoured != null) this.favoured = data.favoured;
+        if(data.repressed != null) this.repressed = data.repressed;
         createBanner();
     }
 
@@ -729,6 +734,7 @@ public class Guild {
     public Faction toLandless(boolean subjugate) {
         setCapital(-1);
         host.getGuildHandler().removeGuild(id);
+        clearFavoursAndRepressions();
         Faction landless = new Faction(this);
         Faction old = host;
         host = landless;
@@ -741,6 +747,7 @@ public class Guild {
         if(!canBeElevated(null)) return null;
         host.getGuildHandler().removeGuild(id);
         host.getProvinceHandler().removeProvince(capital, false);
+        clearFavoursAndRepressions();
         Faction elevated = new Faction(this);
         Faction old = host;
         host = elevated;
@@ -766,5 +773,26 @@ public class Guild {
         b.levelDown();
         double refund = getRefund();
         bank.deposit(refund);
+    }
+
+    public boolean isFavoured() {
+        return favoured;
+    }
+
+    public void setFavoured(boolean favoured) {
+        this.favoured = favoured;
+    }
+
+    public boolean isRepressed() {
+        return repressed;
+    }
+
+    public void setRepressed(boolean repressed) {
+        this.repressed = repressed;
+    }
+
+    private void clearFavoursAndRepressions() {
+        favoured = false;
+        repressed = false;
     }
 }

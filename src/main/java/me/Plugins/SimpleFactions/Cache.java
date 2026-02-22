@@ -8,7 +8,9 @@ import java.util.Map;
 
 import org.checkerframework.checker.units.qual.t;
 
+import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Terrain;
+import me.Plugins.SimpleFactions.laws.LawEffect;
 
 public class Cache {
 	public static String mapRef;
@@ -34,6 +36,8 @@ public class Cache {
 
 	public static double branchUpgradeCost;
 	public static double branchUpgradeExponent;
+
+	public static Map<Scope, LawEffect> baseEffects = new HashMap<>();
 
 	public static Map<Terrain, Double> tradeCarry = new HashMap<>();
 	public static double getTradeCarry(Terrain t) {

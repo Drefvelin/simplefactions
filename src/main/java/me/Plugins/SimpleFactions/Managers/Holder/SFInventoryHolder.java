@@ -9,20 +9,35 @@ public class SFInventoryHolder implements InventoryHolder {
     private final String id;
     private final SFGUI type;
     private int page;
+    private boolean flag;
 
     public SFInventoryHolder(String id, SFGUI type) {
         this.id = id;
         this.type = type;
-        page = 0;
+        this.page = 0;
+        this.flag = false;
     }
+    
     public SFInventoryHolder(String id, SFGUI type, int page) {
         this.id = id;
         this.type = type;
         this.page = page;
+        this.flag = false;
+    }
+    
+    public SFInventoryHolder(String id, SFGUI type, int page, boolean flag) {
+        this.id = id;
+        this.type = type;
+        this.page = page;
+        this.flag = flag;
     }
 
     public int getPage() {
         return page;
+    }
+    
+    public boolean getFlag() {
+        return flag;
     }
 
     public String getId() {

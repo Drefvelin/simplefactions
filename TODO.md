@@ -12,6 +12,7 @@
 - War System
 - Civil Wars
 - Mercenaries (and companies)
+- army recruitment rule
 
 ## Other
 - Connect guilds to faction view
