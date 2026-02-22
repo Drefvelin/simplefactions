@@ -44,9 +44,11 @@ import me.Plugins.SimpleFactions.Database.GuildBranchData;
 import me.Plugins.SimpleFactions.Database.GuildData;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
+import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.SFGUI;
+import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
@@ -84,6 +86,9 @@ public class Guild {
     private List<UpgradeExpansion> upgradeQueue = new ArrayList<>();
 
     private final LoanHandler loanHandler;
+
+    private boolean favoured = false;
+    private boolean repressed = false;
 
     public Guild(Faction f) {
         host = f;
@@ -190,6 +195,8 @@ public class Guild {
         this.wealthModifiers = Database.loadModifiers(data.wealthModifiers);
         this.ledger = new Ledger(this);
         this.loanHandler = new LoanHandler(this, data.creditScore == null ? 50 : data.creditScore);
+        if(data.favoured != null) this.favoured = data.favoured;
+        if(data.repressed != null) this.repressed = data.repressed;
         createBanner();
     }
 
@@ -524,6 +531,10 @@ public class Guild {
         }
     }
 
+    public double getRepressFavourCost() {
+        return Formatter.formatDouble(getStabilityEffect()*0.5);
+    }
+
     public double getMemberPercentage() {
         int totalMembers = host.getMembers().size() + host.getVassalMembers().size();
         if (totalMembers <= 0) {
@@ -565,6 +576,7 @@ public class Guild {
         } else if(stance == Stance.OPPOSE) {
             stability *= -1;
         }
+        stability *= f.getModifier(FactionModifiers.STABILITY_INFLUENCE, id, isBase() ? Scope.VASSALS : Scope.DOMESTIC_GUILDS, null);
         if(isBase()) stability *= (host.getGovernment().getStability()/100.0);
         return stability;
     }
@@ -729,6 +741,7 @@ public class Guild {
     public Faction toLandless(boolean subjugate) {
         setCapital(-1);
         host.getGuildHandler().removeGuild(id);
+        clearFavoursAndRepressions();
         Faction landless = new Faction(this);
         Faction old = host;
         host = landless;
@@ -741,6 +754,7 @@ public class Guild {
         if(!canBeElevated(null)) return null;
         host.getGuildHandler().removeGuild(id);
         host.getProvinceHandler().removeProvince(capital, false);
+        clearFavoursAndRepressions();
         Faction elevated = new Faction(this);
         Faction old = host;
         host = elevated;
@@ -766,5 +780,26 @@ public class Guild {
         b.levelDown();
         double refund = getRefund();
         bank.deposit(refund);
+    }
+
+    public boolean isFavoured() {
+        return favoured;
+    }
+
+    public void setFavoured(boolean favoured) {
+        this.favoured = favoured;
+    }
+
+    public boolean isRepressed() {
+        return repressed;
+    }
+
+    public void setRepressed(boolean repressed) {
+        this.repressed = repressed;
+    }
+
+    private void clearFavoursAndRepressions() {
+        favoured = false;
+        repressed = false;
     }
 }

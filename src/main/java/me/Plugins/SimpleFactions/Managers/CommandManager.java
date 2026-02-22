@@ -27,6 +27,7 @@ import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Permissions;
 import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import net.tfminecraft.DenarEconomy.Data.Account;
@@ -138,6 +139,14 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cYou are not the leader of a guild");
 					return true;
 				}
+				if(!guild.isLeader(p)) {
+					p.sendMessage("§cOnly the guild leader can invite players!");
+					return true;
+				}
+				if(guild.isBase()) {
+					p.sendMessage("§cThis is the base guild, use /faction invite instead");
+					return true;
+				}
 				String invitee = args[1];
 				if(invitee.equalsIgnoreCase(p.getName())) {
 					p.sendMessage("§cCannot invite yourself");
@@ -156,6 +165,25 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cPlayer is already a member");
 					return true;
 				}
+				Guild otherGuild = FactionManager.getGuildByMember(invitee);
+				if(otherGuild != null) {
+					if(!otherGuild.getFaction().equals(guild.getFaction())) {
+						p.sendMessage("§cPlayer is already in a guild ("+otherGuild.getName()+") in another faction");
+						return true;
+					}
+					if(!otherGuild.isBase()) {
+						p.sendMessage("§cPlayer is already in a guild ("+otherGuild.getName()+") in the same faction");
+						return true;
+					}
+					if(otherGuild.isLeader(invitee)) {
+						p.sendMessage("§cPlayer is the leader of the faction, cannot invite");
+						return true;
+					}
+				}
+				if(otherGuild == null && guild.getFaction().hasFactionRule(Rules.CLOSED_BORDERS) && !guild.getFaction().isLeader(p.getName())) {
+					p.sendMessage("§cThe faction has closed borders, cannot invite members from outside the faction");
+					return true;
+				} 
 				guild.invite(invitee);
 				invited.sendMessage("§aYou have been invited to the guild "+guild.getName());
 				return true;
@@ -172,6 +200,10 @@ public class CommandManager implements Listener, CommandExecutor{
 				if(!g.isInvited(p.getName())) {
 					p.sendMessage("§cYou need to be invited to this guild by the leader first!");
 					return true;
+				}
+				Guild previous = FactionManager.getGuildByMember(p.getName());
+				if(previous != null) {
+					previous.kick(p.getName());
 				}
 				g.addMember(p.getName());
 				p.sendMessage("§aJoined "+g.getName());
@@ -1066,7 +1098,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				p.sendMessage("§aElection started for " + f.getName() + "!");
 				for(Player pl : Bukkit.getOnlinePlayers()) {
 					if(f.getMembers().contains(pl.getName())) {
-						pl.sendMessage("§a§lElection Started! §7Apply at voting booths or faction menu!");
+						pl.sendMessage("§a§lElection Started! §7Vote at voting booths!");
 						pl.playSound(pl.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 					}
 				}

@@ -13,6 +13,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.PoliticalActionLoader;
@@ -25,6 +26,7 @@ import me.Plugins.SimpleFactions.Utils.LoreWriter;
 import me.Plugins.SimpleFactions.Utils.Represents;
 import me.Plugins.SimpleFactions.Utils.Wealth;
 import me.Plugins.SimpleFactions.enums.Rules;
+import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.SimpleFactions.government.Council;
 import me.Plugins.SimpleFactions.government.Government;
@@ -591,6 +593,211 @@ public class GovernmentCreator {
         lore.addAll(politicalAction.getDescription());
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, action.name());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createFavourRepressEntryButton() {
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#93c9a7Favour & Repress"));
+        List<String> lore = new ArrayList<String>();
+        lore.add(StringFormatter.formatHex("#b8ae61Manage which guilds and vassals"));
+        lore.add(StringFormatter.formatHex("#b8ae61you favour or repress."));
+        lore.add("");
+        lore.add(StringFormatter.formatHex("#28ed70Click to open"));
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createFavourButton() {
+        ItemStack item = TLibs.getItemAPI().getCreator().getItemsAdderItem("mcicons:icon_confirm");
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#45c46fFavour"));
+        List<String> lore = new ArrayList<String>();
+        lore.add(StringFormatter.formatHex("#b8ae61Favour guilds or vassals"));
+        lore.add("");
+        lore.add(StringFormatter.formatHex("#28ed70Click to manage"));
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createRepressButton() {
+        ItemStack item = TLibs.getItemAPI().getCreator().getItemsAdderItem("mcicons:icon_cancel");
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#c74d32Repress"));
+        List<String> lore = new ArrayList<String>();
+        lore.add(StringFormatter.formatHex("#b8ae61Repress guilds or vassals"));
+        lore.add("");
+        lore.add(StringFormatter.formatHex("#28ed70Click to manage"));
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createGuildsTypeButton(boolean favour) {
+        ItemStack item = new ItemStack(Material.WRITABLE_BOOK);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#93c9a7Guilds"));
+        List<String> lore = new ArrayList<String>();
+        Scope scope = favour ? Scope.FAVOURED_GUILDS : Scope.REPRESSED_GUILDS;
+        if(Cache.baseEffects.containsKey(scope)) {
+            LoreWriter.writeEffect(scope, Cache.baseEffects.get(scope), lore);
+            lore.add("");
+        }
+        lore.add(StringFormatter.formatHex("#28ed70Click to view guilds"));
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createVassalsTypeButton(boolean favour) {
+        ItemStack item = new ItemStack(Material.PAPER);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#93c9a7Vassals"));
+        List<String> lore = new ArrayList<String>();
+        Scope scope = favour ? Scope.FAVOURED_VASSALS : Scope.REPRESSED_VASSALS;
+        if(Cache.baseEffects.containsKey(scope)) {
+            LoreWriter.writeEffect(scope, Cache.baseEffects.get(scope), lore);
+            lore.add("");
+        }
+        lore.add(StringFormatter.formatHex("#28ed70Click to view vassals"));
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createFavourRepressGuildItem(Player p, Faction f, Guild guild, boolean isFavourMode) {
+        ItemStack item = guild.getBanner().clone();
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#93c9a7"+guild.getName()));
+        List<String> lore = new ArrayList<String>();
+        
+        Government gov = f.getGovernment();
+        
+        if(isFavourMode) {
+            if(guild.isFavoured()) {
+                lore.add(StringFormatter.formatHex("#45c46f✔ Currently Favoured"));
+            } else {
+                lore.add(StringFormatter.formatHex("#c74d32✖ Not Favoured"));
+            }
+            
+            if(gov.canFavour(guild)) {
+                lore.add(StringFormatter.formatHex("#eddda8If Toggled:"));
+                EconomicImpact.applyFavourRepressChange(lore, p, f, guild, isFavourMode);
+                if(f.isLeader(p.getName())) {
+                    if(!guild.isFavoured()) {
+                        lore.add(StringFormatter.formatHex("#eddda8Upkeep: §e" + guild.getRepressFavourCost()+" Administrative Power"));
+                    }
+                    lore.add("");
+                    lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
+                }
+            } else if(f.isLeader(p.getName())) {
+                lore.add("");
+                if(guild.isRepressed()) {
+                    lore.add(StringFormatter.formatHex("#89504eCannot favour: Guild is repressed"));
+                } else {
+                    lore.add(StringFormatter.formatHex("#89504eCannot favour this guild"));
+                }
+            }
+        } else {
+            if(guild.isRepressed()) {
+                lore.add(StringFormatter.formatHex("#c74d32✔ Currently Repressed"));
+            } else {
+                lore.add(StringFormatter.formatHex("#45c46f✖ Not Repressed"));
+            }
+            
+            if(gov.canRepress(guild)) {
+                lore.add(StringFormatter.formatHex("#eddda8If Toggled:"));
+                EconomicImpact.applyFavourRepressChange(lore, p, f, guild, isFavourMode);
+                if(f.isLeader(p.getName())) {
+                    if(!guild.isRepressed()) {
+                        lore.add(StringFormatter.formatHex("#eddda8Upkeep: §e" + guild.getRepressFavourCost()+" Administrative Power"));
+                    }
+                    lore.add("");
+                    lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
+                }
+            } else if(f.isLeader(p.getName())) {
+                lore.add("");
+                if(guild.isFavoured()) {
+                    lore.add(StringFormatter.formatHex("#89504eCannot repress: Guild is favoured"));
+                } else {
+                    lore.add(StringFormatter.formatHex("#89504eCannot repress this guild"));
+                }
+            }
+        }
+        
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, guild.getId());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createFavourRepressVassalItem(Player p, Faction f, Faction vassal, boolean isFavourMode) {
+        Guild mainGuild = vassal.getOrCreateMainGuild();
+        ItemStack item = vassal.getBanner().clone();
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#93c9a7"+vassal.getName()));
+        List<String> lore = new ArrayList<String>();
+        
+        Government gov = f.getGovernment();
+        
+        if(isFavourMode) {
+            if(mainGuild.isFavoured()) {
+                lore.add(StringFormatter.formatHex("#45c46f✔ Currently Favoured"));
+            } else {
+                lore.add(StringFormatter.formatHex("#c74d32✖ Not Favoured"));
+            }
+            
+            if(gov.canFavour(mainGuild)) {
+                lore.add(StringFormatter.formatHex("#eddda8If Toggled:"));
+                EconomicImpact.applyFavourRepressChange(lore, p, f, mainGuild, isFavourMode);
+                if(f.isLeader(p.getName())) {
+                    if(!mainGuild.isFavoured()) {
+                        lore.add(StringFormatter.formatHex("#eddda8Upkeep: §e" + mainGuild.getRepressFavourCost()+" Administrative Power"));
+                    }
+                    lore.add("");
+                    lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
+                }
+            } else if(f.isLeader(p.getName())) {
+                lore.add("");
+                if(mainGuild.isRepressed()) {
+                    lore.add(StringFormatter.formatHex("#89504eCannot favour: Vassal is repressed"));
+                } else {
+                    lore.add(StringFormatter.formatHex("#89504eCannot favour this vassal"));
+                }
+            }
+        } else {
+            if(mainGuild.isRepressed()) {
+                lore.add(StringFormatter.formatHex("#c74d32✔ Currently Repressed"));
+            } else {
+                lore.add(StringFormatter.formatHex("#45c46f✖ Not Repressed"));
+            }
+            
+            if(gov.canRepress(mainGuild)) {
+                lore.add(StringFormatter.formatHex("#eddda8If Toggled:"));
+                EconomicImpact.applyFavourRepressChange(lore, p, f, mainGuild, isFavourMode);
+                if(f.isLeader(p.getName())) {
+                    lore.add("");
+                    if(!mainGuild.isRepressed()) {
+                        lore.add(StringFormatter.formatHex("#eddda8Upkeep: §e" + mainGuild.getRepressFavourCost()+" Administrative Power"));
+                    }
+                    lore.add(StringFormatter.formatHex("#28ed70Click to toggle"));
+                }
+            } else if(f.isLeader(p.getName())) {
+                lore.add("");
+                if(mainGuild.isFavoured()) {
+                    lore.add(StringFormatter.formatHex("#89504eCannot repress: Vassal is favoured"));
+                } else {
+                    lore.add(StringFormatter.formatHex("#89504eCannot repress this vassal"));
+                }
+            }
+        }
+        
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, vassal.getId());
         item.setItemMeta(m);
         return item;
     }

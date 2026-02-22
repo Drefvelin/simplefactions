@@ -65,6 +65,23 @@ public class EconomicImpact {
         }
     }
 
+    public static void applyFavourRepressChange(List<String> lore, Player p, Faction f, Guild g, boolean favour) {
+        applyFavourRepressChange(lore, p, f, g, favour, false);
+    }
+
+    public static void applyFavourRepressChange(List<String> lore, Player p, Faction f, Guild g, boolean favour, boolean shortForm) {
+        Guild us = FactionManager.getGuildByMember(p.getName());
+        if (us != null) {
+
+            Map<Guild, Double> deltas =
+                SimpleFactions.getInstance()
+                    .getProvinceManager()
+                    .previewFavourRepressIncomeExact(f, g, favour);
+
+            write(lore, deltas, us, shortForm);
+        }
+    }
+
     private static void write(List<String> lore, Map<Guild, Double> deltas, Guild us, boolean shortForm) {
         lore.add(StringFormatter.formatHex(shortForm ? "#78856dImpacts:" : "#78856dEstimated Economic Impacts:"));
 

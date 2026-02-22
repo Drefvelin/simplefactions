@@ -40,4 +40,7 @@ public class GuildData {
 
     public List<LoanData> loans = new ArrayList<>();
     public Integer creditScore;
+
+    public Boolean favoured = false;
+    public Boolean repressed = false;
 }

@@ -269,6 +269,7 @@ public class Government {
         }
         election.tick();
         if(!hasElections()) lastElectionDate = new Date(0);
+        validateFavoursAndRepressions();
         replace();
     }
 
@@ -407,6 +408,12 @@ public class Government {
         double total = 0;
         for(LawGroup group : f.getLawHandler().getGroupList()) {
             total += group.getCurrent().getUpkeep();
+        }
+        for(Guild guild : getFavoured()) {
+            total += guild.getRepressFavourCost();
+        }
+        for(Guild guild : getRepressed()) {
+            total += guild.getRepressFavourCost();
         }
         total *= 3-getStability()/50.0;
         return total;
@@ -788,5 +795,77 @@ public class Government {
         }
         data.movements = serializeMovements();
         return data;
+    }
+
+    public List<Guild> getFavoured() {
+        List<Guild> favoured = new ArrayList<>();
+        for(Guild guild : f.getGuildHandler().getGuilds()) {
+            if(guild.isFavoured()) favoured.add(guild);
+        }
+        for(Faction vassal : f.getSubjects()) {
+            Guild main = vassal.getOrCreateMainGuild();
+            if(main.isFavoured()) favoured.add(main);
+        }
+        return favoured;
+    }
+
+    public List<Guild> getRepressed() {
+        List<Guild> repressed = new ArrayList<>();
+        for(Guild guild : f.getGuildHandler().getGuilds()) {
+            if(guild.isRepressed()) repressed.add(guild);
+        }
+        for(Faction vassal : f.getSubjects()) {
+            Guild main = vassal.getOrCreateMainGuild();
+            if(main.isRepressed()) repressed.add(main);
+        }
+        return repressed;
+    }
+
+    public boolean canFavour(Guild guild) {
+        if(guild.isRepressed()) return false;
+        return true;
+    }
+
+    public void toggleFavour(Guild guild) {
+        if(guild.isRepressed()) return;
+        if(!guild.isFavoured()) {
+            guild.setFavoured(true);
+        } else {
+            guild.setFavoured(false);
+        }
+    }
+
+    public boolean canRepress(Guild guild) {
+        if(guild.isFavoured()) return false;
+        return true;
+    }
+
+    public void toggleRepress(Guild guild) {
+        if(guild.isFavoured()) return;
+        if(!guild.isRepressed()) {
+            guild.setRepressed(true);
+        } else {
+            guild.setRepressed(false);
+        }
+    }
+
+    public void validateFavoursAndRepressions() {
+        for(Guild guild : f.getGuildHandler().getGuilds()) {
+            if(guild.isFavoured() && !canFavour(guild)) {
+                guild.setFavoured(false);
+            }
+            if(guild.isRepressed() && !canRepress(guild)) {
+                guild.setRepressed(false);
+            }
+        }
+        for(Faction vassal : f.getSubjects()) {
+            Guild main = vassal.getOrCreateMainGuild();
+            if(main.isFavoured() && !canFavour(main)) {
+                main.setFavoured(false);
+            }
+            if(main.isRepressed() && !canRepress(main)) {
+                main.setRepressed(false);
+            }
+        }
     }
 }

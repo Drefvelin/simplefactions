@@ -280,6 +280,8 @@ public class Database {
                             g.getStance(g.getFaction()).name() : 
                             g.getStance(g.getFaction()).name();
                 gd.creditScore = g.getLoanHandler().getCreditScore();
+                gd.repressed = g.isRepressed();
+                gd.favoured = g.isFavoured();
 
                 // --- Bank ---
                 if (g.getBank() != null) {

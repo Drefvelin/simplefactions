@@ -203,6 +203,52 @@ public class ProvinceManager {
         return map;
     }
 
+    public Map<Guild, Double> previewFavourRepressIncomeExact(Faction f, Guild g, boolean favour) {
+        ProvinceManager live = this;
+        ProvinceManager snap = SimpleFactions.getInstance().getProvinceSnapshot();
+        
+        // Save original ledger states before preview
+        Map<String, Double> originalNetIncomes = new HashMap<>();
+        for(Guild guild : FactionManager.getAllGuilds()) {
+            if (guild.hasCapital()) {
+                originalNetIncomes.put(guild.getId(), guild.getLedger().getNetIncome());
+            }
+        }
+        
+        // Apply favour/repress change to snapshot
+        snap.copyAllDataFrom(live);
+        if(favour) {
+            f.getGovernment().toggleFavour(g);
+        } else {
+            f.getGovernment().toggleRepress(g);
+        }
+        TaxHandler tax = f.getTaxHandler();
+        tax.saveState();
+        // Full recalculation - resolves all interdependencies
+        snap.recalculate();
+
+        // Full recalculation - resolves all interdependencies
+        snap.recalculate();
+        
+        // Collect deltas
+        Map<Guild, Double> map = new HashMap<>();
+        for(Guild guild : FactionManager.getAllGuilds()) {
+            if (!guild.hasCapital()) continue;
+            double delta = guild.getLedger().getNetIncome() - originalNetIncomes.get(guild.getId());
+            map.put(guild, Math.round(delta * 100.0) / 100.0);
+        }
+        // Restore original state
+        if(favour) {
+            f.getGovernment().toggleFavour(g);
+        } else {
+            f.getGovernment().toggleRepress(g);
+        }
+        tax.restoreState();
+        snap.recalculate(); // Recalculate snapshot back to live state
+        
+        return map;
+    }
+
     public double previewUpgradeIncomeExact(Guild guild, Branch branch) {
         ProvinceManager live = this;
         ProvinceManager snap = SimpleFactions.getInstance().getProvinceSnapshot();

@@ -15,6 +15,10 @@ public enum Rules {
     DIVIDEND_TAX("Can Collect Dividend Taxes", true), //Implemented
     TARIFFS("Can Impose Tariffs", true), //Implemented
     VASSAL_VOTING_RIGHTS("Vassals Have Voting Rights", true), //Implemented
+    CAN_FAVOUR("Can Favour Guilds and Vassals", true),
+    CAN_REPRESS("Can Repress Guilds and Vassals", true),
+    CLOSED_BORDERS("Leader Invites New Members", false), //Implemented
+    OPEN_BORDERS("Guilds Can Invite New Members", false), //Implemented
     CAN_RECRUIT_PROFESSIONAL_ARMY("Can Recruit Professional Army", true),
     NO_COUNCIL("No Council", false); //Implemented
 

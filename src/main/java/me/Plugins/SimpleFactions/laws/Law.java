@@ -50,7 +50,7 @@ public class Law {
                     Scope scope = Scope.valueOf(s.toUpperCase());
                     scopedEffects.put(scope, new LawEffect(scope, config.getConfigurationSection("effects."+s)));
                 } catch (Exception e) {
-                    Bukkit.getLogger().info("[SimpleFactions] could not parse modifier for law "+s);
+                    Bukkit.getLogger().info("[SimpleFactions] could not parse modifier for scope "+s+" in law "+key);
                     // TODO: handle exception
                 }
             }
@@ -62,7 +62,7 @@ public class Law {
                 try {
                     compatibility.put(split[0], Integer.parseInt(split[1]));
                 } catch (Exception e) {
-                    Bukkit.getLogger().info("[SimpleFactions] could not parse compatibility for law "+s);
+                    Bukkit.getLogger().info("[SimpleFactions] could not parse compatibility for law "+key+" with law "+split[0]);
                 }
             }
         }

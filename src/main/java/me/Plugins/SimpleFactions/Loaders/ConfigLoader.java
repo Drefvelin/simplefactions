@@ -9,7 +9,9 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Terrain;
+import me.Plugins.SimpleFactions.laws.LawEffect;
 
 public class ConfigLoader {
 	public void loadConfig(File configFile) {
@@ -59,5 +61,17 @@ public class ConfigLoader {
 				Cache.icons.put(id, path);
 			}
 		}
+
+		if(config.contains("base-effects")) {
+            for(String s : config.getConfigurationSection("base-effects").getKeys(false)) {
+                try {
+                    Scope scope = Scope.valueOf(s.toUpperCase());
+                    Cache.baseEffects.put(scope, new LawEffect(scope, config.getConfigurationSection("base-effects."+s)));
+                } catch (Exception e) {
+                    Bukkit.getLogger().info("[SimpleFactions] could not parse modifier for scope "+s);
+                    // TODO: handle exception
+                }
+            }
+        }
 	}
 }

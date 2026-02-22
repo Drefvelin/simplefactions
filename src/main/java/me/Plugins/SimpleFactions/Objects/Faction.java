@@ -1097,8 +1097,15 @@ public class Faction {
 	
 	//Modifiers
 
-	public List<FactionModifier> getModifiers(Scope scope, Region region) {
-		return lawHandler.getLawModifiers(scope, region);
+	public double getModifier(FactionModifiers m, String id, Scope scope, Region region) {
+		for(FactionModifier mod : getModifiers(id, scope, region)) {
+			if(mod.getType() == m) return 1+mod.getAmount()/100.0;
+		}
+		return 1.0;
+	}
+
+	public List<FactionModifier> getModifiers(String id, Scope scope, Region region) {
+		return lawHandler.getLawModifiers(id, scope, region);
 	}
 
 	public Faction getOverlord() {
@@ -1109,11 +1116,11 @@ public class Faction {
 	
 	public Collection<FactionModifier> getModifiers() {
 	    List<FactionModifier> all = new ArrayList<>();
-		all.addAll(getModifiers(Scope.FACTION, null));
+		all.addAll(getModifiers(null, Scope.FACTION, null));
 		all.addAll(diplomacyHandler.getModifiers());
 		Faction overlord = getOverlord();
 		if(overlord != null) {
-			all.addAll(overlord.getModifiers(Scope.VASSALS, null));
+			all.addAll(overlord.getModifiers(null, Scope.VASSALS, null));
 		}
 		if(rank.hasModifiers()) {
 			all.addAll(rank.getModifiers());

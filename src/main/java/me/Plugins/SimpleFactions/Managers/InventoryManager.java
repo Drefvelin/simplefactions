@@ -606,6 +606,15 @@ public class InventoryManager implements Listener{
 					case TAKEN_LOAN_DETAIL_VIEW:
 						loansTakenView(p, g);
 						break;
+					case FAVOUR_REPRESS_SELECT:
+						governmentView.favourRepressTypeView(p, f, h.getFlag(), null);
+						break;
+					case FAVOUR_REPRESS_TYPE:
+						governmentView.favourRepressMainView(p, f, null);
+						break;
+					case FAVOUR_REPRESS_MAIN:
+						governmentView(p, f, null);
+						break;
 					default:
 						break;
 				}
@@ -633,7 +642,10 @@ public class InventoryManager implements Listener{
 				|| h.getType() == SFGUI.SPECIFIC_TAX_PROPOSAL_VIEW
 				|| h.getType() == SFGUI.POLITICAL_PROPOSAL_VIEW
 				|| h.getType() == SFGUI.COUNCIL_VIEW
-				|| h.getType() == SFGUI.COUNCIL_SELECT) {
+				|| h.getType() == SFGUI.COUNCIL_SELECT
+				|| h.getType() == SFGUI.FAVOUR_REPRESS_MAIN
+				|| h.getType() == SFGUI.FAVOUR_REPRESS_TYPE
+				|| h.getType() == SFGUI.FAVOUR_REPRESS_SELECT) {
 				governmentView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.MOVEMENT_VIEW
 				|| h.getType() == SFGUI.MOVEMENT_LIST

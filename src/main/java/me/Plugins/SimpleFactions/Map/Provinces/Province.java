@@ -257,19 +257,19 @@ public class Province {
         Faction owner = getOwner();
         Faction host = guild.getFaction();
         if(owner == null) {
-            mods.addAll(host.getModifiers(Scope.DOMESTIC_GUILDS, Region.WILDERNESS));
+            mods.addAll(host.getModifiers(guild.getId(), Scope.DOMESTIC_GUILDS, Region.WILDERNESS));
         } else if(!owner.getId().equalsIgnoreCase(host.getId())){
             if(RelationManager.isOnOverlordPath(owner, host)) {
-                mods.addAll(host.getModifiers(Scope.DOMESTIC_GUILDS, Region.VASSAL_TERRITORY));
-                mods.addAll(owner.getModifiers(Scope.OVERLORD_GUILDS, Region.OUR_TERRITORY));
+                mods.addAll(host.getModifiers(guild.getId(), Scope.DOMESTIC_GUILDS, Region.VASSAL_TERRITORY));
+                mods.addAll(owner.getModifiers(guild.getId(), Scope.OVERLORD_GUILDS, Region.OUR_TERRITORY));
             } else if(RelationManager.isOnOverlordPath(host, owner)) {
-                mods.addAll(owner.getModifiers(Scope.VASSAL_GUILDS, Region.OUR_TERRITORY));
+                mods.addAll(owner.getModifiers(guild.getId(), Scope.VASSAL_GUILDS, Region.OUR_TERRITORY));
             } else {
-                mods.addAll(host.getModifiers(Scope.DOMESTIC_GUILDS, Region.FOREIGN_TERRITORY));
-                mods.addAll(owner.getModifiers(Scope.FOREIGN_GUILDS, Region.OUR_TERRITORY));
+                mods.addAll(host.getModifiers(guild.getId(), Scope.DOMESTIC_GUILDS, Region.FOREIGN_TERRITORY));
+                mods.addAll(owner.getModifiers(guild.getId(), Scope.FOREIGN_GUILDS, Region.OUR_TERRITORY));
             }
         } else {
-            mods.addAll(host.getModifiers(Scope.DOMESTIC_GUILDS, Region.OUR_TERRITORY));
+            mods.addAll(host.getModifiers(guild.getId(), Scope.DOMESTIC_GUILDS, Region.OUR_TERRITORY));
         }
         return ModifierMerger.merge(mods);
     }
