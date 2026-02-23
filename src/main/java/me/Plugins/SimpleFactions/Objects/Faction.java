@@ -622,6 +622,13 @@ public class Faction {
 			if(!t.getTier().getId().equalsIgnoreCase(tier.getId())) continue;
 			if(TitleLoader.getByTitle(t) == null) freeTitles.add(t);
 		}
+		for(Faction vassal : RelationManager.getSubjects(this)) {
+			for(Title t : vassal.getTitles()) {
+				if(!t.getTier().getId().equalsIgnoreCase(tier.getId())) continue;
+				if(!vassal.getHighestTitle().getId().equalsIgnoreCase(t.getId())) continue;
+				if(TitleLoader.getByTitle(t) == null) freeTitles.add(t);
+			}
+		}
 		return freeTitles;
 	}
 	
