@@ -38,6 +38,7 @@ public class Tier {
 		tier = another.getTier();
 		aliases = another.getAliases();
 		index = i;
+		formCost = another.getFormCost();
 	}
 
 	public boolean canForm() {
