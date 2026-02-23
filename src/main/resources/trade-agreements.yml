@@ -1,0 +1,9 @@
+trade_agreement:
+  name: "#f5b942Trade Agreement"
+  description: "A trade agreement between two factions."
+  cost: 0.5
+  effect:
+    domestic_guilds:
+      their_territory:
+        - trade_power(15.0)
+        - production(5.0)

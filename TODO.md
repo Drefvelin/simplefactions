@@ -1,12 +1,12 @@
 ## Economy
-- Trade Agreements
+- Trade Agreements and Embargo
 
 ## Politics
-- favoured/repressed guilds and vassals
-- open/closed borders (can guilds invite their own members)
+- crush movement (or civil war)
 
 ## Diplomacy
 - Federations (Faction)
+- connect diplomacy view to your own tab
 
 ## War
 - War System

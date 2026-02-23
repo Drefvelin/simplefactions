@@ -4,6 +4,7 @@ public enum Scope {
 
     FACTION("Faction"),
     VASSALS("All Vassals"),
+    THEIR_GUILDS("Their Guilds"),
     FAVOURED_VASSALS("Favoured Vassals"),
     REPRESSED_VASSALS("Repressed Vassals"),
     FAVOURED_GUILDS("Favoured Guilds"),
