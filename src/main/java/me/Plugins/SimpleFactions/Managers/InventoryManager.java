@@ -506,6 +506,9 @@ public class InventoryManager implements Listener{
 					case RELATION_VIEW:
 						diplomacyView(null, p, f, true);
 						break;
+					case TRADE_AGREEMENT_VIEW:
+						diplomacyView(null, p, f, true);
+						break;
 					case TIER_VIEW:
 						factionView(p, f);
 						break;
@@ -654,7 +657,10 @@ public class InventoryManager implements Listener{
 				|| h.getType() == SFGUI.MOVEMENT_DEMANDS
 				|| h.getType() == SFGUI.TARGET_SELECT) {
 				movementView.click(e, inv, p);
-			} else if(h.getType() == SFGUI.DIPLOMACY_VIEW || h.getType() == SFGUI.ATTITUDE_VIEW || h.getType() == SFGUI.RELATION_VIEW) {
+			} else if(h.getType() == SFGUI.DIPLOMACY_VIEW 
+					|| h.getType() == SFGUI.ATTITUDE_VIEW 
+					|| h.getType() == SFGUI.RELATION_VIEW
+					|| h.getType() == SFGUI.TRADE_AGREEMENT_VIEW) {
 				relationView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.ELECTION_VIEW || h.getType() == SFGUI.ELECTION_VOTING_VIEW) {
 				electionView.click(e, inv, p);

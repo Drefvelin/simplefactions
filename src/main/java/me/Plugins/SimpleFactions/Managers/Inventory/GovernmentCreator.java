@@ -55,7 +55,7 @@ public class GovernmentCreator {
         double power = Formatter.formatDouble(gov.getPower());
         double maxPower = Formatter.formatDouble(gov.getMaxPower());
         String powerString = ((power < 0) ? "§c" : "") + power+"/"+((maxPower < 0) ? "§c" : "") + maxPower;
-        lore.add(StringFormatter.formatHex("#85c265Administrative Power§7: §e"+powerString+" §7(§e+"
+        lore.add(StringFormatter.formatHex("#85c265Administrative Power§7: §e"+powerString+" §7("+(gov.getPowerGain() >= 0 ? "§e+" : "§c") 
                 +Formatter.formatDouble(gov.getPowerGain())+"§7/hour)"));
         lore.add(" ");
         lore.add(StringFormatter.formatHex("#b8ae61Ruling System: #d4c9ae"+f.getGovernmentString()));

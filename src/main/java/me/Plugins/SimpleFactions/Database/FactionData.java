@@ -45,6 +45,8 @@ public class FactionData {
     public List<Number> provinces = new ArrayList<>();
     public List<String> titles = new ArrayList<>();
     public List<String> relations = new ArrayList<>();
+    @SerializedName("trade relation")
+    public List<String> tradeRelations = new ArrayList<>();
 
     @SerializedName("tier index")
     public Double tierIndex;

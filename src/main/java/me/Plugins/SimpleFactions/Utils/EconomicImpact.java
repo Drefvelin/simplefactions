@@ -6,6 +6,7 @@ import java.util.Map;
 import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -77,6 +78,23 @@ public class EconomicImpact {
                 SimpleFactions.getInstance()
                     .getProvinceManager()
                     .previewFavourRepressIncomeExact(f, g, favour);
+
+            write(lore, deltas, us, shortForm);
+        }
+    }
+
+    public static void applyTradeAgreementChange(List<String> lore, Player p, Faction origin, Faction target, RelationType agreement) {
+        applyTradeAgreementChange(lore, p, origin, target, agreement, false);
+    }
+
+    public static void applyTradeAgreementChange(List<String> lore, Player p, Faction origin, Faction target, RelationType agreement, boolean shortForm) {
+        Guild us = FactionManager.getGuildByMember(p.getName());
+        if (us != null) {
+
+            Map<Guild, Double> deltas =
+                SimpleFactions.getInstance()
+                    .getProvinceManager()
+                    .previewTradeAgreementIncomeExact(origin, target, agreement);
 
             write(lore, deltas, us, shortForm);
         }

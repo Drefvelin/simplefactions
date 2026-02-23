@@ -166,6 +166,39 @@ public class RelationManager {
 		}
 		if(p != null) p.sendMessage(StringFormatter.formatHex("#a89977Set relation to "+r.getName()));
 	}
+
+	public static void setTradeRelation(Player p, RelationType r, Faction target, Faction origin, boolean check) {
+		if(r.hasThreshold()) {
+			Threshold h = r.getThreshold();
+			int opinion = origin.getRelation(target.getId()).getOpinion();
+			boolean fulfilled = true;
+			String plus = "";
+			if(h.getOpinion() > 0) plus = "+";
+			if(!h.fulfilled(opinion)) {
+				if(p != null) p.sendMessage(StringFormatter.formatHex("§cYou need an opinion "+h.getFormattedType()+" "+OpinionColourMapper.getOpinionColor(h.getOpinion())+plus+h.getOpinion()+ "§c of them §7(currently "+opinion+")"));
+				fulfilled = false;
+			}
+			if(h.isMutual()) {
+				int reverseOpinion = target.getRelation(origin.getId()).getOpinion();
+				if(!h.fulfilled(reverseOpinion)) {
+					if(p != null) p.sendMessage(StringFormatter.formatHex("§cThey need an opinion "+h.getFormattedType()+" "+OpinionColourMapper.getOpinionColor(h.getOpinion())+plus+h.getOpinion()+ "§c of us §7(currently "+reverseOpinion+")"));
+					fulfilled = false;
+				}
+			}
+			if(!fulfilled) {
+				return;
+			}
+		}
+		if(r.isMutual() && check) {
+			sendTradeRequest(p, target, r);
+			return;
+		}
+		origin.getDiplomacyHandler().setTradeRelation(target, r);
+		if(r.isMutual()) {
+			target.getDiplomacyHandler().setTradeRelation(origin, r.getLink());
+		}
+		if(p != null) p.sendMessage(StringFormatter.formatHex("#a89977Set trade to "+r.getName()));
+	}
 	
 	public static boolean reverseChange(Faction target, Faction origin, RelationType t) {
 		RelationType linked = t.getLink() != null ? t.getLink() : RelationLoader.getDefaultType();
@@ -274,7 +307,7 @@ public class RelationManager {
 		p.sendMessage(FactionManager.getByLeader(sender.getName()).getName()+" §7is requesting that you become their "+type.getName());
 		p.sendMessage("§7Type §a/faction accept §7to accept");
 		p.sendMessage("§7Request will time out in 60 seconds");
-		RequestManager.addRequest(sender, p, new RelationRequest(FactionManager.getByLeader(sender.getName()).getOrCreateMainGuild(), type));
+		RequestManager.addRequest(sender, p, new RelationRequest(FactionManager.getByLeader(sender.getName()).getOrCreateMainGuild(), type, false));
 	}
 	
 	public static void acceptRequest(Player p) {
@@ -287,6 +320,32 @@ public class RelationManager {
 		Faction sender = req.getFaction();
 		Player sp = Bukkit.getPlayerExact(sender.getLeader());
 		if(sp != null && sp.isOnline()) sp.sendMessage(reciever.getName()+" §aaccepted your request and became your "+req.getType().getName());
+		setRelation(p, req.getType(), reciever, sender, false);
+	}
+
+	private static void sendTradeRequest(Player sender, Faction f, RelationType type) {
+		Player p = Bukkit.getPlayerExact(f.getLeader());
+		if(p == null || !p.isOnline()) {
+			sender.sendMessage("§cCannot send request, target faction leader is not online!");
+			return;
+		}
+		sender.sendMessage("§aSent a request to "+f.getName()+" §ato set trade to "+type.getName());
+		p.sendMessage(FactionManager.getByLeader(sender.getName()).getName()+" §7is requesting that you set trade to "+type.getName());
+		p.sendMessage("§7Type §a/faction accept §7to accept");
+		p.sendMessage("§7Request will time out in 60 seconds");
+		RequestManager.addRequest(sender, p, new RelationRequest(FactionManager.getByLeader(sender.getName()).getOrCreateMainGuild(), type, true));
+	}
+	
+	public static void acceptTradeRequest(Player p) {
+		RelationRequest req = (RelationRequest) RequestManager.getRequest(p);
+		Faction reciever = FactionManager.getByLeader(p.getName());
+		if(reciever == null) {
+			p.sendMessage("§cYou do not have a faction");
+			return;
+		}
+		Faction sender = req.getFaction();
+		Player sp = Bukkit.getPlayerExact(sender.getLeader());
+		if(sp != null && sp.isOnline()) sp.sendMessage(reciever.getName()+" §aaccepted your request and set trade to "+req.getType().getName());
 		setRelation(p, req.getType(), reciever, sender, false);
 	}
 }

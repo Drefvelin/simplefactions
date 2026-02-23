@@ -15,6 +15,7 @@ import me.Plugins.SimpleFactions.enums.GuildModifier;
 public class DiplomacyHandler {
     private Faction f;
     private HashMap<String, Relation> relations = new HashMap<>();
+    private HashMap<String, RelationType> tradeRelations = new HashMap<>();
 
     public DiplomacyHandler(Faction f) {
         this.f = f;
@@ -34,6 +35,12 @@ public class DiplomacyHandler {
             Faction from = FactionManager.getByString(entry.getKey());
             if(from == null) continue;
             used += RelationManager.getDiplomaticCost(from, f, r.getType());
+        }
+        for(Map.Entry<String, RelationType> entry : tradeRelations.entrySet()) {
+            RelationType r = entry.getValue();
+            Faction from = FactionManager.getByString(entry.getKey());
+            if(from == null) continue;
+            used += RelationManager.getDiplomaticCost(from, f, r);
         }
         return used;
     }
@@ -56,13 +63,51 @@ public class DiplomacyHandler {
 	}
 	
 	public void updateRelations() {
+        for(String s : tradeRelations.keySet()) {
+            if(!relations.containsKey(s)) {
+                relations.put(s, new Relation()); //default addition so we can tick it
+            }
+        }
 		for(Map.Entry<String, Relation> entry : relations.entrySet()) {
-			entry.getValue().tick();
+			entry.getValue().tick(entry.getKey(), this);
 		}
 	}
 
     public void removeRelation(String s) {
         relations.remove(s);
+    }
+
+    public HashMap<String, RelationType> getTradeRelations() {
+        return tradeRelations;
+    }
+
+    public boolean hasTradeRelation(String s) {
+        return tradeRelations.containsKey(s);
+    }
+
+    public void removeTradeRelation(String s) {
+        tradeRelations.remove(s);
+    }
+
+    public RelationType getTradeRelation(String s) {
+        if(tradeRelations.containsKey(s)) return tradeRelations.get(s);
+        return null;
+    }
+
+    public void setTradeRelation(Faction f, RelationType r) {
+        tradeRelations.put(f.getId(), r);
+    }
+
+    public List<FactionModifier> getTradeModifiersFor(String target) {
+        List<FactionModifier> mods = new ArrayList<>();
+        RelationType r = getTradeRelation(target);
+        if(r == null) return mods;
+        if(r.hasTradeEffectsThem()) {
+            for(FactionModifier mod : r.getTradeEffectsThem()) {
+                mods.add(new FactionModifier(FactionManager.getByString(target), mod));
+            }
+        }
+        return mods;
     }
 
     public List<FactionModifier> getModifiers() {

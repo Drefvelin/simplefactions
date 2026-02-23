@@ -60,6 +60,7 @@ public class FactionManager implements Listener{
 	public static List<Faction> factions = new ArrayList<Faction>();
 	
 	private static HashMap<Faction, List<String>> dbRelations = new HashMap<>();
+	private static HashMap<Faction, List<String>> dbTradeRelations = new HashMap<>();
 	private static List<LoanData> loans = new ArrayList<>();
 
 	public static int getTimer(){
@@ -73,6 +74,15 @@ public class FactionManager implements Listener{
 		}
 		list.add(s);
 		dbRelations.put(f, list);
+	}
+
+	public static void addDBTradeRelation(Faction f, String s) {
+		List<String> list = new ArrayList<>();
+		if(dbTradeRelations.containsKey(f)) {
+			list = dbTradeRelations.get(f);
+		}
+		list.add(s);
+		dbTradeRelations.put(f, list);
 	}
 
 	public static void addDBLoan(LoanData data) {
@@ -94,6 +104,7 @@ public class FactionManager implements Listener{
 			for(String s : relations) {
 				Faction target = getByString(s.split("\\(")[0]);
 				if(target == null) continue;
+				if(target.getId().equalsIgnoreCase(f.getId())) continue;
 				String info = s.split("\\(")[1].replace(")", "");
 				RelationType r = RelationLoader.getType(info.split("\\.")[0]);
 				Attitude a = RelationLoader.getAttitude(info.split("\\.")[1]);
@@ -105,7 +116,21 @@ public class FactionManager implements Listener{
 				}
 			}
 		}
+		for(Map.Entry<Faction, List<String>> entry : dbTradeRelations.entrySet()) {
+			Faction f = entry.getKey();
+			List<String> relations = entry.getValue();
+			for(String s : relations) {
+				Faction target = getByString(s.split("\\(")[0]);
+				if(target == null) continue;
+				if(target.getId().equalsIgnoreCase(f.getId())) continue;
+				String info = s.split("\\(")[1].replace(")", "");
+				RelationType r = RelationLoader.getType(info);
+				if(r == null) continue;
+				f.getDiplomacyHandler().setTradeRelation(target, r);
+			}
+		}
 		dbRelations.clear();
+		dbTradeRelations.clear();
 	}
 	
 	public static void reloadTitles() {

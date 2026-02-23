@@ -6,6 +6,8 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
@@ -40,6 +42,12 @@ public class RelationView {
 			Faction pf = FactionManager.getByMember(player.getName());
 			Relation r = pf.getRelation(f.getId());
 			i.setItem(21, creator.createRelationItem(f, pf));
+			RelationType trade = pf.getDiplomacyHandler().getTradeRelation(f.getId());
+			if(trade != null) {
+				i.setItem(20, creator.createTradeAgreementTypeItem(player, trade, f, pf, false));
+			} else {
+				i.setItem(20, creator.createNoTradeAgreementItem());
+			}
 			i.setItem(12, creator.createRelationTypeItem(r.getType(), f, pf, false));
 			i.setItem(24, creator.createWarButton(f, pf));
 			i.setItem(30, creator.createAttitudeItem(r.getAttitude()));
@@ -67,14 +75,43 @@ public class RelationView {
 		for(int x = 0; x<RelationLoader.getTypes().size(); x++) {
 			RelationType t = RelationLoader.getTypes().get(x);
 			if(!t.isSettable()) continue;
+			if(t.isTradeAgreement()) continue;
 			i.setItem(slot, creator.createRelationTypeItem(RelationLoader.getTypes().get(x), f, FactionManager.getByMember(player.getName()), true));
 			slot++;
 		}
 		i.setItem(26, inv.createBackButton(SFGUI.RELATION_VIEW));
 		if(open) player.openInventory(i);
 	}
+
+	public void tradeAgreementView(Inventory i, Player player, Faction f, boolean open) {
+		if(open) {
+			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TRADE_AGREEMENT_VIEW), 27, "§7Change Trade Agreement");
+		}
+		int slot = 9;
+		for(int x = 0; x<RelationLoader.getTypes().size(); x++) {
+			RelationType t = RelationLoader.getTypes().get(x);
+			if(!t.isSettable()) continue;
+			if(!t.isTradeAgreement()) continue;
+			i.setItem(slot, creator.createTradeAgreementTypeItem(player, RelationLoader.getTypes().get(x), f, FactionManager.getByMember(player.getName()), true));
+			slot++;
+		}
+		i.setItem(26, inv.createBackButton(SFGUI.TRADE_AGREEMENT_VIEW));
+		if(open) player.openInventory(i);
+	}
 	
 	public void click(InventoryClickEvent e, Inventory inventory, Player p) {
+		ItemStack item = e.getCurrentItem();
+        if (item == null) return;
+        
+        SFInventoryHolder holder = (SFInventoryHolder) inventory.getHolder();
+        if (holder == null) return;
+        
+        e.setCancelled(true);
+        
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return;
+        
+        SFGUI gui = holder.getType();
 		if(e.getView().getTitle().equalsIgnoreCase("§7Diplomacy View")) {
 			e.setCancelled(true);
 			if(!(inventory.getHolder() instanceof SFInventoryHolder)) return;
@@ -87,6 +124,9 @@ public class RelationView {
 			} else if(e.getSlot() == 12) {
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				relationView(null, p, f, true);
+			} else if(e.getSlot() == 20) {
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				tradeAgreementView(null, p, f, true);
 			} else if(e.getSlot() == 24) {
 				Faction attacker = FactionManager.getByLeader(p.getName());
 				if(attacker.getRelation(f.getId()).getOpinion() > -50) {
@@ -184,6 +224,36 @@ public class RelationView {
 			}
 			
 			RelationManager.setRelation(p, r, f, origin, true);
+			
+			diplomacyView(null, p, f, true);
+		} else if(gui.equals(SFGUI.TRADE_AGREEMENT_VIEW)) {
+			e.setCancelled(true);
+			if(e.getCurrentItem().getType().equals(Material.BARRIER)) return;
+			Faction f = FactionManager.getByString(holder.getId());
+			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
+			String rid = e.getCurrentItem().getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			Faction origin = FactionManager.getByMember(p.getName());
+			
+			RelationType r = RelationLoader.getType(rid);
+			RelationType current = origin.getDiplomacyHandler().getTradeRelation(f.getId());
+			RelationType theirCurrent = f.getDiplomacyHandler().getTradeRelation(origin.getId());
+			if(current != null && current.hasLock()) {
+				p.sendMessage("§cYou are not allowed to change your relationship with "+f.getName()+"§c!");
+				return;
+			}
+
+			double ourCost = RelationManager.getDiplomaticCost(origin, f, r);
+			double theirCost = r.hasLink() ? RelationManager.getDiplomaticCost(f, origin, r.getLink()) : 0;
+			if(origin.getDiplomacyHandler().getAvailableCapacity() < ourCost && (current == null || !current.equals(r)) || f.getDiplomacyHandler().getAvailableCapacity() < theirCost && (theirCurrent == null || !theirCurrent.equals(r.getLink()))) {
+				if(origin.getDiplomacyHandler().getAvailableCapacity() < ourCost && (current == null || !current.equals(r))) 
+					p.sendMessage("§cYou lack diplomatic capacity for this relation!");
+				if(f.getDiplomacyHandler().getAvailableCapacity() < theirCost && (theirCurrent == null || !theirCurrent.equals(r.getLink()))) 
+					p.sendMessage("§cThey lack diplomatic capacity for this relation!");
+				return;
+			}
+			
+			RelationManager.setTradeRelation(p, r, f, origin, true);
 			
 			diplomacyView(null, p, f, true);
 		}
