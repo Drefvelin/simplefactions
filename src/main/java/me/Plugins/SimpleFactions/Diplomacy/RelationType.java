@@ -32,6 +32,10 @@ public class RelationType {
 	
 	private List<FactionModifier> giveModifiers = new ArrayList<>();
 	private List<FactionModifier> recieveModifiers = new ArrayList<>();
+
+	private boolean isTradeAgreement;
+	private List<FactionModifier> tradeEffectsUs = new ArrayList<>();
+	private List<FactionModifier> tradeEffectsThem = new ArrayList<>();
 	
 	private Threshold threshold;
 
@@ -53,6 +57,7 @@ public class RelationType {
 		overlord = config.getBoolean("overlord", false);
 		lock = config.getBoolean("lock", false);
 		elevationTarget = config.getBoolean("elevation-target", false);
+		isTradeAgreement = config.getBoolean("trade-agreement", false);
 		if(config.isConfigurationSection("threshold")) {
 			threshold = new Threshold(config.getConfigurationSection("threshold"));
 		}
@@ -66,6 +71,20 @@ public class RelationType {
 				recieveModifiers.add(new FactionModifier(s));
 			}
 		}
+		if(config.contains("trade-effects-us")) {
+			for(String s : config.getStringList("trade-effects-us")) {
+				tradeEffectsUs.add(new FactionModifier(s));
+			}
+		}
+		if(config.contains("trade-effects-them")) {
+			for(String s : config.getStringList("trade-effects-them")) {
+				tradeEffectsThem.add(new FactionModifier(s));
+			}
+		}
+	}
+
+	public boolean isTradeAgreement() {
+		return isTradeAgreement;
 	}
 
 	public boolean isElevationTarget() {
@@ -162,6 +181,38 @@ public class RelationType {
 	
 	public List<FactionModifier> getRecieveModifiers() {
 		return recieveModifiers;
+	}
+
+	public boolean hasTradeEffectsUs() {
+		return getTradeEffectsUs().size() > 0;
+	}
+
+	public List<FactionModifier> getTradeEffectsUs() {
+		List<FactionModifier> usEffects = new ArrayList<>(tradeEffectsUs);
+		if(isMutual()) {
+			usEffects.addAll(getLink().getTradeEffectsThemRaw());
+		}
+		return usEffects;
+	}
+
+	public List<FactionModifier> getTradeEffectsUsRaw() {
+		return tradeEffectsUs;
+	}
+
+	public boolean hasTradeEffectsThem() {
+		return getTradeEffectsThem().size() > 0;
+	}
+
+	public List<FactionModifier> getTradeEffectsThem() {
+		List<FactionModifier> themEffects = new ArrayList<>(tradeEffectsThem);
+		if(isMutual()) {
+			themEffects.addAll(getLink().getTradeEffectsUsRaw());
+		}
+		return themEffects;
+	}
+
+	public List<FactionModifier> getTradeEffectsThemRaw() {
+		return tradeEffectsThem;
 	}
 	
 	public boolean hasLink() {

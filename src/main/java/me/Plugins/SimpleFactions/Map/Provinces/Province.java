@@ -268,6 +268,9 @@ public class Province {
                 mods.addAll(host.getModifiers(guild.getId(), Scope.DOMESTIC_GUILDS, Region.FOREIGN_TERRITORY));
                 mods.addAll(owner.getModifiers(guild.getId(), Scope.FOREIGN_GUILDS, Region.OUR_TERRITORY));
             }
+            if(owner.getDiplomacyHandler().hasTradeRelation(host.getId())) {
+                mods.addAll(owner.getDiplomacyHandler().getTradeModifiersFor(host.getId()));
+            }
         } else {
             mods.addAll(host.getModifiers(guild.getId(), Scope.DOMESTIC_GUILDS, Region.OUR_TERRITORY));
         }

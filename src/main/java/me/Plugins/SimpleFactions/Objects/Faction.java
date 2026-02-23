@@ -779,6 +779,9 @@ public class Faction {
 			if(!t.getTier().getId().equalsIgnoreCase(tier.getId())) continue;
 			if(TitleLoader.getByTitle(t) == null) freeTitles.add(t);
 		}
+		for(Faction vassal : RelationManager.getSubjects(this)) {
+			freeTitles.addAll(vassal.getFreeTitles(tier));
+		}
 		return freeTitles;
 	}
 	

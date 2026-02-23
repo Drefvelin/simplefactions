@@ -274,14 +274,20 @@ public class Government {
     }
 
     public void powerTick() {
-        for(StabilityModifier modifier : new ArrayList<>(stabilityModifiers)) {
-            if(modifier.tick()) {
+        for (StabilityModifier modifier : new ArrayList<>(stabilityModifiers)) {
+            if (modifier.tick()) {
                 stabilityModifiers.remove(modifier);
             }
         }
+
         double maxPower = getMaxPower();
-        if (power > maxPower && getPower() > 0) return; //cant overstack but it can decline
-        power += getPowerGain();
+        double gain = getPowerGain();
+
+        if (gain > 0 && power <= maxPower) {
+            power = Math.min(power + gain, maxPower);
+        } else {
+            power += gain; // allows negative gain or over-max values to decline naturally
+        }
     }
 
     public void replace() {
@@ -424,8 +430,7 @@ public class Government {
     }
 
     public double getBaseMaxPower() {
-        double base = f.getMembers().size() * 10;
-        base += f.getOrCreateMainGuild().getModifier(GuildModifier.ADMIN_POWER);
+        double base = f.getOrCreateMainGuild().getModifier(GuildModifier.ADMIN_POWER);
         base *= 1+f.getModifier(FactionModifiers.ADMIN_POWER_MULTIPLIER).getAmount()/100.0;
         base *= getStability()/100.0;
         return base;
@@ -446,11 +451,23 @@ public class Government {
         if(power < 0) power = 0;
     }
 
+    private static final double EPSILON = 0.01;
+
     public double getPowerGain() {
         double base = 1;
         base += f.getOrCreateMainGuild().getModifier(GuildModifier.ADMIN_POWER_GAIN);
-        base *= 1+f.getModifier(FactionModifiers.ADMIN_POWER_GAIN_MULTIPLIER).getAmount()/100.0;
-        base *= getStability()/100.0;
+        base *= 1 + f.getModifier(FactionModifiers.ADMIN_POWER_GAIN_MULTIPLIER).getAmount() / 100.0;
+        base *= getStability() / 100.0;
+
+        double power = getPower();
+        double maxPower = getMaxPower();
+
+        if (power - maxPower > EPSILON) {
+            base = -10;
+        } else if (Math.abs(power - maxPower) <= EPSILON) {
+            base = 0;
+        }
+
         return base;
     }
 

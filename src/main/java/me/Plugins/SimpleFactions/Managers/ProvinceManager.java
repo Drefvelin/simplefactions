@@ -16,6 +16,8 @@ import me.Plugins.SimpleFactions.Objects.Bracket;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Diplomacy.Relation;
+import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.laws.Law;
@@ -244,6 +246,62 @@ public class ProvinceManager {
             f.getGovernment().toggleRepress(g);
         }
         tax.restoreState();
+        snap.recalculate(); // Recalculate snapshot back to live state
+        
+        return map;
+    }
+
+    public Map<Guild, Double> previewTradeAgreementIncomeExact(Faction origin, Faction target, RelationType agreement) {
+        ProvinceManager live = this;
+        ProvinceManager snap = SimpleFactions.getInstance().getProvinceSnapshot();
+        
+        // Save original ledger states before preview
+        Map<String, Double> originalNetIncomes = new HashMap<>();
+        for(Guild guild : FactionManager.getAllGuilds()) {
+            if (guild.hasCapital()) {
+                originalNetIncomes.put(guild.getId(), guild.getLedger().getNetIncome());
+            }
+        }
+        
+        // Apply favour/repress change to snapshot
+        snap.copyAllDataFrom(live);
+        RelationType current = origin.getDiplomacyHandler().getTradeRelation(target.getId());
+        RelationType targetCurrent = target.getDiplomacyHandler().getTradeRelation(origin.getId());
+        if(agreement != null) {
+            origin.getDiplomacyHandler().setTradeRelation(target, agreement);
+            if(agreement.hasLink()) {
+                target.getDiplomacyHandler().setTradeRelation(origin, agreement.getLink());
+            }
+        } else {
+            origin.getDiplomacyHandler().removeTradeRelation(target.getId());
+            if(current.isMutual()) {
+                target.getDiplomacyHandler().removeTradeRelation(origin.getId());
+            }
+        }
+        // Full recalculation - resolves all interdependencies
+        snap.recalculate();
+
+        // Full recalculation - resolves all interdependencies
+        snap.recalculate();
+        
+        // Collect deltas
+        Map<Guild, Double> map = new HashMap<>();
+        for(Guild guild : FactionManager.getAllGuilds()) {
+            if (!guild.hasCapital()) continue;
+            double delta = guild.getLedger().getNetIncome() - originalNetIncomes.get(guild.getId());
+            map.put(guild, Math.round(delta * 100.0) / 100.0);
+        }
+        // Restore original state
+        if(current != null) {
+            origin.getDiplomacyHandler().setTradeRelation(target, current);
+        } else {
+            origin.getDiplomacyHandler().removeTradeRelation(target.getId());
+        }
+        if(targetCurrent != null) {
+            target.getDiplomacyHandler().setTradeRelation(origin, targetCurrent);
+        } else {
+            target.getDiplomacyHandler().removeTradeRelation(origin.getId());
+        }
         snap.recalculate(); // Recalculate snapshot back to live state
         
         return map;

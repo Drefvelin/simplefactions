@@ -36,7 +36,7 @@ public class ModifierMerger {
 
         for (Map.Entry<FactionModifiers, Double> entry : totals.entrySet()) {
             double amount = entry.getValue();
-
+            if (amount < -100) amount = -100;
             if (amount != 0) {
                 result.add(new FactionModifier(entry.getKey(), amount));
             }

@@ -47,8 +47,12 @@ public class RequestManager {
 	public static void accept(Player p) {
 		if(!hasRequest(p)) return;
 		Request req = requests.get(p);
-		if(req instanceof RelationRequest) {
-			RelationManager.acceptRequest(p);
+		if(req instanceof RelationRequest rreq) {
+			if(rreq.isTrade()) {
+				RelationManager.acceptTradeRequest(p);
+			} else {
+				RelationManager.acceptRequest(p);
+			}
 		} else if(req instanceof WarRequest){
 			WarManager.acceptRequest(p);
 		} else if(req instanceof RelocateRequest){

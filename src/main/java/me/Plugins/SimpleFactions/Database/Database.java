@@ -146,6 +146,12 @@ public class Database {
                     FactionManager.addDBRelation(f, r);
                 }
 
+                if(data.tradeRelations != null) {
+                    for (String r : data.tradeRelations) {
+                        FactionManager.addDBTradeRelation(f, r);
+                    }
+                }
+
                 // --- Tier ---
                 if (data.tierIndex != null) {
                     f.getTier().setIndex(data.tierIndex.intValue());
@@ -256,6 +262,9 @@ public class Database {
             f.getRelations().forEach((id, rel) ->
                     data.relations.add(id + "(" + rel.getType().getId() + "."
                             + rel.getAttitude().getId() + "." + rel.getOpinion() + ")"));
+            // --- Trade Relations ---
+            f.getDiplomacyHandler().getTradeRelations().forEach((id, rel) ->
+                    data.tradeRelations.add(id + "(" + rel.getId() + ")"));
 
             // --- Modifiers ---
             f.getPrestigeModifiers().forEach(m -> {
