@@ -1,5 +1,5 @@
 ## Economy
-- Trade Agreements and Embargo
+- Embargo blocks sign shops
 
 ## Politics
 - crush movement (or civil war)
