@@ -711,6 +711,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				Faction f = FactionManager.getByMember(p.getName());
 				if(f.isInGuild(p.getName())) {
 					p.sendMessage("§cYou are in a guild, use /guild leave instead");
+					return true;
 				}
 				f.forceRemoveMember(p.getName());
 				p.sendMessage("§aLeft "+f.getName());
