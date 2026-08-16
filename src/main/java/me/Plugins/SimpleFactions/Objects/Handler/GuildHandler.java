@@ -34,7 +34,12 @@ public class GuildHandler {
     }
 
     public void removeGuild(String id) {
+        Guild g = guilds.get(id);
+        int cap = (g != null && !g.isBase() && g.hasCapital()) ? g.getCapital() : -1;
         guilds.remove(id);
+        if (cap != -1) {
+            f.getSettlementHandler().onGuildDepartedCapital(cap);
+        }
         f.getProvinceHandler().revalidateClaims();
     }
 

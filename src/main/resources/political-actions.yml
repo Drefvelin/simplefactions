@@ -1,37 +1,37 @@
 change_leader:
     name: "#62ccd1Change Leader"
-    description: "Change the leader of a faction to another member."
+    description:
+        - "#c4c0a1Change the leader of a faction to another member."
     pools:
-      members:
-        - members
-        - guilds
-        - vassals
+      - citizens
+      - guilds
+      - vassals
 nationhood:
     name: "#62ccd1Nationhood"
-    description: "Elevate members to nationhood."
+    description:
+        - "#c4c0a1Elevate members to nationhood."
     pools:
-      members:
-        - guilds
+      - guilds
 independence:
     name: "#62ccd1Independence"
-    description: "Members are granted independence."
+    description:
+        - "#c4c0a1Members are granted independence."
     pools:
-      members:
-        - guilds
-        - vassals
+      - guilds
+      - vassals
 snap_elections:
     name: "#62ccd1Snap Elections"
-    description: "Elections will be held immediately."
+    description:
+        - "#c4c0a1Elections will be held immediately."
     pools:
-      members:
-        - members
-        - guilds
-        - vassals
+      - citizens
+      - guilds
+      - vassals
 dissolve:
     name: "#62ccd1Dissolve"
-    description: "Target faction is dissolved"
+    description:
+        - "#c4c0a1Target faction is dissolved"
     pools:
-      members:
-        - members
-        - guilds
-        - vassals
+      - citizens
+      - guilds
+      - vassals

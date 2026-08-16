@@ -66,6 +66,7 @@ import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawEffect;
 import me.Plugins.SimpleFactions.laws.LawGroup;
+import me.Plugins.SimpleFactions.settlement.handler.SettlementHandler;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Faction {
@@ -112,6 +113,9 @@ public class Faction {
 
 	//Realm
 	private final ProvinceHandler provinceHandler;
+
+	//Settlements
+	private final SettlementHandler settlementHandler;
 	
 	public Faction(String id, String leader) {
 		this.id = Formatter.formatId(id);
@@ -135,6 +139,7 @@ public class Faction {
 		}
 		this.military = new Military(this);
 		this.government = new Government(this);
+		this.settlementHandler = new SettlementHandler(this);
 		this.taxHandler = new TaxHandler(this, 5, 5, 5, 5, 5);
 		lawHandler.apply();
 		this.guildHandler = new GuildHandler(this);
@@ -165,6 +170,7 @@ public class Faction {
 		}
 		this.military = new Military(this);
 		this.government = new Government(this);
+		this.settlementHandler = new SettlementHandler(this);
 		this.taxHandler = new TaxHandler(this, 5, 5, 5, 5, 5);
 		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(guild);
@@ -235,6 +241,7 @@ public class Faction {
 			}
 		}
 		this.government = governmentData != null ? new Government(this, governmentData) : new Government(this);
+		this.settlementHandler = new SettlementHandler(this);
 		lawHandler.apply();
 		createBanner(bannerPatterns);
 		updateTier();
@@ -400,6 +407,11 @@ public class Faction {
 		}
 		*/
 		government.tick();
+		settlementHandler.validate();
+	}
+
+	public SettlementHandler getSettlementHandler() {
+		return settlementHandler;
 	}
 
 	public ProvinceHandler getProvinceHandler() {

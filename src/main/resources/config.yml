@@ -1,1 +1,89 @@
-max-prestige-from-wealth: 800 #shared between factions based on the % of global wealth they own
+# SimpleFactions — dev server template (map-reference: dev, world: TFMC_Map)
+# world-name must match the loaded Bukkit overworld (server.properties level-name).
+
+world-name: TFMC_Map
+
+max-prestige-from-wealth: 800 # shared between factions based on % of global wealth
+max-members: 64
+max-untitled-provinces: 5
+max-free-titles: 3
+province-cost: 50
+
+bank-block: iaf(tfmc:bank)
+voting-block: v(chiseled_bookshelf)
+starting-year: "372 AE"
+
+max-extra-node-capacity: 0
+de-jure-requirement: 75.0
+
+# Map platform (step 42) — requires TFMCWeb softdepend + api.base-url configured
+enable-map: true
+map-reference: dev
+settlement-found-distance: 2
+settlement-large-population-threshold: 8
+
+branch-upgrade-cost: 100.0
+branch-upgrade-exponent: 1.07
+
+terrain-modifiers:
+    - FARMLAND 0.95
+    - PLAINS 0.85
+    - HILLS 0.5
+    - FOREST 0.6
+    - HIGHLANDS 0.55
+    - JUNGLE 0.45
+    - WATER 0.75
+    - SEA 0.6
+    - BOG 0.4
+    - MOUNTAIN 0.3
+    - DRYLANDS 0.6
+
+icons:
+    - diplomacy(black_dye.14)
+    - overlord(black_dye.12)
+    - subject(black_dye.13)
+    - integrated_subject(black_dye.13)
+    - rival(black_dye.15)
+    - tributary(black_dye.16)
+    - suzerain(black_dye.17)
+    - ally(black_dye.18)
+    - war(black_dye.19)
+    - friendly(black_dye.20)
+    - neutral(black_dye.21)
+    - unfriendly(black_dye.22)
+    - hostile(black_dye.23)
+    - march(black_dye.24)
+    - palatinate(black_dye.25)
+    - mercantile(black_dye.26)
+    - tier(black_dye.27)
+    - titles(black_dye.28)
+    - county(black_dye.29)
+    - duchy(black_dye.30)
+    - kingdom(black_dye.31)
+    - empire(black_dye.32)
+    - independence(black_dye.14)
+    - usurp(black_dye.12)
+
+base-effects:
+  favoured_guilds:
+    modifiers:
+      - stability_influence(10)
+    our_territory:
+      - trade_power(20)
+  repressed_guilds:
+    modifiers:
+      - stability_influence(-25)
+    our_territory:
+      - trade_power(-15)
+  favoured_vassals:
+    modifiers:
+      - stability_influence(10)
+      - tax_multiplier(-5)
+    our_territory:
+      - trade_power(15)
+  repressed_vassals:
+    modifiers:
+      - stability_influence(-15)
+      - tax_multiplier(5)
+    our_territory:
+      - trade_power(-10)

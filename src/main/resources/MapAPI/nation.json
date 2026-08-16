@@ -1,0 +1,148 @@
+{
+  "Lantan": {
+    "id": "Lantan",
+    "name": "§cLantan",
+    "rgb": "51,200,210",
+    "leader": "ukindaickyngl",
+    "ruler title": "Leader",
+    "government": "Community",
+    "culture": "Multicultural",
+    "religion": "Religious Diversity",
+    "citizen tax": 0.0,
+    "guild tax": 0.0,
+    "vassal tax": 0.0,
+    "dividend tax": 0.0,
+    "tariffs": 0.0,
+    "specific taxes": {},
+    "capital": 705,
+    "extra node capacity": 0.0,
+    "banner": [
+      "BROWN.BASE",
+      "GREEN.SQUARE_TOP_RIGHT",
+      "YELLOW.ARROWS_DOWN"
+    ],
+    "provinces": [
+      705,
+      704
+    ],
+    "titles": [],
+    "relations": [],
+    "trade relation": [],
+    "tier index": -1.0,
+    "military": [
+      "professional.0",
+      "militia.6"
+    ],
+    "military queue": [],
+    "prestige modifiers": [
+      "debug(1000.0)"
+    ],
+    "guilds": [
+      {
+        "id": "Lantan",
+        "name": "§cLantan",
+        "leader": "ukindaickyngl",
+        "rgb": "51,200,210",
+        "type": "realm",
+        "capital": 705,
+        "bank": "true",
+        "world": "TFMC_Map",
+        "stance": "SUPPORT",
+        "xPos": 0.0,
+        "zPos": 0.0,
+        "balance": 0.0,
+        "banner": [
+          "BROWN.BASE",
+          "GREEN.SQUARE_TOP_RIGHT",
+          "YELLOW.ARROWS_DOWN"
+        ],
+        "members": [
+          "ukindaickyngl"
+        ],
+        "branches": [
+          {
+            "id": "bureaucracy",
+            "level": 0
+          },
+          {
+            "id": "workshops",
+            "level": 0
+          },
+          {
+            "id": "storehouses",
+            "level": 0
+          }
+        ],
+        "upgrades": [
+          {
+            "id": "max_admin_power",
+            "level": 0
+          },
+          {
+            "id": "max_diplomatic_capacity",
+            "level": 0
+          },
+          {
+            "id": "admin_power_gain",
+            "level": 0
+          }
+        ],
+        "upgrade queue": [],
+        "wealth modifiers": [],
+        "loans": [],
+        "creditScore": 50,
+        "favoured": false,
+        "repressed": false
+      }
+    ],
+    "settlements": [
+      {
+        "id": "Lanbury",
+        "name": "§x§a§3§a§1§8§4Lanbury",
+        "centerProvince": 705,
+        "centerX": 1748,
+        "centerZ": 2739,
+        "provinces": [
+          705,
+          704
+        ]
+      }
+    ],
+    "governmentData": {
+      "power": 20.0,
+      "last election date": 0,
+      "council members": [],
+      "proposals": [],
+      "eligible voters": [],
+      "election candidates": {
+        "LEADER": [],
+        "COUNCIL": []
+      },
+      "election votes": {
+        "LEADER": {},
+        "COUNCIL": {}
+      },
+      "previous votes": {
+        "LEADER": {},
+        "COUNCIL": {}
+      },
+      "stability modifiers": [],
+      "movements": []
+    },
+    "faction modifiers": [],
+    "laws": [
+      "citizen_tax:none",
+      "vassal_tax:none",
+      "guild_tax:none",
+      "leadership:fixed",
+      "government:community",
+      "council:none",
+      "military:decentralized",
+      "vassalage:none",
+      "economy:decentralized",
+      "borders:closed_borders",
+      "repression:no_repression",
+      "favouring:no_favouring"
+    ]
+  }
+}

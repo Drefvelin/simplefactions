@@ -1,0 +1,15 @@
+[
+  {
+    "id": "Lantan",
+    "name": "§cLantan",
+    "type": "§x§5§e§a§b§c§4Realm",
+    "size": 0,
+    "rgb": "51,200,210",
+    "trade_power": 1.0,
+    "banner": [
+      "BROWN.BASE",
+      "GREEN.SQUARE_TOP_RIGHT",
+      "YELLOW.ARROWS_DOWN"
+    ]
+  }
+]

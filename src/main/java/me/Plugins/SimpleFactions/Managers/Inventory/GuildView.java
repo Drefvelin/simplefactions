@@ -19,6 +19,7 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.RelocationPrompt;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -292,23 +293,18 @@ public class GuildView {
 						return;
 					}
 					if(!target.getId().equalsIgnoreCase(guild.getFaction().getId())) {
-						FactionManager.requestRelocation(p, guild, target, province);
-					} else {
-						if(target.hasProvince(province)) {
-							guild.setCapital(province);
-						} else {
-							int old = guild.getCapital();
-							guild.setCapital(-1);
-							FactionManager.getMap().claim(p, target, province, true);
-							if(!target.hasProvince(province)) {
-								guild.setCapital(old);
-								p.sendMessage("§cRelocation failed, cannot claim province!");
-								p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-								return;
-							}
-							guild.setCapital(province);
+						if(RelocationPrompt.begin(p, guild, target, province, true, cost)) {
+							return;
 						}
-						guild.getBank().withdraw(cost);
+						FactionManager.requestRelocation(p, guild, target, province, null);
+					} else {
+						if(RelocationPrompt.begin(p, guild, target, province, false, cost)) {
+							return;
+						}
+						if(!RelocationPrompt.completeIntraFactionRelocate(
+								p, guild, target, province, null, cost)) {
+							return;
+						}
 					}
 					guildView(p, guild, inventory);
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);

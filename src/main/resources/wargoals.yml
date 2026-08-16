@@ -1,0 +1,46 @@
+
+###War goal effects are either manual (annex) or they are handled by code, you can only change the cost and targeters.
+###Do not change IDs they are not variable!
+
+annex:
+    name: "#9c3428Annex"
+    desc:
+        - "#a39ba8Take a province from the target"
+    cost: 1
+subjugate:
+    name: "#66a8bdSubjugate"
+    desc:
+        - "#a39ba8Make the target your subject"
+    cost: 2
+    target:
+        - lower_tier
+        - independent
+tributary:
+    name: "#c2ba70Tributary"
+    cost: 1
+revolt:
+    name: "#e07a43Revolt"
+    cost: 1
+    stackable: true
+    target:
+        - overlord #Declaring war on your overlord REQUIRES that the war goal has overlord in its target, otherwise the war goal is not available
+independence:
+    name: "#6bd68fIndependence"
+    cost: 1
+    stackable: true
+    target:
+        - overlord
+usurp:
+    name: "#d9bc6cUsurp"
+    cost: 2
+    target:
+        - higher_tier
+war_reparations:
+    name: "#cc8316War Reparations"
+    stackable: true
+    cost: 1
+transfer_subject:
+    name: "#739dc7Transfer Subject"
+    cost: 2
+    target:
+        - overlords #Not to be confused with overlord, this can target any overlord (you own not included)

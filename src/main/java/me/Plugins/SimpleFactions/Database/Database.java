@@ -141,6 +141,10 @@ public class Database {
                         data.governmentData
                 );
 
+                if (data.settlements != null) {
+                    f.getSettlementHandler().load(data.settlements);
+                }
+
                 // --- Relations ---
                 for (String r : data.relations) {
                     FactionManager.addDBRelation(f, r);
@@ -243,6 +247,8 @@ public class Database {
             
             // --- Government ---
             data.governmentData = f.getGovernment().serialize();
+
+            data.settlements = f.getSettlementHandler().serialize();
 
             for (int p : f.getProvinces()) data.provinces.add(p);
             for (Title t : f.getTitles()) data.titles.add(t.getId());

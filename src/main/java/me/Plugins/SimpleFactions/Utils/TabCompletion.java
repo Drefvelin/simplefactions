@@ -112,6 +112,28 @@ public class TabCompletion implements TabCompleter{
 				
 				return completions;
 			}
+		} else if(eitherCommand(cmd) && args.length == 2 && args[0].equalsIgnoreCase("setcapital")) {
+			if(sender instanceof Player) {
+				Player p = (Player) sender;
+				Faction f = null;
+				if(cmd.getName().equalsIgnoreCase("guild")) {
+					Guild g = FactionManager.getGuildByLeader(p.getName());
+					if(g != null) {
+						f = g.getFaction();
+					}
+				} else {
+					f = FactionManager.getByLeader(p.getName());
+				}
+				if(f == null) {
+					return new ArrayList<>();
+				}
+				List<String> completions = new ArrayList<>();
+				for(var s : f.getSettlementHandler().getAll()) {
+					completions.add(s.getId());
+				}
+				TabCleaner.cleanTab(completions, args);
+				return completions;
+			}
 		} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("delete")){
 			if(sender instanceof Player){
 				Player p = (Player) sender;

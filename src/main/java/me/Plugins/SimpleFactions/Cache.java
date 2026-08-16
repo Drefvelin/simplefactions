@@ -28,6 +28,9 @@ public class Cache {
 	public static boolean mapEnabled;
 
 	public static int provinceCost;
+
+	public static int settlementFoundDistance;
+	public static int settlementLargePopulationThreshold;
 	
 	public static HashMap<String, String> icons = new HashMap<>();
 

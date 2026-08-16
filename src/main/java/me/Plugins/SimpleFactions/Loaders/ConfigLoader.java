@@ -22,7 +22,7 @@ public class ConfigLoader {
             e.printStackTrace();
         }
 		Cache.mapRef = config.getString("map-reference", "main");
-		Cache.worldName = config.getString("world-name", "TFMC_S2");
+		Cache.worldName = config.getString("world-name", "TFMC_Map");
 
 		Cache.maxMembers = config.getInt("max-members", 64);
 		Cache.maxWealthPrestige = config.getInt("max-prestige-from-wealth", 1000);
@@ -35,6 +35,9 @@ public class ConfigLoader {
 		Cache.mapEnabled = config.getBoolean("enable-map", false);
 
 		Cache.provinceCost = config.getInt("province-cost", 50);
+
+		Cache.settlementFoundDistance = config.getInt("settlement-found-distance", 2);
+		Cache.settlementLargePopulationThreshold = config.getInt("settlement-large-population-threshold", 8);
 
 		Cache.branchUpgradeCost = config.getDouble("branch-upgrade-cost", 100.0);
 		Cache.branchUpgradeExponent = config.getDouble("branch-upgrade-exponent", 1.1);

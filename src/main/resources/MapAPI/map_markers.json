@@ -1,0 +1,22 @@
+{
+  "map_id": "dev",
+  "exported_at": "2026-08-16T10:32:12.260044351Z",
+  "settlement_large_population_threshold": 8,
+  "settlements": [
+    {
+      "id": "Lanbury",
+      "name": "§x§a§3§a§1§8§4Lanbury",
+      "faction_id": "Lantan",
+      "province_id": 705,
+      "center_x": 1748,
+      "center_z": 2739,
+      "population": 1,
+      "marker_size": "small",
+      "kind": "faction_capital",
+      "provinces": [
+        705,
+        704
+      ]
+    }
+  ]
+}

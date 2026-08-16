@@ -1,4 +1,6 @@
 guild:
   name: "#bda464Guild"
-Realm:
+  default: true
+realm:
   name: "#5eabc4Realm"
+  base: true

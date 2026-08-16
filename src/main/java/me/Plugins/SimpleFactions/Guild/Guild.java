@@ -38,6 +38,7 @@ import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.settlement.handler.CapitalResult;
 import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
 import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Database.GuildBranchData;
@@ -201,18 +202,45 @@ public class Guild {
     }
 
     public void relocate(Faction f, int newCapital) {
+        relocate(f, newCapital, null, null);
+    }
+
+    public void relocate(Faction newFaction, int newCapital, Player actor, String settlementNameOpt) {
         if(isBase()) return;
-        if(f.getId().equalsIgnoreCase(host.getId())) return;
-        Faction origin = FactionManager.getByString(this.host.getId());
-        if(origin != null) {
-            origin.getGuildHandler().removeGuild(id);
-        }
-        f.getGuildHandler().addGuild(this);
-        this.host = f;
+        if(newFaction.getId().equalsIgnoreCase(host.getId())) return;
+        Faction oldFaction = host;
+
+        oldFaction.getGuildHandler().removeGuild(id);
+        newFaction.getGuildHandler().addGuild(this);
+        this.host = newFaction;
+
         if(newCapital != -1) {
             setCapital(newCapital);
+        } else {
+            setCapital(-1);
         }
-        
+
+        if(newCapital != -1 && actor != null) {
+            CapitalResult result = newFaction.getSettlementHandler()
+                    .onGuildRelocateTo(actor, this, newCapital, settlementNameOpt);
+            actor.sendMessage(result.getMessage());
+        }
+    }
+
+    public CapitalResult relocateWithinFaction(Player actor, int newCapital, String settlementNameOpt) {
+        if(isBase()) {
+            return CapitalResult.fail("§cCannot relocate the main guild");
+        }
+        Faction faction = host;
+
+        setCapital(newCapital);
+
+        CapitalResult result = faction.getSettlementHandler()
+                .onGuildRelocateTo(actor, this, newCapital, settlementNameOpt);
+        if(actor != null) {
+            actor.sendMessage(result.getMessage());
+        }
+        return result;
     }
 
     public void tick() {
@@ -316,8 +344,19 @@ public class Guild {
 		return capital != -1;
 	}
     public void setCapital(int i) {
+        setCapital(i, true);
+    }
+
+    public void setCapital(int i, boolean notifySettlement) {
+        if (isBase()) {
+            return;
+        }
+        int old = capital;
         capital = i;
         SimpleFactions.getInstance().getProvinceManager().recalculateForSingleGuild(this, true);
+        if (notifySettlement && host != null && old != -1 && old != i) {
+            host.getSettlementHandler().onGuildDepartedCapital(old);
+        }
     }
     public String getRGB() {
         return isBase() ? host.getRGB() : rgb;

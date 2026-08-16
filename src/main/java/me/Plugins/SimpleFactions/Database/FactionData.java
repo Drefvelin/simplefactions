@@ -63,6 +63,8 @@ public class FactionData {
 
     public List<GuildData> guilds = new ArrayList<>();
 
+    public List<SettlementData> settlements = new ArrayList<>();
+
     public GovernmentData governmentData;
 
     @SerializedName("faction modifiers")

@@ -1,10 +1,12 @@
 # Settlements
 
+> **Implementation status:** Shipped in **step 42** (2026-08-15): SF settlement core, `map_markers` export (`population`, `marker_size`), TFMCWeb gateway for map HTTP, PS `GET /data/markers`, frontend settlement marker layer on political map modes.
+
 Settlements are **named cities** on the political map. A faction owns zero or more settlements. Each settlement has a **centre province**, a **display name**, **map coordinates** for the web marker, and an explicit **list of provinces** that belong to the city.
 
 Guild and faction **capitals** are separate: they point at a province. Whether a capital “lives in” a city is derived — a guild counts toward a settlement’s population when its capital province is in that settlement’s province list.
 
-This document is the product spec for implementation (step 42). Code lives under the lowercase `settlement` package; see [Package layout](#package-layout).
+This document is the product spec for implemented (step 42, 2026-08-15) behaviour. Code lives under the lowercase `settlement` package; see [Package layout](#package-layout).
 
 ---
 
@@ -98,16 +100,30 @@ hops(P, S) = minimum land hops from P to S.centerProvince
 
 Config: `settlement-found-distance` → `Cache.settlementFoundDistance` (default **2**).
 
+Config: `settlement-large-population-threshold` → `Cache.settlementLargePopulationThreshold` (default **8**). Settlements with more than this many guild capitals in the city export `marker_size: large` for the web map.
+
 ---
 
 ## Commands
 
 Player stands in the target province. Block coords are taken from the player’s location at command time for **new** settlements (marker position).
 
-### `/faction setcapital [name]`
+### `/faction claim`
+
+Expansion only — adds territory to an existing faction. Does **not** set capital or found a settlement.
 
 | Situation | Behaviour |
 |-----------|-----------|
+| Faction has **0 provinces** | Reject — use `/faction setcapital <name>` instead |
+| Faction already has land | Normal claim; adjacent-province rules apply; `onProvinceClaimed` may grow settlement borders |
+
+### `/faction setcapital [name]`
+
+If the faction does not own the standing province, **claims it first** (same as guild `setcapital`).
+
+| Situation | Behaviour |
+|-----------|-----------|
+| Faction has **0 provinces** | **Require** `name` → claim + found settlement + set faction capital |
 | `P` already in settlement `S` | Set faction capital to `P`. **Must** be `S.centerProvince` — reject if `P` is only an outer province |
 | `P` not in any list, `hops(P, S) == 1` for some `S` | Join `S`: set capital, add `P` to `S.provinces` if missing, tell player |
 | `P` not in any list, `hops(P, S) ≥ 2` for all `S` | **Require** `name` → found new settlement |
@@ -242,6 +258,24 @@ There is **no** rename command. Moving is relocate + settlement rules at the des
 
 ---
 
+## Guild departure
+
+When a guild **leaves** a city's population — capital cleared or guild removed from the faction while capital was still set — apply the same disband rule as relocate on the old faction:
+
+1. Let `S` = settlement containing the guild's former capital (if any).
+2. If **no** guild in that faction still has `capital ∈ S.provinces` → **dissolve** `S`.
+
+**Covers:** cross-faction relocate, intra-faction relocate, evict (`Guild.toLandless`), guild delete, elevate.
+
+**Hooks (implementation):**
+
+- `Guild.setCapital` — when a non-base guild's capital changes away from province `P`, call `onGuildDepartedCapital(P)`.
+- `GuildHandler.removeGuild` — if the guild still has a capital when removed, call `onGuildDepartedCapital` before dropping it from the faction list.
+
+Internal capital clears during `dissolve` and temporary claim shims use `setCapital(i, notifySettlement=false)` to avoid re-entrant departure checks.
+
+---
+
 ## Population
 
 Not stored. Computed:
@@ -266,8 +300,16 @@ Export each settlement for ProvinceSystem (`map_markers` sidecar or equivalent):
 | `province_id` | `centerProvince` |
 | Marker position | `centerX`, `centerZ` (PS converts to map pixels) |
 | `kind` | `faction_capital` if `faction.capital == centerProvince`; else `settlement` |
+| `population` | `getPopulation(settlement).size()` (guild capitals in city) |
+| `marker_size` | `large` if `population > settlement-large-population-threshold`; else `small` |
+
+Web map ([42.09](../../ProvinceSystem/Planning/batches/step-42/09-frontend-markers.md)): `kind === faction_capital` uses `capital_settlement_small` / `capital_settlement_large` PNGs; other settlements use `settlement_small` / `settlement_large` (size from `marker_size`).
+
+Root payload may include `settlement_large_population_threshold` from SF config (default **8** — large when population **> 8**).
 
 Guild seats in the same city do not get separate markers in v1.
+
+HTTP upload uses **TFMCWeb** `ProvinceSystemGateway` ([step 42.07](../../ProvinceSystem/Planning/batches/step-42/07-sf-tfmcweb-gateway.md)), not SF-local REST URL.
 
 ---
 

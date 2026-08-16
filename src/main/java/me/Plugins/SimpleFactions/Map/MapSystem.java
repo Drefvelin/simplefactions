@@ -16,6 +16,7 @@ import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
+import me.Plugins.SimpleFactions.Map.export.Markers;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
@@ -51,10 +52,12 @@ public class MapSystem {
 	public void uploadAll() {
 		exportProvinces();
 		exportGuilds();
+		exportMarkers();
 		compiler.exportAllFactionsToNationJson();
 		RestServer.upload("nation", new File("plugins/SimpleFactions/MapAPI/nation.json"));
 		RestServer.upload("province_data", new File("plugins/SimpleFactions/MapAPI/province_data.json"));
 		RestServer.upload("guilds", new File("plugins/SimpleFactions/MapAPI/guilds.json"));
+		RestServer.upload("map_markers", new File("plugins/SimpleFactions/MapAPI/map_markers.json"));
 		RestServer.upload("county", new File("plugins/SimpleFactions/Input/county.json"));
 		RestServer.upload("duchy", new File("plugins/SimpleFactions/Input/duchy.json"));
 		RestServer.upload("kingdom", new File("plugins/SimpleFactions/Input/kingdom.json"));
@@ -146,10 +149,6 @@ public class MapSystem {
 		}
 		p.sendMessage(stolen ? "§aSuccessfully  claimed province "+province+" §afrom "+owner.getName() : "§aSuccessfully  claimed province "+province);
 		f.addProvince(province);
-		if(f.getProvinces().size() == 1) {
-			f.setCapital(province);
-			p.sendMessage("§aThis province has been set as your capital!");
-		}
 	}
 
 	public Faction getRelocationTarget(Player p) {
@@ -203,6 +202,16 @@ public class MapSystem {
 			//RestServer.upload("provinces", out); not yet
 		} catch (Exception e) {
 			Bukkit.getLogger().severe("[SimpleFactions] Failed to export guilds.json");
+			e.printStackTrace();
+		}
+	}
+
+	public void exportMarkers() {
+		try {
+			File out = new File("plugins/SimpleFactions/MapAPI/map_markers.json");
+			Markers.export(out);
+		} catch (Exception e) {
+			Bukkit.getLogger().severe("[SimpleFactions] Failed to export map_markers.json");
 			e.printStackTrace();
 		}
 	}

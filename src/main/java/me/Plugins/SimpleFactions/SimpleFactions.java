@@ -5,6 +5,7 @@ import java.io.File;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.ConfigLoader;
@@ -25,6 +26,7 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.PlayerManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
+import me.Plugins.SimpleFactions.Managers.RelocationPrompt;
 import me.Plugins.SimpleFactions.Managers.RequestManager;
 import me.Plugins.SimpleFactions.Managers.SessionManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
@@ -62,6 +64,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final TitleManager titleManager = new TitleManager();
 	private final PlayerManager playerManager = new PlayerManager();
 	private final SessionManager sessionManager = new SessionManager();
+	private final RelocationPrompt relocationPrompt = new RelocationPrompt();
 	private ProvinceManager provinceSnapshot = new ProvinceManager();
 	
 	@Override
@@ -72,6 +75,12 @@ public class SimpleFactions extends JavaPlugin{
 		createConfigs();
 		registerListeners();
 		loadConfigs();
+		if (Cache.mapEnabled && !getServer().getPluginManager().isPluginEnabled("TFMCWeb")) {
+			getLogger().severe(
+				"[SimpleFactions] enable-map is true but TFMCWeb is not loaded. "
+				+ "Map upload, province lookup, and regen require TFMCWeb + api.base-url / api.plugin-key."
+			);
+		}
 		db.loadFactions();
 		getCommand(commands.cmd1).setExecutor(commands);
 		getCommand(commands.cmd2).setExecutor(commands);
@@ -132,6 +141,7 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(titleManager, this);
 		getServer().getPluginManager().registerEvents(playerManager, this);
 		getServer().getPluginManager().registerEvents(sessionManager, this);
+		getServer().getPluginManager().registerEvents(relocationPrompt, this);
 		getServer().getPluginManager().registerEvents(factionManager, this);
 	}
 	public void createFolders() {

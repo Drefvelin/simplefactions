@@ -23,6 +23,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.settlement.handler.CapitalResult;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Permissions;
@@ -345,38 +346,32 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cYou need to be a guild leader to withdraw from the guild bank");
 				}
 				return true;
-			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("setcapital") && args.length == 1) {
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("setcapital") && (args.length == 1 || args.length == 2)) {
 				Guild g = FactionManager.getGuildByLeader(p.getName());
 				if(g == null) {
 					p.sendMessage("§cYou must be the leader of a guild to set the capital");
 					return true;
 				}
-				if(g.hasCapital()) {
-					p.sendMessage("§cYour guild already has a capital");
-					return true;
-				}
 				int claim = RestServer.getProvince(p);
 				if(claim == -2) {
 					p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
-				} else {
-					if(claim == 0) {
-						p.sendMessage("§cThis location has no province!");
-						return true;
-					}
-					Faction owner = FactionManager.getByProvince(claim);
-					if(owner != null && !owner.getId().equalsIgnoreCase(g.getFaction().getId())) {
-						p.sendMessage("§cThis province is already owned by another faction!");
-						return true;
-					} else if(!g.getFaction().getProvinces().contains(claim)) {
-						FactionManager.getMap().claim(p, g.getFaction(), claim, true);
-					}
-				}
-				if(!g.getFaction().getProvinces().contains(claim)) {
 					return true;
 				}
-				g.setCapital(claim);
-				p.sendMessage("§aCapital set!");
-				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				if(claim == 0) {
+					p.sendMessage("§cThis location has no province!");
+					return true;
+				}
+				if(!tryClaimForCapital(p, g.getFaction(), claim)) {
+					return true;
+				}
+				String name = args.length == 2 ? args[1] : null;
+				CapitalResult result = g.getFaction().getSettlementHandler()
+						.resolveGuildCapital(p, g, claim, name);
+				p.sendMessage(result.getMessage());
+				if(result.isSuccess()) {
+					g.setCapital(claim);
+					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				}
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("setbanner") && args.length == 1) {
 				Guild g = FactionManager.getGuildByLeader(p.getName());
@@ -445,11 +440,16 @@ public class CommandManager implements Listener, CommandExecutor{
 				if(!factionCreateEvent.isCancelled()) {
 					FactionManager.addFaction(f);
 					p.sendMessage("§aFaction "+f.getName()+" §acreated!");
+					p.sendMessage("§7Use §e/faction setcapital <name> §7to claim your first province and found your capital.");
 				}
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("claim") && args.length == 1) {
 				if(FactionManager.getByLeader(p.getName()) != null) {
 					Faction f = FactionManager.getByMember(p.getName());
+					if(f.getProvinces().isEmpty()) {
+						p.sendMessage("§cUse §e/faction setcapital <name> §cto claim your first province and found your capital city.");
+						return true;
+					}
 					int claim = RestServer.getProvince(p);
 					if(claim == -2) {
 						p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
@@ -738,31 +738,35 @@ public class CommandManager implements Listener, CommandExecutor{
 				f.setRulerTitle(s);
 				p.sendMessage("§aFaction ruler title changed to "+f.getRulerTitle());
 				return true;
-			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setcapital") && args.length == 1) {
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setcapital") && (args.length == 1 || args.length == 2)) {
 				Faction f = FactionManager.getByLeader(p.getName());
 				if(f == null) {
 					p.sendMessage("§cYou must be the leader of a faction to set the capital");
 					return true;
 				}
-				if(f.hasCapital()) {
-					p.sendMessage("§cYour faction already has a capital");
-					return true;
-				}
 				int claim = RestServer.getProvince(p);
 				if(claim == -2) {
 					p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
-				} else {
-					if(claim == 0) {
-						p.sendMessage("§cThis location has no province!");
-						return true;
-					} else if(!f.getProvinces().contains(claim)) {
-						p.sendMessage("§cYour faction doesn't own this province!");
-						return true;
-					}
+					return true;
 				}
-				f.setCapital(claim);
-				p.sendMessage("§aCapital set!");
-				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				if(claim == 0) {
+					p.sendMessage("§cThis location has no province!");
+					return true;
+				}
+				if(f.getProvinces().isEmpty() && args.length < 2) {
+					p.sendMessage("§cName required to found your capital city: §e/faction setcapital <name>");
+					return true;
+				}
+				if(!tryClaimForCapital(p, f, claim)) {
+					return true;
+				}
+				String name = args.length == 2 ? args[1] : null;
+				CapitalResult result = f.getSettlementHandler().resolveFactionCapital(p, claim, name);
+				p.sendMessage(result.getMessage());
+				if(result.isSuccess()) {
+					f.setCapital(claim);
+					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				}
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setrulingsystem") && args.length == 2) {
 				Faction f = FactionManager.getByLeader(p.getName());
@@ -1317,5 +1321,17 @@ public class CommandManager implements Listener, CommandExecutor{
 			p.sendMessage("§a[SimpleFactions]§c Error with command format, use the gameplay guide for a list of commands");
 		}
 		return false;
+	}
+
+	private boolean tryClaimForCapital(Player p, Faction f, int claim) {
+		Faction owner = FactionManager.getByProvince(claim);
+		if(owner != null && !owner.getId().equalsIgnoreCase(f.getId())) {
+			p.sendMessage("§cThis province is already owned by another faction!");
+			return false;
+		}
+		if(!f.getProvinces().contains(claim)) {
+			FactionManager.getMap().claim(p, f, claim, true);
+		}
+		return f.getProvinces().contains(claim);
 	}
 }
