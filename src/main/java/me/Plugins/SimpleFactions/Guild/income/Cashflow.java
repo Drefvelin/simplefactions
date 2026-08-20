@@ -29,7 +29,7 @@ public enum Cashflow {
     TRADE_UPKEEP("#d6645aTrade Upkeep", true, false),
     UPGRADES_UPKEEP("#c46054Upgrades Upkeep", true, false),
     PENALTIES("#c74c3fPenalties", true, false),
-    FORTS("#706964Forts", true, false);
+    INSTALLATIONS("#706964Installations", true, false);
 
     private final String display;
     private final boolean affectsInflation;

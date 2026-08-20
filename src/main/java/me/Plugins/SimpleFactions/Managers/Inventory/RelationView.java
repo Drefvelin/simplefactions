@@ -10,6 +10,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Diplomacy.Attitude;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
@@ -22,7 +23,6 @@ import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Tier;
-import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 
 public class RelationView {
@@ -129,7 +129,14 @@ public class RelationView {
 				tradeAgreementView(null, p, f, true);
 			} else if(e.getSlot() == 24) {
 				Faction attacker = FactionManager.getByLeader(p.getName());
-				if(attacker.getRelation(f.getId()).getOpinion() > -50) {
+				if (attacker == null) return;
+				// DEBUG: declare pre-checks disabled for war testing — re-enable before production
+				/*
+				if (Cache.warRequireDeclareCode) {
+					p.sendMessage("§cWar declaration requires a staff code (not enabled yet).");
+					return;
+				}
+				if(attacker.getRelation(f.getId()).getOpinion() > Cache.warDeclareOpinionThreshold) {
 					p.sendMessage("§cYour opinion of the target is too high");
 					return;
 				}
@@ -137,29 +144,13 @@ public class RelationView {
 					p.sendMessage("§cYour faction is already part of a war with the target!");
 					return;
 				}
-				if(f.numOnline() < 0){
+				if(f.numOnline() < 1){
 					p.sendMessage("§cCannot declare war while none of the target faction members are online!");
 					return;
 				}
-				/*
-				if(WarManager.getByFaction(attacker) != null) {
-					p.sendMessage("§cYour faction is already part of another war!");
-					return;
-				}
-				if(WarManager.getByFaction(f) != null) {
-					p.sendMessage("§cThis faction is already at war!");
-					return;
-				}
 				*/
-				boolean civilWar = false;
-				if(RelationManager.endVassalage(attacker, f, true)) civilWar = true;
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-				War w = WarManager.addWar(new War(attacker, f));
-				if(civilWar) {
-					w.getParticipant(attacker).setCivilWar(true);
-					w.getParticipant(f).setCivilWar(true);
-				}
-				inv.warList(p);
+				inv.openDeclareWarGoalPicker(p, attacker, f);
 			}
 			
 		} else if(e.getView().getTitle().equalsIgnoreCase("§7Change Attitude")) {

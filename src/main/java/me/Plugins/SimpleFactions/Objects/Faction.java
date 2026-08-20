@@ -66,6 +66,7 @@ import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawEffect;
 import me.Plugins.SimpleFactions.laws.LawGroup;
+import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
 import me.Plugins.SimpleFactions.settlement.handler.SettlementHandler;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
@@ -116,6 +117,9 @@ public class Faction {
 
 	//Settlements
 	private final SettlementHandler settlementHandler;
+
+	//Installations
+	private final InstallationHandler installationHandler;
 	
 	public Faction(String id, String leader) {
 		this.id = Formatter.formatId(id);
@@ -140,6 +144,7 @@ public class Faction {
 		this.military = new Military(this);
 		this.government = new Government(this);
 		this.settlementHandler = new SettlementHandler(this);
+		this.installationHandler = new InstallationHandler(this);
 		this.taxHandler = new TaxHandler(this, 5, 5, 5, 5, 5);
 		lawHandler.apply();
 		this.guildHandler = new GuildHandler(this);
@@ -171,6 +176,7 @@ public class Faction {
 		this.military = new Military(this);
 		this.government = new Government(this);
 		this.settlementHandler = new SettlementHandler(this);
+		this.installationHandler = new InstallationHandler(this);
 		this.taxHandler = new TaxHandler(this, 5, 5, 5, 5, 5);
 		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(guild);
@@ -242,6 +248,7 @@ public class Faction {
 		}
 		this.government = governmentData != null ? new Government(this, governmentData) : new Government(this);
 		this.settlementHandler = new SettlementHandler(this);
+		this.installationHandler = new InstallationHandler(this);
 		lawHandler.apply();
 		createBanner(bannerPatterns);
 		updateTier();
@@ -397,6 +404,7 @@ public class Faction {
 		if(getTaxRate() + tax > 100) setTaxRate(100-tax);
 		
 		military.tick();
+		installationHandler.tick();
 		for(Guild guild : guildHandler.getGuilds()) {
 			guild.tick();
 		}
@@ -408,10 +416,15 @@ public class Faction {
 		*/
 		government.tick();
 		settlementHandler.validate();
+		installationHandler.validate();
 	}
 
 	public SettlementHandler getSettlementHandler() {
 		return settlementHandler;
+	}
+
+	public InstallationHandler getInstallationHandler() {
+		return installationHandler;
 	}
 
 	public ProvinceHandler getProvinceHandler() {
@@ -1193,6 +1206,7 @@ public class Faction {
 		if(armyCost > 0) {
 			getBank().withdraw(armyCost);
 		}
+		installationHandler.payDailyUpkeep();
 		provinceCap();
 		for(Guild guild : guildHandler.getGuilds()) {
 			guild.newDay();

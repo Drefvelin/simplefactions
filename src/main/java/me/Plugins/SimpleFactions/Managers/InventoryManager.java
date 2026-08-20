@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -21,13 +22,18 @@ import org.bukkit.scheduler.BukkitRunnable;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.loans.Loan;
+import me.Plugins.SimpleFactions.Managers.Holder.CampaignInventoryHolder;
+import me.Plugins.SimpleFactions.Managers.Holder.DeclareWarHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.SFCombinedInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
+import me.Plugins.SimpleFactions.Managers.Inventory.CampaignView;
+import me.Plugins.SimpleFactions.Managers.Inventory.DeclareWarView;
 import me.Plugins.SimpleFactions.Managers.Inventory.ElectionView;
 import me.Plugins.SimpleFactions.Managers.Inventory.FactionView;
 import me.Plugins.SimpleFactions.Managers.Inventory.GovernmentView;
 import me.Plugins.SimpleFactions.Managers.Inventory.GuildView;
+import me.Plugins.SimpleFactions.Managers.Inventory.InstallationView;
 import me.Plugins.SimpleFactions.Managers.Inventory.InventoryUpdater;
 import me.Plugins.SimpleFactions.Managers.Inventory.LawView;
 import me.Plugins.SimpleFactions.Managers.Inventory.LoanPayment;
@@ -45,7 +51,9 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.War.Participant;
 import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.progression.WhitePeaceService;
 import me.Plugins.SimpleFactions.enums.SFGUI;
+import me.Plugins.SimpleFactions.installation.handler.ConstructResult;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.movement.Movement;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
@@ -57,6 +65,8 @@ import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class InventoryManager implements Listener{
 	public HashMap<Player, Faction> confirming = new HashMap<>();
+	public HashMap<Player, Integer> campaignConfirmWar = new HashMap<>();
+	public HashMap<Player, Boolean> installationConfirmFromCommand = new HashMap<>();
 	public HashMap<Player, TaxChange> taxChange = new HashMap<>();
 	public HashMap<Player, LoanPayment> loanPayments = new HashMap<>();
 	
@@ -98,7 +108,9 @@ public class InventoryManager implements Listener{
 	
 	///WAAAAR
 	public WarView warView = new WarView(this);
-	
+	public CampaignView campaignView = new CampaignView(this);
+	public DeclareWarView declareWarView = new DeclareWarView(this);
+
 	public void warList(Player player) {
 		warView.warList(player);
 	}
@@ -111,8 +123,28 @@ public class InventoryManager implements Listener{
 		warView.warGoalView(i, player, w, target, page, open);
 	}
 	
-	public void participantView(Inventory i, Player player, War w, Participant p, boolean open) { 
+	public void participantView(Inventory i, Player player, War w, Participant p, boolean open) {
 		warView.participantView(i, player, w, p, open); 
+	}
+
+	public void openCampaignView(Player player, War war) {
+		if (war == null || !war.isActive()) {
+			player.sendMessage("§cWar not found.");
+			return;
+		}
+		var autoEnd = WhitePeaceService.recalculateProposals(war);
+		if (autoEnd.isPresent()) {
+			WarManager.endWar(war, autoEnd.get());
+			player.sendMessage("§aWar ended: " + autoEnd.get().toJson().replace('_', ' ') + ".");
+			warList(player);
+			return;
+		}
+		WarManager.persist(war);
+		campaignView.campaignView(player, war, 0, true);
+	}
+
+	public void openDeclareWarGoalPicker(Player player, Faction attacker, Faction defender) {
+		declareWarView.openGoalPicker(player, attacker, defender);
 	}
 	
 	//Factions
@@ -193,6 +225,17 @@ public class InventoryManager implements Listener{
 	
 	public void militaryView(Inventory i, Player player, Faction f, boolean open) {
 		militaryView.militaryView(i, player, f, open);
+	}
+
+	//Installations
+	public InstallationView installationView = new InstallationView(this);
+
+	public void installationsView(Inventory i, Player player, Faction f, boolean open) {
+		installationView.installationsView(i, player, f, open);
+	}
+
+	public void installationDetailView(Player player, Faction f, String id) {
+		installationView.installationDetailView(player, f, id);
 	}
 	
 	//Relations
@@ -456,10 +499,27 @@ public class InventoryManager implements Listener{
 	}
 	
 	@EventHandler
+	public void dragInWarGui(InventoryDragEvent e) {
+		Inventory inv = e.getView().getTopInventory();
+		if (inv.getHolder() instanceof WarInventoryHolder
+				|| inv.getHolder() instanceof CampaignInventoryHolder
+				|| inv.getHolder() instanceof SFCombinedInventoryHolder
+				|| inv.getHolder() instanceof DeclareWarHolder) {
+			e.setCancelled(true);
+		}
+	}
+
+	@EventHandler
 	public void clickButton(InventoryClickEvent e) {
 		Player p = (Player) e.getWhoClicked();
-		if(e.getCurrentItem() == null) return;
 		Inventory inv = e.getView().getTopInventory();
+		if (inv.getHolder() instanceof WarInventoryHolder
+				|| inv.getHolder() instanceof CampaignInventoryHolder
+				|| inv.getHolder() instanceof SFCombinedInventoryHolder
+				|| inv.getHolder() instanceof DeclareWarHolder) {
+			e.setCancelled(true);
+		}
+		if(e.getCurrentItem() == null) return;
 		if(inv.getHolder() instanceof SFInventoryHolder) {
 			e.setCancelled(true);
 			SFInventoryHolder h = (SFInventoryHolder) inv.getHolder();
@@ -502,6 +562,12 @@ public class InventoryManager implements Listener{
 						break;
 					case MILITARY_VIEW:
 						factionView(p, f);
+						break;
+					case INSTALLATIONS_VIEW:
+						factionView(p, f);
+						break;
+					case INSTALLATION_DETAIL_VIEW:
+						installationsView(null, p, f, true);
 						break;
 					case RELATION_VIEW:
 						diplomacyView(null, p, f, true);
@@ -636,6 +702,9 @@ public class InventoryManager implements Listener{
 				lawView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.MILITARY_VIEW) {
 				militaryView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.INSTALLATIONS_VIEW
+					|| h.getType() == SFGUI.INSTALLATION_DETAIL_VIEW) {
+				installationView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.GOVERNMENT_VIEW 
 				|| h.getType() == SFGUI.PROPOSAL_VIEW
 				|| h.getType() == SFGUI.PROPOSALS
@@ -668,16 +737,31 @@ public class InventoryManager implements Listener{
 					|| h.getType() == SFGUI.TITLE_VIEW
 					|| (inv.getHolder() instanceof SFInventoryHolder && ((SFInventoryHolder) inv.getHolder()).getType().equals(SFGUI.TITLE_TYPE_VIEW))) {
 				tierTitleView.click(e, inv, p);
-			} else if(h.getType() == SFGUI.WAR_LIST
-					|| (inv.getHolder() instanceof WarInventoryHolder && ((WarInventoryHolder) inv.getHolder()).getType().equals(SFGUI.WAR_VIEW))
-					|| (inv.getHolder() instanceof SFCombinedInventoryHolder && ((SFCombinedInventoryHolder) inv.getHolder()).getType().equals(SFGUI.PARTICIPANT_VIEW))
-					|| (inv.getHolder() instanceof SFCombinedInventoryHolder && ((SFCombinedInventoryHolder) inv.getHolder()).getType().equals(SFGUI.WARGOAL_VIEW))) {
+			} else if(h.getType() == SFGUI.WAR_LIST) {
 				warView.click(e, inv, p);
 			} else if(inv.getHolder() instanceof SFInventoryHolder && ((SFInventoryHolder) inv.getHolder()).getType().equals(SFGUI.TAX_VIEW)) {
 				taxView.click(e, inv, p);
 			} else if(inv.getHolder() instanceof SFInventoryHolder && ((SFInventoryHolder) inv.getHolder()).getType().equals(SFGUI.TAX_VIEW_SPECIFIC)) {
 				taxView.click(e, inv, p);
 			}
+		} else if (inv.getHolder() instanceof WarInventoryHolder warHolder) {
+			e.setCancelled(true);
+			if (warHolder.getType() == SFGUI.WAR_VIEW) {
+				warView.click(e, inv, p);
+			}
+		} else if (inv.getHolder() instanceof CampaignInventoryHolder campaignHolder) {
+			e.setCancelled(true);
+			if (campaignHolder.getType() == SFGUI.CAMPAIGN_VIEW) {
+				campaignView.click(e, inv, p);
+			}
+		} else if (inv.getHolder() instanceof SFCombinedInventoryHolder combinedHolder) {
+			e.setCancelled(true);
+			SFGUI combinedType = combinedHolder.getType();
+			if (combinedType == SFGUI.PARTICIPANT_VIEW || combinedType == SFGUI.WARGOAL_VIEW) {
+				warView.click(e, inv, p);
+			}
+		} else if (inv.getHolder() instanceof DeclareWarHolder) {
+			declareWarView.click(e, inv, p);
 		}
 		if(e.getView().getTitle().equalsIgnoreCase("§7Confirm Action")) {
 			e.setCancelled(true);
@@ -716,6 +800,52 @@ public class InventoryManager implements Listener{
 					factionView(p, returnView);
 					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 				}
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "installation");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if(data != null) {
+				Faction f = confirming.get(p);
+				boolean fromCommand = installationConfirmFromCommand.getOrDefault(p, false);
+				installationConfirmFromCommand.remove(p);
+				if(item.getType().equals(Material.RED_CONCRETE)) {
+					if(fromCommand) {
+						installationsView(null, p, f, true);
+					} else {
+						installationDetailView(p, f, data);
+					}
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					return;
+				}
+				ConstructResult result = f.getInstallationHandler().deconstruct(data);
+				p.sendMessage(result.getMessage());
+				if(result.isSuccess()) {
+					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				} else {
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				}
+				installationsView(null, p, f, true);
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "campaign_hold");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if (data != null) {
+				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
+				campaignView.handleConfirm(p, "campaign_hold", data, confirmed);
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "campaign_counter");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if (data != null) {
+				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
+				campaignView.handleConfirm(p, "campaign_counter", data, confirmed);
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "campaign_accept_peace");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if (data != null) {
+				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
+				campaignView.handleConfirm(p, "campaign_accept_peace", data, confirmed);
 				return;
 			}
 		}

@@ -15,8 +15,12 @@ import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
+import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.installation.Installation;
+import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.TLibs.Utils.TabCleaner;
 
 public class TabCompletion implements TabCompleter{
@@ -26,6 +30,37 @@ public class TabCompletion implements TabCompleter{
 			return true;
 		}
 		return false;
+	}
+
+	private List<String> completeConstructKinds(String[] args) {
+		List<String> completions = new ArrayList<>();
+		for (InstallationKind kind : InstallationKind.values()) {
+			completions.add(kind.getCommandName());
+		}
+		if (args.length >= 2) {
+			String prefix = args[1].toLowerCase();
+			completions.removeIf(kind -> !kind.toLowerCase().startsWith(prefix));
+		}
+		return completions;
+	}
+
+	private List<String> completeDeconstructIds(Player p, String[] args) {
+		List<String> completions = new ArrayList<>();
+		Faction f = FactionManager.getByLeader(p.getName());
+		if (f == null) {
+			return completions;
+		}
+		for (Installation installation : f.getInstallationHandler().getAll()) {
+			completions.add(installation.getId());
+		}
+		if (f.getInstallationHandler().getPendingConstruction() != null) {
+			completions.add(f.getInstallationHandler().getPendingConstruction().getId());
+		}
+		if (args.length >= 2) {
+			String prefix = args[1].toLowerCase();
+			completions.removeIf(id -> !id.toLowerCase().startsWith(prefix));
+		}
+		return completions;
 	}
 
     @Override
@@ -55,6 +90,27 @@ public class TabCompletion implements TabCompleter{
 				return completions;
 			}
 		}
+		else if(cmd.getName().equalsIgnoreCase("faction")
+				&& args.length >= 1
+				&& args.length <= 2
+				&& args[0].equalsIgnoreCase("construct")) {
+			if(sender instanceof Player) {
+				Player p = (Player) sender;
+				if(FactionManager.getByLeader(p.getName()) == null) {
+					return new ArrayList<>();
+				}
+				return completeConstructKinds(args);
+			}
+		}
+		else if(cmd.getName().equalsIgnoreCase("faction")
+				&& args.length >= 1
+				&& args.length <= 2
+				&& args[0].equalsIgnoreCase("deconstruct")) {
+			if(sender instanceof Player) {
+				Player p = (Player) sender;
+				return completeDeconstructIds(p, args);
+			}
+		}
 		else if(cmd.getName().equalsIgnoreCase("faction") && args.length >= 0 && args.length < 2 ) {
 			if(sender instanceof Player){
 				Player p = (Player) sender;
@@ -68,6 +124,8 @@ public class TabCompletion implements TabCompleter{
 				
 				if(FactionManager.getByLeader(p.getName()) != null) {
 					completions.add("claim");
+					completions.add("construct");
+					completions.add("deconstruct");
 					completions.add("unclaim");
 					completions.add("withdraw");
 					completions.add("setbank");
@@ -94,6 +152,8 @@ public class TabCompletion implements TabCompleter{
 					completions.add("fullregen");
 					completions.add("reloadtitles");
 					completions.add("endwar");
+					completions.add("warstatus");
+					completions.add("warpath");
 					completions.add("destroytitle");
 					completions.add("granttitle");
 					completions.add("transfersubject");
@@ -241,6 +301,12 @@ public class TabCompletion implements TabCompleter{
 				
 				return completions;
 			}
+		} else if(cmd.getName().equalsIgnoreCase("faction") && args.length >= 3 && args[0].equalsIgnoreCase("construct")){
+			if(sender instanceof Player){
+				List<String> completions = new ArrayList<>();
+				completions.add("<name>");
+				return completions;
+			}
 		} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("unclaim")){
 			if(sender instanceof Player){
 				List<String> completions = new ArrayList<String>();
@@ -357,6 +423,18 @@ public class TabCompletion implements TabCompleter{
 					List<String> completions = new ArrayList<String>();
 					completions.add("<amount>");
 					
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2
+					&& (args[0].equalsIgnoreCase("endwar")
+							|| args[0].equalsIgnoreCase("warstatus")
+							|| args[0].equalsIgnoreCase("warpath"))) {
+				if(sender instanceof Player){
+					List<String> completions = new ArrayList<>();
+					for (War war : WarManager.getActive()) {
+						completions.add(String.valueOf(war.getId()));
+					}
+					TabCleaner.cleanTab(completions, args);
 					return completions;
 				}
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("destroytitle")){

@@ -19,8 +19,53 @@ de-jure-requirement: 75.0
 # Map platform (step 42) — requires TFMCWeb softdepend + api.base-url configured
 enable-map: true
 map-reference: dev
-settlement-found-distance: 2
 settlement-large-population-threshold: 8
+port-sea-proximity-blocks: 20
+
+war:
+  require_declare_code: false
+  declare_opinion_threshold: -50
+  initiative_per_side: 4
+  declined_ally_stability_penalty: -30
+  battle_cadence:
+    first_battle_at_border: true
+    provinces_between_battles: 1
+  occupation:
+    include_enemy_neighbors: true
+  pathfinder:
+    neutral_penalty: 8.0
+    sea_pass_enabled: true
+    # water_cost: 0  # 0 = derive from terrain-modifiers WATER via 1/carry
+  battle_schedule:
+    window_start_hour: 20
+    window_end_hour: 24
+    vote_close_hour: 16
+    defender_choice_deadline_hour: 12
+    one_battle_per_day: true
+    first_battle_day_after_declare: true
+  battle_voting:
+    min_players: 4
+    require_smallest_side_full: true
+    pass_if_either: true
+    dev_min_players: 1
+
+# installation slots reserved for future VehicleFramework integration
+installations:
+  fort:
+    daily-upkeep: 50
+    construction-time: 10  # 432000 (5 days)
+    slots:
+      static_emplacement: 8
+  port:
+    daily-upkeep: 20
+    construction-time: 10  # 259200 (3 days)
+    slots:
+      ship: 10
+  airport:
+    daily-upkeep: 35
+    construction-time: 10  # 259200 (3 days)
+    slots:
+      aircraft: 10
 
 branch-upgrade-cost: 100.0
 branch-upgrade-exponent: 1.07
@@ -39,30 +84,37 @@ terrain-modifiers:
     - DRYLANDS 0.6
 
 icons:
-    - diplomacy(black_dye.14)
-    - overlord(black_dye.12)
-    - subject(black_dye.13)
-    - integrated_subject(black_dye.13)
-    - rival(black_dye.15)
-    - tributary(black_dye.16)
-    - suzerain(black_dye.17)
-    - ally(black_dye.18)
-    - war(black_dye.19)
-    - friendly(black_dye.20)
-    - neutral(black_dye.21)
-    - unfriendly(black_dye.22)
-    - hostile(black_dye.23)
-    - march(black_dye.24)
-    - palatinate(black_dye.25)
-    - mercantile(black_dye.26)
-    - tier(black_dye.27)
-    - titles(black_dye.28)
-    - county(black_dye.29)
-    - duchy(black_dye.30)
-    - kingdom(black_dye.31)
-    - empire(black_dye.32)
-    - independence(black_dye.14)
-    - usurp(black_dye.12)
+    - diplomacy(black_dye.5)
+    - overlord(black_dye.3)
+    - subject(black_dye.4)
+    - integrated_subject(black_dye.4)
+    - rival(black_dye.6)
+    - tributary(black_dye.7)
+    - suzerain(black_dye.8)
+    - ally(black_dye.9)
+    - war(black_dye.10)
+    - friendly(black_dye.11)
+    - neutral(black_dye.2)
+    - unfriendly(black_dye.13)
+    - hostile(black_dye.14)
+    - march(black_dye.15)
+    - installations(black_dye.15)
+    - palatinate(black_dye.16)
+    - mercantile(black_dye.17)
+    - tier(black_dye.18)
+    - titles(black_dye.19)
+    - county(black_dye.20)
+    - duchy(black_dye.21)
+    - kingdom(black_dye.22)
+    - empire(black_dye.23)
+    - independence(black_dye.5)
+    - usurp(black_dye.3)
+    - stability(black_dye.2)
+    - loans_given(black_dye.7)
+    - loans_taken(black_dye.8)
+    - guild_elevate(black_dye.4)
+    - guild_loans(black_dye.17)
+    - muster(black_dye.11)
 
 base-effects:
   favoured_guilds:

@@ -588,7 +588,7 @@ public class FactionManager implements Listener{
 			p.sendMessage("§cA city name is required to relocate here");
 			Player sp = Bukkit.getPlayerExact(sender.getLeader());
 			if(sp != null && sp.isOnline()) {
-				sp.sendMessage("§cRelocation failed — a city name is required at the destination");
+				sp.sendMessage("§cRelocation failed - a city name is required at the destination");
 			}
 			return;
 		}

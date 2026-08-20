@@ -62,7 +62,6 @@ public class ProvinceHandler {
 		provinces.add(i);
 		FactionManager.getMap().enqueue("nation", f.getRGB());
 		f.updateTier();
-		f.getSettlementHandler().onProvinceClaimed(i);
 	}
 
     public void removeProvince(int i, boolean destroyTitles) {
@@ -79,6 +78,7 @@ public class ProvinceHandler {
                     }
                 }
 				f.getSettlementHandler().onProvinceLost(i);
+				f.getInstallationHandler().onProvinceLost(i);
 				return;
 			}
 		}

@@ -12,6 +12,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Diplomacy.Attitude;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
@@ -48,8 +49,12 @@ public class RelationCreator {
 		if(r.hasThreshold()) {
 			addThreshold(lore, r.getThreshold());
 			lore.add("");
-			lore.add("§4Only click this if you have");
-			lore.add("§4an approved War Ticket in the discord!");
+			if (Cache.warRequireDeclareCode) {
+				lore.add("§4Only click this if you have");
+				lore.add("§4an approved War Ticket in the discord!");
+			} else {
+				lore.add("§7Select a war goal.");
+			}
 		}
 		lore.add(" ");
 		m.setLore(lore);

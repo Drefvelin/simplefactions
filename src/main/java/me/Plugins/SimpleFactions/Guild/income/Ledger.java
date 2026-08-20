@@ -13,9 +13,11 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.income.entry.PlayerEntry;
 import me.Plugins.SimpleFactions.Guild.loans.Loan;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
+import me.Plugins.SimpleFactions.Loaders.InstallationConfigLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
+import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Utils.DailyGuildTransfers;
@@ -162,8 +164,13 @@ public class Ledger {
             case TRADE_UPKEEP:
                 amount = -guild.getTradeBreakdown().getUpkeep();
                 break;
-            case FORTS:
-                //TODO implement
+            case INSTALLATIONS:
+                if (!guild.isBase()) {
+                    return 0;
+                }
+                for (Installation installation : f.getInstallationHandler().getAll()) {
+                    amount -= InstallationConfigLoader.getDailyUpkeep(installation.getKind());
+                }
                 break;
             case UPGRADES_UPKEEP:
                 for(Upgrade u : guild.getUpgrades()) {
@@ -242,7 +249,6 @@ public class Ledger {
 
                 // -------- NEGATIVE / COSTS --------
                 case TRADE_UPKEEP:
-                case FORTS:
                 case UPGRADES_UPKEEP:
                 case PENALTIES:
                 case GUILD_PAYMENTS:
@@ -354,7 +360,7 @@ public class Ledger {
             // They are simply added to this guild's daily delta.
             case TRADE:
             case TRADE_UPKEEP:
-            case FORTS:
+            // INSTALLATIONS: withdrawn in Faction.newDay() — getIncome() is ledger GUI display only
             case UPGRADES_UPKEEP:
             case PENALTIES:
             case CITIZENS:

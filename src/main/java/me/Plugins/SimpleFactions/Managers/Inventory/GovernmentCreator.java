@@ -175,9 +175,8 @@ public class GovernmentCreator {
 
 
     public ItemStack createStabilityItem(Faction f) {
-        ItemStack item = new ItemStack(Material.BLACK_DYE);
+        ItemStack item = IconGetter.getIconOrDefault("stability", Material.BLACK_DYE);
         ItemMeta m = item.getItemMeta();
-        m.setCustomModelData(21);
         Government gov = f.getGovernment();
         m.setDisplayName(StringFormatter.formatHex("#85c265Stability§7: §e"+gov.getStabilityString()+"%"));
         List<String> lore = new ArrayList<String>();

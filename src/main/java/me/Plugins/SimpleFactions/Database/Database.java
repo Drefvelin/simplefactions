@@ -21,17 +21,14 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
-import me.Plugins.SimpleFactions.Loaders.WarGoalLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Tiers.Title;
-import me.Plugins.SimpleFactions.War.Participant;
-import me.Plugins.SimpleFactions.War.Side;
 import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.WarGoal;
+import me.Plugins.SimpleFactions.War.WarMapper;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawGroup;
@@ -145,6 +142,14 @@ public class Database {
                     f.getSettlementHandler().load(data.settlements);
                 }
 
+                if (data.installations != null) {
+                    f.getInstallationHandler().load(data.installations);
+                }
+
+                if (data.installationQueue != null) {
+                    f.getInstallationHandler().loadConstruction(data.installationQueue);
+                }
+
                 // --- Relations ---
                 for (String r : data.relations) {
                     FactionManager.addDBRelation(f, r);
@@ -249,6 +254,8 @@ public class Database {
             data.governmentData = f.getGovernment().serialize();
 
             data.settlements = f.getSettlementHandler().serialize();
+            data.installations = f.getInstallationHandler().serialize();
+            data.installationQueue = f.getInstallationHandler().serializeConstruction();
 
             for (int p : f.getProvinces()) data.provinces.add(p);
             for (Title t : f.getTitles()) data.titles.add(t.getId());
@@ -399,48 +406,12 @@ public class Database {
 			if (!folder.exists()) folder.mkdirs();
 
 			File file = new File(folder, "war_" + war.getId() + ".json");
-
-			WarData data = new WarData();
-			data.id = war.getId();
-			data.attackers = serializeSide(war.getAttackers());
-			data.defenders = serializeSide(war.getDefenders());
-
+			WarData data = WarMapper.toData(war);
 			JsonUtil.writeJson(file, data);
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
-	
-	private SideData serializeSide(Side side) {
-		SideData data = new SideData();
-		data.leader = side.getLeader().getId();
-
-		for (Participant p : side.getMainParticipants()) {
-			data.participants.add(serializeParticipant(p));
-		}
-
-		return data;
-	}
-
-	private ParticipantData serializeParticipant(Participant p) {
-		ParticipantData data = new ParticipantData();
-		data.leader = p.getLeader().getId();
-		data.civilWar = p.isCivilWar();
-
-		for (Faction s : p.getSubjects()) {
-			data.subjects.add(s.getId());
-		}
-
-		for (Map.Entry<Faction, Boolean> entry : p.getAllies().entrySet()) {
-			data.allies.put(entry.getKey().getId(), entry.getValue());
-		}
-
-		for (Map.Entry<Faction, WarGoal> entry : p.getWarGoals().entrySet()) {
-			data.warGoals.put(entry.getKey().getId(), entry.getValue().getId());
-		}
-
-		return data;
 	}
 
 	public List<War> loadWars() {
@@ -449,27 +420,20 @@ public class Database {
 
 		if (!folder.exists() || !folder.isDirectory()) return wars;
 
-		for (File file : folder.listFiles()) {
+		File[] files = folder.listFiles();
+		if (files == null) return wars;
+
+		for (File file : files) {
 			if (!file.getName().endsWith(".json")) continue;
 
 			try {
 				WarData data = JsonUtil.readJson(file, WarData.class);
 				if (data == null) continue;
 
-				Faction atkLeader = FactionManager.getByString(data.attackers.leader);
-				Faction defLeader = FactionManager.getByString(data.defenders.leader);
-
-				if (atkLeader == null || defLeader == null) continue;
-
-				War war = new War(data.id, atkLeader, defLeader);
-
-				war.getAttackers().getMainParticipants().clear();
-				war.getDefenders().getMainParticipants().clear();
-
-				loadParticipants(data.attackers, war.getAttackers());
-				loadParticipants(data.defenders, war.getDefenders());
-
-				wars.add(war);
+				War war = WarMapper.fromData(data);
+				if (war != null) {
+					wars.add(war);
+				}
 
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -477,45 +441,6 @@ public class Database {
 		}
 
 		return wars;
-	}
-
-	private void loadParticipants(SideData data, Side side) {
-		for (ParticipantData pData : data.participants) {
-
-			Faction leader = FactionManager.getByString(pData.leader);
-			if (leader == null) continue;
-
-			List<Faction> subjects = new ArrayList<>();
-			for (String id : pData.subjects) {
-				Faction f = FactionManager.getByString(id);
-				if (f != null) subjects.add(f);
-			}
-
-			Map<Faction, Boolean> allies = new HashMap<>();
-			for (Map.Entry<String, Boolean> entry : pData.allies.entrySet()) {
-				Faction f = FactionManager.getByString(entry.getKey());
-				if (f != null) allies.put(f, entry.getValue());
-			}
-
-			Map<Faction, WarGoal> warGoals = new HashMap<>();
-			for (Map.Entry<String, String> entry : pData.warGoals.entrySet()) {
-				Faction target = FactionManager.getByString(entry.getKey());
-				WarGoal goal = WarGoalLoader.getByString(entry.getValue());
-				if (target != null && goal != null) {
-					warGoals.put(target, goal);
-				}
-			}
-
-			Participant p = new Participant(
-					leader,
-					subjects,
-					allies,
-					warGoals,
-					pData.civilWar
-			);
-
-			side.getMainParticipants().add(p);
-		}
 	}
 
 	public void deleteWar(War war) {

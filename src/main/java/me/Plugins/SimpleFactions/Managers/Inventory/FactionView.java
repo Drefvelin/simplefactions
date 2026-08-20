@@ -116,6 +116,7 @@ public class FactionView {
 		i.setItem(29, creator.createMenuItem(player, f, MenuItemType.MILITARY));
 		if(f.canDissolve() && f.isLeader(player.getName())) i.setItem(30, creator.createDissolveItem(f));
 		i.setItem(31, creator.createMenuItem(player, f, MenuItemType.DIPLOMACY));
+		i.setItem(32, creator.createMenuItem(player, f, MenuItemType.INSTALLATIONS));
 		i.setItem(33, creator.createMenuItem(player, f, MenuItemType.TIER));
 		i.setItem(34, creator.createMenuItem(player, f, MenuItemType.TITLES));
 		i.setItem(53, inv.createBackButton(SFGUI.FACTION_VIEW));
@@ -238,6 +239,17 @@ public class FactionView {
 				Faction f = FactionManager.getByString(factionId);
 				if(f != null) {
 					inv.diplomacyView(null, p, f, true);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				}
+			} else if(e.getSlot() == 32) {
+				ItemStack item = e.getCurrentItem();
+				ItemMeta m = item.getItemMeta();
+				NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");
+				String factionId = m.getPersistentDataContainer().get(id, PersistentDataType.STRING);
+				if(factionId == null) return;
+				Faction f = FactionManager.getByString(factionId);
+				if(f != null) {
+					inv.installationsView(null, p, f, true);
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				}
 			} else if(e.getSlot() == 11) {

@@ -36,8 +36,31 @@ public class ConfigLoader {
 
 		Cache.provinceCost = config.getInt("province-cost", 50);
 
-		Cache.settlementFoundDistance = config.getInt("settlement-found-distance", 2);
 		Cache.settlementLargePopulationThreshold = config.getInt("settlement-large-population-threshold", 8);
+		Cache.portSeaProximityBlocks = config.getInt("port-sea-proximity-blocks", 20);
+
+		Cache.warRequireDeclareCode = config.getBoolean("war.require_declare_code", false);
+		Cache.warDeclareOpinionThreshold = config.getInt("war.declare_opinion_threshold", -50);
+		Cache.warInitiativePerSide = config.getInt("war.initiative_per_side", 4);
+		Cache.warFirstBattleAtBorder = config.getBoolean("war.battle_cadence.first_battle_at_border", true);
+		Cache.warProvincesBetweenBattles = config.getInt("war.battle_cadence.provinces_between_battles", 1);
+		Cache.warOccupationIncludeEnemyNeighbors = config.getBoolean("war.occupation.include_enemy_neighbors", true);
+		Cache.warDeclinedAllyStabilityPenalty = config.getInt("war.declined_ally_stability_penalty", -30);
+		Cache.warPathfinderNeutralPenalty = config.getDouble("war.pathfinder.neutral_penalty", 8.0);
+		Cache.warPathfinderSeaPassEnabled = config.getBoolean("war.pathfinder.sea_pass_enabled", true);
+		Cache.warPathfinderWaterCost = config.getDouble("war.pathfinder.water_cost", 0.0);
+
+		Cache.warBattleWindowStartHour = config.getInt("war.battle_schedule.window_start_hour", 20);
+		Cache.warBattleWindowEndHour = config.getInt("war.battle_schedule.window_end_hour", 24);
+		Cache.warVoteCloseHour = config.getInt("war.battle_schedule.vote_close_hour", 16);
+		Cache.warDefenderChoiceDeadlineHour = config.getInt("war.battle_schedule.defender_choice_deadline_hour", 12);
+		Cache.warOneBattlePerDay = config.getBoolean("war.battle_schedule.one_battle_per_day", true);
+		Cache.warFirstBattleDayAfterDeclare = config.getBoolean("war.battle_schedule.first_battle_day_after_declare", true);
+		Cache.warBattleVotingMinPlayers = config.getInt("war.battle_voting.min_players", 4);
+		Cache.warBattleVotingRequireSmallestSideFull = config.getBoolean("war.battle_voting.require_smallest_side_full", true);
+		Cache.warBattleVotingPassIfEither = config.getBoolean("war.battle_voting.pass_if_either", true);
+		Cache.warBattleVotingDevMinPlayers = config.getInt("war.battle_voting.dev_min_players", 1);
+		validateBattleScheduleConfig();
 
 		Cache.branchUpgradeCost = config.getDouble("branch-upgrade-cost", 100.0);
 		Cache.branchUpgradeExponent = config.getDouble("branch-upgrade-exponent", 1.1);
@@ -76,5 +99,40 @@ public class ConfigLoader {
                 }
             }
         }
+
+		if (!config.isConfigurationSection("installations")) {
+			throw new IllegalStateException("config.yml missing installations section");
+		}
+		InstallationConfigLoader.load(config.getConfigurationSection("installations"));
+	}
+
+	private static void validateBattleScheduleConfig() {
+		int defenderDeadline = Cache.warDefenderChoiceDeadlineHour;
+		int voteClose = Cache.warVoteCloseHour;
+		int windowStart = Cache.warBattleWindowStartHour;
+		int windowEnd = Cache.warBattleWindowEndHour;
+
+		if (defenderDeadline < 0 || defenderDeadline >= voteClose) {
+			failBattleSchedule("war.battle_schedule.defender_choice_deadline_hour must be >= 0 and < vote_close_hour");
+		}
+		if (voteClose >= windowStart) {
+			failBattleSchedule("war.battle_schedule.vote_close_hour must be < window_start_hour");
+		}
+		if (windowStart > windowEnd || windowEnd > 24) {
+			failBattleSchedule("war.battle_schedule requires window_start_hour <= window_end_hour <= 24");
+		}
+		if (Cache.warBattleVotingMinPlayers < 1) {
+			failBattleSchedule("war.battle_voting.min_players must be >= 1");
+		}
+		if (Cache.warBattleVotingDevMinPlayers < 1) {
+			failBattleSchedule("war.battle_voting.dev_min_players must be >= 1");
+		}
+	}
+
+	private static void failBattleSchedule(String message) {
+		if (Bukkit.getServer() != null) {
+			Bukkit.getLogger().severe("[SimpleFactions] " + message);
+		}
+		throw new IllegalStateException(message);
 	}
 }

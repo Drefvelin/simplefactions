@@ -6,6 +6,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Map.ProvinceGrid;
 import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.ConfigLoader;
@@ -66,6 +67,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final SessionManager sessionManager = new SessionManager();
 	private final RelocationPrompt relocationPrompt = new RelocationPrompt();
 	private ProvinceManager provinceSnapshot = new ProvinceManager();
+	private ProvinceGrid provinceGrid;
 	
 	@Override
 	public void onEnable() {
@@ -95,6 +97,19 @@ public class SimpleFactions extends JavaPlugin{
 			);
 		} catch (Exception e) {
 			getLogger().severe("Failed to load provinces! Plugin disabled.");
+			e.printStackTrace();
+			getServer().getPluginManager().disablePlugin(this);
+			return;
+		}
+		try {
+			provinceGrid = ProvinceGrid.load(new File(getDataFolder(), "Input/province_id_grid.bin.gz"));
+			getLogger().info(
+					"Loaded province_id_grid "
+							+ provinceGrid.getWidth()
+							+ "x"
+							+ provinceGrid.getHeight());
+		} catch (Exception e) {
+			getLogger().severe("Failed to load province_id_grid.bin.gz! Plugin disabled.");
 			e.printStackTrace();
 			getServer().getPluginManager().disablePlugin(this);
 			return;
@@ -203,6 +218,10 @@ public class SimpleFactions extends JavaPlugin{
 
 	public ProvinceManager getProvinceSnapshot() {
 		return provinceSnapshot;
+	}
+
+	public ProvinceGrid getProvinceGrid() {
+		return provinceGrid;
 	}
 
 	public SessionManager getSessionManager() {

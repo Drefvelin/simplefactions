@@ -1,4 +1,5 @@
 package me.Plugins.SimpleFactions.Managers;
+import java.util.Arrays;
 import java.util.List;
 
 import org.bukkit.Bukkit;
@@ -23,11 +24,15 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.installation.InstallationKind;
+import me.Plugins.SimpleFactions.installation.handler.ConstructResult;
 import me.Plugins.SimpleFactions.settlement.handler.CapitalResult;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Permissions;
 import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.WarCommandHelper;
+import me.Plugins.SimpleFactions.War.WarDebugFormatter;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -354,7 +359,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				int claim = RestServer.getProvince(p);
 				if(claim == -2) {
-					p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
+					p.sendMessage("§a[SimpleFactions] §cError! could not resolve province");
 					return true;
 				}
 				if(claim == 0) {
@@ -452,13 +457,79 @@ public class CommandManager implements Listener, CommandExecutor{
 					}
 					int claim = RestServer.getProvince(p);
 					if(claim == -2) {
-						p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
+						p.sendMessage("§a[SimpleFactions] §cError! could not resolve province");
 					} else {
 						FactionManager.getMap().claim(p, f, claim, false);
 					}
 				} else {
 					p.sendMessage("§cYou need to be a faction leader to claim land");
 				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("construct")) {
+				Faction f = FactionManager.getByLeader(p.getName());
+				if(f == null) {
+					p.sendMessage("§cYou need to be a faction leader to construct installations");
+					return true;
+				}
+				if(args.length == 1) {
+					p.sendMessage("§cUsage: §e/faction construct <fort|port|airport> <name>");
+					return true;
+				}
+				InstallationKind kind = InstallationKind.fromCommand(args[1]);
+				if(kind == null) {
+					p.sendMessage("§cUnknown installation type. Use: §efort§7, §eport§7, or §eairport");
+					return true;
+				}
+				if(args.length == 2) {
+					p.sendMessage("§cName required: §e/faction construct " + kind.getCommandName() + " <name>");
+					return true;
+				}
+				int province = RestServer.getProvince(p);
+				if(province == -2) {
+					p.sendMessage("§a[SimpleFactions] §cError! could not resolve province");
+					return true;
+				}
+				if(province == 0) {
+					p.sendMessage("§cThis location has no province!");
+					return true;
+				}
+				String name = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
+				ConstructResult result = f.getInstallationHandler().construct(
+						kind,
+						name,
+						province,
+						p.getLocation().getBlockX(),
+						p.getLocation().getBlockZ());
+				p.sendMessage(result.getMessage());
+				if(result.isSuccess()) {
+					p.playSound(p, Sound.BLOCK_ANVIL_USE, 1f, 1f);
+				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("deconstruct")) {
+				Faction f = FactionManager.getByLeader(p.getName());
+				if(f == null) {
+					p.sendMessage("§cYou need to be a faction leader to deconstruct installations");
+					return true;
+				}
+				InventoryManager inv = new InventoryManager();
+				if(args.length == 1) {
+					inv.installationsView(null, p, f, true);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					return true;
+				}
+				String id = args[1];
+				var handler = f.getInstallationHandler();
+				boolean exists = handler.getById(id) != null
+						|| (handler.getPendingConstruction() != null
+								&& handler.getPendingConstruction().getId().equalsIgnoreCase(id));
+				if(!exists) {
+					p.sendMessage("§cNo installation with id §f" + id);
+					return true;
+				}
+				inv.confirming.put(p, f);
+				inv.installationConfirmFromCommand.put(p, true);
+				inv.confirmView(p, f, "installation", id);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("unclaim") && args.length >= 1) {
 				Faction f = null;
@@ -482,7 +553,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				int claim = RestServer.getProvince(p);
 				if(claim == -2) {
-					p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
+					p.sendMessage("§a[SimpleFactions] §cError! could not resolve province");
 				} else {
 					FactionManager.getMap().unclaim(p, f, claim);
 				}
@@ -746,7 +817,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				int claim = RestServer.getProvince(p);
 				if(claim == -2) {
-					p.sendMessage("§a[SimpleFactions] §cError! could not connect to webapp");
+					p.sendMessage("§a[SimpleFactions] §cError! could not resolve province");
 					return true;
 				}
 				if(claim == 0) {
@@ -1182,20 +1253,79 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
 					return true;
 				}
-				Integer warId = 0;
-				try {
-					Integer.parseInt(args[1]);
-				} catch (Exception e) {
-					p.sendMessage("§cWar id is a number");
-					return false;
+				var warId = WarCommandHelper.parseWarId(args[1]);
+				if (warId.isEmpty()) {
+					p.sendMessage("§cWar id must be a number");
+					return true;
 				}
-				War w = WarManager.getById(warId);
+				War w = WarManager.getById(warId.get());
 				if(w == null){
 					p.sendMessage("§cNo war by that id");
-					return false;
+					return true;
 				}
 				WarManager.endWar(w);
 				p.sendMessage("§aEnded war "+w.getName());
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("warstatus") && args.length == 2) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				var warId = WarCommandHelper.parseWarId(args[1]);
+				if (warId.isEmpty()) {
+					p.sendMessage("§cWar id must be a number");
+					return true;
+				}
+				War w = WarManager.getById(warId.get());
+				if(w == null){
+					p.sendMessage("§cNo war by that id");
+					return true;
+				}
+				for (String line : WarDebugFormatter.formatStatusLines(w)) {
+					p.sendMessage(line);
+				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("warpath") && args.length == 2) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				var warId = WarCommandHelper.parseWarId(args[1]);
+				if (warId.isEmpty()) {
+					p.sendMessage("§cWar id must be a number");
+					return true;
+				}
+				War w = WarManager.getById(warId.get());
+				if(w == null){
+					p.sendMessage("§cNo war by that id");
+					return true;
+				}
+				if (!w.isActive()) {
+					p.sendMessage("§cWar is not active");
+					return true;
+				}
+				if (!WarManager.regenerateCampaign(w)) {
+					p.sendMessage("§cCould not regenerate campaign route");
+					return true;
+				}
+				List<Integer> axis = w.getCampaignProvinces();
+				Integer cursorProvince = null;
+				if (axis != null && w.getCursorIndex() >= 0 && w.getCursorIndex() < axis.size()) {
+					cursorProvince = axis.get(w.getCursorIndex());
+				}
+				String phase = w.getCampaignPhase() != null ? w.getCampaignPhase().toJson() : "invasion";
+				p.sendMessage("§aRegenerated campaign for war " + w.getId()
+						+ ": objective " + w.getObjectiveProvinceId()
+						+ ", start " + w.getCampaignStartProvinceId()
+						+ ", path length " + (axis == null ? 0 : axis.size())
+						+ ", cursor " + w.getCursorIndex()
+						+ (cursorProvince != null ? " (province " + cursorProvince + ")" : "")
+						+ ", phase " + phase
+						+ ", initiative " + w.getInitiativeAttacker() + "/" + w.getInitiativeDefender()
+						+ ". Progression and occupation reset.");
+				for (String line : WarDebugFormatter.formatStatusLines(w)) {
+					p.sendMessage(line);
+				}
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("destroytitle") && args.length == 2) {
 				if(!Permissions.isAdmin(sender)) {

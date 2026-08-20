@@ -54,9 +54,14 @@ public class Participant {
 		Iterator<Faction> iterator = subjects.iterator();
 		while(iterator.hasNext()) {
 			Faction subject = iterator.next();
-			if(w.isMainParticipant(subject) || !RelationManager.getOverlord(subject).equalsIgnoreCase(leader.getId())) {
+			String overlord = RelationManager.getOverlord(subject);
+			if(w.isMainParticipant(subject) || overlord == null || !overlord.equalsIgnoreCase(leader.getId())) {
 				iterator.remove();
 			}
+		}
+		for (Faction subject : RelationManager.getSubjects(leader)) {
+			if (subjects.contains(subject) || w.isMainParticipant(subject)) continue;
+			subjects.add(subject);
 		}
 		Iterator<Map.Entry<Faction, Boolean>> allyIterator = allies.entrySet().iterator();
 		while (allyIterator.hasNext()) {
@@ -108,14 +113,19 @@ public class Participant {
 		if(hasWarGoal(f)) return warGoals.get(f);
 		return null;
 	}
+
+	/** @deprecated Per-participant goals replaced by single war-level goal in v2. Read-only for v1 migration. */
+	@Deprecated
 	public HashMap<Faction, WarGoal> getWarGoals() {
 		return warGoals;
 	}
-	
+
+	/** @deprecated Use war-level {@link me.Plugins.SimpleFactions.War.enums.WarGoalType} instead. */
+	@Deprecated
 	public void addWarGoal(Faction f, WarGoal goal) {
 		warGoals.put(f, goal);
 	}
-	
+
 	public List<Faction> getAllParticipatingFactions(){
 		List<Faction> list = new ArrayList<>();
 		list.add(leader);

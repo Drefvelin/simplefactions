@@ -31,9 +31,8 @@ public class LoanCreator {
 	private static final String LIGHT_GRAY  = "#9cb68c";
 
     public ItemStack createLoansGivenButton(Guild guild) {
-        ItemStack i = new ItemStack(Material.BLACK_DYE);
+        ItemStack i = IconGetter.getIconOrDefault("loans_given", Material.BLACK_DYE);
         ItemMeta meta = i.getItemMeta();
-        meta.setCustomModelData(16);
         meta.setDisplayName(StringFormatter.formatHex("#7ad65eLoans Given"));
         
         List<String> lore = new ArrayList<>();
@@ -50,9 +49,8 @@ public class LoanCreator {
     }
 
     public ItemStack createLoansTakenButton(Guild guild) {
-        ItemStack i = new ItemStack(Material.BLACK_DYE);
+        ItemStack i = IconGetter.getIconOrDefault("loans_taken", Material.BLACK_DYE);
         ItemMeta meta = i.getItemMeta();
-        meta.setCustomModelData(17);
         meta.setDisplayName(StringFormatter.formatHex("#d45b48Loans Taken"));
         
         List<String> lore = new ArrayList<>();

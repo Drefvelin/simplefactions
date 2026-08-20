@@ -12,8 +12,11 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Army.LevyEntry;
+import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -25,10 +28,26 @@ import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import net.tfminecraft.Warbands.Managers.WarbandManager;
 
 public class WarCreator {
+	public ItemStack createCampaignButton(War w) {
+		ItemStack i = new ItemStack(Material.COMPASS, 1);
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(StringFormatter.formatHex("#d4c9aeCampaign"));
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#a39ba8Attacker initiative: #d4c9ae" + w.getInitiativeAttacker()));
+		lore.add(StringFormatter.formatHex("#a39ba8Defender initiative: #d4c9ae" + w.getInitiativeDefender()));
+		String phase = w.getCampaignPhase() != null ? w.getCampaignPhase().toJson() : "invasion";
+		lore.add(StringFormatter.formatHex("#a39ba8Phase: #d4c9ae" + phase));
+		lore.add(" ");
+		lore.add(StringFormatter.formatHex("#28ed70Click to view campaign route"));
+		m.setLore(lore);
+		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "campaign_war");
+		m.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, w.getId());
+		i.setItemMeta(m);
+		return i;
+	}
+
 	public ItemStack createMusterItem(Participant par) {
-		ItemStack i = new ItemStack(Material.IRON_HELMET, 1);
-		
-		if(IconGetter.hasIcon("muster")) i = IconGetter.getIcon("muster");
+		ItemStack i = IconGetter.getIconOrDefault("muster", Material.IRON_HELMET);
 		ItemMeta m = i.getItemMeta();
 		m.setDisplayName(StringFormatter.formatHex("#7fbd73Muster Army"));
 		m.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
@@ -70,15 +89,31 @@ public class WarCreator {
 		return i;
 	}
 	public ItemStack createWarItem(War w, boolean button) {
-		ItemStack i = new ItemStack(Material.BLAZE_POWDER, 1);
-		if(IconGetter.hasIcon("war")) i = IconGetter.getIcon("war");
+		ItemStack i = IconGetter.getIconOrDefault("war", Material.BLAZE_POWDER);
 		ItemMeta m = i.getItemMeta();
 		m.setDisplayName(w.getName());
 		List<String> lore = new ArrayList<>();
 		if(button) {
 			lore.add(StringFormatter.formatHex("#28ed70Click to view"));
+			lore.add(" ");
+			if (w.getStatus() != null) {
+				String status = w.getStatus().toJson();
+				lore.add(StringFormatter.formatHex("#a39ba8Status: #f5ef42" + status.substring(0, 1).toUpperCase() + status.substring(1)));
+			}
+			lore.add(StringFormatter.formatHex("#a39ba8Attacker: #d4c9ae" + formatLeaderName(w.getAttackerLeaderId())));
+			lore.add(StringFormatter.formatHex("#a39ba8Defender: #d4c9ae" + formatLeaderName(w.getDefenderLeaderId())));
 		} else {
 			lore.add(StringFormatter.formatHex("#535955ID: "+w.getId()));
+		}
+		if (w.getGoal() != null) {
+			lore.add(" ");
+			lore.add(StringFormatter.formatHex("#a39ba8War Goal: #f5ef42" + w.getGoal().getDisplayName()));
+			if (w.getGoal() == WarGoalType.DE_JURE_ANNEX && w.getTargetTitleId() != null) {
+				Title title = TitleLoader.getById(w.getTargetTitleId());
+				if (title != null) {
+					lore.add(StringFormatter.formatHex("#a39ba8Title: #d4c9ae" + title.getName()));
+				}
+			}
 		}
 		m.setLore(lore);
 		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
@@ -86,19 +121,11 @@ public class WarCreator {
 		i.setItemMeta(m);
 		return i;
 	}
-	
-	public ItemStack createSwitchItem() {
-		ItemStack i = new ItemStack(Material.BLAZE_POWDER, 1);
-		if(IconGetter.hasIcon("switch")) i = IconGetter.getIcon("switch");
-		ItemMeta m = i.getItemMeta();
-		m.setDisplayName(StringFormatter.formatHex("#cc6f23Switch Sides"));
-		List<String> lore = new ArrayList<>();
-		lore.add(StringFormatter.formatHex("#a1aba3(Independence Rebellion)"));
-		lore.add(" ");
-		lore.add(StringFormatter.formatHex("#c73818§lClick to switch sides"));
-		m.setLore(lore);
-		i.setItemMeta(m);
-		return i;
+
+	private String formatLeaderName(String leaderId) {
+		if (leaderId == null) return "Unknown";
+		Faction faction = FactionManager.getByString(leaderId);
+		return faction != null ? faction.getName() : leaderId;
 	}
 	
 	public ItemStack createSecondaryItem(Player p, Participant par, War w, Faction f, boolean subject, boolean called) {
@@ -137,7 +164,7 @@ public class WarCreator {
 				lore.add(StringFormatter.formatHex("#28ed70§lClick to call!"));
 			}
 		}
-		if(!w.getSide(pf).equals(w.getSide(f)) && w.getSide(f) != null) {
+		if (w.getGoal() == null && pf != null && !w.getSide(pf).equals(w.getSide(f)) && w.getSide(f) != null) {
 			lore.add(" ");
 			lore.add(StringFormatter.formatHex("#8a4152§o§lClick to set a war goal!"));
 		}
@@ -190,7 +217,7 @@ public class WarCreator {
 				lore.add(StringFormatter.formatHex("#9e4c4fNo Secondary Participants"));
 			}
 		}
-		if(full || warGoal) {
+		if (w.getGoal() == null && (full || warGoal)) {
 			if(pf != null) {
 				Participant pp = w.getParticipant(pf);
 				if(pp != null) {

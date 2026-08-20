@@ -29,9 +29,32 @@ public class Cache {
 
 	public static int provinceCost;
 
-	public static int settlementFoundDistance;
 	public static int settlementLargePopulationThreshold;
-	
+
+	public static int portSeaProximityBlocks;
+
+	public static boolean warRequireDeclareCode;
+	public static int warDeclareOpinionThreshold;
+	public static int warInitiativePerSide;
+	public static int warDeclinedAllyStabilityPenalty;
+	public static boolean warFirstBattleAtBorder;
+	public static int warProvincesBetweenBattles;
+	public static boolean warOccupationIncludeEnemyNeighbors;
+	public static double warPathfinderNeutralPenalty;
+	public static boolean warPathfinderSeaPassEnabled;
+	public static double warPathfinderWaterCost;
+
+	public static int warBattleWindowStartHour;
+	public static int warBattleWindowEndHour;
+	public static int warVoteCloseHour;
+	public static int warDefenderChoiceDeadlineHour;
+	public static boolean warOneBattlePerDay;
+	public static boolean warFirstBattleDayAfterDeclare;
+	public static int warBattleVotingMinPlayers;
+	public static boolean warBattleVotingRequireSmallestSideFull;
+	public static boolean warBattleVotingPassIfEither;
+	public static int warBattleVotingDevMinPlayers;
+
 	public static HashMap<String, String> icons = new HashMap<>();
 
 	public static double branchUpgradeCost;

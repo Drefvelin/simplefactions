@@ -76,11 +76,20 @@ public class Settlement {
     }
 
     public void addProvince(int provinceId) {
-        provinces.add(provinceId);
+        if (provinceId != centerProvince) {
+            throw new IllegalArgumentException(
+                    "Settlements are single-province; cannot add province " + provinceId);
+        }
+        provinces.add(centerProvince);
     }
 
     public void removeProvince(int provinceId) {
         provinces.remove(provinceId);
+    }
+
+    public void normalizeToCenterOnly() {
+        provinces.clear();
+        provinces.add(centerProvince);
     }
 
     public SettlementData toData() {

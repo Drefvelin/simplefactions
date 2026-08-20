@@ -1,0 +1,163 @@
+package me.Plugins.SimpleFactions.Managers.Inventory;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
+
+import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
+import me.Plugins.SimpleFactions.Managers.InventoryManager;
+import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.enums.SFGUI;
+import me.Plugins.SimpleFactions.installation.Installation;
+import me.Plugins.SimpleFactions.installation.InstallationConstruction;
+import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
+import me.Plugins.SimpleFactions.keys.Keys;
+
+public class InstallationView {
+    public InventoryManager inv;
+    public InstallationCreator creator = new InstallationCreator();
+
+    public InstallationView(InventoryManager inv) {
+        this.inv = inv;
+    }
+
+    public void installationsView(Inventory inventory, Player player, Faction f, boolean open) {
+        if (open) {
+            inventory =
+                    SimpleFactions.plugin
+                            .getServer()
+                            .createInventory(
+                                    new SFInventoryHolder(f.getId(), SFGUI.INSTALLATIONS_VIEW),
+                                    54,
+                                    "§7Installations View");
+        }
+
+        InstallationHandler handler = f.getInstallationHandler();
+        inventory.setItem(10, creator.createSummary(f));
+
+        List<Installation> installations = new ArrayList<>(handler.getAll());
+        installations.sort(
+                Comparator.comparing((Installation installation) -> installation.getKind().name())
+                        .thenComparing(Installation::getId));
+
+        for (int index = 0; index < installations.size(); index++) {
+            int slot = index + 12;
+            if (slot > 44) {
+                break;
+            }
+            inventory.setItem(slot, creator.createInstallationIcon(installations.get(index)));
+        }
+        for (int slot = 12 + installations.size(); slot <= 44; slot++) {
+            inventory.setItem(slot, new ItemStack(Material.AIR, 1));
+        }
+
+        InstallationConstruction pending = handler.getPendingConstruction();
+        if (pending != null) {
+            inventory.setItem(39, creator.createConstructionIcon(pending));
+        } else {
+            inventory.setItem(39, new ItemStack(Material.AIR, 1));
+        }
+
+        inventory.setItem(53, inv.createBackButton(SFGUI.INSTALLATIONS_VIEW));
+        if (open) {
+            player.openInventory(inventory);
+        }
+    }
+
+    public void installationDetailView(Player player, Faction f, String installationId) {
+        InstallationHandler handler = f.getInstallationHandler();
+        InstallationConstruction pending = handler.getPendingConstruction();
+        boolean isPending =
+                pending != null && pending.getId().equalsIgnoreCase(installationId);
+        Installation installation = handler.getById(installationId);
+
+        if (!isPending && installation == null) {
+            player.sendMessage("§cNo installation with id §f" + installationId);
+            installationsView(null, player, f, true);
+            return;
+        }
+
+        Inventory inventory =
+                SimpleFactions.plugin
+                        .getServer()
+                        .createInventory(
+                                new SFInventoryHolder(f.getId(), SFGUI.INSTALLATION_DETAIL_VIEW),
+                                27,
+                                "§7Installation Details");
+
+        if (isPending) {
+            inventory.setItem(15, creator.createConstructionDetailItem(pending));
+        } else {
+            inventory.setItem(15, creator.createDetailItem(installation));
+        }
+
+        if (f.getLeader().equalsIgnoreCase(player.getName())) {
+            inventory.setItem(
+                    11, creator.createDeconstructButton(installationId, isPending));
+        } else {
+            inventory.setItem(11, new ItemStack(Material.AIR, 1));
+        }
+
+        inventory.setItem(26, inv.createBackButton(SFGUI.INSTALLATION_DETAIL_VIEW));
+        player.openInventory(inventory);
+    }
+
+    public void click(InventoryClickEvent event, Inventory inventory, Player player) {
+        event.setCancelled(true);
+        if (!(inventory.getHolder() instanceof SFInventoryHolder holder)) {
+            return;
+        }
+
+        Faction f = FactionManager.getByString(holder.getId());
+        if (f == null) {
+            return;
+        }
+
+        if (holder.getType() == SFGUI.INSTALLATIONS_VIEW) {
+            ItemStack item = event.getCurrentItem();
+            if (item == null || !item.hasItemMeta()) {
+                return;
+            }
+            ItemMeta meta = item.getItemMeta();
+            if (!meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
+                return;
+            }
+            String id =
+                    meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+            installationDetailView(player, f, id);
+            player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+            return;
+        }
+
+        if (holder.getType() == SFGUI.INSTALLATION_DETAIL_VIEW) {
+            if (event.getSlot() != 11) {
+                return;
+            }
+            ItemStack item = event.getCurrentItem();
+            if (item == null || !item.hasItemMeta()) {
+                return;
+            }
+            ItemMeta meta = item.getItemMeta();
+            if (!meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
+                return;
+            }
+            String id =
+                    meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+            inv.confirming.put(player, f);
+            inv.installationConfirmFromCommand.put(player, false);
+            inv.confirmView(player, f, "installation", id);
+            player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+        }
+    }
+}

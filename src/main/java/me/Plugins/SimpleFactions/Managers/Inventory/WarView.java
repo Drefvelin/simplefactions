@@ -17,7 +17,6 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Loaders.WarGoalLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
-import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFCombinedInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
@@ -26,6 +25,8 @@ import me.Plugins.SimpleFactions.War.Participant;
 import me.Plugins.SimpleFactions.War.Side;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.WarGoal;
+import me.Plugins.SimpleFactions.War.enums.WarType;
+import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import net.tfminecraft.Warbands.Managers.WarbandManager;
 import net.tfminecraft.Warbands.Objects.Warband;
@@ -39,9 +40,11 @@ public class WarView {
 	}
 	
 	public void warList(Player player) {
-		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 54, "§7War List");
-		for(int x = 0; x<WarManager.get().size(); x++) {
-			i.setItem(x, creator.createWarItem(WarManager.get().get(x), true));
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(
+				new SFInventoryHolder("", SFGUI.WAR_LIST), 54, "§7War List");
+		List<War> activeWars = WarManager.getActive();
+		for(int x = 0; x < activeWars.size(); x++) {
+			i.setItem(x, creator.createWarItem(activeWars.get(x), true));
 		}
 		player.openInventory(i);
 	}
@@ -72,15 +75,21 @@ public class WarView {
 		for(int x : gray) {
 			i.setItem(x, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 		}
+		boolean showCampaign = canShowCampaignView(w, player);
 		for(int x : red) {
+			if (x == 49 && showCampaign) {
+				continue;
+			}
 			i.setItem(x, inv.getFiller(Material.RED_STAINED_GLASS_PANE));
+		}
+		if (showCampaign) {
+			i.setItem(49, creator.createCampaignButton(w));
 		}
 		Faction f = FactionManager.getByLeader(player.getName());
 		if(f != null) {
 			if(w.getParticipant(f) != null) {
 				i.setItem(13, creator.createMusterItem(w.getParticipant(f)));
 			}
-			if(w.canSwitchSides(f)) i.setItem(31, creator.createSwitchItem());
 		}
 		i.setItem(53, inv.createBackButton(SFGUI.WAR_VIEW));
 		if(open) player.openInventory(i);
@@ -136,10 +145,12 @@ public class WarView {
 	public void click(InventoryClickEvent e, Inventory inventory, Player p) {
 		if(e.getView().getTitle().equalsIgnoreCase("§7War List")) {
 			e.setCancelled(true);
+			if (e.getCurrentItem() == null || e.getCurrentItem().getItemMeta() == null) return;
 			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
 			Integer id = e.getCurrentItem().getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.INTEGER);
 			if(id == null) return;
 			War w = WarManager.getById(id);
+			if (w == null) return;
 			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			warView(null, p, w, true);
 		} else if(inventory.getHolder() instanceof WarInventoryHolder && ((WarInventoryHolder) inventory.getHolder()).getType().equals(SFGUI.WAR_VIEW)) {
@@ -149,6 +160,13 @@ public class WarView {
 			if(e.getSlot() == 53) {
 				warList(p);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				return;
+			} else if(e.getSlot() == 49) {
+				if (!canShowCampaignView(w, p)) {
+					return;
+				}
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				inv.openCampaignView(p, w);
 				return;
 			} else if(e.getSlot() == 13) {
 				Faction pf = FactionManager.getByLeader(p.getName());
@@ -163,40 +181,6 @@ public class WarView {
 				WarbandManager.addWarband(new Warband(w, par, offense));
 				net.tfminecraft.Warbands.Managers.InventoryManager warinv = new net.tfminecraft.Warbands.Managers.InventoryManager();
 				warinv.warbandList(p);
-			} else if(e.getSlot() == 31) {
-				Faction pf = FactionManager.getByLeader(p.getName());
-				if(pf == null) return;
-				Participant par = w.getParticipant(pf);
-				if(par != null) return;
-				String o = RelationManager.getOverlord(pf);
-				if(o == null) return;
-				Faction overlord = FactionManager.getByString(o);
-				if(w.getParticipant(overlord) != null) {
-					Participant oPar = w.getParticipant(overlord);
-					RelationManager.reset(pf, overlord, true);
-					Participant subject = w.getOppositeSide(overlord).addNewParticipant(pf, oPar);
-					subject.setCivilWar(true);
-					subject.addWarGoal(overlord, WarGoalLoader.getByString("independence"));
-					oPar.setCivilWar(true);
-					oPar.addWarGoal(pf, WarGoalLoader.getByString("subjugate"));
-					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-					warView(inventory, p, w, false);
-					return;
-				}
-				Faction top = FactionManager.getByString(RelationManager.getTopLiege(pf));
-				if(top.getId().equalsIgnoreCase(overlord.getId())) return;
-				if(w.getParticipant(top) != null) {
-					Participant newPar = w.getSide(top).addNewParticipant(overlord, w.getParticipant(top));
-					newPar.setCivilWar(true);
-					RelationManager.reset(pf, overlord, true);
-					Participant subject = w.getOppositeSide(top).addNewParticipant(pf, newPar);
-					subject.setCivilWar(true);
-					subject.addWarGoal(overlord, WarGoalLoader.getByString("independence"));
-					newPar.addWarGoal(pf, WarGoalLoader.getByString("subjugate"));
-					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-					warView(inventory, p, w, false);
-					return;
-				}
 			}
 			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
 			String id = e.getCurrentItem().getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.STRING);
@@ -230,8 +214,9 @@ public class WarView {
 				if(!w.canBeCalled(f)) return;
 				WarManager.sendRequest(p, pf, f, w);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				return;
 			}
-			if(!w.getSide(f).equals(w.getSide(pf))) {
+			if (w.getGoal() == null && !w.getSide(f).equals(w.getSide(pf))) {
 				Faction page = FactionManager.getByString(h.getFactionId());
 				warGoalView(null, p, w, f, page, true);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
@@ -240,6 +225,10 @@ public class WarView {
 			e.setCancelled(true);
 			SFCombinedInventoryHolder h = (SFCombinedInventoryHolder) inventory.getHolder();
 			War w = WarManager.getById(h.getWarId());
+			if (w != null && w.getGoal() != null) {
+				p.sendMessage("§cWar goal was set at declare.");
+				return;
+			}
 			Faction page = FactionManager.getByString(h.getFactionId());
 			if(e.getSlot() == 26) {
 				participantView(null, p, w, w.getParticipant(page), true);
@@ -269,5 +258,20 @@ public class WarView {
 			participantView(null, p, w, w.getParticipant(page), true);
 			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 		}
+	}
+
+	private boolean canShowCampaignView(War w, Player player) {
+		if (w == null || !w.isActive() || w.getWarType() == WarType.RAID) {
+			return false;
+		}
+		List<Integer> axis = w.getCampaignProvinces();
+		if (axis == null || axis.isEmpty()) {
+			return false;
+		}
+		Faction faction = FactionManager.getByLeader(player.getName());
+		if (faction == null) {
+			faction = FactionManager.getByMember(player.getName());
+		}
+		return faction != null && w.getParticipant(faction) != null;
 	}
 }

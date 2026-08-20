@@ -15,6 +15,8 @@ import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Map.ProvinceGrid;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.api.GatewayClient;
 
 public class RestServer {
@@ -39,22 +41,11 @@ public class RestServer {
 
 	public static int getProvince(Player p) {
 		if (!Cache.mapEnabled) return -2;
-		int x = p.getLocation().getBlockX();
-		int z = p.getLocation().getBlockZ();
-		try {
-			String path = "/" + Cache.mapRef + "/map/province/" + x + "," + z;
-			GatewayClient.Result result = GatewayClient.request("GET", path, null);
-			if (!result.ok) {
-				System.out.println("[SimpleFactions] getProvince failed: " + result.error);
-				return -2;
-			}
-
-			JsonObject json = gson.fromJson(result.body, JsonObject.class);
-			return json.get("province_id").getAsInt();
-		} catch (Exception e) {
-			e.printStackTrace();
-			return -2;
-		}
+		SimpleFactions plugin = SimpleFactions.getInstance();
+		if (plugin == null) return -2;
+		ProvinceGrid grid = plugin.getProvinceGrid();
+		if (grid == null) return -2;
+		return grid.getAt(p.getLocation().getBlockX(), p.getLocation().getBlockZ());
 	}
 
 	public static void upload(String mode, File file) {
@@ -76,6 +67,10 @@ public class RestServer {
 				var obj = payload.getAsJsonObject();
 				if (!obj.has("settlements") || !obj.get("settlements").isJsonArray())
 					throw new IllegalStateException("map_markers upload must include settlements array");
+				if (obj.has("installations") && !obj.get("installations").isJsonArray())
+					throw new IllegalStateException("map_markers installations must be a JSON array");
+				if (obj.has("forts") && !obj.get("forts").isJsonArray())
+					throw new IllegalStateException("map_markers forts must be a JSON array");
 			}
 
 			String path = "/" + Cache.mapRef + "/data/upload/" + mode;

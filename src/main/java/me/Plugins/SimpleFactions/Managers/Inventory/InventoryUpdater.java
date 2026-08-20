@@ -40,6 +40,8 @@ public class InventoryUpdater {
 					if(f == null) continue;
 					if(h.getType().equals(SFGUI.MILITARY_VIEW)) {
 						inv.militaryView(i, p, f, false);
+					} else if(h.getType().equals(SFGUI.INSTALLATIONS_VIEW)) {
+						inv.installationsView(i, p, f, false);
 					} else if(h.getType().equals(SFGUI.DIPLOMACY_VIEW)) {
 						inv.diplomacyView(i, p, f, false);
 					}

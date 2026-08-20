@@ -702,9 +702,8 @@ public class GuildCreator {
 	}
 
 	public ItemStack createElevationItem(Player p, Guild guild) {
-		ItemStack i = new ItemStack(Material.BLACK_DYE);
+		ItemStack i = IconGetter.getIconOrDefault("guild_elevate", Material.BLACK_DYE);
 		ItemMeta meta = i.getItemMeta();
-		meta.setCustomModelData(13);
 		meta.setDisplayName(StringFormatter.formatHex("#6ade9cElevate Guild to Faction Status"));
 		List<String> lore = new ArrayList<>();
 		lore.add(StringFormatter.formatHex("#d4c9aeThis will make the guild an "+RelationLoader.getElevationTarget().getName()));
@@ -749,9 +748,8 @@ public class GuildCreator {
 	}
 
 	public ItemStack createLoansItem(Player p, Guild guild) {
-		ItemStack i = new ItemStack(Material.BLACK_DYE);
+		ItemStack i = IconGetter.getIconOrDefault("guild_loans", Material.BLACK_DYE);
 		ItemMeta meta = i.getItemMeta();
-		meta.setCustomModelData(26);
 		meta.setDisplayName(StringFormatter.formatHex("#e8c65fLoans"));
 		List<String> lore = new ArrayList<>();
 		LoanHandler handler = guild.getLoanHandler();

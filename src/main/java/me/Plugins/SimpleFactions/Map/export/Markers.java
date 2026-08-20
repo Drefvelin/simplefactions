@@ -13,6 +13,8 @@ import com.google.gson.JsonObject;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.installation.Installation;
+import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.SimpleFactions.settlement.Settlement;
 
 public final class Markers {
@@ -48,15 +50,55 @@ public final class Markers {
                 row.addProperty("kind", kind);
 
                 JsonArray provinces = new JsonArray();
-                for (int province : settlement.getProvinces()) {
-                    provinces.add(province);
-                }
+                provinces.add(settlement.getCenterProvince());
                 row.add("provinces", provinces);
 
                 settlements.add(row);
             }
         }
         root.add("settlements", settlements);
+
+        JsonArray installations = new JsonArray();
+        for (Faction faction : FactionManager.factions) {
+            for (Installation installation : faction.getInstallationHandler().getAll()) {
+                JsonObject row = new JsonObject();
+                row.addProperty("id", installation.getId());
+                row.addProperty("name", installation.getName());
+                row.addProperty("kind", installation.getKind().getCommandName());
+                row.addProperty("faction_id", faction.getId());
+                row.addProperty("province_id", installation.getProvince());
+                row.addProperty("center_x", installation.getCenterX());
+                row.addProperty("center_z", installation.getCenterZ());
+                installations.add(row);
+            }
+        }
+        root.add("installations", installations);
+
+        JsonArray forts = new JsonArray();
+        for (Faction faction : FactionManager.factions) {
+            for (Installation installation : faction.getInstallationHandler().getAll()) {
+                if (installation.getKind() != InstallationKind.FORT) {
+                    continue;
+                }
+
+                JsonObject row = new JsonObject();
+                row.addProperty("id", installation.getId());
+                row.addProperty("name", installation.getName());
+                row.addProperty("faction_id", faction.getId());
+                row.addProperty("province_id", installation.getProvince());
+                row.addProperty("center_x", installation.getCenterX());
+                row.addProperty("center_z", installation.getCenterZ());
+
+                JsonArray zocProvinces = new JsonArray();
+                for (int provinceId :
+                        ZocRealm.computeZocProvinces(faction, installation.getProvince())) {
+                    zocProvinces.add(provinceId);
+                }
+                row.add("zoc_provinces", zocProvinces);
+                forts.add(row);
+            }
+        }
+        root.add("forts", forts);
 
         File parent = out.getParentFile();
         if (parent != null) {

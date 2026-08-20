@@ -19,6 +19,7 @@ import me.Plugins.SimpleFactions.Diplomacy.DiplomacyHandler;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
+import me.Plugins.SimpleFactions.Loaders.InstallationConfigLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
@@ -27,7 +28,10 @@ import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Objects.PrestigeRank;
 import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.FactionRanker;
+import me.Plugins.SimpleFactions.installation.Installation;
+import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Represents;
 import me.Plugins.SimpleFactions.Utils.OpinionColourMapper;
@@ -363,6 +367,28 @@ public class FactionCreator {
 				m.setDisplayName(StringFormatter.formatHex("#a6659fMilitary"));
 				List<String> lore = new ArrayList<String>();
 				lore.add("§7Click to view Military");
+				m.setLore(lore);
+				NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
+				m.getPersistentDataContainer().set(key, PersistentDataType.STRING, f.getId());
+				i.setItemMeta(m);
+		} else if(t.equals(MenuItemType.INSTALLATIONS)) {
+				i = new ItemStack(Material.GREEN_CONCRETE, 1);
+				ItemMeta m = i.getItemMeta();
+				m.setDisplayName(StringFormatter.formatHex("#706964Installations"));
+				int forts = 0;
+				int ports = 0;
+				int airports = 0;
+				double totalUpkeep = 0;
+				for(Installation installation : f.getInstallationHandler().getAll()) {
+					totalUpkeep += InstallationConfigLoader.getDailyUpkeep(installation.getKind());
+					if(installation.getKind() == InstallationKind.FORT) forts++;
+					else if(installation.getKind() == InstallationKind.PORT) ports++;
+					else if(installation.getKind() == InstallationKind.AIRPORT) airports++;
+				}
+				List<String> lore = new ArrayList<String>();
+				lore.add("§7Click to view Installations");
+				lore.add("§7Forts: §e" + forts + " §7Ports: §e" + ports + " §7Airports: §e" + airports);
+				lore.add("§7Total upkeep: §e" + Formatter.formatDouble(totalUpkeep) + "d/day");
 				m.setLore(lore);
 				NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
 				m.getPersistentDataContainer().set(key, PersistentDataType.STRING, f.getId());

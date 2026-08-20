@@ -28,6 +28,8 @@ public class Province {
     private Map<String, ProvinceDataEntry> data = new HashMap<>();
     private Terrain terrain;
     private int fertility;
+    private int centerX;
+    private int centerZ;
     private double prosperity = 0;
     private final Set<Integer> neighbours = new HashSet<>();
 
@@ -38,6 +40,10 @@ public class Province {
     }
 
     public Province(int id, String terrain, int fertility) {
+        this(id, terrain, fertility, 0, 0);
+    }
+
+    public Province(int id, String terrain, int fertility, int centerX, int centerZ) {
         this.id = id;
         try {
             this.terrain = Terrain.valueOf(terrain.toUpperCase());
@@ -45,12 +51,16 @@ public class Province {
             this.terrain = Terrain.UNKNOWN;
         }
         this.fertility = fertility;
+        this.centerX = centerX;
+        this.centerZ = centerZ;
     }
 
     public int getId() { return id; }
     public boolean isValid() { return id != 0; }
     public Terrain getTerrain() { return terrain; }
     public int getFertility() { return fertility; }
+    public int getCenterX() { return centerX; }
+    public int getCenterZ() { return centerZ; }
     public ProvinceDataEntry getData(String id) {
         if(data.containsKey(id)) return data.get(id);
         Guild guild = FactionManager.getGuildByString(id);
@@ -231,7 +241,7 @@ public class Province {
     }
 
     public Province cloneShell() {
-        Province p = new Province(id, terrain.name(), fertility);
+        Province p = new Province(id, terrain.name(), fertility, centerX, centerZ);
         p.neighbours.addAll(this.neighbours);
         return p;
     }

@@ -38,10 +38,19 @@ public class ProvinceLoader {
                 int id = Integer.parseInt(split[0].trim());
 
                 String[] parts = split[1].trim().split(";");
+                String[] coords = parts[0].trim().split(",");
+                int centerX = 0;
+                int centerZ = 0;
+                if (coords.length >= 1) {
+                    centerX = Integer.parseInt(coords[0].trim());
+                }
+                if (coords.length >= 3) {
+                    centerZ = Integer.parseInt(coords[2].trim());
+                }
                 String terrain = parts[1];
                 int fertility = Integer.parseInt(parts[2]);
 
-                provinces.put(id, new Province(id, terrain, fertility));
+                provinces.put(id, new Province(id, terrain, fertility, centerX, centerZ));
             }
         } catch (Exception e) {
             throw new RuntimeException("Failed to load provinces file", e);

@@ -65,6 +65,11 @@ public class FactionData {
 
     public List<SettlementData> settlements = new ArrayList<>();
 
+    public List<InstallationData> installations = new ArrayList<>();
+
+    @SerializedName("installation queue")
+    public InstallationConstructionData installationQueue;
+
     public GovernmentData governmentData;
 
     @SerializedName("faction modifiers")
