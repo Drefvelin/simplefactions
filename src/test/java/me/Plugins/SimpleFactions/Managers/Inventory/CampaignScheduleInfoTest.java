@@ -51,7 +51,8 @@ class CampaignScheduleInfoTest {
 		assertTrue(lines.stream().anyMatch(line -> line.contains("2026-08-21")));
 		assertTrue(lines.stream().anyMatch(line -> line.contains("16:00 UTC")));
 		assertTrue(lines.stream().anyMatch(line -> line.contains("21:00")));
-		assertTrue(lines.stream().anyMatch(line -> line.contains("H21")));
+		assertTrue(lines.stream().anyMatch(line -> line.contains("Total voters")));
+		assertTrue(lines.stream().anyMatch(line -> line.contains("Hour votes")));
 	}
 
 	@Test

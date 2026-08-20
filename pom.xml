@@ -16,7 +16,7 @@
         <tfmc.builds>D:/Dokumenter/My Plugins/TFMC/SimpleFactions</tfmc.builds>
         <tfmc.tlibs>D:/Dokumenter/My Plugins/TFMC/TLibs</tfmc.tlibs>
         <tfmc.denareconomy>D:/Dokumenter/My Plugins/TFMC/DenarEconomy</tfmc.denareconomy>
-        <tfmc.warbands>D:/Dokumenter/My Plugins/TFMC/Warbands</tfmc.warbands>
+        <tfmc.vehicleframework>D:/Dokumenter/My Plugins/TFMC/VehicleFramework</tfmc.vehicleframework>
     </properties>
 
     <dependencies>
@@ -76,10 +76,10 @@
         </dependency>
         <dependency>
             <groupId>local</groupId>
-            <artifactId>Warbands</artifactId>
-            <version>0.2.2</version>
+            <artifactId>VehicleFramework</artifactId>
+            <version>1.0.0</version>
             <scope>system</scope>
-            <systemPath>${tfmc.warbands}/warbands-0.2.2.jar</systemPath>
+            <systemPath>${tfmc.vehicleframework}/vehicleframework-1.0.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>commons-lang</groupId>

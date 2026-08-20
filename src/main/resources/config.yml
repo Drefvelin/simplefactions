@@ -49,6 +49,18 @@ war:
     pass_if_either: true
     dev_min_players: 1
 
+battle:
+  province_poll_interval_ticks: 20
+  province_leave_countdown_seconds: 10
+  siege:
+    contest_duration_seconds: 180
+  raid:
+    defender_respawn_mode_default: INFINITE
+  campaign_template:
+    field: field_default
+    siege: siege_default
+    raid: raid_template
+
 # installation slots reserved for future VehicleFramework integration
 installations:
   fort:

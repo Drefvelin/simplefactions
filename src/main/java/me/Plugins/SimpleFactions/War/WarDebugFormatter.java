@@ -51,6 +51,7 @@ public final class WarDebugFormatter {
 		summary.put("autoresolveProposedByDefender", war.isAutoresolveProposedByDefender());
 		summary.put("postponementsThisCycle", war.getPostponementsThisCycle());
 		summary.put("defenderChoiceResolved", war.isDefenderChoiceResolved());
+		summary.put("forceQuorumNextClose", war.isForceQuorumNextClose() ? true : null);
 		summary.put("startedAt", war.getStartedAt() != null ? war.getStartedAt().toString() : null);
 		summary.put("commitments", WarManager.getCommitmentsForWar(war.getId()).size());
 		return List.of("§7" + GSON.toJson(summary));

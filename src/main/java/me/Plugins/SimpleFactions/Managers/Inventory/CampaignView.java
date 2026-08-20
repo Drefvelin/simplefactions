@@ -1,5 +1,6 @@
 package me.Plugins.SimpleFactions.Managers.Inventory;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -30,7 +31,9 @@ import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
 import me.Plugins.SimpleFactions.War.progression.CampaignProgressionService;
 import me.Plugins.SimpleFactions.War.progression.CampaignRouteRenderer;
 import me.Plugins.SimpleFactions.War.progression.WhitePeaceService;
-import me.Plugins.SimpleFactions.War.schedule.BattleScheduleService;
+import me.Plugins.SimpleFactions.War.schedule.BattleAutoresolveService;
+import me.Plugins.SimpleFactions.War.schedule.BattleHourTally;
+import me.Plugins.SimpleFactions.War.schedule.BattleScheduleLookups;
 import me.Plugins.SimpleFactions.War.schedule.BattleVoteService;
 import me.Plugins.SimpleFactions.War.schedule.BattleVoteToggleResult;
 import me.Plugins.SimpleFactions.War.schedule.BattleVoterEligibility;
@@ -86,7 +89,7 @@ public class CampaignView {
 				war,
 				viewerFaction,
 				player.getUniqueId(),
-				this::resolveVoterFaction));
+				BattleScheduleLookups.uuidToFactionForWar(war)));
 
 		populateHourToggles(inventory, war, viewerFaction, player.getUniqueId());
 
@@ -126,61 +129,40 @@ public class CampaignView {
 	private void populateHourToggles(Inventory inventory, War war, Faction viewerFaction, UUID viewerUuid) {
 		boolean eligible = BattleVoterEligibility.isEligibleVoter(war, viewerFaction);
 		Set<Integer> selections = BattleVoteService.getPlayerSelections(war, viewerUuid);
+		var uuidToFaction = BattleScheduleLookups.uuidToFactionForWar(war);
+		var hourTally = BattleVoteService.buildHourTally(war, uuidToFaction);
 		for (BattleVoterEligibility.HourSlotEntry entry : BattleVoterEligibility.hourSlotLayout(
 				BattleWindowService.listValidHours())) {
 			if (entry.hour() == null) {
-				inventory.setItem(entry.slot(), inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
+				inventory.setItem(entry.slot(), creator.createUnusedHourSlotItem());
 				continue;
 			}
 			boolean selected = selections.contains(entry.hour());
+			BattleHourTally tally = hourTally.getOrDefault(entry.hour(), new BattleHourTally(0, 0));
 			inventory.setItem(
 					entry.slot(),
-					creator.createHourToggleItem(war, entry.hour(), selected, eligible));
+					creator.createHourToggleItem(war, entry.hour(), selected, eligible, tally));
 		}
 	}
 
 	private void populateAutoresolveButtons(Inventory inventory, War war, Player player) {
-		if (war.getBattleSchedulePhase() == BattleSchedulePhase.VOTING) {
-			if (isAttackerLeader(player, war)
-					&& BattleVoterEligibility.canProposeAutoresolve(war, BelligerentRole.ATTACKER)) {
-				inventory.setItem(
-						49,
-						creator.createAutoresolveProposeButton(
-								war,
-								BelligerentRole.ATTACKER,
-								war.isAutoresolveProposedByAttacker()));
-			} else {
-				inventory.setItem(49, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
-			}
-			if (isDefenderLeader(player, war)
-					&& BattleVoterEligibility.canProposeAutoresolve(war, BelligerentRole.DEFENDER)) {
-				inventory.setItem(
-						50,
-						creator.createAutoresolveProposeButton(
-								war,
-								BelligerentRole.DEFENDER,
-								war.isAutoresolveProposedByDefender()));
-			} else {
-				inventory.setItem(50, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
-			}
-		} else {
+		inventory.setItem(51, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
+		if (war.getBattleSchedulePhase() != BattleSchedulePhase.VOTING
+				|| !BattleAutoresolveService.canProposeAutoresolveNow(war, Instant.now())) {
 			inventory.setItem(49, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 			inventory.setItem(50, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
+			return;
 		}
-
-		if (war.isAutoresolveProposedByAttacker() || war.isAutoresolveProposedByDefender()) {
-			inventory.setItem(51, creator.createAutoresolveStatusItem(war));
+		if (isAttackerLeader(player, war)) {
+			inventory.setItem(49, creator.createAutoresolveProposeButton(war, BelligerentRole.ATTACKER));
 		} else {
-			inventory.setItem(51, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
+			inventory.setItem(49, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 		}
-	}
-
-	private Faction resolveVoterFaction(UUID uuid) {
-		Player online = Bukkit.getPlayer(uuid);
-		if (online == null) {
-			return null;
+		if (isDefenderLeader(player, war)) {
+			inventory.setItem(50, creator.createAutoresolveProposeButton(war, BelligerentRole.DEFENDER));
+		} else {
+			inventory.setItem(50, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 		}
-		return FactionManager.getByMember(online.getName());
 	}
 
 	public void click(InventoryClickEvent e, Inventory inventory, Player player) {
@@ -361,18 +343,18 @@ public class CampaignView {
 			case ATTACKER -> isAttackerLeader(player, war);
 			case DEFENDER -> isDefenderLeader(player, war);
 		};
-		if (!allowed || !BattleVoterEligibility.canProposeAutoresolve(war, side)) {
+		if (!allowed || !BattleAutoresolveService.canProposeAutoresolveNow(war, Instant.now())) {
 			player.sendMessage("§cYou cannot propose autoresolve right now.");
 			return;
 		}
-		if (!BattleScheduleService.proposeAutoresolve(war, side)) {
-			player.sendMessage("§cCould not propose autoresolve.");
-			return;
+		switch (BattleAutoresolveService.sendProposeRequest(player, war, side)) {
+			case SENT -> {
+				player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				campaignView(player, war, routePage, true);
+			}
+			case OPPOSING_LEADER_OFFLINE -> player.sendMessage("§cThe opposing war leader is not online.");
+			case NOT_ALLOWED -> player.sendMessage("§cYou cannot propose autoresolve right now.");
 		}
-		WarManager.persist(war);
-		player.sendMessage("§aAutoresolve proposed.");
-		player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-		campaignView(player, war, routePage, true);
 	}
 
 	public void handleConfirm(Player player, String key, String data, boolean confirmed) {

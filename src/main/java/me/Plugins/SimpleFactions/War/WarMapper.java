@@ -81,6 +81,7 @@ public final class WarMapper {
 		data.autoresolveProposedByDefender = war.isAutoresolveProposedByDefender();
 		data.postponementsThisCycle = war.getPostponementsThisCycle();
 		data.defenderChoiceResolved = war.isDefenderChoiceResolved();
+		data.forceQuorumNextClose = war.isForceQuorumNextClose();
 		if (war.getStartedAt() != null) {
 			data.startedAt = war.getStartedAt().toString();
 		}
@@ -147,6 +148,7 @@ public final class WarMapper {
 		war.setAutoresolveProposedByDefender(data.autoresolveProposedByDefender);
 		war.setPostponementsThisCycle(data.postponementsThisCycle != null ? data.postponementsThisCycle : 0);
 		war.setDefenderChoiceResolved(data.defenderChoiceResolved);
+		war.setForceQuorumNextClose(data.forceQuorumNextClose);
 		if (data.startedAt != null) {
 			war.setStartedAt(Instant.parse(data.startedAt));
 		}

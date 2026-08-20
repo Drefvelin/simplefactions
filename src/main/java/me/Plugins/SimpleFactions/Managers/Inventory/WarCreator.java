@@ -25,7 +25,7 @@ import me.Plugins.SimpleFactions.War.Side;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.WarGoal;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
-import net.tfminecraft.Warbands.Managers.WarbandManager;
+import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 
 public class WarCreator {
 	public ItemStack createCampaignButton(War w) {

@@ -1,7 +1,9 @@
 package me.Plugins.SimpleFactions.Loaders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -71,6 +73,27 @@ class ConfigLoaderBattleScheduleTest {
 		assertEquals(12, Cache.warDefenderChoiceDeadlineHour);
 		assertEquals(4, Cache.warBattleVotingMinPlayers);
 		assertEquals(1, Cache.warBattleVotingDevMinPlayers);
+		assertTrue(Cache.warBattleVotingDevMinPlayersEnabled);
+	}
+
+	@Test
+	void loadConfig_devMinPlayersAbsentUsesMinPlayersThreshold() throws IOException {
+		Path file = writeConfig("""
+				war:
+				  battle_schedule:
+				    window_start_hour: 20
+				    window_end_hour: 24
+				    vote_close_hour: 16
+				    defender_choice_deadline_hour: 12
+				  battle_voting:
+				    min_players: 4
+				""" + INSTALLATIONS);
+
+		new ConfigLoader().loadConfig(file.toFile());
+
+		assertEquals(4, Cache.warBattleVotingMinPlayers);
+		assertEquals(4, Cache.warBattleVotingDevMinPlayers);
+		assertFalse(Cache.warBattleVotingDevMinPlayersEnabled);
 	}
 
 	@Test

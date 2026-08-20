@@ -48,6 +48,7 @@ public class RelationManager {
 	public static boolean endVassalage(Faction origin, Faction target, boolean hostile) {
 		if(isOverlord(origin, target) || isOverlord(target, origin)) {
 			reset(origin, target, hostile);
+			me.Plugins.SimpleFactions.War.commitment.WarCommitmentService.onVassalageEnded(origin, target);
 			return true;
 		}
 		return false;
@@ -104,6 +105,7 @@ public class RelationManager {
 		Relation reverse = new Relation(target.getRelation(origin.getId()));
 		boolean reverseChange = reverseChange(target, origin, r);
 		if(r.isVassalage()) {
+			// War levy rows are snapshotted at declare / ally join only (61.01b); no mid-war add here.
 			if(!vassalCheck(target, origin)) {
 				if(p != null) p.sendMessage("§cThis faction is alredy a subject of someone else");
 				return;

@@ -7,12 +7,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Objects.Request.AutoresolveRequest;
 import me.Plugins.SimpleFactions.Objects.Request.ElevateRequest;
 import me.Plugins.SimpleFactions.Objects.Request.MovementJoinRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelocateRequest;
 import me.Plugins.SimpleFactions.Objects.Request.Request;
 import me.Plugins.SimpleFactions.Objects.Request.WarRequest;
+import me.Plugins.SimpleFactions.War.schedule.BattleAutoresolveService;
 
 public class RequestManager {
 	private static HashMap<Player, Request> requests = new HashMap<>();
@@ -55,6 +57,8 @@ public class RequestManager {
 			}
 		} else if(req instanceof WarRequest){
 			WarManager.acceptRequest(p);
+		} else if(req instanceof AutoresolveRequest) {
+			BattleAutoresolveService.acceptRequest(p);
 		} else if(req instanceof RelocateRequest){
 			FactionManager.acceptRelocateRequest(p);
 		} else if(req instanceof ElevateRequest) {

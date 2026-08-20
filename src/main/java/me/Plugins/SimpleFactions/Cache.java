@@ -8,6 +8,7 @@ import java.util.Map;
 import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.SimpleFactions.laws.LawEffect;
+import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 
 public class Cache {
 	public static String mapRef;
@@ -54,6 +55,15 @@ public class Cache {
 	public static boolean warBattleVotingRequireSmallestSideFull;
 	public static boolean warBattleVotingPassIfEither;
 	public static int warBattleVotingDevMinPlayers;
+	public static boolean warBattleVotingDevMinPlayersEnabled;
+
+	public static int battleProvincePollIntervalTicks;
+	public static int battleProvinceLeaveCountdownSeconds;
+	public static int battleSiegeContestDurationSeconds;
+	public static DefenderRespawnMode battleRaidDefenderRespawnModeDefault;
+	public static String battleCampaignTemplateField;
+	public static String battleCampaignTemplateSiege;
+	public static String battleCampaignTemplateRaid;
 
 	public static HashMap<String, String> icons = new HashMap<>();
 

@@ -7,7 +7,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Map.ProvinceGrid;
+import me.Plugins.SimpleFactions.Map.presence.ProvincePresenceListener;
+import me.Plugins.SimpleFactions.Map.presence.ProvincePresenceService;
+import me.Plugins.SimpleFactions.Map.presence.ProvincePresenceTickService;
 import me.Plugins.SimpleFactions.Database.Database;
+import me.Plugins.SimpleFactions.Loaders.BattleTemplateLoader;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.ConfigLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
@@ -34,7 +38,16 @@ import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.TabCompletion;
+import me.Plugins.SimpleFactions.War.schedule.BattleScheduleTickService;
 import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleOutcomeService;
+import me.Plugins.SimpleFactions.War.battle.engine.BattleLeavePenaltyService;
+import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
+import me.Plugins.SimpleFactions.War.battle.ui.BattleCommandManager;
+import me.Plugins.SimpleFactions.War.battle.ui.BattleTabCompletion;
+import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
+import me.Plugins.SimpleFactions.War.battle.template.BattleTemplateService;
+import me.Plugins.SimpleFactions.War.battle.warband.WarbandMembershipListener;
 
 public class SimpleFactions extends JavaPlugin{
 	public static FileConfiguration config;
@@ -54,6 +67,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final LawLoader lawLoader = new LawLoader();
 	private final ProvinceLoader provinceLoader = new ProvinceLoader();
 	private final PoliticalActionLoader politicalActionLoader = new PoliticalActionLoader();
+	private final BattleTemplateLoader battleTemplateLoader = new BattleTemplateLoader();
 	
 	//Managers
 	private final ProvinceManager provinceManager = new ProvinceManager();
@@ -66,6 +80,13 @@ public class SimpleFactions extends JavaPlugin{
 	private final PlayerManager playerManager = new PlayerManager();
 	private final SessionManager sessionManager = new SessionManager();
 	private final RelocationPrompt relocationPrompt = new RelocationPrompt();
+	private final ProvincePresenceListener provincePresenceListener = new ProvincePresenceListener();
+	private final BattleManager battleManager = new BattleManager();
+	private final BattleLeavePenaltyService battleLeavePenaltyService = new BattleLeavePenaltyService();
+	private final WarbandManager warbandManager = new WarbandManager();
+	private final BattleCommandManager battleCommandManager = new BattleCommandManager();
+	private final WarbandMembershipListener warbandMembershipListener = new WarbandMembershipListener();
+	private final CampaignBattleOutcomeService campaignBattleOutcomeService = new CampaignBattleOutcomeService();
 	private ProvinceManager provinceSnapshot = new ProvinceManager();
 	private ProvinceGrid provinceGrid;
 	
@@ -115,8 +136,17 @@ public class SimpleFactions extends JavaPlugin{
 			return;
 		}
 		factionManager.run();
+		ProvincePresenceTickService.start();
+		warbandManager.start();
+		battleManager.start();
+		getCommand(battleCommandManager.cmd1).setExecutor(battleCommandManager);
+		getCommand(battleCommandManager.cmd2).setExecutor(battleCommandManager);
+		BattleTabCompletion battleTabCompletion = new BattleTabCompletion();
+		getCommand(battleCommandManager.cmd1).setTabCompleter(battleTabCompletion);
+		getCommand(battleCommandManager.cmd2).setTabCompleter(battleTabCompletion);
 		RequestManager.start();
 		WarManager.start();
+		BattleScheduleTickService.start();
 		sessionManager.start();
 		provinceSnapshot = provinceManager.createSnapshotShell();
 		provinceManager.recalculate();
@@ -124,6 +154,7 @@ public class SimpleFactions extends JavaPlugin{
 	}
 	@Override
 	public void onDisable() {
+		battleManager.end();
 		sessionManager.end();
 		db.saveTimer(FactionManager.getTimer());
 		for(Faction f : FactionManager.factions) {
@@ -144,6 +175,7 @@ public class SimpleFactions extends JavaPlugin{
 		lawLoader.load(new File(getDataFolder(), "laws.yml"));
 		tierLoader.load(new File(getDataFolder(), "tiers.yml"));
 		goalLoader.load(new File(getDataFolder(), "wargoals.yml"));
+		battleTemplateLoader.load(new File(getDataFolder(), "battle-templates.yml"));
 		guildLoader.load(new File(getDataFolder(), "Guilds/guild-types.yml"));
 		branchLoader.load(new File(getDataFolder(), "Guilds/branches.yml"));
 		upgradeLoader.load(new File(getDataFolder(), "Guilds/upgrades.yml"));
@@ -158,6 +190,12 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(sessionManager, this);
 		getServer().getPluginManager().registerEvents(relocationPrompt, this);
 		getServer().getPluginManager().registerEvents(factionManager, this);
+		getServer().getPluginManager().registerEvents(provincePresenceListener, this);
+		getServer().getPluginManager().registerEvents(battleManager, this);
+		getServer().getPluginManager().registerEvents(battleLeavePenaltyService, this);
+		getServer().getPluginManager().registerEvents(warbandManager, this);
+		getServer().getPluginManager().registerEvents(warbandMembershipListener, this);
+		getServer().getPluginManager().registerEvents(campaignBattleOutcomeService, this);
 	}
 	public void createFolders() {
 		File dataFolder = getDataFolder();
@@ -194,6 +232,7 @@ public class SimpleFactions extends JavaPlugin{
 				"Guilds/guild-types.yml",
 				"Guilds/branches.yml",
 				"Guilds/upgrades.yml",
+				"battle-templates.yml",
 				};
 		for(String s : files) {
 			File newConfigFile = new File(getDataFolder(), s);
@@ -226,5 +265,13 @@ public class SimpleFactions extends JavaPlugin{
 
 	public SessionManager getSessionManager() {
 		return sessionManager;
+	}
+
+	public ProvincePresenceService getProvincePresenceService() {
+		return ProvincePresenceService.getInstance();
+	}
+
+	public BattleTemplateService getBattleTemplateService() {
+		return BattleTemplateService.getInstance();
 	}
 }

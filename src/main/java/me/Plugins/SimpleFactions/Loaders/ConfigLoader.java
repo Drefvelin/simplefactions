@@ -9,6 +9,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.SimpleFactions.laws.LawEffect;
@@ -59,8 +60,27 @@ public class ConfigLoader {
 		Cache.warBattleVotingMinPlayers = config.getInt("war.battle_voting.min_players", 4);
 		Cache.warBattleVotingRequireSmallestSideFull = config.getBoolean("war.battle_voting.require_smallest_side_full", true);
 		Cache.warBattleVotingPassIfEither = config.getBoolean("war.battle_voting.pass_if_either", true);
-		Cache.warBattleVotingDevMinPlayers = config.getInt("war.battle_voting.dev_min_players", 1);
-		validateBattleScheduleConfig();
+		Cache.warBattleVotingDevMinPlayersEnabled = config.contains("war.battle_voting.dev_min_players");
+		if (Cache.warBattleVotingDevMinPlayersEnabled) {
+			Cache.warBattleVotingDevMinPlayers = config.getInt("war.battle_voting.dev_min_players");
+		} else {
+			Cache.warBattleVotingDevMinPlayers = Cache.warBattleVotingMinPlayers;
+		}
+		validateBattleScheduleConfig(config);
+
+		Cache.battleProvincePollIntervalTicks = config.getInt("battle.province_poll_interval_ticks", 20);
+		Cache.battleProvinceLeaveCountdownSeconds = config.getInt("battle.province_leave_countdown_seconds", 10);
+		Cache.battleSiegeContestDurationSeconds = config.getInt("battle.siege.contest_duration_seconds", 180);
+		Cache.battleRaidDefenderRespawnModeDefault = DefenderRespawnMode.fromJson(
+				config.getString("battle.raid.defender_respawn_mode_default", "INFINITE"));
+		if (Cache.battleRaidDefenderRespawnModeDefault == null) {
+			Cache.battleRaidDefenderRespawnModeDefault = DefenderRespawnMode.INFINITE;
+		}
+		Cache.battleCampaignTemplateField = config.getString("battle.campaign_template.field", "field_default");
+		Cache.battleCampaignTemplateSiege = config.getString("battle.campaign_template.siege", "siege_default");
+		Cache.battleCampaignTemplateRaid = config.getString("battle.campaign_template.raid", "raid_template");
+		validateBattlePresenceConfig();
+		validateBattleTemplateDefaultsConfig();
 
 		Cache.branchUpgradeCost = config.getDouble("branch-upgrade-cost", 100.0);
 		Cache.branchUpgradeExponent = config.getDouble("branch-upgrade-exponent", 1.1);
@@ -106,7 +126,7 @@ public class ConfigLoader {
 		InstallationConfigLoader.load(config.getConfigurationSection("installations"));
 	}
 
-	private static void validateBattleScheduleConfig() {
+	private static void validateBattleScheduleConfig(FileConfiguration config) {
 		int defenderDeadline = Cache.warDefenderChoiceDeadlineHour;
 		int voteClose = Cache.warVoteCloseHour;
 		int windowStart = Cache.warBattleWindowStartHour;
@@ -124,7 +144,7 @@ public class ConfigLoader {
 		if (Cache.warBattleVotingMinPlayers < 1) {
 			failBattleSchedule("war.battle_voting.min_players must be >= 1");
 		}
-		if (Cache.warBattleVotingDevMinPlayers < 1) {
+		if (Cache.warBattleVotingDevMinPlayersEnabled && Cache.warBattleVotingDevMinPlayers < 1) {
 			failBattleSchedule("war.battle_voting.dev_min_players must be >= 1");
 		}
 	}
@@ -134,5 +154,23 @@ public class ConfigLoader {
 			Bukkit.getLogger().severe("[SimpleFactions] " + message);
 		}
 		throw new IllegalStateException(message);
+	}
+
+	private static void validateBattlePresenceConfig() {
+		if (Cache.battleProvincePollIntervalTicks < 1) {
+			failBattleSchedule("battle.province_poll_interval_ticks must be >= 1");
+		}
+	}
+
+	private static void validateBattleTemplateDefaultsConfig() {
+		if (Cache.battleProvinceLeaveCountdownSeconds < 1) {
+			failBattleSchedule("battle.province_leave_countdown_seconds must be >= 1");
+		}
+		if (Cache.battleSiegeContestDurationSeconds < 1) {
+			failBattleSchedule("battle.siege.contest_duration_seconds must be >= 1");
+		}
+		if (Cache.battleRaidDefenderRespawnModeDefault == null) {
+			failBattleSchedule("battle.raid.defender_respawn_mode_default must be INFINITE or LIVES");
+		}
 	}
 }

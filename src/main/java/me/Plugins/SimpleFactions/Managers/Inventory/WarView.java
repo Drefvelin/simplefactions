@@ -28,8 +28,9 @@ import me.Plugins.SimpleFactions.War.WarGoal;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.enums.SFGUI;
-import net.tfminecraft.Warbands.Managers.WarbandManager;
-import net.tfminecraft.Warbands.Objects.Warband;
+import me.Plugins.SimpleFactions.War.battle.ui.BattleInventoryManager;
+import me.Plugins.SimpleFactions.War.battle.warband.Warband;
+import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 
 public class WarView {
 	public InventoryManager inv;
@@ -179,7 +180,7 @@ public class WarView {
 				if(w.getType(pf).equalsIgnoreCase("main_attacker")) offense = true;
 				if(par.isCivilWar()) offense = false;
 				WarbandManager.addWarband(new Warband(w, par, offense));
-				net.tfminecraft.Warbands.Managers.InventoryManager warinv = new net.tfminecraft.Warbands.Managers.InventoryManager();
+				BattleInventoryManager warinv = new BattleInventoryManager();
 				warinv.warbandList(p);
 			}
 			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");

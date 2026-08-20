@@ -18,6 +18,7 @@ import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.schedule.BattleWindowService;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
@@ -154,6 +155,7 @@ public class TabCompletion implements TabCompleter{
 					completions.add("endwar");
 					completions.add("warstatus");
 					completions.add("warpath");
+					completions.add("warschedule");
 					completions.add("destroytitle");
 					completions.add("granttitle");
 					completions.add("transfersubject");
@@ -428,12 +430,47 @@ public class TabCompletion implements TabCompleter{
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2
 					&& (args[0].equalsIgnoreCase("endwar")
 							|| args[0].equalsIgnoreCase("warstatus")
-							|| args[0].equalsIgnoreCase("warpath"))) {
+							|| args[0].equalsIgnoreCase("warpath")
+							|| args[0].equalsIgnoreCase("warschedule"))) {
 				if(sender instanceof Player){
 					List<String> completions = new ArrayList<>();
 					for (War war : WarManager.getActive()) {
 						completions.add(String.valueOf(war.getId()));
 					}
+					TabCleaner.cleanTab(completions, args);
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("warschedule")) {
+				if(Permissions.isAdmin(sender)) {
+					List<String> completions = new ArrayList<>();
+					completions.add("opencvote");
+					completions.add("closevote");
+					completions.add("skipday");
+					completions.add("castvote");
+					completions.add("forcequorum");
+					completions.add("setscheduled");
+					TabCleaner.cleanTab(completions, args);
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 4
+					&& args[0].equalsIgnoreCase("warschedule")
+					&& args[2].equalsIgnoreCase("castvote")) {
+				if(Permissions.isAdmin(sender)) {
+					List<String> completions = new ArrayList<>();
+					for (int hour : BattleWindowService.listValidHours()) {
+						completions.add(String.valueOf(hour));
+					}
+					TabCleaner.cleanTab(completions, args);
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 5
+					&& args[0].equalsIgnoreCase("warschedule")
+					&& args[2].equalsIgnoreCase("castvote")) {
+				if(Permissions.isAdmin(sender)) {
+					List<String> completions = new ArrayList<>();
+					completions.add("attacker");
+					completions.add("defender");
+					completions.add("both");
 					TabCleaner.cleanTab(completions, args);
 					return completions;
 				}

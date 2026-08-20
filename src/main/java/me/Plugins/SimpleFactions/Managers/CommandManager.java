@@ -1,4 +1,5 @@
 package me.Plugins.SimpleFactions.Managers;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 
@@ -33,6 +34,8 @@ import me.Plugins.SimpleFactions.Utils.Permissions;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.WarCommandHelper;
 import me.Plugins.SimpleFactions.War.WarDebugFormatter;
+import me.Plugins.SimpleFactions.War.schedule.WarScheduleAdminResult;
+import me.Plugins.SimpleFactions.War.schedule.WarScheduleAdminService;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -1325,6 +1328,59 @@ public class CommandManager implements Listener, CommandExecutor{
 						+ ". Progression and occupation reset.");
 				for (String line : WarDebugFormatter.formatStatusLines(w)) {
 					p.sendMessage(line);
+				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("warschedule") && args.length >= 3) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				var warId = WarCommandHelper.parseWarId(args[1]);
+				if (warId.isEmpty()) {
+					p.sendMessage("§cWar id must be a number");
+					return true;
+				}
+				War w = WarManager.getById(warId.get());
+				if(w == null){
+					p.sendMessage("§cNo war by that id");
+					return true;
+				}
+				String subcommand = args[2].toLowerCase();
+				WarScheduleAdminResult result = switch (subcommand) {
+					case "opencvote" -> WarScheduleAdminService.openVote(w);
+					case "closevote" -> WarScheduleAdminService.closeVote(w, Instant.now());
+					case "skipday" -> WarScheduleAdminService.skipDay(w);
+					case "castvote" -> {
+						if (args.length < 4) {
+							yield WarScheduleAdminResult.error("Usage: warschedule <id> castvote <hour> [attacker|defender|both]");
+						}
+						int hour;
+						try {
+							hour = Integer.parseInt(args[3]);
+						} catch (NumberFormatException e) {
+							yield WarScheduleAdminResult.error("Hour must be a number.");
+						}
+						String side = args.length >= 5 ? args[4] : "both";
+						yield WarScheduleAdminService.castVote(w, hour, side);
+					}
+					case "forcequorum" -> WarScheduleAdminService.forceQuorum(w);
+					case "setscheduled" -> {
+						if (args.length < 4) {
+							yield WarScheduleAdminResult.error("Usage: warschedule <id> setscheduled <iso-instant>");
+						}
+						yield WarScheduleAdminService.setScheduled(w, args[3]);
+					}
+					default -> WarScheduleAdminResult.error(
+							"Unknown subcommand. Use: opencvote, closevote, skipday, castvote, forcequorum, setscheduled");
+				};
+				if (result.success()) {
+					WarManager.persist(w);
+					p.sendMessage("§a" + result.message());
+					for (String line : WarDebugFormatter.formatStatusLines(w)) {
+						p.sendMessage(line);
+					}
+				} else {
+					p.sendMessage("§c" + result.message());
 				}
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("destroytitle") && args.length == 2) {

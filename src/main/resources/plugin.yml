@@ -5,7 +5,7 @@ version: 1.0
 author: Drefvelin
 
 depend: [DenarEconomy, TLibs]
-softdepend: [MMOItems, MythicLib, TFMCWeb]
+softdepend: [MMOItems, MythicLib, TFMCWeb, VehicleFramework]
 
 commands:
   faction:
@@ -14,3 +14,9 @@ commands:
   guild:
       useage: /<command>
       description: Guild Command
+  warband:
+      useage: /<command>
+      description: Warband Command
+  battle:
+      useage: /<command>
+      description: Battle Command

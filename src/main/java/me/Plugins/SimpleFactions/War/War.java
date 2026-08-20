@@ -57,6 +57,7 @@ public class War {
 	private boolean autoresolveProposedByDefender;
 	private int postponementsThisCycle;
 	private boolean defenderChoiceResolved;
+	private boolean forceQuorumNextClose;
 	private Instant startedAt;
 	private Instant endedAt;
 	private WarEndReason endReason;
@@ -374,6 +375,14 @@ public class War {
 
 	public void setDefenderChoiceResolved(boolean defenderChoiceResolved) {
 		this.defenderChoiceResolved = defenderChoiceResolved;
+	}
+
+	public boolean isForceQuorumNextClose() {
+		return forceQuorumNextClose;
+	}
+
+	public void setForceQuorumNextClose(boolean forceQuorumNextClose) {
+		this.forceQuorumNextClose = forceQuorumNextClose;
 	}
 
 	public Instant getStartedAt() {

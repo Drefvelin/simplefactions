@@ -1,6 +1,6 @@
 # Wars — automated campaign system (planning lock)
 
-> **Implementation status:** **Step 56 foundation shipped** (2026-08-19). **Step 57 pathfinder & campaign shipped** (2026-08-20). **Step 58 initiative & occupation shipped** (2026-08-20). **Step 59.01 battle scheduling lock** (2026-08-20). Code: steps **59.02+** (scheduling impl), battles **60–61**. Still planned: raid routes (**66**), map export (**67**), declare codes (**68**).
+> **Implementation status:** **Step 56 foundation shipped** (2026-08-19). **Step 57 pathfinder & campaign shipped** (2026-08-20). **Step 58 initiative & occupation shipped** (2026-08-20). **Step 59 battle scheduling shipped** (2026-08-20). **Step 60.09 campaign battle launch shipped** (2026-08-20). **Step 61.01 military & casualties planning lock** (2026-08-20); code batches **61.02–61.07** pending. Still planned: raid routes (**66**), map export (**67**), declare codes (**68**).
 >
 > **ProvinceSystem:** [step-44](../../ProvinceSystem/Planning/batches/step-44/00-index.md) (map occupation overlay) · [map-export-schema.json](../../ProvinceSystem/Planning/assets/map-export-schema.json)
 
@@ -341,7 +341,7 @@ Green/yellow mark **action** slots; ownership remains visible in item lore.
 
 Fort / objective / capital: lore tags; siege rules in step **63**.
 
-Voting hour toggles: same Campaign view, added in step **59**.
+Voting hour toggles and schedule info: Campaign view slots **28-32** (hour multi-select), info book slot **4**, autoresolve propose slots **49-51** (step **59**, shipped 2026-08-20).
 
 ---
 
@@ -370,7 +370,7 @@ Each **won campaign battle** adds explicit province(s) to the occupier's zone (*
 
 ## Battle scheduling & voting
 
-> **Locked in:** [step-59/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-59/01-planning-lock.md) (59.01, 2026-08-20)
+> **Shipped:** steps [59.02-59.06](../../ProvinceSystem/Planning/batches/step-59/00-index.md) (2026-08-20). Locked in [59.01 planning lock](../../ProvinceSystem/Planning/batches/step-59/01-planning-lock.md).
 
 All clock times **Zulu (UTC)**, configurable under `war.battle_schedule`:
 
@@ -398,6 +398,7 @@ Config under `war.battle_voting`:
 | `min_players` | 4 | Minimum distinct voters (any hour) |
 | `require_smallest_side_full` | true | Smaller side must have 100% of **eligible members** represented |
 | `pass_if_either` | true | Pass if **either** threshold met |
+| `dev_min_players` | (optional) | Test-server override when key explicitly set; lower than `min_players` lowers quorum threshold. Remove before prod ([DEV-SHORTCUTS.md](../../ProvinceSystem/Planning/DEV-SHORTCUTS.md)). |
 
 ### Low turnout
 
@@ -418,52 +419,137 @@ Config under `war.battle_voting`:
 | `battleVotes` | UUID → selected hours |
 | `autoresolveProposedByAttacker/Defender` | Dual-leader autoresolve flags |
 | `postponementsThisCycle` | Debug counter |
+| `defenderChoiceResolved` | Defender hold/counter choice locked (auto-Hold at deadline) |
+| `forceQuorumNextClose` | Dev-only: next admin/tick close bypasses quorum ([DEV-SHORTCUTS.md](../../ProvinceSystem/Planning/DEV-SHORTCUTS.md)) |
+
+### Runtime (59.06)
+
+- **UTC scheduler:** `BattleScheduleTickService` polls every minute; processes each active `VOTING` war once per UTC hour change. At `defender_choice_deadline_hour` applies auto-Hold when needed; at `vote_close_hour` runs tally (schedule, postpone, or autoresolve). Persists on change.
+- **Campaign battle launch (60.09):** On `SCHEDULED`, `CampaignBattleLaunchService` creates `campaign_w{id}_p{prov}` from campaign template, auto-rosters warbands, broadcasts `/battle join`. Tick starts fight at `scheduledBattleAt`. Autoresolve accept starts immediately. On `BattleEndedEvent`, progression + occupation apply and phase returns to `VOTING`. Regiment casualties apply in **61.06** (locked in **61.01**, not yet implemented).
+- **Declare hook:** `WarManager.declareWar` -> `populateCampaign` -> `initScheduleState` sets `VOTING`, `battleDay`, empty votes.
+- **Admin dev commands:** `/faction warschedule <warId> <subcommand>` (`opencvote`, `closevote`, `skipday`, `castvote`, `forcequorum`, `setscheduled`). Permission `simplefactions.admin`. Remove before prod.
 
 ---
 
 ## Battles & Warbands
 
+### Province presence (central tracker)
+
+SimpleFactions runs **one** province location poll for all online players every **1 second**. It fires **`PlayerProvinceEnterEvent`** / **`PlayerProvinceLeaveEvent`** when a player's province changes.
+
+Battles (province-leave penalty), and future systems (ZOC, raids), **subscribe to these events** instead of running separate location scans.
+
+Lookup: [`RestServer.getProvince`](./ProvinceGrid.md) → local `ProvinceGrid`.
+
 ### Merge Warbands into SimpleFactions
 
 Same pattern as professions → RPCharacters. SF owns campaign battles, join flow, lives, and campaign linkage. Warbands battle engine (capture points, deaths, respawn) becomes an SF submodule.
+
+### Battle modes (locked step 60)
+
+| Mode | Win | Region | Respawns |
+|------|-----|--------|----------|
+| **Field** | Side eliminated when **lives = 0** and all online fighters are in **jail** (capture points gate spawn teleports only) | Battle **province** (+ naval add-on) | Campaign: collective lives from committed regiments (61.04). Staff manual: template lives |
+| **Siege** | Hold **contest area** until timer hits **0** (ETW-style bidirectional timer); defender elimination also ends battle | Same as field | Same as field |
+| **Raid** | Capture **target** to 100%; defender eliminated when `LIVES` mode exhausted | **No fence** - map-wide movement | Attackers: **none** (elimination on death/disconnect). Defenders: **infinite** or **set lives** (template) |
+
+**Naval variant** (field + siege only): template flag adds the **adjacent sea province** to allowed set; **attacker spawn** on naval point. Campaign sea routing stays step **64**.
+
+**Province-leave penalty** (field + siege): leave allowed province set → **10s countdown** → death → respawn at **side spawn**. Uses central province events. **Raids:** no leave penalty.
 
 ### Automatic vs manual battles
 
 | Mode | Use |
 |------|-----|
-| **Campaign battle** | System-created; join via command; **no manual warband** for that battle |
+| **Campaign battle** | System-created from schedule; join via command; mode = field or siege from campaign context |
+| **Raid battle** | Target settlement/province; raid war (66) or inter-battle raid (65) |
 | **Manual battle** | Lore / staff events — **remains** for non-campaign fights |
 
 ### Staff template battles
 
-From war GUI (staff): **template** per province/terrain — **spawns**, **jails**, **capture points**. Reused for campaign battles at that province.
+From war GUI (staff): **template** per province — **spawns**, **jails**, **capture points** (field), **contest area** + duration (siege), **naval variant**, **defender respawn mode** (raid). Reused for campaign battles at that province.
 
 ### In-battle rules
 
-- Leave battle **province** → **10s countdown** → death → respawn at **side spawn**.
+- Leave allowed **provinces** (field/siege) → **10s countdown** → death → respawn at **side spawn** (central province tracker).
 - Friendly fire / keep inventory per template config.
+- **Raid attackers** do not respawn; fight until eliminated.
+- **Raid defenders:** infinite respawns or finite lives per template.
 
-### Manpower pool per battle
+### Manpower pool per battle (locked step 61.01)
 
-Offense/defense regiment pools depend on **where** the battle is fought, not who declared war:
+Planning lock: [step-61/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-61/01-planning-lock.md) · levy detail: [step-61/01b-levy-vassal-lock.md](../../ProvinceSystem/Planning/batches/step-61/01b-levy-vassal-lock.md). Implementation batches **61.02–61.07**.
 
-| Location | Attacker-side factions | Defender-side factions |
+Offense/defense regiment pools depend on **where the battle is fought** and **campaign phase**, not who declared war. Use `CampaignProgressionService.getOffensiveSide(war)` to determine which belligerent role is offensive; that side's factions use offensive regiments, the other side uses defensive regiments.
+
+| Location (simplified) | Attacker-side factions | Defender-side factions |
 |----------|------------------------|-------------------------|
-| Inside **defender** territory (push toward their objective) | Offensive regiments | Defensive regiments |
+| Inside **defender** territory (invasion push) | Offensive regiments | Defensive regiments |
 | Inside **attacker** territory (counter-push) | Defensive regiments | Offensive regiments |
 
-### Lives (collective)
+**Militia** (`militia` regiment): deploys only on **that faction's direct land** (`TitleManager.getByProvince(battleProvinceId) == faction`). Overlord militia does **not** deploy in vassal territory; vassal gets full military including militia on vassal land; overlord sends professional army + levies only.
 
-- **5 lives × regiments committed** minus **players at battle start** (config formula).
-- `max_players ≤ lives`.
-- Track actual deaths and disconnects; apply regiment casualties after battle.
-- **Casualty order:** militia first (own land only), then army + levies fairly across contributors (not "vassals always die first").
+### War commitment (`WarCommitment`, step 61.02+)
+
+Minimal rules (locked 61.01 + 61.01b):
+
+1. **Fighter OR levy-only, never both** on a war side. Fighters = main leaders, their **direct subjects**, and **called allies** (`BattleSideMembers.collectParticipatingFactions`). Nested vassals are levy-only.
+2. **Fighter own regiments:** live slot count at each battle (mid-war buildup counts).
+3. **Levy:** frozen rows `holder → source → count`. Snapshotted at **declare** and when an **ally joins**. Nearest **fighter** on the overlord chain is the holder (not the top overlord when a subject also fights).
+4. Casualties always debit the **source** faction for levy rows.
+
+**Levy mid-war:**
+
+| Event | Effect |
+|-------|--------|
+| Ally joins | New levy rows for joiner only |
+| Subject buildup / levy % change | No change |
+| **New vassal** (of main, subject fighter, or ally) | No new rows |
+| **Vassal bond breaks** | Remove rows for broken subject **and its subject subtree**; if a fighting subject leaves, remove all rows it held |
+
+Today `WarManager.getCommitmentsForWar` returns real snapshot rows via `WarCommitmentService` (61.02). Re-commit is forbidden per own-regiment row. Levy rows use `sourceFactionId`. Commitments are in-memory until 61.06 persistence.
+
+Militia eligibility is filtered at **battle pool** time, not at commit.
+
+### Lives (collective, campaign field + siege)
+
+Applies when `battle.warId != null` and type is **FIELD** or **SIEGE** at `battle.start()` (61.04). Staff manual battles (`warId == null`) and **raids** keep 60 template lives.
+
+**Formula (per side):**
+
+```text
+sideLives = max(minSideLives, livesPerRegiment × committedRegiments − playersAtStart)
+```
+
+- `committedRegiments`: eligible pool total from battle pool resolver (61.03)
+- `playersAtStart`: unique online fighters on that side at start
+- `max_players ≤ lives`
+
+Config under `war.battle_military`:
+
+| Key | Default |
+|-----|---------|
+| `lives_per_regiment` | `5` |
+| `min_side_lives` | `1` |
+
+### Casualties (locked step 61.01)
+
+**Ledger (61.05):** During campaign field/siege battles, track per-side casualties from deaths, disconnects after start, and province-leave penalty deaths. No ledger for staff manual or raid battles.
+
+**Apply (61.06):** After battle via `CampaignBattleOutcomeService` (before `openVote`). Order: militia first (when eligible at battle province), then army + levies split **proportionally** across contributors. Debits `WarCommitment.count` and faction `Regiment.currentSlots` (permanent until rebuilt). Applies even when **no winner**.
+
+**Out of scope for 61:** staff battles, goal apply (**62**), fort ZOC siege pick (**63**), raid war type (**66**).
 
 ### Levies (war-scoped)
 
-- Integer **levy pool committed at war start** per subject; no mid-war levy increases from subject buildup.
-- All commits tagged **`war_id`**.
-- Losses decrement committed levies for war duration.
+- Frozen integer pool per `(holder, source)` row; snapshotted at **declare** and on **ally join** only.
+- **Holder** = nearest participating fighter walking up from source (avoids double count when main and subject both fight).
+- **Source** = levy-only faction whose troops and casualties are tracked; can be any depth in the vassal chain.
+- **No** mid-war add from subject troop buildup, levy % changes, or **becoming** a new vassal (of main, subject fighter, or ally).
+- **Yes** mid-war **remove** when a subject stops being a vassal: drop that source and **all its subject descendants**; drop holder rows if a fighting subject leaves the side.
+- **transferSubject** mid-war: remove old subtree only; no snapshot for new overlord.
+- Fighter on the war side never also appears as levy from the same side (no double count).
+- All commits tagged **`war_id`**. Losses decrement committed levy and source faction sent counts.
 
 ---
 
@@ -525,10 +611,10 @@ Full step list and dependencies: [ProvinceSystem/Planning/war-build-order.md](..
 |------|--------|-------|
 | **56** — Foundation **done** | War v2, goals, FSM, persistence, test declare (no code), participants, `war_id` stubs | SF |
 | **57** — Pathfinder & campaign **done** | `ProvincePathfinder`, border start, route, objective province | SF |
-| **58** — Initiative & occupation | Cursor, initiative, occupation bulge, counter-push | SF |
-| **59** — Scheduling | Battle window, voting, postpone | SF |
-| **60** — Warbands & battles | Merge Warbands, templates, auto-join | SF |
-| **61** — Military & casualties | Lives, militia, levies, regiment losses | SF |
+| **58** — Initiative & occupation **done** | Cursor, initiative, occupation bulge, counter-push | SF |
+| **59** — Scheduling **done** | Battle window, voting, postpone, scheduler, `warschedule` dev | SF |
+| **60** — Warbands & battles **done** | Province tracker, field/siege/raid, templates, schedule hook, auto-join | SF |
+| **61** — Military & casualties | Lives, militia, levies, regiment losses (**61.01–61.02 done**; code 61.03+) | SF |
 | **62** — End & goals | Surrender, white peace, goal apply, reparations | SF |
 | **63** — Forts & sieges | ZOC gates on campaign line | SF |
 | **64** — Naval & installations | Sea zones, port pick per battle | SF |

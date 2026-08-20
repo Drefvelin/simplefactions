@@ -26,9 +26,12 @@ import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
 import me.Plugins.SimpleFactions.War.progression.CampaignProgressionService;
 import me.Plugins.SimpleFactions.War.progression.CampaignRouteRenderer;
 import me.Plugins.SimpleFactions.War.schedule.BattleHourTally;
+import me.Plugins.SimpleFactions.War.schedule.BattleQuorumService;
+import me.Plugins.SimpleFactions.War.schedule.BattleScheduleLookups;
 import me.Plugins.SimpleFactions.War.schedule.BattleScheduleService;
 import me.Plugins.SimpleFactions.War.schedule.BattleVoteService;
 import me.Plugins.SimpleFactions.War.schedule.BattleWindowService;
+import me.Plugins.TLibs.TLibs;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class CampaignCreator {
@@ -103,6 +106,22 @@ public class CampaignCreator {
 				"#a39ba8Schedule: #d4c9ae"
 						+ (schedulePhase != null ? schedulePhase.toJson() : BattleSchedulePhase.IDLE.toJson())));
 
+		Function<UUID, Faction> factionLookup = uuidToFaction != null
+				? uuidToFaction
+				: BattleScheduleLookups.uuidToFactionForWar(war);
+
+		if (schedulePhase == BattleSchedulePhase.VOTING) {
+			lines.add(StringFormatter.formatHex("#e6c84aHour votes:"));
+			Map<Integer, BattleHourTally> tally = BattleVoteService.buildHourTally(war, factionLookup);
+			for (int hour : BattleWindowService.listValidHours()) {
+				BattleHourTally counts = tally.getOrDefault(hour, new BattleHourTally(0, 0));
+				lines.add(StringFormatter.formatHex(
+						"#a39ba8" + hour + ":00 #d4c9aeA" + counts.attackerCount() + " / D" + counts.defenderCount()));
+			}
+			lines.add(StringFormatter.formatHex(
+					"#a39ba8Total voters: #d4c9ae" + BattleQuorumService.countDistinctVoters(war)));
+		}
+
 		Set<Integer> selections = viewerUuid != null
 				? new TreeSet<>(BattleVoteService.getPlayerSelections(war, viewerUuid))
 				: Set.of();
@@ -110,18 +129,6 @@ public class CampaignCreator {
 				? "-"
 				: selections.stream().map(h -> h + ":00").collect(Collectors.joining(", "));
 		lines.add(StringFormatter.formatHex("#a39ba8Your hours: #d4c9ae" + yourHours));
-
-		if (uuidToFaction != null) {
-			Map<Integer, BattleHourTally> tally = BattleVoteService.buildHourTally(war, uuidToFaction);
-			for (int hour : BattleWindowService.listValidHours()) {
-				BattleHourTally counts = tally.get(hour);
-				if (counts == null) {
-					continue;
-				}
-				lines.add(StringFormatter.formatHex(
-						"#a39ba8H" + hour + " #d4c9aeA" + counts.attackerCount() + "/D" + counts.defenderCount()));
-			}
-		}
 
 		if (schedulePhase == BattleSchedulePhase.SCHEDULED) {
 			Instant fightAt = war.getScheduledBattleAt();
@@ -134,31 +141,30 @@ public class CampaignCreator {
 			}
 		}
 
-		if (war.isAutoresolveProposedByAttacker()) {
-			lines.add(StringFormatter.formatHex("#e6c84aAttacker proposed autoresolve"));
-		}
-		if (war.isAutoresolveProposedByDefender()) {
-			lines.add(StringFormatter.formatHex("#e6c84aDefender proposed autoresolve"));
-		}
-		if (BattleScheduleService.isAutoresolveReady(war)) {
-			lines.add(StringFormatter.formatHex("#7fbd73Both leaders ready for autoresolve"));
-		}
-
 		return lines;
 	}
 
-	public ItemStack createHourToggleItem(War war, int hour, boolean selected, boolean clickable) {
-		Material material = clickable
-				? (selected ? Material.LIME_STAINED_GLASS_PANE : Material.GRAY_STAINED_GLASS_PANE)
-				: Material.GRAY_STAINED_GLASS_PANE;
-		ItemStack item = new ItemStack(material, 1);
+	public ItemStack createHourToggleItem(
+			War war,
+			int hour,
+			boolean selected,
+			boolean clickable,
+			BattleHourTally tally) {
+		String iconId = selected ? "mcicons:icon_confirm" : "mcicons:icon_cancel";
+		ItemStack item = TLibs.getItemAPI().getCreator().getItemsAdderItem(iconId);
 		ItemMeta meta = item.getItemMeta();
-		meta.setDisplayName(StringFormatter.formatHex("#d4c9ae" + hour + ":00 UTC"));
+		meta.setDisplayName(StringFormatter.formatHex(
+				(selected ? "#7fbd73" : "#d4c9ae") + hour + ":00 UTC"));
+		int attackerVotes = tally != null ? tally.attackerCount() : 0;
+		int defenderVotes = tally != null ? tally.defenderCount() : 0;
 		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#a39ba8Attacker votes: #d4c9ae" + attackerVotes));
+		lore.add(StringFormatter.formatHex("#a39ba8Defender votes: #d4c9ae" + defenderVotes));
 		if (clickable) {
-			lore.add(StringFormatter.formatHex(selected ? "#7fbd73Selected" : "#a39ba8Click to toggle"));
+			lore.add(StringFormatter.formatHex(
+					selected ? "#7fbd73Click to remove this hour" : "#d4c9aeClick to select this hour"));
 		} else {
-			lore.add(StringFormatter.formatHex("#a39ba8Voting closed or not eligible"));
+			lore.add(StringFormatter.formatHex("#a39ba8Voting closed or you are not eligible"));
 		}
 		meta.setLore(lore);
 		if (clickable) {
@@ -171,38 +177,28 @@ public class CampaignCreator {
 		return item;
 	}
 
-	public ItemStack createAutoresolveProposeButton(War war, BelligerentRole side, boolean alreadyProposed) {
-		Material material = alreadyProposed ? Material.LIME_BANNER : Material.GRAY_BANNER;
-		ItemStack item = new ItemStack(material, 1);
+	public ItemStack createUnusedHourSlotItem() {
+		ItemStack item = new ItemStack(Material.BLACK_STAINED_GLASS_PANE, 1);
 		ItemMeta meta = item.getItemMeta();
-		String sideLabel = side == BelligerentRole.ATTACKER ? "Attacker" : "Defender";
-		meta.setDisplayName(StringFormatter.formatHex(
-				(alreadyProposed ? "#7fbd73" : "#d4c9ae") + sideLabel + " autoresolve"));
-		meta.setLore(List.of(StringFormatter.formatHex(
-				alreadyProposed ? "#7fbd73Proposed" : "#a39ba8Propose skipping the battle vote")));
-		if (!alreadyProposed) {
-			NamespacedKey warKey = new NamespacedKey(SimpleFactions.plugin, "campaign_autoresolve_war");
-			NamespacedKey sideKey = new NamespacedKey(SimpleFactions.plugin, "campaign_autoresolve_side");
-			meta.getPersistentDataContainer().set(warKey, PersistentDataType.INTEGER, war.getId());
-			meta.getPersistentDataContainer().set(sideKey, PersistentDataType.STRING, side.name());
-		}
+		meta.setDisplayName(StringFormatter.formatHex("#a39ba8Battle hour slot"));
+		meta.setLore(List.of(StringFormatter.formatHex("#a39ba8No vote hour on this slot")));
 		item.setItemMeta(meta);
 		return item;
 	}
 
-	public ItemStack createAutoresolveStatusItem(War war) {
-		ItemStack item = new ItemStack(Material.PAPER, 1);
+	public ItemStack createAutoresolveProposeButton(War war, BelligerentRole side) {
+		ItemStack item = new ItemStack(Material.GRAY_BANNER, 1);
 		ItemMeta meta = item.getItemMeta();
-		meta.setDisplayName(StringFormatter.formatHex("#d4c9aeAutoresolve status"));
-		List<String> lore = new ArrayList<>();
-		lore.add(StringFormatter.formatHex(
-				"#a39ba8Attacker: #d4c9ae" + (war.isAutoresolveProposedByAttacker() ? "yes" : "no")));
-		lore.add(StringFormatter.formatHex(
-				"#a39ba8Defender: #d4c9ae" + (war.isAutoresolveProposedByDefender() ? "yes" : "no")));
-		if (BattleScheduleService.isAutoresolveReady(war)) {
-			lore.add(StringFormatter.formatHex("#7fbd73Both leaders agreed"));
-		}
-		meta.setLore(lore);
+		String sideLabel = side == BelligerentRole.ATTACKER ? "Attacker" : "Defender";
+		meta.setDisplayName(StringFormatter.formatHex("#d4c9ae" + sideLabel + " autoresolve"));
+		meta.setLore(List.of(
+				StringFormatter.formatHex("#a39ba8Propose skipping the battle vote"),
+				StringFormatter.formatHex("#a39ba8Opposing war leader must accept"),
+				StringFormatter.formatHex("#a39ba8(60s request, before vote close)")));
+		NamespacedKey warKey = new NamespacedKey(SimpleFactions.plugin, "campaign_autoresolve_war");
+		NamespacedKey sideKey = new NamespacedKey(SimpleFactions.plugin, "campaign_autoresolve_side");
+		meta.getPersistentDataContainer().set(warKey, PersistentDataType.INTEGER, war.getId());
+		meta.getPersistentDataContainer().set(sideKey, PersistentDataType.STRING, side.name());
 		item.setItemMeta(meta);
 		return item;
 	}

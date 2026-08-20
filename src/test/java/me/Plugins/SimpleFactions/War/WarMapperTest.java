@@ -91,6 +91,7 @@ class WarMapperTest {
 		when(war.isAutoresolveProposedByDefender()).thenReturn(false);
 		when(war.getPostponementsThisCycle()).thenReturn(1);
 		when(war.isDefenderChoiceResolved()).thenReturn(true);
+		when(war.isForceQuorumNextClose()).thenReturn(true);
 		when(war.getSubjectFactionId()).thenReturn(null);
 		when(war.getStartedAt()).thenReturn(Instant.parse("2026-08-19T12:00:00Z"));
 		when(war.getEndedAt()).thenReturn(null);
@@ -128,6 +129,7 @@ class WarMapperTest {
 		assertTrue(data.autoresolveProposedByAttacker);
 		assertEquals(Integer.valueOf(1), data.postponementsThisCycle);
 		assertTrue(data.defenderChoiceResolved);
+		assertTrue(data.forceQuorumNextClose);
 		assertEquals("2026-08-19T12:00:00Z", data.startedAt);
 		assertNull(data.endReason);
 		assertTrue(data.attackers.participants.get(0).warGoals.isEmpty());

@@ -1,0 +1,43 @@
+raid_template:
+  type: raid
+  attacker:
+    spawn: { x: 0, y: 64, z: 0 }
+  defender:
+    spawn: { x: 10, y: 64, z: 10 }
+  defender_respawn_mode: infinite
+  raid_target:
+    id: target
+    location: { x: 50, y: 64, z: 50 }
+  friendly_fire: true
+  keep_inventory: true
+
+field_default:
+  type: field
+  attacker:
+    spawn: { x: 100, y: 70, z: 200 }
+    jail: { x: 95, y: 70, z: 200 }
+  defender:
+    spawn: { x: 120, y: 70, z: 200 }
+    jail: { x: 125, y: 70, z: 200 }
+  capture_points:
+    - id: alpha
+      location: { x: 110, y: 70, z: 200 }
+  lives: 25
+  life_type: COLLECTIVE
+  friendly_fire: true
+  keep_inventory: true
+
+siege_default:
+  type: siege
+  attacker:
+    spawn: { x: 200, y: 64, z: 200 }
+    jail: { x: 195, y: 64, z: 200 }
+  defender:
+    spawn: { x: 220, y: 64, z: 200 }
+    jail: { x: 225, y: 64, z: 200 }
+  contest_area:
+    min: { x: 210, y: 60, z: 190 }
+    max: { x: 230, y: 80, z: 210 }
+  contest_duration_seconds: 180
+  friendly_fire: true
+  keep_inventory: true

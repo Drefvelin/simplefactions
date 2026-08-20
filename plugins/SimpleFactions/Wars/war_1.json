@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 2,
+  "id": 1,
+  "status": "active",
+  "goal": "subjugate",
+  "warType": "subjugate",
+  "attackerLeaderId": "atk",
+  "defenderLeaderId": "def",
+  "objectiveProvinceId": 30,
+  "campaignStartProvinceId": 20,
+  "campaignProvinces": [
+    5,
+    10,
+    20,
+    30
+  ],
+  "cursorIndex": 2,
+  "initiativeAttacker": 4,
+  "initiativeDefender": 4,
+  "occupiedByAttacker": [],
+  "occupiedByDefender": [],
+  "lastBattleOccupied": [],
+  "campaignPhase": "invasion",
+  "objectiveHeldBy": "defender",
+  "whitePeaceProposedByAttacker": false,
+  "whitePeaceProposedByDefender": false,
+  "campaignBattlesFought": 0,
+  "battleSchedulePhase": "scheduled",
+  "battleDay": "2026-08-21",
+  "scheduledBattleAt": "2026-08-21T21:00:00Z",
+  "scheduledBattleHour": 21,
+  "scheduledBattleProvinceId": 20,
+  "battleVotes": {},
+  "autoresolveProposedByAttacker": false,
+  "autoresolveProposedByDefender": false,
+  "postponementsThisCycle": 0,
+  "defenderChoiceResolved": false,
+  "forceQuorumNextClose": false,
+  "startedAt": "2026-08-20T21:03:58.550034400Z",
+  "attackers": {
+    "leader": "atk",
+    "participants": [
+      {
+        "leader": "atk",
+        "subjects": [],
+        "allies": {},
+        "warGoals": {},
+        "civilWar": false
+      }
+    ]
+  },
+  "defenders": {
+    "leader": "def",
+    "participants": [
+      {
+        "leader": "def",
+        "subjects": [],
+        "allies": {},
+        "warGoals": {},
+        "civilWar": false
+      }
+    ]
+  }
+}

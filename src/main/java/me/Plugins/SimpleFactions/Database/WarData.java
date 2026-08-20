@@ -39,6 +39,7 @@ public class WarData {
     public boolean autoresolveProposedByDefender;
     public Integer postponementsThisCycle;
     public boolean defenderChoiceResolved;
+    public boolean forceQuorumNextClose;
     public String startedAt;
     public String endedAt;
     public String endReason;

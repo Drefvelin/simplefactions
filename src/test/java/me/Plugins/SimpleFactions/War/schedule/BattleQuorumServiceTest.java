@@ -143,6 +143,30 @@ class BattleQuorumServiceTest {
 		assertFalse(war.getAttackers().isParticipating(ally));
 	}
 
+	@Test
+	void meetsQuorum_usesDevMinPlayersWhenConfigured() {
+		Cache.warBattleVotingMinPlayers = 4;
+		Cache.warBattleVotingDevMinPlayers = 1;
+		Cache.warBattleVotingDevMinPlayersEnabled = true;
+
+		War war = baseWar();
+		UUID voter = UUID.randomUUID();
+		war.getBattleVotes().put(voter, Set.of(21));
+
+		QuorumResult result = BattleQuorumService.meetsQuorum(war, name -> null);
+		assertTrue(result.passed());
+		assertTrue(result.passMinPlayers());
+		assertEquals(1, BattleQuorumService.effectiveMinPlayers());
+	}
+
+	@Test
+	void effectiveMinPlayers_usesMinPlayersWhenDevKeyAbsent() {
+		Cache.warBattleVotingMinPlayers = 4;
+		Cache.warBattleVotingDevMinPlayersEnabled = false;
+
+		assertEquals(4, BattleQuorumService.effectiveMinPlayers());
+	}
+
 	private War baseWar() {
 		War war = new War(1, attacker, defender);
 		war.setGoal(WarGoalType.SUBJUGATE);

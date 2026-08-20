@@ -2,17 +2,13 @@ package me.Plugins.SimpleFactions.Managers;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 
-import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Request.WarRequest;
@@ -22,6 +18,7 @@ import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.WarCommitment;
 import me.Plugins.SimpleFactions.War.WarDeclareHelper;
 import me.Plugins.SimpleFactions.War.campaign.WarCampaignService;
+import me.Plugins.SimpleFactions.War.commitment.WarCommitmentService;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
@@ -31,7 +28,6 @@ import me.Plugins.SimpleFactions.War.validation.WarValidationResult;
 
 public class WarManager {
 	private static List<War> wars = new ArrayList<>();
-	private static final Map<Integer, List<WarCommitment>> commitmentsByWar = new HashMap<>();
 	
 	public static War declareWar(
 			Faction attacker,
@@ -64,8 +60,7 @@ public class WarManager {
 			return null;
 		}
 		addWar(war);
-		commitForWar(war.getId(), attacker);
-		commitForWar(war.getId(), defender);
+		WarCommitmentService.commitAllParticipants(war);
 		if (civilWar) {
 			war.getParticipant(attacker).setCivilWar(true);
 			war.getParticipant(defender).setCivilWar(true);
@@ -115,55 +110,12 @@ public class WarManager {
 		return plugin.getProvinceManager();
 	}
 
-	public static List<WarCommitment> commitForWar(int warId, Faction faction) {
-		if (getById(warId) == null || faction == null) {
-			return List.of();
-		}
-
-		List<WarCommitment> existing = getCommitmentsForFaction(warId, faction.getId());
-		if (!existing.isEmpty()) {
-			return existing;
-		}
-
-		Instant committedAt = Instant.now();
-		List<WarCommitment> commitments = new ArrayList<>();
-		for (Regiment regiment : faction.getMilitary().getRegiments()) {
-			commitments.add(new WarCommitment(
-					warId,
-					faction.getId(),
-					regiment.getId(),
-					0,
-					committedAt));
-		}
-
-		commitmentsByWar.computeIfAbsent(warId, ignored -> new ArrayList<>()).addAll(commitments);
-		return List.copyOf(commitments);
-	}
-
 	public static List<WarCommitment> getCommitmentsForWar(int warId) {
-		List<WarCommitment> commitments = commitmentsByWar.get(warId);
-		if (commitments == null || commitments.isEmpty()) {
-			return List.of();
-		}
-		return Collections.unmodifiableList(commitments);
-	}
-
-	private static List<WarCommitment> getCommitmentsForFaction(int warId, String factionId) {
-		List<WarCommitment> all = commitmentsByWar.get(warId);
-		if (all == null || all.isEmpty()) {
-			return List.of();
-		}
-		List<WarCommitment> factionCommitments = new ArrayList<>();
-		for (WarCommitment commitment : all) {
-			if (commitment.factionId().equalsIgnoreCase(factionId)) {
-				factionCommitments.add(commitment);
-			}
-		}
-		return factionCommitments;
+		return WarCommitmentService.getCommitmentsForWar(warId);
 	}
 
 	static void clearCommitments(int warId) {
-		commitmentsByWar.remove(warId);
+		WarCommitmentService.clearCommitments(warId);
 	}
 
 	public static War addWar(War w) {
@@ -317,6 +269,8 @@ public class WarManager {
 			p.sendMessage("§cCould not join the war.");
 			return;
 		}
+		WarCommitmentService.commitFaction(war, reciever);
+		WarCommitmentService.snapshotLevyForFighter(war, reciever);
 		Player sp = Bukkit.getPlayerExact(origin.getLeader());
 		if(sp != null && sp.isOnline()) sp.sendMessage(reciever.getName()+" §aaccepted your call to arms");
 		p.sendMessage("§aYour faction has joined the "+war.getName());

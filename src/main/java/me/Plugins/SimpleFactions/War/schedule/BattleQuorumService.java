@@ -57,6 +57,14 @@ public final class BattleQuorumService {
 		return true;
 	}
 
+	public static int effectiveMinPlayers() {
+		if (Cache.warBattleVotingDevMinPlayersEnabled
+				&& Cache.warBattleVotingDevMinPlayers < Cache.warBattleVotingMinPlayers) {
+			return Cache.warBattleVotingDevMinPlayers;
+		}
+		return Cache.warBattleVotingMinPlayers;
+	}
+
 	public static QuorumResult meetsQuorum(War war, Function<String, UUID> memberNameToUuid) {
 		if (war == null) {
 			return new QuorumResult(false, false, false, 0, 0, 0);
@@ -70,7 +78,7 @@ public final class BattleQuorumService {
 				? BattleSideMembers.countEligibleMembers(war.getDefenders())
 				: 0;
 
-		boolean passMinPlayers = distinctVoters >= Cache.warBattleVotingMinPlayers;
+		boolean passMinPlayers = distinctVoters >= effectiveMinPlayers();
 		boolean passSmallestSideFull = Cache.warBattleVotingRequireSmallestSideFull
 				&& isSmallestSideFullyRepresented(war, memberNameToUuid);
 

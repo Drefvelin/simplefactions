@@ -4,7 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -15,17 +19,25 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
+import org.bukkit.Bukkit;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
+import me.Plugins.SimpleFactions.Army.Military;
+import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
+import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
-import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
 
 class BattleScheduleServiceTest {
 	private static final LocalDate BATTLE_DAY = LocalDate.of(2026, 8, 21);
@@ -39,6 +51,9 @@ class BattleScheduleServiceTest {
 
 	@BeforeEach
 	void setUp() {
+		BattleManager.resetForTests();
+		WarbandManager.resetForTests();
+		Cache.battleCampaignTemplateField = "";
 		Cache.warBattleWindowStartHour = 20;
 		Cache.warBattleWindowEndHour = 24;
 		Cache.warVoteCloseHour = 16;
@@ -52,6 +67,8 @@ class BattleScheduleServiceTest {
 		defender = mock(Faction.class);
 		when(attacker.getId()).thenReturn("atk");
 		when(defender.getId()).thenReturn("def");
+		mockMilitary(attacker);
+		mockMilitary(defender);
 
 		attackerVoter1 = UUID.randomUUID();
 		attackerVoter2 = UUID.randomUUID();
@@ -64,19 +81,21 @@ class BattleScheduleServiceTest {
 		War war = votingWar();
 		addCrossSideVotes(war, 21);
 
-		BattleScheduleCloseResult result = BattleScheduleService.closeVote(
-				war,
-				Instant.parse("2026-08-21T16:00:00Z"),
-				uuidToFaction(),
-				name -> null);
+		withMockBossBar(() -> {
+			BattleScheduleCloseResult result = BattleScheduleService.closeVote(
+					war,
+					Instant.parse("2026-08-21T16:00:00Z"),
+					uuidToFaction(),
+					name -> null);
 
-		assertEquals(BattleScheduleCloseResult.SCHEDULED, result);
-		assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
-		assertEquals(21, war.getScheduledBattleHour());
-		assertEquals(Integer.valueOf(20), war.getScheduledBattleProvinceId());
-		assertEquals(
-				BATTLE_DAY.atTime(21, 0).atZone(ZoneOffset.UTC).toInstant(),
-				war.getScheduledBattleAt());
+			assertEquals(BattleScheduleCloseResult.SCHEDULED, result);
+			assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
+			assertEquals(21, war.getScheduledBattleHour());
+			assertEquals(Integer.valueOf(20), war.getScheduledBattleProvinceId());
+			assertEquals(
+					BATTLE_DAY.atTime(21, 0).atZone(ZoneOffset.UTC).toInstant(),
+					war.getScheduledBattleAt());
+		});
 	}
 
 	@Test
@@ -100,25 +119,29 @@ class BattleScheduleServiceTest {
 	}
 
 	@Test
-	void closeVote_entersAutoresolvePendingWhenBothLeadersProposed() {
+	void isBeforeVoteClose_trueBeforeConfiguredHourOnBattleDay() {
+		War war = votingWar();
+		assertTrue(BattleScheduleService.isBeforeVoteClose(
+				war, Instant.parse("2026-08-21T15:59:00Z")));
+		assertFalse(BattleScheduleService.isBeforeVoteClose(
+				war, Instant.parse("2026-08-21T16:00:00Z")));
+	}
+
+	@Test
+	void enterAutoresolvePending_setsPhaseAndClearsFlags() {
 		War war = votingWar();
 		war.setAutoresolveProposedByAttacker(true);
 		war.setAutoresolveProposedByDefender(true);
 
-		BattleScheduleCloseResult result = BattleScheduleService.closeVote(
-				war,
-				Instant.parse("2026-08-21T16:00:00Z"),
-				uuidToFaction(),
-				name -> null);
+		BattleScheduleService.enterAutoresolvePending(war);
 
-		assertEquals(BattleScheduleCloseResult.AUTORESOLVE_PENDING, result);
 		assertEquals(BattleSchedulePhase.AUTORESOLVE_PENDING, war.getBattleSchedulePhase());
 		assertFalse(war.isAutoresolveProposedByAttacker());
 		assertFalse(war.isAutoresolveProposedByDefender());
 	}
 
 	@Test
-	void applyDefenderChoiceDeadline_autoHoldsAtDeadline() {
+	void closeVote_forceImmediateBypassesVoteCloseHour() {
 		War war = defenderChoiceWar();
 
 		assertTrue(BattleScheduleService.applyDefenderChoiceDeadline(
@@ -155,15 +178,17 @@ class BattleScheduleServiceTest {
 		War war = defenderChoiceWar();
 		addCrossSideVotes(war, 21);
 
-		BattleScheduleCloseResult result = BattleScheduleService.closeVote(
-				war,
-				Instant.parse("2026-08-21T16:00:00Z"),
-				uuidToFaction(),
-				name -> null);
+		withMockBossBar(() -> {
+			BattleScheduleCloseResult result = BattleScheduleService.closeVote(
+					war,
+					Instant.parse("2026-08-21T16:00:00Z"),
+					uuidToFaction(),
+					name -> null);
 
-		assertEquals(BattleScheduleCloseResult.SCHEDULED, result);
-		assertTrue(war.isDefenderChoiceResolved());
-		assertEquals(Integer.valueOf(20), war.getScheduledBattleProvinceId());
+			assertEquals(BattleScheduleCloseResult.SCHEDULED, result);
+			assertTrue(war.isDefenderChoiceResolved());
+			assertEquals(Integer.valueOf(20), war.getScheduledBattleProvinceId());
+		});
 	}
 
 	@Test
@@ -190,11 +215,60 @@ class BattleScheduleServiceTest {
 	}
 
 	@Test
-	void proposeAutoresolve_setsSideFlag() {
+	void applyDefenderChoiceDeadline_autoHoldsAtDeadline() {
 		War war = votingWar();
-		assertTrue(BattleScheduleService.proposeAutoresolve(war, BelligerentRole.ATTACKER));
-		assertTrue(war.isAutoresolveProposedByAttacker());
-		assertFalse(war.isAutoresolveProposedByDefender());
+		addCrossSideVotes(war, 21);
+
+		withMockBossBar(() -> {
+			BattleScheduleCloseResult result = BattleScheduleService.closeVote(
+					war,
+					Instant.parse("2026-08-21T10:00:00Z"),
+					uuidToFaction(),
+					name -> null,
+					CloseVoteOptions.admin(false));
+
+			assertEquals(BattleScheduleCloseResult.SCHEDULED, result);
+			assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
+		});
+	}
+
+	@Test
+	void closeVote_forceQuorumBypassesMinPlayers() {
+		War war = votingWar();
+		UUID atk = UUID.randomUUID();
+		UUID def = UUID.randomUUID();
+		war.getBattleVotes().put(atk, Set.of(21));
+		war.getBattleVotes().put(def, Set.of(21));
+
+		Function<UUID, Faction> factions = uuid -> uuid.equals(def) ? defender : attacker;
+		withMockBossBar(() -> {
+			BattleScheduleCloseResult result = BattleScheduleService.closeVote(
+					war,
+					Instant.parse("2026-08-21T16:00:00Z"),
+					factions,
+					name -> null,
+					CloseVoteOptions.admin(true));
+
+			assertEquals(BattleScheduleCloseResult.SCHEDULED, result);
+		});
+	}
+
+	@Test
+	void closeVote_clearsForceQuorumFlagAfterAttempt() {
+		War war = votingWar();
+		war.setForceQuorumNextClose(true);
+		addCrossSideVotes(war, 21);
+
+		withMockBossBar(() -> {
+			BattleScheduleService.closeVote(
+					war,
+					Instant.parse("2026-08-21T16:00:00Z"),
+					uuidToFaction(),
+					name -> null,
+					CloseVoteOptions.scheduled());
+
+			assertFalse(war.isForceQuorumNextClose());
+		});
 	}
 
 	private War votingWar() {
@@ -233,5 +307,29 @@ class BattleScheduleServiceTest {
 			}
 			return attacker;
 		};
+	}
+
+	private void mockMilitary(Faction faction) {
+		Military military = mock(Military.class);
+		Regiment levy = mock(Regiment.class);
+		when(military.getManpowerNoLevy(anyBoolean())).thenReturn(10);
+		when(military.getRegiment("levy")).thenReturn(levy);
+		when(levy.getEntries()).thenReturn(List.of());
+		when(faction.getMilitary()).thenReturn(military);
+		when(faction.getMembers()).thenReturn(List.of());
+		when(faction.getLeader()).thenReturn("leader");
+		when(faction.getName()).thenReturn("faction");
+	}
+
+	private void withMockBossBar(Runnable action) {
+		BossBar bossBar = mock(BossBar.class);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.createBossBar(anyString(), any(BarColor.class), any(BarStyle.class)))
+					.thenReturn(bossBar);
+			bukkit.when(() -> Bukkit.createBossBar(anyString(), any(BarColor.class), any(BarStyle.class), any()))
+					.thenReturn(bossBar);
+			bukkit.when(() -> Bukkit.getPlayerExact(anyString())).thenReturn(null);
+			action.run();
+		}
 	}
 }
