@@ -1,14 +1,10 @@
 package me.Plugins.SimpleFactions.War.battle.engine;
 
-import org.bukkit.Location;
-
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.template.BattleModeTemplate;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplateService;
-import me.Plugins.SimpleFactions.War.battle.template.CapturePointDefinition;
-import me.Plugins.SimpleFactions.War.battle.template.TemplateSideConfig;
 
 public final class BattleFactory {
 	private BattleFactory() {
@@ -25,6 +21,7 @@ public final class BattleFactory {
 		Battle battle = new Battle(battleId);
 		battle.setBattleType(type);
 		battle.setTemplateName(null);
+		battle.setCapturePointsEnabled(type == BattleType.FIELD);
 		seedBaseSides(battle);
 		return battle;
 	}
@@ -52,13 +49,16 @@ public final class BattleFactory {
 		BattleModeTemplate config = BattleTemplateService.getInstance().getModeConfig(templateName);
 		battle.setTemplateName(templateName);
 		applyModeSettings(battle, config);
-		seedTemplateLayout(battle, config);
+		seedBaseSides(battle);
 	}
 
 	public static void resetToBase(Battle battle) {
 		validateEditable(battle);
 		resetLayout(battle);
 		battle.setTemplateName(null);
+		if (battle.getBattleType() != null) {
+			battle.setCapturePointsEnabled(battle.getBattleType() == BattleType.FIELD);
+		}
 		seedBaseSides(battle);
 	}
 
@@ -100,82 +100,29 @@ public final class BattleFactory {
 	}
 
 	private static void applyModeSettings(Battle battle, BattleModeTemplate config) {
+		if (config == null) {
+			return;
+		}
 		battle.setFriendlyFire(config.getFriendlyFire());
 		battle.setKeepInventory(config.getKeepInventory());
 		battle.setLifeType(config.getLifeType());
 		battle.setLives(config.getLives());
-	}
-
-	private static void seedTemplateLayout(Battle battle, BattleModeTemplate config) {
-		BattleSide attacker = createSide(BattleTemplate.ATTACKER_SIDE, config.getAttacker(), config);
-		BattleSide defender = createSide(BattleTemplate.DEFENDER_SIDE, config.getDefender(), config);
-		battle.addSide(attacker);
-		battle.addSide(defender);
+		if (config.getCapturePointsEnabled() != null) {
+			battle.setCapturePointsEnabled(config.getCapturePointsEnabled());
+		}
 
 		BattleType type = battle.getBattleType();
-		if (type == BattleType.FIELD) {
-			seedFieldPoints(battle, config, defender);
-		} else if (type == BattleType.SIEGE) {
-			seedSiegeMetadata(battle, config);
+		if (type == BattleType.SIEGE) {
+			battle.setContestDurationSeconds(config.getContestDurationSeconds());
+			battle.setNavalVariant(config.isNavalVariant());
 		} else if (type == BattleType.RAID) {
-			seedRaidMetadata(battle, config);
-		}
-
-		seedNavalMetadata(battle, config, type);
-	}
-
-	private static BattleSide createSide(String sideId, TemplateSideConfig sideConfig, BattleModeTemplate config) {
-		BattleSide side = new BattleSide(sideId, config.getLifeType(), config.getLives());
-		if (sideConfig != null) {
-			if (sideConfig.getSpawn() != null) {
-				side.setSpawn(sideConfig.getSpawn().toBukkitLocation());
+			battle.setDefenderRespawnMode(config.getDefenderRespawnMode());
+			if (config.getDefenderLives() != null) {
+				battle.setDefenderLives(config.getDefenderLives());
 			}
-			if (sideConfig.getJail() != null) {
-				side.setJail(sideConfig.getJail().toBukkitLocation());
-			}
-		}
-		return side;
-	}
-
-	private static void seedFieldPoints(Battle battle, BattleModeTemplate config, BattleSide defaultController) {
-		if (config.getCapturePoints() == null) {
-			return;
-		}
-		int sequence = 0;
-		for (CapturePointDefinition pointDef : config.getCapturePoints()) {
-			if (pointDef == null || pointDef.getLocation() == null) {
-				continue;
-			}
-			Location location = pointDef.getLocation().toBukkitLocation();
-			if (location == null) {
-				continue;
-			}
-			CapturePoint point = new CapturePoint(pointDef.getId(), location, defaultController, 100);
-			point.setSequenceIndex(sequence++);
-			point.setAdvanceSideId(BattleTemplate.ATTACKER_SIDE);
-			battle.addPoint(point);
-		}
-	}
-
-	private static void seedSiegeMetadata(Battle battle, BattleModeTemplate config) {
-		battle.setContestArea(config.getContestArea());
-		battle.setContestDurationSeconds(config.getContestDurationSeconds());
-	}
-
-	private static void seedRaidMetadata(Battle battle, BattleModeTemplate config) {
-		battle.setDefenderRespawnMode(config.getDefenderRespawnMode());
-		battle.setDefenderLives(config.getDefenderLives());
-		battle.setRaidTarget(config.getRaidTarget());
-	}
-
-	private static void seedNavalMetadata(Battle battle, BattleModeTemplate config, BattleType type) {
-		if (!config.isNavalVariant() || (type != BattleType.FIELD && type != BattleType.SIEGE)) {
-			return;
-		}
-		battle.setNavalVariant(true);
-		TemplateSideConfig navalSpawn = config.getNavalSpawn();
-		if (navalSpawn != null && navalSpawn.getSpawn() != null) {
-			battle.setNavalSpawn(navalSpawn.getSpawn().toBukkitLocation());
+		} else if (type == BattleType.FIELD) {
+			battle.setNavalVariant(config.isNavalVariant());
 		}
 	}
 }
+

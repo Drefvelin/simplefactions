@@ -163,7 +163,9 @@ Operational **forts only** (same set as `installations[]` where `kind == fort`).
 | `center_x` / `center_z` | Pin position |
 | `zoc_provinces` | Sorted unique province ids — computed by `ZocRealm` |
 
-**`zoc_provinces` rules:** fort province + one-ring **land** neighbors whose owner shares the **same top realm** (`RelationManager.getTopLiege` or faction id). Sea and unclaimed neighbors excluded. War-based suppression ships with [Wars.md](./Wars.md) war rework.
+**`zoc_provinces` rules:** fort province + one-ring **land** neighbors whose owner shares the **same top realm** (`RelationManager.getTopLiege` or faction id). Sea and unclaimed neighbors excluded.
+
+**Active wars:** during a campaign war, who **controls** a fort's ZOC for siege gating may differ from installation owner (`fortControllers` on the war JSON). Siege winner becomes controller; installation DB ownership unchanged. **Map export is war-aware (shipped step 65.06):** when a fort is referenced on an active war and has a `fortControllers` entry, `zoc_provinces` is computed from that coalition's war leader realm; otherwise the installation owner is used. See [Wars.md](./Wars.md#campaign-battle-schedule-locked-step-64).
 
 #### PS + frontend (step 43)
 
@@ -182,7 +184,10 @@ Port and airport pins have no ZOC. Pending construction forts are excluded from 
 ## Config
 
 ```yaml
-port-sea-proximity-blocks: 20
+port-sea-proximity-blocks: 20   # construct validation: port must be within N blocks of sea/river
+
+war:
+  port_sea_zoc_radius: 2        # shipped step 65 — campaign naval blocking range (sea-hop BFS)
 
 installations:
   fort:

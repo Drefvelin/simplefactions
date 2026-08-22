@@ -21,6 +21,7 @@ public class WarData {
     public int cursorIndex;
     public Integer initiativeAttacker;
     public Integer initiativeDefender;
+    public String initiativeHolder;
     public List<Integer> occupiedByAttacker;
     public List<Integer> occupiedByDefender;
     public List<Integer> lastBattleOccupied;
@@ -29,6 +30,10 @@ public class WarData {
     public boolean whitePeaceProposedByAttacker;
     public boolean whitePeaceProposedByDefender;
     public Integer campaignBattlesFought;
+    public List<ScheduledCampaignBattleData> campaignBattleSchedule;
+    public Integer campaignScheduleIndex;
+    public Map<String, String> fortControllers;
+    public Map<String, Integer> locationBattleCounts;
     public String battleSchedulePhase;
     public String battleDay;
     public String scheduledBattleAt;
@@ -39,12 +44,20 @@ public class WarData {
     public boolean autoresolveProposedByDefender;
     public Integer postponementsThisCycle;
     public boolean defenderChoiceResolved;
+    public String initiativeHolderCoalition;
+    public String pushTarget;
+    public String postBattleChoicePhase;
+    public String postBattleWinnerCoalition;
+    public Boolean postBattleChoiceResolved;
+    public String lastBattleOffensiveCoalition;
+    public boolean holdPeaceProposalActive;
     public boolean forceQuorumNextClose;
     public String startedAt;
     public String endedAt;
     public String endReason;
     public SideData attackers;
     public SideData defenders;
+    public List<CommitmentData> commitments;
 
     public WarData() {
         campaignProvinces = new ArrayList<>();
@@ -52,5 +65,8 @@ public class WarData {
         occupiedByDefender = new ArrayList<>();
         lastBattleOccupied = new ArrayList<>();
         battleVotes = new HashMap<>();
+        locationBattleCounts = new HashMap<>();
+        fortControllers = new HashMap<>();
+        campaignBattleSchedule = new ArrayList<>();
     }
 }

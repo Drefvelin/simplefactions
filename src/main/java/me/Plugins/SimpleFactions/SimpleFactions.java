@@ -32,6 +32,7 @@ import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.PlayerManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Managers.RelocationPrompt;
+import me.Plugins.SimpleFactions.Managers.CapitalMovePrompt;
 import me.Plugins.SimpleFactions.Managers.RequestManager;
 import me.Plugins.SimpleFactions.Managers.SessionManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
@@ -41,7 +42,6 @@ import me.Plugins.SimpleFactions.Utils.TabCompletion;
 import me.Plugins.SimpleFactions.War.schedule.BattleScheduleTickService;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleOutcomeService;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleLeavePenaltyService;
 import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleCommandManager;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleTabCompletion;
@@ -80,9 +80,9 @@ public class SimpleFactions extends JavaPlugin{
 	private final PlayerManager playerManager = new PlayerManager();
 	private final SessionManager sessionManager = new SessionManager();
 	private final RelocationPrompt relocationPrompt = new RelocationPrompt();
+	private final CapitalMovePrompt capitalMovePrompt = new CapitalMovePrompt();
 	private final ProvincePresenceListener provincePresenceListener = new ProvincePresenceListener();
 	private final BattleManager battleManager = new BattleManager();
-	private final BattleLeavePenaltyService battleLeavePenaltyService = new BattleLeavePenaltyService();
 	private final WarbandManager warbandManager = new WarbandManager();
 	private final BattleCommandManager battleCommandManager = new BattleCommandManager();
 	private final WarbandMembershipListener warbandMembershipListener = new WarbandMembershipListener();
@@ -94,6 +94,7 @@ public class SimpleFactions extends JavaPlugin{
 	public void onEnable() {
 		config = getConfig();
 		plugin = this;
+		FactionManager.inv = inventoryManager;
 		createFolders();
 		createConfigs();
 		registerListeners();
@@ -146,6 +147,8 @@ public class SimpleFactions extends JavaPlugin{
 		getCommand(battleCommandManager.cmd2).setTabCompleter(battleTabCompletion);
 		RequestManager.start();
 		WarManager.start();
+		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.loadAll();
+		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.startAutosave();
 		BattleScheduleTickService.start();
 		sessionManager.start();
 		provinceSnapshot = provinceManager.createSnapshotShell();
@@ -154,7 +157,9 @@ public class SimpleFactions extends JavaPlugin{
 	}
 	@Override
 	public void onDisable() {
-		battleManager.end();
+		BattleManager.shutdown();
+		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.stopAutosave();
+		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.saveAll();
 		sessionManager.end();
 		db.saveTimer(FactionManager.getTimer());
 		for(Faction f : FactionManager.factions) {
@@ -189,10 +194,10 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(playerManager, this);
 		getServer().getPluginManager().registerEvents(sessionManager, this);
 		getServer().getPluginManager().registerEvents(relocationPrompt, this);
+		getServer().getPluginManager().registerEvents(capitalMovePrompt, this);
 		getServer().getPluginManager().registerEvents(factionManager, this);
 		getServer().getPluginManager().registerEvents(provincePresenceListener, this);
 		getServer().getPluginManager().registerEvents(battleManager, this);
-		getServer().getPluginManager().registerEvents(battleLeavePenaltyService, this);
 		getServer().getPluginManager().registerEvents(warbandManager, this);
 		getServer().getPluginManager().registerEvents(warbandMembershipListener, this);
 		getServer().getPluginManager().registerEvents(campaignBattleOutcomeService, this);

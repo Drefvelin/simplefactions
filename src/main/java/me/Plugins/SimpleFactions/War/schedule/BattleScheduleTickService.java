@@ -73,7 +73,7 @@ public final class BattleScheduleTickService {
 		}
 
 		boolean changed = false;
-		if (BattleScheduleService.applyDefenderChoiceDeadline(war, now)) {
+		if (BattleScheduleService.applyPostBattleChoiceDeadline(war, now)) {
 			changed = true;
 		}
 

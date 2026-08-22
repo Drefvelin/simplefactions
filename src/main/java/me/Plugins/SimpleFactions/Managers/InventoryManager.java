@@ -132,13 +132,7 @@ public class InventoryManager implements Listener{
 			player.sendMessage("§cWar not found.");
 			return;
 		}
-		var autoEnd = WhitePeaceService.recalculateProposals(war);
-		if (autoEnd.isPresent()) {
-			WarManager.endWar(war, autoEnd.get());
-			player.sendMessage("§aWar ended: " + autoEnd.get().toJson().replace('_', ' ') + ".");
-			warList(player);
-			return;
-		}
+		WhitePeaceService.recalculateProposals(war);
 		WarManager.persist(war);
 		campaignView.campaignView(player, war, 0, true);
 	}
@@ -460,7 +454,20 @@ public class InventoryManager implements Listener{
 		i.setItem(15, createButton("cancel", key, data));
 		player.openInventory(i);
 	}
-	
+
+	public void confirmCapitalMoveView(Player player, int provincesLost) {
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Confirm Action");
+		ItemStack info = new ItemStack(Material.PAPER);
+		ItemMeta infoMeta = info.getItemMeta();
+		infoMeta.setDisplayName("§eMove faction capital?");
+		infoMeta.setLore(java.util.List.of(
+				"§cYou will lose " + provincesLost + " provinces"));
+		info.setItemMeta(infoMeta);
+		i.setItem(13, info);
+		i.setItem(11, createButton("confirm", "setcapital", "1"));
+		i.setItem(15, createButton("cancel", "setcapital", "1"));
+		player.openInventory(i);
+	}
 	
 	//Basic Items
 	public ItemStack getFiller(Material mat) {
@@ -765,6 +772,10 @@ public class InventoryManager implements Listener{
 		}
 		if(e.getView().getTitle().equalsIgnoreCase("§7Confirm Action")) {
 			e.setCancelled(true);
+			if (e.getClickedInventory() == null
+					|| e.getClickedInventory() != e.getView().getTopInventory()) {
+				return;
+			}
 			if(!confirming.containsKey(p)) return;
 			ItemStack item = e.getCurrentItem();
 			ItemMeta m = item.getItemMeta();
@@ -827,6 +838,13 @@ public class InventoryManager implements Listener{
 				installationsView(null, p, f, true);
 				return;
 			}
+			key = new NamespacedKey(SimpleFactions.plugin, "campaign_push");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if (data != null) {
+				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
+				campaignView.handleConfirm(p, "campaign_push", data, confirmed);
+				return;
+			}
 			key = new NamespacedKey(SimpleFactions.plugin, "campaign_hold");
 			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 			if (data != null) {
@@ -834,11 +852,25 @@ public class InventoryManager implements Listener{
 				campaignView.handleConfirm(p, "campaign_hold", data, confirmed);
 				return;
 			}
-			key = new NamespacedKey(SimpleFactions.plugin, "campaign_counter");
+			key = new NamespacedKey(SimpleFactions.plugin, "campaign_attack");
 			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 			if (data != null) {
 				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
-				campaignView.handleConfirm(p, "campaign_counter", data, confirmed);
+				campaignView.handleConfirm(p, "campaign_attack", data, confirmed);
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "campaign_loser_peace");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if (data != null) {
+				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
+				campaignView.handleConfirm(p, "campaign_loser_peace", data, confirmed);
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "campaign_surrender");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if (data != null) {
+				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
+				campaignView.handleConfirm(p, "campaign_surrender", data, confirmed);
 				return;
 			}
 			key = new NamespacedKey(SimpleFactions.plugin, "campaign_accept_peace");
@@ -846,6 +878,13 @@ public class InventoryManager implements Listener{
 			if (data != null) {
 				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
 				campaignView.handleConfirm(p, "campaign_accept_peace", data, confirmed);
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "setcapital");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if (data != null) {
+				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
+				CapitalMovePrompt.handleConfirm(p, confirmed);
 				return;
 			}
 		}

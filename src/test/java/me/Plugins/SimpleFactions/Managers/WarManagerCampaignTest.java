@@ -7,9 +7,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -17,6 +19,7 @@ import org.mockito.MockedStatic;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
@@ -27,6 +30,7 @@ class WarManagerCampaignTest {
 	private ProvinceManager pm;
 	private Faction attacker;
 	private Faction defender;
+	private MockedStatic<SimpleFactions> simpleFactions;
 
 	@BeforeEach
 	void setUp() {
@@ -35,9 +39,18 @@ class WarManagerCampaignTest {
 		Cache.warPathfinderNeutralPenalty = 8.0;
 		Cache.warPathfinderSeaPassEnabled = true;
 		Cache.warPathfinderWaterCost = 0.0;
-		Cache.warInitiativePerSide = 4;
+		Cache.warInitiativeFactor = 1.5;
+		Cache.warGoalMaxBattles = new EnumMap<>(WarGoalType.class);
+		for (WarGoalType goal : WarGoalType.values()) {
+			Cache.warGoalMaxBattles.put(goal, 4);
+		}
 
 		pm = new ProvinceManager();
+		SimpleFactions plugin = mock(SimpleFactions.class);
+		when(plugin.getProvinceManager()).thenReturn(pm);
+		simpleFactions = mockStatic(SimpleFactions.class);
+		simpleFactions.when(SimpleFactions::getInstance).thenReturn(plugin);
+
 		attacker = mock(Faction.class);
 		defender = mock(Faction.class);
 		when(attacker.getId()).thenReturn("atk");
@@ -48,6 +61,13 @@ class WarManagerCampaignTest {
 		SettlementHandler handler = mock(SettlementHandler.class);
 		when(defender.getSettlementHandler()).thenReturn(handler);
 		when(handler.getAll()).thenReturn(List.of());
+	}
+
+	@AfterEach
+	void tearDown() {
+		if (simpleFactions != null) {
+			simpleFactions.close();
+		}
 	}
 
 	@Test
@@ -66,8 +86,9 @@ class WarManagerCampaignTest {
 			assertEquals(20, war.getCampaignStartProvinceId());
 			assertEquals(List.of(5, 10, 20, 30), war.getCampaignProvinces());
 			assertEquals(2, war.getCursorIndex());
-			assertEquals(4, war.getInitiativeAttacker());
-			assertEquals(4, war.getInitiativeDefender());
+			int expectedFuel = (int) Math.ceil(war.getCampaignBattleSchedule().size() * Cache.warInitiativeFactor);
+			assertEquals(expectedFuel, war.getInitiativeAttacker());
+			assertEquals(expectedFuel, war.getInitiativeDefender());
 		}
 	}
 

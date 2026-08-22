@@ -447,4 +447,118 @@ public class Database {
 		File file = new File("plugins/SimpleFactions/Wars", "war_" + war.getId() + ".json");
 		if (file.exists()) file.delete();
 	}
+
+	public void saveBattle(me.Plugins.SimpleFactions.War.battle.engine.Battle battle) {
+		if (battle == null) {
+			return;
+		}
+		try {
+			File folder = new File("plugins/SimpleFactions/Battles");
+			if (!folder.exists()) {
+				folder.mkdirs();
+			}
+			File file = new File(folder, "battle_" + battle.getId() + ".json");
+			me.Plugins.SimpleFactions.Database.BattleData data =
+					me.Plugins.SimpleFactions.War.battle.persistence.BattleMapper.toData(battle);
+			JsonUtil.writeJson(file, data);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void saveWarband(me.Plugins.SimpleFactions.War.battle.warband.Warband warband) {
+		if (warband == null) {
+			return;
+		}
+		try {
+			File folder = new File("plugins/SimpleFactions/Warbands");
+			if (!folder.exists()) {
+				folder.mkdirs();
+			}
+			File file = new File(folder, "warband_" + warband.getId() + ".json");
+			me.Plugins.SimpleFactions.Database.WarbandData data =
+					me.Plugins.SimpleFactions.War.battle.persistence.WarbandMapper.toData(warband);
+			JsonUtil.writeJson(file, data);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void deleteBattleFile(String battleId) {
+		if (battleId == null) {
+			return;
+		}
+		File file = new File("plugins/SimpleFactions/Battles", "battle_" + battleId + ".json");
+		if (file.exists()) {
+			file.delete();
+		}
+	}
+
+	public void deleteWarbandFile(String warbandId) {
+		if (warbandId == null) {
+			return;
+		}
+		File file = new File("plugins/SimpleFactions/Warbands", "warband_" + warbandId + ".json");
+		if (file.exists()) {
+			file.delete();
+		}
+	}
+
+	public java.util.List<me.Plugins.SimpleFactions.War.battle.warband.Warband> loadWarbands() {
+		java.util.List<me.Plugins.SimpleFactions.War.battle.warband.Warband> warbands = new ArrayList<>();
+		File folder = new File("plugins/SimpleFactions/Warbands");
+		if (!folder.exists() || !folder.isDirectory()) {
+			return warbands;
+		}
+		File[] files = folder.listFiles();
+		if (files == null) {
+			return warbands;
+		}
+		for (File file : files) {
+			if (!file.getName().endsWith(".json")) {
+				continue;
+			}
+			try {
+				me.Plugins.SimpleFactions.Database.WarbandData data =
+						JsonUtil.readJson(file, me.Plugins.SimpleFactions.Database.WarbandData.class);
+				me.Plugins.SimpleFactions.War.battle.warband.Warband warband =
+						me.Plugins.SimpleFactions.War.battle.persistence.WarbandMapper.fromData(data);
+				if (warband != null) {
+					warbands.add(warband);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return warbands;
+	}
+
+	public java.util.List<me.Plugins.SimpleFactions.War.battle.engine.Battle> loadBattles() {
+		java.util.List<me.Plugins.SimpleFactions.War.battle.engine.Battle> loaded = new ArrayList<>();
+		File folder = new File("plugins/SimpleFactions/Battles");
+		if (!folder.exists() || !folder.isDirectory()) {
+			return loaded;
+		}
+		File[] files = folder.listFiles();
+		if (files == null) {
+			return loaded;
+		}
+		for (File file : files) {
+			if (!file.getName().endsWith(".json")) {
+				continue;
+			}
+			try {
+				me.Plugins.SimpleFactions.Database.BattleData data =
+						JsonUtil.readJson(file, me.Plugins.SimpleFactions.Database.BattleData.class);
+				me.Plugins.SimpleFactions.War.battle.engine.Battle battle =
+						me.Plugins.SimpleFactions.War.battle.persistence.BattleMapper.fromData(data);
+				if (battle != null) {
+					loaded.add(battle);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return loaded;
+	}
 }

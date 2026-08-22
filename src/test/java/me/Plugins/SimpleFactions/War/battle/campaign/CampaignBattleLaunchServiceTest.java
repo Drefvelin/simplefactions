@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -13,7 +14,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.util.List;
 
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
@@ -33,9 +34,17 @@ import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
+import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
+import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.progression.CampaignOffensiveForfeitService;
+import me.Plugins.SimpleFactions.War.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.War.schedule.BattleWindowService;
+import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 
 class CampaignBattleLaunchServiceTest {
 	private Faction attacker;
@@ -47,6 +56,9 @@ class CampaignBattleLaunchServiceTest {
 		WarbandManager.resetForTests();
 		Cache.warFirstBattleAtBorder = true;
 		Cache.battleCampaignTemplateField = "";
+		Cache.battleCampaignTemplateSiege = "";
+		Cache.warBattleWindowStartHour = 20;
+		Cache.warBattleWindowEndHour = 24;
 
 		attacker = mock(Faction.class);
 		defender = mock(Faction.class);
@@ -61,12 +73,109 @@ class CampaignBattleLaunchServiceTest {
 	private void mockMilitary(Faction faction) {
 		Military military = mock(Military.class);
 		Regiment levy = mock(Regiment.class);
+		Regiment professional = mock(Regiment.class);
+		when(professional.getId()).thenReturn("professional");
+		when(professional.isLevy()).thenReturn(false);
+		when(professional.isOffensive()).thenReturn(true);
+		when(professional.getCurrentSlots()).thenReturn(10);
 		when(military.getManpowerNoLevy(anyBoolean())).thenReturn(10);
 		when(military.getRegiment("levy")).thenReturn(levy);
+		when(military.getRegiments()).thenReturn(java.util.List.of(professional));
 		when(levy.getEntries()).thenReturn(java.util.List.of());
 		when(faction.getMilitary()).thenReturn(military);
 		when(faction.getMembers()).thenReturn(java.util.List.of());
 		when(faction.getName()).thenReturn("faction");
+	}
+
+	@Test
+	void resolve_returnsSiegeForSiegeSlot() {
+		War war = baseWar();
+		ScheduledCampaignBattle siege = new ScheduledCampaignBattle(20, CampaignBattleKind.SIEGE, false, "fort_a");
+		war.setCampaignBattleSchedule(List.of(siege));
+		war.setCampaignScheduleIndex(0);
+
+		assertEquals(BattleType.SIEGE, CampaignBattleTypeResolver.resolve(war, siege));
+		assertEquals(BattleType.SIEGE, CampaignBattleTypeResolver.resolve(war, 20));
+	}
+
+	@Test
+	void resolve_returnsFieldForCampaignProvince() {
+		War war = baseWar();
+		assertEquals(BattleType.FIELD, CampaignBattleTypeResolver.resolve(war, 20));
+	}
+
+	@Test
+	void resolve_returnsFieldForNavalSlot() {
+		War war = baseWar();
+		ScheduledCampaignBattle naval = new ScheduledCampaignBattle(
+				20, CampaignBattleKind.NAVAL, false, null, "port_a");
+		war.setCampaignBattleSchedule(List.of(naval));
+		war.setCampaignScheduleIndex(0);
+
+		assertEquals(BattleType.FIELD, CampaignBattleTypeResolver.resolve(war, naval));
+	}
+
+	@Test
+	void prepareScheduledBattle_navalSlot_setsNavalVariant() {
+		War war = scheduledWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.NAVAL, false, null, "port_a")));
+		war.setCampaignScheduleIndex(0);
+
+		withMockBossBar(() -> {
+			Battle battle = CampaignBattleLaunchService.prepareScheduledBattle(war);
+
+			assertNotNull(battle);
+			assertEquals(BattleType.FIELD, battle.getBattleType());
+			assertTrue(battle.isNavalVariant());
+		});
+	}
+
+	@Test
+	void prepareScheduledBattle_navalInvasionSlot_setsNavalVariant() {
+		War war = scheduledWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.NAVAL_INVASION, false, null)));
+		war.setCampaignScheduleIndex(0);
+
+		withMockBossBar(() -> {
+			Battle battle = CampaignBattleLaunchService.prepareScheduledBattle(war);
+
+			assertNotNull(battle);
+			assertEquals(BattleType.FIELD, battle.getBattleType());
+			assertTrue(battle.isNavalVariant());
+		});
+	}
+
+	@Test
+	void prepareScheduledBattle_siegeSlot_doesNotSetNavalVariant() {
+		War war = scheduledWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.SIEGE, false, "fort_a")));
+		war.setCampaignScheduleIndex(0);
+
+		withMockBossBar(() -> {
+			Battle battle = CampaignBattleLaunchService.prepareScheduledBattle(war);
+
+			assertNotNull(battle);
+			assertEquals(BattleType.SIEGE, battle.getBattleType());
+			assertFalse(battle.isNavalVariant());
+		});
+	}
+
+	@Test
+	void prepareScheduledBattle_createsSiegeBattle() {
+		War war = scheduledWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.SIEGE, false, "fort_a")));
+		war.setCampaignScheduleIndex(0);
+
+		withMockBossBar(() -> {
+			Battle battle = CampaignBattleLaunchService.prepareScheduledBattle(war);
+
+			assertNotNull(battle);
+			assertEquals(BattleType.SIEGE, battle.getBattleType());
+		});
 	}
 
 	@Test
@@ -116,13 +225,22 @@ class CampaignBattleLaunchServiceTest {
 	void tryStartScheduledBattle_startsWhenDue() {
 		War war = scheduledWar();
 		Instant startAt = war.getScheduledBattleAt();
+		SimpleFactions plugin = mock(SimpleFactions.class);
+		when(plugin.getLogger()).thenReturn(java.util.logging.Logger.getLogger("test"));
 
 		withMockBossBar(() -> {
-			CampaignBattleLaunchService.prepareScheduledBattle(war);
-			assertFalse(BattleManager.getByWarId(war.getId()).hasStarted());
+			try (MockedStatic<CampaignOffensiveForfeitService> forfeit =
+					mockStatic(CampaignOffensiveForfeitService.class)) {
+				forfeit.when(() -> CampaignOffensiveForfeitService.applyIfBattleOffensiveCannotAttack(
+						any(), anyInt())).thenReturn(false);
 
-			assertTrue(CampaignBattleLaunchService.tryStartScheduledBattle(war, startAt));
-			assertTrue(BattleManager.getByWarId(war.getId()).hasStarted());
+				SimpleFactions.plugin = plugin;
+				CampaignBattleLaunchService.prepareScheduledBattle(war);
+				assertFalse(BattleManager.getByWarId(war.getId()).hasStarted());
+
+				assertTrue(CampaignBattleLaunchService.tryStartScheduledBattle(war, startAt));
+				assertTrue(BattleManager.getByWarId(war.getId()).hasStarted());
+			}
 		});
 	}
 
@@ -136,6 +254,10 @@ class CampaignBattleLaunchServiceTest {
 		war.setCursorIndex(2);
 		war.setInitiativeAttacker(4);
 		war.setInitiativeDefender(4);
+		war.setInitiativeHolderCoalition(CampaignCoalition.AGGRESSOR);
+		war.setPushTarget(CampaignPushTarget.TOWARD_OBJECTIVE);
+		war.setPostBattleChoicePhase(PostBattleChoicePhase.NONE);
+		war.setPostBattleChoiceResolved(true);
 		war.setCampaignPhase(CampaignPhase.INVASION);
 		return war;
 	}
@@ -145,7 +267,7 @@ class CampaignBattleLaunchServiceTest {
 		LocalDate battleDay = LocalDate.of(2026, 8, 21);
 		war.setBattleDay(battleDay);
 		war.setScheduledBattleHour(21);
-		war.setScheduledBattleAt(battleDay.atTime(21, 0).atZone(ZoneOffset.UTC).toInstant());
+		war.setScheduledBattleAt(BattleWindowService.computeScheduledBattleAt(battleDay, 21));
 		war.setScheduledBattleProvinceId(20);
 		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
 		return war;

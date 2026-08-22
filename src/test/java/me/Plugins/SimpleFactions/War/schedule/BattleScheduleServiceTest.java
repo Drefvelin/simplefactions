@@ -13,7 +13,6 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -30,17 +29,24 @@ import org.mockito.MockedStatic;
 import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
+import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.progression.PostBattleChoicePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 
 class BattleScheduleServiceTest {
 	private static final LocalDate BATTLE_DAY = LocalDate.of(2026, 8, 21);
+
+	private static Instant voteCloseInstant() {
+		return BattleWindowService.atScheduleHour(BATTLE_DAY, 16);
+	}
 
 	private Faction attacker;
 	private Faction defender;
@@ -84,7 +90,7 @@ class BattleScheduleServiceTest {
 		withMockBossBar(() -> {
 			BattleScheduleCloseResult result = BattleScheduleService.closeVote(
 					war,
-					Instant.parse("2026-08-21T16:00:00Z"),
+					voteCloseInstant(),
 					uuidToFaction(),
 					name -> null);
 
@@ -93,7 +99,7 @@ class BattleScheduleServiceTest {
 			assertEquals(21, war.getScheduledBattleHour());
 			assertEquals(Integer.valueOf(20), war.getScheduledBattleProvinceId());
 			assertEquals(
-					BATTLE_DAY.atTime(21, 0).atZone(ZoneOffset.UTC).toInstant(),
+					BattleWindowService.computeScheduledBattleAt(BATTLE_DAY, 21),
 					war.getScheduledBattleAt());
 		});
 	}
@@ -105,7 +111,7 @@ class BattleScheduleServiceTest {
 
 		BattleScheduleCloseResult result = BattleScheduleService.closeVote(
 				war,
-				Instant.parse("2026-08-21T16:00:00Z"),
+				voteCloseInstant(),
 				uuidToFaction(),
 				name -> null);
 
@@ -122,9 +128,9 @@ class BattleScheduleServiceTest {
 	void isBeforeVoteClose_trueBeforeConfiguredHourOnBattleDay() {
 		War war = votingWar();
 		assertTrue(BattleScheduleService.isBeforeVoteClose(
-				war, Instant.parse("2026-08-21T15:59:00Z")));
+				war, voteCloseInstant().minusSeconds(60)));
 		assertFalse(BattleScheduleService.isBeforeVoteClose(
-				war, Instant.parse("2026-08-21T16:00:00Z")));
+				war, voteCloseInstant()));
 	}
 
 	@Test
@@ -144,9 +150,9 @@ class BattleScheduleServiceTest {
 	void closeVote_forceImmediateBypassesVoteCloseHour() {
 		War war = defenderChoiceWar();
 
-		assertTrue(BattleScheduleService.applyDefenderChoiceDeadline(
-				war, Instant.parse("2026-08-21T12:00:00Z")));
-		assertTrue(war.isDefenderChoiceResolved());
+		assertTrue(BattleScheduleService.applyPostBattleChoiceDeadline(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 12)));
+		assertTrue(war.isPostBattleChoiceResolved());
 	}
 
 	@Test
@@ -157,37 +163,37 @@ class BattleScheduleServiceTest {
 
 		BattleScheduleCloseResult result = BattleScheduleService.closeVote(
 				war,
-				Instant.parse("2026-08-21T16:00:00Z"),
+				voteCloseInstant(),
 				uuidToFaction(),
 				name -> null);
 
 		assertEquals(BattleScheduleCloseResult.BLOCKED_DEFENDER_CHOICE, result);
-		assertFalse(war.isDefenderChoiceResolved());
+		assertFalse(war.isPostBattleChoiceResolved());
 	}
 
 	@Test
 	void applyDefenderChoiceDeadline_notDueBeforeConfiguredHour() {
 		War war = defenderChoiceWar();
-		assertFalse(BattleScheduleService.applyDefenderChoiceDeadline(
-				war, Instant.parse("2026-08-21T11:00:00Z")));
-		assertFalse(war.isDefenderChoiceResolved());
+		assertFalse(BattleScheduleService.applyPostBattleChoiceDeadline(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 12).minusSeconds(60)));
+		assertFalse(war.isPostBattleChoiceResolved());
 	}
 
 	@Test
-	void closeVote_schedulesAfterAutoHoldAtCloseWhenChoiceNeeded() {
+	void closeVote_schedulesAfterAutoPushAtCloseWhenChoiceNeeded() {
 		War war = defenderChoiceWar();
 		addCrossSideVotes(war, 21);
 
 		withMockBossBar(() -> {
 			BattleScheduleCloseResult result = BattleScheduleService.closeVote(
 					war,
-					Instant.parse("2026-08-21T16:00:00Z"),
+					voteCloseInstant(),
 					uuidToFaction(),
 					name -> null);
 
 			assertEquals(BattleScheduleCloseResult.SCHEDULED, result);
-			assertTrue(war.isDefenderChoiceResolved());
-			assertEquals(Integer.valueOf(20), war.getScheduledBattleProvinceId());
+			assertTrue(war.isPostBattleChoiceResolved());
+			assertEquals(Integer.valueOf(5), war.getScheduledBattleProvinceId());
 		});
 	}
 
@@ -200,7 +206,7 @@ class BattleScheduleServiceTest {
 				BattleScheduleCloseResult.SKIPPED,
 				BattleScheduleService.closeVote(
 						war,
-						Instant.parse("2026-08-21T16:00:00Z"),
+						voteCloseInstant(),
 						uuidToFaction(),
 						name -> null));
 
@@ -209,7 +215,7 @@ class BattleScheduleServiceTest {
 				BattleScheduleCloseResult.SKIPPED,
 				BattleScheduleService.closeVote(
 						war,
-						Instant.parse("2026-08-20T16:00:00Z"),
+						BattleWindowService.atScheduleHour(BATTLE_DAY.minusDays(1), 16),
 						uuidToFaction(),
 						name -> null));
 	}
@@ -222,7 +228,7 @@ class BattleScheduleServiceTest {
 		withMockBossBar(() -> {
 			BattleScheduleCloseResult result = BattleScheduleService.closeVote(
 					war,
-					Instant.parse("2026-08-21T10:00:00Z"),
+					BattleWindowService.atScheduleHour(BATTLE_DAY, 10),
 					uuidToFaction(),
 					name -> null,
 					CloseVoteOptions.admin(false));
@@ -244,7 +250,7 @@ class BattleScheduleServiceTest {
 		withMockBossBar(() -> {
 			BattleScheduleCloseResult result = BattleScheduleService.closeVote(
 					war,
-					Instant.parse("2026-08-21T16:00:00Z"),
+					voteCloseInstant(),
 					factions,
 					name -> null,
 					CloseVoteOptions.admin(true));
@@ -262,13 +268,28 @@ class BattleScheduleServiceTest {
 		withMockBossBar(() -> {
 			BattleScheduleService.closeVote(
 					war,
-					Instant.parse("2026-08-21T16:00:00Z"),
+					voteCloseInstant(),
 					uuidToFaction(),
 					name -> null,
 					CloseVoteOptions.scheduled());
 
 			assertFalse(war.isForceQuorumNextClose());
 		});
+	}
+
+	@Test
+	void canProposeAutoresolveNow_onlyDuringVotingBeforeVoteCloseOnBattleDay() {
+		War war = votingWar();
+
+		assertTrue(BattleAutoresolveService.canProposeAutoresolveNow(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 15)));
+
+		assertFalse(BattleAutoresolveService.canProposeAutoresolveNow(
+				war, voteCloseInstant()));
+
+		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
+		assertFalse(BattleAutoresolveService.canProposeAutoresolveNow(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 15)));
 	}
 
 	private War votingWar() {
@@ -281,6 +302,7 @@ class BattleScheduleServiceTest {
 		war.setCursorIndex(2);
 		war.setInitiativeAttacker(4);
 		war.setInitiativeDefender(4);
+		war.setInitiativeHolder(me.Plugins.SimpleFactions.War.progression.BelligerentRole.ATTACKER);
 		war.setCampaignPhase(CampaignPhase.INVASION);
 		war.setBattleDay(BATTLE_DAY);
 		war.setBattleSchedulePhase(BattleSchedulePhase.VOTING);
@@ -289,7 +311,11 @@ class BattleScheduleServiceTest {
 
 	private War defenderChoiceWar() {
 		War war = votingWar();
-		war.setInitiativeAttacker(0);
+		war.setInitiativeHolder(me.Plugins.SimpleFactions.War.progression.BelligerentRole.ATTACKER);
+		war.setPostBattleChoicePhase(PostBattleChoicePhase.WINNER_PUSH_HOLD);
+		war.setPostBattleWinnerCoalition(CampaignCoalition.DEFENDER);
+		war.setLastBattleOffensiveCoalition(CampaignCoalition.AGGRESSOR);
+		war.setPostBattleChoiceResolved(false);
 		return war;
 	}
 
@@ -321,14 +347,35 @@ class BattleScheduleServiceTest {
 		when(faction.getName()).thenReturn("faction");
 	}
 
+	private void withChoiceResolutionMocks(War war, Runnable action) {
+		try (MockedStatic<WarManager> warManager = mockStatic(WarManager.class);
+				MockedStatic<me.Plugins.SimpleFactions.War.battle.military.BattlePoolService> pool =
+						mockStatic(me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.class)) {
+			warManager.when(() -> WarManager.persist(any())).then(inv -> null);
+			warManager.when(() -> WarManager.getById(war.getId())).thenReturn(war);
+			warManager.when(() -> WarManager.endWar(any(), any())).then(inv -> null);
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any())).thenReturn(5);
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any(), any())).thenReturn(5);
+			action.run();
+		}
+	}
+
 	private void withMockBossBar(Runnable action) {
 		BossBar bossBar = mock(BossBar.class);
-		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
+				MockedStatic<me.Plugins.SimpleFactions.War.battle.military.BattlePoolService> pool =
+						mockStatic(me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.class)) {
 			bukkit.when(() -> Bukkit.createBossBar(anyString(), any(BarColor.class), any(BarStyle.class)))
 					.thenReturn(bossBar);
 			bukkit.when(() -> Bukkit.createBossBar(anyString(), any(BarColor.class), any(BarStyle.class), any()))
 					.thenReturn(bossBar);
 			bukkit.when(() -> Bukkit.getPlayerExact(anyString())).thenReturn(null);
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any())).thenReturn(5);
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any(), any())).thenReturn(5);
 			action.run();
 		}
 	}

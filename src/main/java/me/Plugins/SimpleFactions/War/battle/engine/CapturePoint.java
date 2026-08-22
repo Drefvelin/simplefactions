@@ -1,7 +1,9 @@
 package me.Plugins.SimpleFactions.War.battle.engine;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
@@ -9,6 +11,9 @@ import java.util.Map.Entry;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+
+import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 
 public class CapturePoint {
 	private String id;
@@ -42,17 +47,20 @@ public class CapturePoint {
 				}
 			}
 		}
-		if(playerSide.size() > 0) {
-			int maxValueInMap = (Collections.max(playerSide.values()));
+		processCaptureTicks();
+	}
 
-	        for (Entry<BattleSide, Integer> entry :
-	        	playerSide.entrySet()) {
-	 
-	            if (entry.getValue() == maxValueInMap && entry.getValue() >= 3) {
-	                tickCapture(entry.getKey());
-	            }
-	        }
-		}	
+	void processCaptureTicks() {
+		if (playerSide.isEmpty()) {
+			return;
+		}
+		int maxValueInMap = Collections.max(playerSide.values());
+
+		for (Entry<BattleSide, Integer> entry : playerSide.entrySet()) {
+			if (entry.getValue() == maxValueInMap && entry.getValue() >= Cache.battleCaptureMinPlayers) {
+				tickCapture(entry.getKey());
+			}
+		}
 	}
 	public BattleSide getController() {
 		return controller;
@@ -65,8 +73,16 @@ public class CapturePoint {
 		return this.id;
 	}
 
+	public void setId(String id) {
+		this.id = id;
+	}
+
 	public int getCaptureProgress() {
 		return captureProgress;
+	}
+
+	public void setCaptureProgress(int captureProgress) {
+		this.captureProgress = Math.max(0, Math.min(100, captureProgress));
 	}
 
 	public int getSequenceIndex() {
@@ -85,6 +101,10 @@ public class CapturePoint {
 		this.advanceSideId = advanceSideId;
 	}
 
+	public void setController(BattleSide controller) {
+		this.controller = controller;
+	}
+
 	public boolean isFullyControlledBy(String sideId) {
 		return controller != null
 				&& sideId != null
@@ -92,10 +112,126 @@ public class CapturePoint {
 				&& captureProgress >= 100;
 	}
 
-	public static boolean isFrontPoint(CapturePoint point, List<CapturePoint> points) {
-		if (point == null || point.getAdvanceSideId() == null) {
+	boolean isContested() {
+		int sidesMeetingMin = 0;
+		for (Integer count : playerSide.values()) {
+			if (count != null && count >= Cache.battleCaptureMinPlayers) {
+				sidesMeetingMin++;
+			}
+		}
+		if (sidesMeetingMin >= 2) {
 			return true;
 		}
+		return !playerSide.isEmpty() && captureProgress > 0 && captureProgress < 100;
+	}
+
+	public static boolean isFrontPoint(CapturePoint point, List<CapturePoint> points) {
+		return isFrontPoint(point, points, false);
+	}
+
+	public static boolean isFrontPoint(CapturePoint point, List<CapturePoint> points, Battle battle) {
+		if (point == null || points == null || points.isEmpty()) {
+			return true;
+		}
+		if (battle == null || !battle.isSequentialCapture()) {
+			return true;
+		}
+		return isFrontPointAtMeet(
+				point,
+				points,
+				BattleTemplate.ATTACKER_SIDE,
+				BattleTemplate.DEFENDER_SIDE);
+	}
+
+	public static boolean isFrontPoint(CapturePoint point, List<CapturePoint> points, boolean globalSequential) {
+		if (point == null) {
+			return true;
+		}
+		if (!globalSequential) {
+			if (point.getAdvanceSideId() == null) {
+				return true;
+			}
+			return isFrontPointPerSide(point, points);
+		}
+		return isFrontPointAtMeet(
+				point,
+				points,
+				BattleTemplate.ATTACKER_SIDE,
+				BattleTemplate.DEFENDER_SIDE);
+	}
+
+	/**
+	 * Linear frontline: the one or two chain points where defender-held and attacker-held
+	 * territory meet (A = defender spawn end, last letter = attacker spawn end).
+	 */
+	static boolean isFrontPointAtMeet(
+			CapturePoint point,
+			List<CapturePoint> points,
+			String attackerId,
+			String defenderId) {
+		if (point == null || points == null || points.isEmpty()) {
+			return true;
+		}
+		for (int index : resolveFrontlineIndices(points, attackerId, defenderId)) {
+			if (point.getSequenceIndex() == index) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	static int[] resolveFrontlineIndices(List<CapturePoint> points, String attackerId, String defenderId) {
+		if (points == null || points.isEmpty()) {
+			return new int[0];
+		}
+		List<CapturePoint> ordered = new ArrayList<>(points);
+		ordered.sort(Comparator.comparingInt(CapturePoint::getSequenceIndex));
+
+		int minIndex = ordered.get(0).getSequenceIndex();
+		int maxIndex = ordered.get(ordered.size() - 1).getSequenceIndex();
+
+		boolean anyAttackerHeld = false;
+		boolean anyDefenderHeld = false;
+		for (CapturePoint candidate : ordered) {
+			if (candidate.isFullyControlledBy(attackerId)) {
+				anyAttackerHeld = true;
+			}
+			if (candidate.isFullyControlledBy(defenderId)) {
+				anyDefenderHeld = true;
+			}
+		}
+
+		if (!anyAttackerHeld) {
+			return new int[] { maxIndex };
+		}
+		if (!anyDefenderHeld) {
+			return new int[] { minIndex };
+		}
+
+		int lowFront = maxIndex;
+		for (CapturePoint candidate : ordered) {
+			if (!candidate.isFullyControlledBy(defenderId)) {
+				lowFront = candidate.getSequenceIndex();
+				break;
+			}
+		}
+
+		int highFront = minIndex;
+		for (int i = ordered.size() - 1; i >= 0; i--) {
+			CapturePoint candidate = ordered.get(i);
+			if (!candidate.isFullyControlledBy(attackerId)) {
+				highFront = candidate.getSequenceIndex();
+				break;
+			}
+		}
+
+		if (lowFront == highFront) {
+			return new int[] { lowFront };
+		}
+		return new int[] { highFront, lowFront };
+	}
+
+	private static boolean isFrontPointPerSide(CapturePoint point, List<CapturePoint> points) {
 		String sideId = point.getAdvanceSideId();
 		int frontIndex = Integer.MAX_VALUE;
 		for (CapturePoint candidate : points) {

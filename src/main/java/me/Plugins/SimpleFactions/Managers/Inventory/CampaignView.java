@@ -25,12 +25,12 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
-import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
-import me.Plugins.SimpleFactions.War.progression.CampaignProgressionService;
-import me.Plugins.SimpleFactions.War.progression.CampaignRouteRenderer;
+import me.Plugins.SimpleFactions.War.progression.CampaignChoiceService;
+import me.Plugins.SimpleFactions.War.progression.CampaignPostBattleChoiceService;
 import me.Plugins.SimpleFactions.War.progression.WhitePeaceService;
+import me.Plugins.SimpleFactions.War.resolution.WarResolutionService;
 import me.Plugins.SimpleFactions.War.schedule.BattleAutoresolveService;
 import me.Plugins.SimpleFactions.War.schedule.BattleHourTally;
 import me.Plugins.SimpleFactions.War.schedule.BattleScheduleLookups;
@@ -45,6 +45,8 @@ public class CampaignView {
 	private static final int ROUTE_START_SLOT = 10;
 	private static final int PREV_PAGE_SLOT = 9;
 	private static final int NEXT_PAGE_SLOT = 19;
+	private static final int NEXT_PAGE_ALT_SLOT = 26;
+	private static final int VOTING_HELP_SLOT = 27;
 
 	public InventoryManager inv;
 	public CampaignCreator creator = new CampaignCreator();
@@ -81,7 +83,7 @@ public class CampaignView {
 				54,
 				war.getName() + " §7Campaign");
 
-		for (int slot : Arrays.asList(0, 1, 2, 6, 7, 8, 45, 46, 47, 52)) {
+		for (int slot : Arrays.asList(0, 1, 2, 6, 7, 8, 45, 46, 52)) {
 			inventory.setItem(slot, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 		}
 
@@ -94,6 +96,8 @@ public class CampaignView {
 		populateHourToggles(inventory, war, viewerFaction, player.getUniqueId());
 
 		int axisOffset = page * ROUTE_SLOTS_PER_PAGE;
+		Integer campaignStartId = war.getCampaignStartProvinceId();
+		int firstBattleMarkerSlot = -1;
 		for (int i = 0; i < ROUTE_SLOTS_PER_PAGE; i++) {
 			int axisIndex = axisOffset + i;
 			int slot = ROUTE_START_SLOT + i;
@@ -103,13 +107,26 @@ public class CampaignView {
 			}
 			int provinceId = axis.get(axisIndex);
 			inventory.setItem(slot, creator.createRouteProvinceItem(war, viewerFaction, provinceId, axisIndex));
+			if (campaignStartId != null && campaignStartId == provinceId) {
+				firstBattleMarkerSlot = slot + 9;
+			}
+		}
+		if (firstBattleMarkerSlot >= 0) {
+			inventory.setItem(firstBattleMarkerSlot, creator.createFirstBattleMarkerItem());
 		}
 
 		if (page > 0) {
 			inventory.setItem(PREV_PAGE_SLOT, creator.createPageButton("Previous page", war.getId(), page - 1));
 		}
 		if (page < maxPage) {
-			inventory.setItem(NEXT_PAGE_SLOT, creator.createPageButton("Next page", war.getId(), page + 1));
+			int nextPageSlot = firstBattleMarkerSlot == NEXT_PAGE_SLOT ? NEXT_PAGE_ALT_SLOT : NEXT_PAGE_SLOT;
+			inventory.setItem(nextPageSlot, creator.createPageButton("Next page", war.getId(), page + 1));
+		}
+
+		if (canSurrender(player, war)) {
+			inventory.setItem(47, creator.createSurrenderButton(war));
+		} else {
+			inventory.setItem(47, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 		}
 
 		if (canAcceptWhitePeace(player, war)) {
@@ -117,6 +134,8 @@ public class CampaignView {
 		} else {
 			inventory.setItem(48, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 		}
+
+		populatePostBattleChoiceButtons(inventory, war, player);
 
 		populateAutoresolveButtons(inventory, war, player);
 
@@ -127,6 +146,7 @@ public class CampaignView {
 	}
 
 	private void populateHourToggles(Inventory inventory, War war, Faction viewerFaction, UUID viewerUuid) {
+		inventory.setItem(VOTING_HELP_SLOT, creator.createVotingHelpItem());
 		boolean eligible = BattleVoterEligibility.isEligibleVoter(war, viewerFaction);
 		Set<Integer> selections = BattleVoteService.getPlayerSelections(war, viewerUuid);
 		var uuidToFaction = BattleScheduleLookups.uuidToFactionForWar(war);
@@ -142,6 +162,28 @@ public class CampaignView {
 			inventory.setItem(
 					entry.slot(),
 					creator.createHourToggleItem(war, entry.hour(), selected, eligible, tally));
+		}
+	}
+
+	private void populatePostBattleChoiceButtons(Inventory inventory, War war, Player player) {
+		Faction leader = FactionManager.getByLeader(player.getName());
+		for (int slot : List.of(40, 41, 42, 43)) {
+			inventory.setItem(slot, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
+		}
+		if (leader == null || !CampaignPostBattleChoiceService.needsAnyChoice(war)) {
+			return;
+		}
+		if (!CampaignPostBattleChoiceService.isChoiceLeader(war, leader)) {
+			return;
+		}
+		if (CampaignPostBattleChoiceService.needsWinnerChoice(war)) {
+			inventory.setItem(40, creator.createPushButton(war));
+			inventory.setItem(41, creator.createHoldButton(war));
+			return;
+		}
+		if (CampaignPostBattleChoiceService.needsLoserResponse(war)) {
+			inventory.setItem(42, creator.createLoserAttackButton(war));
+			inventory.setItem(43, creator.createLoserAcceptPeaceButton(war));
 		}
 	}
 
@@ -229,6 +271,25 @@ public class CampaignView {
 			return;
 		}
 
+		Integer surrenderWarId = meta.getPersistentDataContainer().get(
+				new NamespacedKey(SimpleFactions.plugin, "campaign_surrender"),
+				PersistentDataType.INTEGER);
+		if (surrenderWarId != null && surrenderWarId == war.getId()) {
+			if (!canSurrender(player, war)) {
+				player.sendMessage("§cYou cannot surrender right now.");
+				return;
+			}
+			Faction leader = FactionManager.getByLeader(player.getName());
+			if (leader == null) {
+				return;
+			}
+			inv.confirming.put(player, leader);
+			inv.campaignConfirmWar.put(player, war.getId());
+			inv.confirmView(player, leader, "campaign_surrender", String.valueOf(war.getId()));
+			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			return;
+		}
+
 		Integer acceptWarId = meta.getPersistentDataContainer().get(
 				new NamespacedKey(SimpleFactions.plugin, "campaign_accept_peace"),
 				PersistentDataType.INTEGER);
@@ -248,12 +309,31 @@ public class CampaignView {
 			return;
 		}
 
+		Integer pushWarId = meta.getPersistentDataContainer().get(
+				new NamespacedKey(SimpleFactions.plugin, "campaign_push"),
+				PersistentDataType.INTEGER);
+		if (pushWarId != null && pushWarId == war.getId()) {
+			if (!canMakePostBattleChoice(player, war)) {
+				player.sendMessage("§cYou cannot push right now.");
+				return;
+			}
+			Faction leader = FactionManager.getByLeader(player.getName());
+			if (leader == null) {
+				return;
+			}
+			inv.confirming.put(player, leader);
+			inv.campaignConfirmWar.put(player, war.getId());
+			inv.confirmView(player, leader, "campaign_push", String.valueOf(war.getId()));
+			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			return;
+		}
+
 		Integer holdWarId = meta.getPersistentDataContainer().get(
 				new NamespacedKey(SimpleFactions.plugin, "campaign_hold"),
 				PersistentDataType.INTEGER);
 		if (holdWarId != null && holdWarId == war.getId()) {
-			if (!isDefenderLeader(player, war) || !creator.isDefenderChoiceActive(war)) {
-				player.sendMessage("§cYou cannot hold the front right now.");
+			if (!canMakePostBattleChoice(player, war)) {
+				player.sendMessage("§cYou cannot hold right now.");
 				return;
 			}
 			Faction leader = FactionManager.getByLeader(player.getName());
@@ -267,12 +347,12 @@ public class CampaignView {
 			return;
 		}
 
-		Integer counterWarId = meta.getPersistentDataContainer().get(
-				new NamespacedKey(SimpleFactions.plugin, "campaign_counter"),
+		Integer attackWarId = meta.getPersistentDataContainer().get(
+				new NamespacedKey(SimpleFactions.plugin, "campaign_attack"),
 				PersistentDataType.INTEGER);
-		if (counterWarId != null && counterWarId == war.getId()) {
-			if (!isDefenderLeader(player, war) || !creator.isDefenderChoiceActive(war)) {
-				player.sendMessage("§cYou cannot counter-push right now.");
+		if (attackWarId != null && attackWarId == war.getId()) {
+			if (!canMakePostBattleChoice(player, war)) {
+				player.sendMessage("§cYou cannot attack right now.");
 				return;
 			}
 			Faction leader = FactionManager.getByLeader(player.getName());
@@ -281,7 +361,26 @@ public class CampaignView {
 			}
 			inv.confirming.put(player, leader);
 			inv.campaignConfirmWar.put(player, war.getId());
-			inv.confirmView(player, leader, "campaign_counter", String.valueOf(war.getId()));
+			inv.confirmView(player, leader, "campaign_attack", String.valueOf(war.getId()));
+			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			return;
+		}
+
+		Integer loserPeaceWarId = meta.getPersistentDataContainer().get(
+				new NamespacedKey(SimpleFactions.plugin, "campaign_loser_peace"),
+				PersistentDataType.INTEGER);
+		if (loserPeaceWarId != null && loserPeaceWarId == war.getId()) {
+			if (!canMakePostBattleChoice(player, war)) {
+				player.sendMessage("§cYou cannot accept peace right now.");
+				return;
+			}
+			Faction leader = FactionManager.getByLeader(player.getName());
+			if (leader == null) {
+				return;
+			}
+			inv.confirming.put(player, leader);
+			inv.campaignConfirmWar.put(player, war.getId());
+			inv.confirmView(player, leader, "campaign_loser_peace", String.valueOf(war.getId()));
 			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			return;
 		}
@@ -289,24 +388,8 @@ public class CampaignView {
 		Integer provinceId = meta.getPersistentDataContainer().get(
 				new NamespacedKey(SimpleFactions.plugin, "campaign_province"),
 				PersistentDataType.INTEGER);
-		if (provinceId != null && isDefenderLeader(player, war) && creator.isDefenderChoiceActive(war)) {
-			List<Integer> choices = CampaignRouteRenderer.actionProvinceIds(war);
-			if (choices.size() != 2 || !choices.contains(provinceId)) {
-				return;
-			}
-			int frontProvince = war.getCampaignProvinces().get(war.getCursorIndex());
-			Faction leader = FactionManager.getByLeader(player.getName());
-			if (leader == null) {
-				return;
-			}
-			inv.confirming.put(player, leader);
-			inv.campaignConfirmWar.put(player, war.getId());
-			if (provinceId == frontProvince) {
-				inv.confirmView(player, leader, "campaign_hold", String.valueOf(war.getId()));
-			} else {
-				inv.confirmView(player, leader, "campaign_counter", String.valueOf(war.getId()));
-			}
-			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+		if (provinceId != null) {
+			// Route provinces are informational only; choices use dedicated buttons.
 		}
 	}
 
@@ -380,28 +463,67 @@ public class CampaignView {
 		}
 
 		switch (key) {
+			case "campaign_push" -> {
+				if (!canMakePostBattleChoice(player, war) || !CampaignChoiceService.applyPush(war)) {
+					player.sendMessage("§cCould not push.");
+					return;
+				}
+				if (WarManager.getById(war.getId()) == null) {
+					inv.warList(player);
+					player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+					return;
+				}
+				player.sendMessage("§aOffensive continues.");
+			}
 			case "campaign_hold" -> {
-				if (!isDefenderLeader(player, war) || !CampaignProgressionService.applyDefenderHold(war)) {
+				if (!canMakePostBattleChoice(player, war) || !CampaignChoiceService.applyHold(war)) {
 					player.sendMessage("§cCould not hold the front.");
 					return;
 				}
-				applyRecalcAndPersist(player, war);
-				player.sendMessage("§aFront held. No counter-offensive.");
-			}
-			case "campaign_counter" -> {
-				if (!isDefenderLeader(player, war) || !CampaignProgressionService.applyDefenderCounterPush(war)) {
-					player.sendMessage("§cCould not start counter-push.");
+				if (WarManager.getById(war.getId()) == null) {
+					inv.warList(player);
+					player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 					return;
 				}
-				applyRecalcAndPersist(player, war);
-				player.sendMessage("§aCounter-push started.");
+				player.sendMessage("§aFront held. White peace proposed.");
 			}
-			case "campaign_accept_peace" -> {
-				if (!WhitePeaceService.acceptWhitePeace(war, leader)) {
+			case "campaign_attack" -> {
+				if (!canMakePostBattleChoice(player, war) || !CampaignChoiceService.applyLoserAttack(war)) {
+					player.sendMessage("§cCould not schedule attack.");
+					return;
+				}
+				if (WarManager.getById(war.getId()) == null) {
+					inv.warList(player);
+					player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+					return;
+				}
+				player.sendMessage("§aAttack scheduled at the held front.");
+			}
+			case "campaign_loser_peace" -> {
+				if (!canMakePostBattleChoice(player, war) || !CampaignChoiceService.applyLoserAcceptPeace(war)) {
 					player.sendMessage("§cCould not accept white peace.");
 					return;
 				}
-				WarManager.endWar(war, WarEndReason.WHITE_PEACE);
+				player.sendMessage("§aWhite peace accepted.");
+				inv.warList(player);
+				player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				return;
+			}
+			case "campaign_surrender" -> {
+				if (!canSurrender(player, war) || !WarResolutionService.surrender(war, leader)) {
+					player.sendMessage("§cCould not surrender.");
+					return;
+				}
+				player.sendMessage("§aYou have surrendered.");
+				inv.warList(player);
+				player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				return;
+			}
+			case "campaign_accept_peace" -> {
+				if (!CampaignChoiceService.acceptWhitePeaceAndEnd(war, leader)) {
+					player.sendMessage("§cCould not accept white peace.");
+					return;
+				}
 				player.sendMessage("§aWhite peace accepted.");
 				inv.warList(player);
 				player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
@@ -415,13 +537,11 @@ public class CampaignView {
 		campaignView(player, war, 0, true);
 	}
 
-	private void applyRecalcAndPersist(Player player, War war) {
-		WhitePeaceService.recalculateProposals(war).ifPresent(reason -> WarManager.endWar(war, reason));
-		if (WarManager.getById(war.getId()) != null) {
-			WarManager.persist(war);
-		} else {
-			inv.warList(player);
+	public boolean canSurrender(Player player, War war) {
+		if (war == null || !war.isActive() || CampaignPostBattleChoiceService.needsAnyChoice(war)) {
+			return false;
 		}
+		return isAttackerLeader(player, war) || isDefenderLeader(player, war);
 	}
 
 	public boolean canAcceptWhitePeace(Player player, War war) {
@@ -430,6 +550,11 @@ public class CampaignView {
 			return false;
 		}
 		return WhitePeaceService.acceptWhitePeace(war, leader);
+	}
+
+	public boolean canMakePostBattleChoice(Player player, War war) {
+		Faction leader = FactionManager.getByLeader(player.getName());
+		return leader != null && CampaignPostBattleChoiceService.isChoiceLeader(war, leader);
 	}
 
 	public boolean isDefenderLeader(Player player, War war) {

@@ -1,6 +1,7 @@
 package me.Plugins.SimpleFactions.War.battle.ui;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -21,28 +22,43 @@ import me.Plugins.TLibs.Objects.API.ItemAPI;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Loaders.BattleTemplateLoader;
+import me.Plugins.SimpleFactions.Managers.WarManager;
+import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService.CampaignBattleContext;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
-import me.Plugins.SimpleFactions.War.battle.enums.LifeType;
+import me.Plugins.SimpleFactions.War.battle.military.BattleLivesService;
+import me.Plugins.SimpleFactions.War.battle.military.BattleLivesService.SideLivesPreview;
+import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.engine.BattleContestSetup;
 import me.Plugins.SimpleFactions.War.battle.engine.BattleRaidSetup;
 import me.Plugins.SimpleFactions.War.battle.engine.Battle;
+import me.Plugins.SimpleFactions.War.battle.engine.BattleSide;
 import me.Plugins.SimpleFactions.War.battle.engine.CapturePoint;
 import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleSide;
+import org.bukkit.Location;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.battle.template.BattleLocation;
-import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.template.ContestArea;
-import me.Plugins.SimpleFactions.War.battle.warband.WarbandSlot;
 
 
 public class BattleInventoryManager {
 	public static final String TEMPLATE_NONE_ID = "__none__";
+	public static final String SIDE_EDIT_TITLE = "§7Side Edit";
+	public static final int SIDE_EDIT_LIVES_SLOT = 16;
 
 	private static NamespacedKey templateKey() {
 		return new NamespacedKey(SimpleFactions.plugin, "battle_template");
+	}
+
+	private static NamespacedKey sideKey() {
+		return new NamespacedKey(SimpleFactions.plugin, "battle_side_id");
+	}
+
+	private static NamespacedKey pointKey() {
+		return new NamespacedKey(SimpleFactions.plugin, "battle_point_id");
 	}
 
 	public void battleView(Player player, Battle b) {
@@ -64,12 +80,21 @@ public class BattleInventoryManager {
 		}
 		player.openInventory(i);
 	}
+	public static final String WARBAND_LIST_TITLE = "§7Warband List";
+
 	public void warbandList(Player player) {
-		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Warband List");
-		for(int y = 0; y<WarbandManager.get().size();y++) {
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, WARBAND_LIST_TITLE);
+		populateWarbandList(i);
+		player.openInventory(i);
+	}
+
+	public void populateWarbandList(Inventory i) {
+		for (int slot = 0; slot < i.getSize(); slot++) {
+			i.setItem(slot, null);
+		}
+		for (int y = 0; y < WarbandManager.get().size() && y < i.getSize(); y++) {
 			i.setItem(y, createWarbandItem(WarbandManager.get().get(y)));
 		}
-		player.openInventory(i);
 	}
 	public void updateView(Player player, Battle b, Inventory i) {
 		populateBattleView(i, b);
@@ -82,7 +107,6 @@ public class BattleInventoryManager {
 		if (b.getBattleType() == BattleType.SIEGE) {
 			i.setItem(3, createContestDurationButton(b));
 			i.setItem(8, null);
-			i.setItem(23, createContestButton(b));
 		} else if (b.getBattleType() == BattleType.RAID) {
 			i.setItem(3, createDefenderRespawnModeButton(b));
 			if (BattleRaidSetup.getEffectiveDefenderRespawnMode(b) == DefenderRespawnMode.LIVES) {
@@ -90,11 +114,26 @@ public class BattleInventoryManager {
 			} else {
 				i.setItem(8, null);
 			}
+		} else {
+			if (usesCampaignLivesFormula(b)) {
+				i.setItem(3, createCampaignLivesSummaryItem(b));
+			} else {
+				i.setItem(3, createManualSideLivesHintItem(b));
+			}
+			if (b.isCapturePointsEnabled()) {
+				i.setItem(8, createSequentialCaptureButton(b));
+			} else {
+				i.setItem(8, null);
+			}
+		}
+		if (b.isCapturePointsEnabled()) {
+			i.setItem(23, createPointButton(b));
+		} else if (b.getBattleType() == BattleType.SIEGE) {
+			i.setItem(23, createContestButton(b));
+		} else if (b.getBattleType() == BattleType.RAID) {
 			i.setItem(23, createRaidTargetButton(b));
 		} else {
-			i.setItem(3, createLifeCount(b));
-			i.setItem(8, createSequentialCaptureButton(b));
-			i.setItem(23, createPointButton(b));
+			i.setItem(23, null);
 		}
 		i.setItem(4, createGameRuleButton("Friendly Fire", b.hasFriendlyFire()));
 		i.setItem(5, createGameRuleButton("Keep Inventory", b.hasKeepInventory()));
@@ -105,6 +144,51 @@ public class BattleInventoryManager {
 		} else {
 			i.setItem(18, createStartButton(b));
 		}
+		i.setItem(13, createBattleInfoItem(b));
+		if (b.getWarId() == null && !b.hasStarted()) {
+			i.setItem(22, createDeleteBattleButton(b));
+		} else if (b.getWarId() != null && !b.hasStarted()) {
+			i.setItem(22, createCampaignBattleResetHintItem(b));
+		} else {
+			i.setItem(22, null);
+		}
+	}
+
+	public ItemStack createDeleteBattleButton(Battle b) {
+		ItemStack i = new ItemStack(Material.TNT, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName("§cDelete battle");
+		List<String> lore = new ArrayList<>();
+		lore.add("§7Click to delete this manual battle");
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createCampaignBattleResetHintItem(Battle b) {
+		ItemStack i = new ItemStack(Material.BARRIER, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName("§cCampaign battle");
+		List<String> lore = new ArrayList<>();
+		lore.add("§7Cannot delete from here");
+		if (b.getWarId() != null) {
+			lore.add("§7Use §e/faction warschedule " + b.getWarId() + " battledelete");
+			lore.add("§7to reset battle setup and warbands");
+		}
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createBattleInfoItem(Battle b) {
+		ItemStack i = new ItemStack(Material.NAME_TAG, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName("§fBattle: §e" + b.getDisplayName());
+		List<String> lore = new ArrayList<>();
+		lore.add("§7Id: " + b.getId());
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
 	}
 
 	public void contestView(Player player, Battle b) {
@@ -123,7 +207,7 @@ public class BattleInventoryManager {
 		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Raid Target View");
 		i.setItem(0, createRaidTargetLocationItem(b));
 		if (b.hasStarted() && !b.getPointManager().getPoints().isEmpty()) {
-			i.setItem(1, createPointItem(b.getPointManager().getPoints().get(0)));
+			i.setItem(1, createPointItem(b.getPointManager().getPoints().get(0), b));
 		}
 		i.setItem(26, createBackButton());
 		player.openInventory(i);
@@ -131,7 +215,7 @@ public class BattleInventoryManager {
 	public void sideSelection(Player player, Battle b) {
 		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Side Selection");
 		for(int y = 0; y<b.getSides().size();y++) {
-			i.setItem(y, createSideItem(b.getSides().get(y)));
+			i.setItem(y, createSideItem(b, b.getSides().get(y)));
 		}
 		i.setItem(26, createBackButton());
 		player.openInventory(i);
@@ -139,15 +223,43 @@ public class BattleInventoryManager {
 	public void sideView(Player player, Battle b) {
 		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Side View");
 		for(int y = 0; y<b.getSides().size();y++) {
-			i.setItem(y, createSideItem(b.getSides().get(y)));
+			i.setItem(y, createSideItem(b, b.getSides().get(y)));
 		}
 		i.setItem(26, createBackButton());
 		player.openInventory(i);
 	}
+
+	public void sideEditView(Player player, Battle b, BattleSide side) {
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, SIDE_EDIT_TITLE);
+		populateSideEditView(i, b, side);
+		player.openInventory(i);
+	}
+
+	public void populateSideEditView(Inventory i, Battle b, BattleSide side) {
+		for (int slot = 0; slot < i.getSize(); slot++) {
+			i.setItem(slot, null);
+		}
+		i.setItem(4, createSideItem(b, side));
+		i.setItem(10, createSetSpawnButton(side));
+		i.setItem(12, createSetJailButton(side));
+		if (b.isCapturePointsEnabled()) {
+			i.setItem(14, createAddPointButton(side));
+		}
+		if (b.getWarId() == null && supportsPerSideLives(b) && !b.hasStarted()) {
+			i.setItem(SIDE_EDIT_LIVES_SLOT, createSetSideLivesButton(side));
+		}
+		i.setItem(26, createBackButton());
+	}
+
+	public void updateSideEditView(Player player, Battle b, BattleSide side, Inventory inventory) {
+		populateSideEditView(inventory, b, side);
+	}
 	public void pointView(Player player, Battle b) {
 		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Point View");
-		for(int y = 0; y<b.getPoints().size();y++) {
-			i.setItem(y, createPointItem(b.getPoints().get(y)));
+		List<CapturePoint> sorted = new ArrayList<>(b.getPoints());
+		sorted.sort(Comparator.comparingInt(CapturePoint::getSequenceIndex));
+		for (int y = 0; y < sorted.size(); y++) {
+			i.setItem(y, createPointItem(sorted.get(y), b));
 		}
 		i.setItem(26, createBackButton());
 		player.openInventory(i);
@@ -202,6 +314,7 @@ public class BattleInventoryManager {
 		meta.setDisplayName("§e" + templateId);
 		List<String> lore = new ArrayList<String>();
 		lore.add("§7Apply this template");
+		lore.add("§7Applies battle rules only");
 		lore.add("§cWipes current battle layout");
 		meta.setLore(lore);
 		meta.getPersistentDataContainer().set(templateKey(), PersistentDataType.STRING, templateId);
@@ -262,9 +375,20 @@ public class BattleInventoryManager {
 		if(w.isFaction()) {
 			lore.add(StringFormatter.formatHex("#ba4b3a§lFaction Warband"));
 		}
-		lore.add("§aLeader: "+w.getLeader().getName());
+		lore.add("§aLeader: "+w.getLeaderDisplayName());
 		lore.add(" ");
-		lore.add("§7Soldiers: "+w.getPlayers().size());
+		lore.add("§7Soldiers: §e" + w.getMemberCount());
+		int onlineCount = w.getOnlineMemberCount();
+		if (onlineCount > 0) {
+			lore.add("§7Online: §e" + onlineCount);
+		}
+		List<String> shownNames = w.getMemberDisplayNamesForLore(5);
+		for (String memberName : shownNames) {
+			lore.add("§8- " + memberName);
+		}
+		if (w.getMemberCount() > shownNames.size()) {
+			lore.add("§8- and " + (w.getMemberCount() - shownNames.size()) + " more");
+		}
 		lore.add(" ");
 		if(!w.isFaction()) {
 			if(w.isLocked()) {
@@ -273,10 +397,29 @@ public class BattleInventoryManager {
 				lore.add("§aOPEN");
 			}
 		} else {
-			lore.add(StringFormatter.formatHex("#7fbd73Slots:"));
-			for(Map.Entry<Faction, WarbandSlot> entry : w.getSlots().entrySet()) {
-				WarbandSlot slot = entry.getValue();
-				lore.add(entry.getKey().getName()+"§e: §7"+slot.getCurrent()+"/"+slot.getMax());
+			if (w.getCampaignSideId() != null) {
+				lore.add(StringFormatter.formatHex("#7fbd73Side: #d4c9ae" + w.getCampaignSideId()));
+			}
+			CampaignBattleContext ctx = CampaignBattleJoinService.findCampaignBattleForWarband(w);
+			if (ctx != null) {
+				if (ctx.battle().hasStarted()) {
+					BattleSide side = ctx.battle().getSideById(ctx.sideId());
+					if (side != null) {
+						lore.add("§7Lives: §e" + side.getLives());
+					}
+				} else {
+					SideLivesPreview preview = BattleLivesService.previewCampaignSideLives(
+							ctx.war(), ctx.battle(), ctx.sideId());
+					lore.add("§7Side lives: §e" + preview.sideLives());
+					if (preview.committedRegiments() > 0) {
+						lore.add("§8Pool §e" + preview.poolLives()
+								+ " §8- §e" + preview.rosterFighters() + " §8soldiers");
+					}
+					int roster = CampaignBattleJoinService.countSideRoster(ctx.battle(), ctx.sideId());
+					int maxRoster = CampaignBattleJoinService.previewSidePoolLives(
+							ctx.war(), ctx.battle(), ctx.sideId());
+					lore.add("§7Soldiers: §e" + roster + "§7/§e" + maxRoster);
+				}
 			}
 		}
 		
@@ -289,36 +432,142 @@ public class BattleInventoryManager {
 	public ItemStack createBattleItem(Battle b) {
 		ItemStack i = new ItemStack(Material.IRON_SWORD, 1);
 		ItemMeta meta = i.getItemMeta();
-		meta.setDisplayName("§e"+b.getId());
+		meta.setDisplayName("§e"+b.getDisplayName());
 		List<String> lore = new ArrayList<String>();
-		lore.add("§7Participants: "+b.getAllParticipants().size());
+		lore.add("§7Id: "+b.getId());
+		int rosterCount = 0;
+		for (BattleSide side : b.getSides()) {
+			if (side != null) {
+				rosterCount += side.getAllParticipants();
+			}
+		}
+		lore.add("§7Participants: "+rosterCount);
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;
 	}
 	public ItemStack createSideItem(BattleSide s) {
+		return createSideItem(null, s);
+	}
+
+	public ItemStack createSideItem(Battle battle, BattleSide s) {
 		ItemStack i = new ItemStack(Material.EMERALD, 1);
 		ItemMeta meta = i.getItemMeta();
 		int count = 0;
 		List<String> lore = new ArrayList<String>();
 		for(Warband w : s.getBands()) {
-			lore.add("§f"+w.getId()+": "+w.getPlayers().size());
-			count = count+w.getPlayers().size();
+			lore.add("§f"+w.getName()+": "+w.getMemberCount());
+			count = count+w.getMemberCount();
+		}
+		if (battle != null && !battle.hasStarted()) {
+			if (usesCampaignLivesFormula(battle)) {
+				War war = WarManager.getById(battle.getWarId());
+				if (war != null) {
+					lore.addAll(formatSideLivesPreviewLore(
+							BattleLivesService.previewCampaignSideLives(war, battle, s.getId())));
+				}
+			} else if (battle.getWarId() == null && supportsPerSideLives(battle)) {
+				lore.add("§7Lives: §e" + s.getLives());
+			}
+		}
+		if (s.getSpawn() != null) {
+			lore.add("§7Spawn: " + formatLocation(s.getSpawn()));
+		}
+		if (s.getJail() != null) {
+			lore.add("§7Jail: " + formatLocation(s.getJail()));
 		}
 		meta.setDisplayName("§e"+s.getId()+": §f"+count);
+		meta.setLore(lore);
+		meta.getPersistentDataContainer().set(sideKey(), PersistentDataType.STRING, s.getId());
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public static String getSideIdFromItem(ItemStack item) {
+		if (item == null || !item.hasItemMeta()) {
+			return null;
+		}
+		return item.getItemMeta().getPersistentDataContainer().get(sideKey(), PersistentDataType.STRING);
+	}
+
+	public ItemStack createSetSpawnButton(BattleSide side) {
+		ItemStack i = new ItemStack(Material.RED_BED, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName("§aSet spawn");
+		List<String> lore = new ArrayList<>();
+		lore.add("§7Uses your current location");
+		if (side.getSpawn() != null) {
+			lore.add("§7Current: " + formatLocation(side.getSpawn()));
+		} else {
+			lore.add("§7Current: not set");
+		}
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;
 	}
-	public ItemStack createPointItem(CapturePoint p) {
-		ItemStack i = new ItemStack(Material.GRAY_BANNER, 1);
+
+	public ItemStack createSetJailButton(BattleSide side) {
+		ItemStack i = new ItemStack(Material.IRON_BARS, 1);
 		ItemMeta meta = i.getItemMeta();
-		meta.setDisplayName("§e"+p.getId()+": §f"+p.getController().getId()+ " §7("+p.getCaptureProgress()+"%)");
-		List<String> lore = new ArrayList<String>();
-		lore.add("§7x"+Math.round(p.getLoc().getX())+", y"+Math.round(p.getLoc().getY())+", z"+Math.round(p.getLoc().getZ()));
+		meta.setDisplayName("§aSet jail");
+		List<String> lore = new ArrayList<>();
+		lore.add("§7Uses your current location");
+		if (side.getJail() != null) {
+			lore.add("§7Current: " + formatLocation(side.getJail()));
+		} else {
+			lore.add("§7Current: not set");
+		}
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;
+	}
+
+	public ItemStack createAddPointButton(BattleSide side) {
+		ItemStack i = new ItemStack(Material.GRAY_BANNER, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName("§aAdd capture point");
+		List<String> lore = new ArrayList<>();
+		lore.add("§7Uses your current location");
+		lore.add("§7Auto-names next global chain letter (A, B, C...)");
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	private static String formatLocation(Location location) {
+		if (location == null) {
+			return "-";
+		}
+		return "x" + Math.round(location.getX())
+				+ ", y" + Math.round(location.getY())
+				+ ", z" + Math.round(location.getZ());
+	}
+	public ItemStack createPointItem(CapturePoint p) {
+		return createPointItem(p, null);
+	}
+
+	public ItemStack createPointItem(CapturePoint p, Battle b) {
+		ItemStack i = new ItemStack(Material.RED_BANNER, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName("§e"+p.getId()+": §f"+p.getController().getId()+ " §7("+p.getCaptureProgress()+"%)");
+		List<String> lore = new ArrayList<String>();
+		lore.add("§7Chain #" + (p.getSequenceIndex() + 1) + " (" + p.getId() + ")");
+		lore.add("§7x"+Math.round(p.getLoc().getX())+", y"+Math.round(p.getLoc().getY())+", z"+Math.round(p.getLoc().getZ()));
+		if (b != null && b.isSequentialCapture()) {
+			lore.add("§7Order synced defender to attacker spawns");
+		}
+		lore.add("§cClick to delete");
+		meta.setLore(lore);
+		meta.getPersistentDataContainer().set(pointKey(), PersistentDataType.STRING, p.getId());
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public static String getPointIdFromItem(ItemStack item) {
+		if (item == null || !item.hasItemMeta()) {
+			return null;
+		}
+		return item.getItemMeta().getPersistentDataContainer().get(pointKey(), PersistentDataType.STRING);
 	}
 	public ItemStack createStartButton(Battle b) {
 		ItemStack i = new ItemStack(Material.IRON_SWORD, 1);
@@ -346,34 +595,111 @@ public class BattleInventoryManager {
 		ItemMeta meta = i.getItemMeta();
 		meta.setDisplayName("§eLives: §c"+b.getLives());
 		List<String> lore = new ArrayList<String>();
-		if(b.getLifeType().equals(LifeType.COLLECTIVE)) {
-			lore.add("§7Collective: Each side has "+b.getLives()+" respawns in total");
-		} else if(b.getLifeType().equals(LifeType.PER_PLAYER)) {
-			lore.add("§7Each player has "+b.getLives()+" respawns");
-		}	
+		lore.add("§7Collective: Each side has "+b.getLives()+" respawns in total");
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;
 	}
-	public ItemStack createLifeButton(Battle b) {
-		ItemStack i = new ItemStack(Material.DIRT, 1);
-		if(b.getLifeType().equals(LifeType.COLLECTIVE)) {
-			i.setType(Material.GOLDEN_APPLE);
-			ItemMeta meta = i.getItemMeta();
-			meta.setDisplayName("§eLife Mode: §aCollective");
-			List<String> lore = new ArrayList<String>();
-			lore.add("§7Each side has a common pool of lives");
-			meta.setLore(lore);
-			i.setItemMeta(meta);
-		} else if(b.getLifeType().equals(LifeType.PER_PLAYER)) {
-			i.setType(Material.PLAYER_HEAD);
-			ItemMeta meta = i.getItemMeta();
-			meta.setDisplayName("§eLife Mode: §aPer-Player");
-			List<String> lore = new ArrayList<String>();
-			lore.add("§7Each player has a specific number of respawns");
-			meta.setLore(lore);
-			i.setItemMeta(meta);
+
+	public ItemStack createCampaignLivesSummaryItem(Battle b) {
+		ItemStack i = new ItemStack(Material.RED_DYE, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName("§eCampaign lives");
+		List<String> lore = new ArrayList<>();
+		War war = WarManager.getById(b.getWarId());
+		if (war == null) {
+			lore.add("§7War not found");
+		} else {
+			appendCampaignSideLivesLine(lore, "Attacker", war, b, BattleTemplate.ATTACKER_SIDE);
+			appendCampaignSideLivesLine(lore, "Defender", war, b, BattleTemplate.DEFENDER_SIDE);
 		}
+		lore.add(" ");
+		lore.add("§8Computed from war commitment and roster");
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createManualSideLivesHintItem(Battle b) {
+		ItemStack i = new ItemStack(Material.RED_DYE, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName("§ePer-side lives");
+		List<String> lore = new ArrayList<>();
+		lore.add("§7Configure each side in §eSides");
+		if (supportsPerSideLives(b)) {
+			for (BattleSide side : b.getSides()) {
+				lore.add("§7" + side.getId() + ": §e" + side.getLives());
+			}
+		}
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createSetSideLivesButton(BattleSide side) {
+		ItemStack i = new ItemStack(Material.APPLE, 1);
+		ItemMeta meta = i.getItemMeta();
+		int lives = side.getMaxLives() > 0 ? side.getMaxLives() : side.getLives();
+		meta.setDisplayName("§fSide lives: §e" + lives);
+		List<String> lore = new ArrayList<>();
+		lore.add("§7Click to cycle pool size");
+		lore.add("§7Current: §e" + side.getLives() + "§7/§e" + lives);
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	private static void appendCampaignSideLivesLine(
+			List<String> lore,
+			String label,
+			War war,
+			Battle battle,
+			String sideId) {
+		SideLivesPreview preview = BattleLivesService.previewCampaignSideLives(war, battle, sideId);
+		if (preview.committedRegiments() <= 0) {
+			lore.add("§7" + label + ": §e0");
+			return;
+		}
+		lore.add("§7" + label + ": §e" + preview.sideLives()
+				+ " §8(" + preview.poolLives() + " - " + preview.rosterFighters() + ")");
+	}
+
+	public static List<String> formatSideLivesPreviewLore(SideLivesPreview preview) {
+		List<String> lore = new ArrayList<>();
+		if (preview.committedRegiments() <= 0) {
+			lore.add("§7Lives: §e0 §8(no committed regiments)");
+			return lore;
+		}
+		lore.add("§7Lives: §e" + preview.sideLives());
+		lore.add("§8Regiments §e" + preview.committedRegiments()
+				+ " §8| Pool §e" + preview.poolLives()
+				+ " §8- §e" + preview.rosterFighters() + " §8soldiers");
+		return lore;
+	}
+
+	private static boolean usesCampaignLivesFormula(Battle battle) {
+		if (battle == null || battle.getWarId() == null) {
+			return false;
+		}
+		BattleType type = battle.getBattleType();
+		return type == BattleType.FIELD || type == BattleType.SIEGE;
+	}
+
+	private static boolean supportsPerSideLives(Battle battle) {
+		if (battle == null) {
+			return false;
+		}
+		BattleType type = battle.getBattleType();
+		return type == BattleType.FIELD || type == BattleType.SIEGE;
+	}
+	public ItemStack createLifeButton(Battle b) {
+		ItemStack i = new ItemStack(Material.GOLDEN_APPLE, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName("§eLife Mode: §aCollective");
+		List<String> lore = new ArrayList<String>();
+		lore.add("§7Each side has a common pool of lives");
+		meta.setLore(lore);
+		i.setItemMeta(meta);
 		return i;
 	}
 	public ItemStack createSideButton(Battle b) {

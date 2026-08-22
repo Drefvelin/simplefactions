@@ -2,7 +2,6 @@ package me.Plugins.SimpleFactions.War.schedule;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.List;
 import java.util.OptionalInt;
@@ -16,25 +15,20 @@ import me.Plugins.SimpleFactions.War.Side;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleLaunchService;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
-import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
+import me.Plugins.SimpleFactions.War.progression.CampaignCapabilityService;
+import me.Plugins.SimpleFactions.War.progression.CampaignPostBattleChoiceService;
 import me.Plugins.SimpleFactions.War.progression.CampaignProgressionService;
 
 public final class BattleScheduleService {
 	private BattleScheduleService() {}
 
 	public static int battleDayHour(Instant now) {
-		if (now == null) {
-			return 0;
-		}
-		return now.atZone(ZoneOffset.UTC).getHour();
+		return BattleWindowService.scheduleHour(now);
 	}
 
 	public static LocalDate battleDayDate(Instant now) {
-		if (now == null) {
-			return null;
-		}
-		return now.atZone(ZoneOffset.UTC).toLocalDate();
+		return BattleWindowService.scheduleDate(now);
 	}
 
 	public static boolean isOnBattleDay(War war, Instant now) {
@@ -44,7 +38,7 @@ public final class BattleScheduleService {
 		return war.getBattleDay().equals(battleDayDate(now));
 	}
 
-	public static boolean isDefenderChoiceDeadlineDue(War war, Instant now) {
+	public static boolean isPostBattleChoiceDeadlineDue(War war, Instant now) {
 		return isOnBattleDay(war, now) && battleDayHour(now) >= Cache.warDefenderChoiceDeadlineHour;
 	}
 
@@ -56,30 +50,19 @@ public final class BattleScheduleService {
 		return isOnBattleDay(war, now) && battleDayHour(now) < Cache.warVoteCloseHour;
 	}
 
-	public static boolean needsDefenderChoice(War war) {
-		if (war == null || !war.isActive()) {
-			return false;
-		}
-		return CampaignProgressionService.isAttackerInitiativeExhausted(war)
-				&& war.getCampaignPhase() == CampaignPhase.INVASION
-				&& CampaignProgressionService.resolveNextBattleNodes(war).size() == 2;
+	public static boolean needsPostBattleChoice(War war) {
+		return CampaignPostBattleChoiceService.needsAnyChoice(war);
 	}
 
-	public static boolean isDefenderChoiceResolved(War war) {
-		if (!needsDefenderChoice(war)) {
+	public static boolean isPostBattleChoiceResolved(War war) {
+		if (!needsPostBattleChoice(war)) {
 			return true;
 		}
-		return war.isDefenderChoiceResolved();
+		return war.isPostBattleChoiceResolved();
 	}
 
-	public static boolean applyDefenderChoiceDeadline(War war, Instant now) {
-		if (war == null || !war.isActive() || !isDefenderChoiceDeadlineDue(war, now)) {
-			return false;
-		}
-		if (!needsDefenderChoice(war) || isDefenderChoiceResolved(war)) {
-			return false;
-		}
-		return CampaignProgressionService.applyDefenderHold(war);
+	public static boolean applyPostBattleChoiceDeadline(War war, Instant now) {
+		return CampaignPostBattleChoiceService.applyDeadlineIfDue(war, now);
 	}
 
 	public static void enterAutoresolvePending(War war) {
@@ -128,9 +111,9 @@ public final class BattleScheduleService {
 			return BattleScheduleCloseResult.SKIPPED;
 		}
 
-		if (needsDefenderChoice(war) && !isDefenderChoiceResolved(war)) {
-			applyDefenderChoiceDeadline(war, now);
-			if (!isDefenderChoiceResolved(war)) {
+		if (needsPostBattleChoice(war) && !isPostBattleChoiceResolved(war)) {
+			applyPostBattleChoiceDeadline(war, now);
+			if (!isPostBattleChoiceResolved(war)) {
 				return BattleScheduleCloseResult.BLOCKED_DEFENDER_CHOICE;
 			}
 		}
@@ -164,14 +147,8 @@ public final class BattleScheduleService {
 		}
 
 		int hour = pickedHour.getAsInt();
-		war.setScheduledBattleHour(hour);
-		war.setScheduledBattleAt(BattleWindowService.computeScheduledBattleAt(war.getBattleDay(), hour));
-		war.setScheduledBattleProvinceId(provinceId);
-		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
-		if (war.getScheduledBattleAt() != null) {
-			CampaignBattleLaunchService.prepareScheduledBattle(war);
-		}
-		return war.getScheduledBattleAt() != null;
+		Instant scheduledAt = BattleWindowService.computeScheduledBattleAt(war.getBattleDay(), hour);
+		return scheduleBattleAtProvince(war, provinceId, scheduledAt);
 	}
 
 	public static boolean applyScheduledInstant(War war, Instant scheduledAt) {
@@ -184,18 +161,7 @@ public final class BattleScheduleService {
 			return false;
 		}
 
-		int hour = scheduledAt.atZone(ZoneOffset.UTC).getHour();
-		if (!BattleWindowService.isValidHour(hour)) {
-			return false;
-		}
-
-		war.setBattleDay(scheduledAt.atZone(ZoneOffset.UTC).toLocalDate());
-		war.setScheduledBattleHour(hour);
-		war.setScheduledBattleAt(scheduledAt);
-		war.setScheduledBattleProvinceId(provinceId);
-		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
-		CampaignBattleLaunchService.prepareScheduledBattle(war);
-		return true;
+		return scheduleBattleAtProvince(war, provinceId, scheduledAt);
 	}
 
 	public static int castSpoofVotes(
@@ -250,18 +216,54 @@ public final class BattleScheduleService {
 		war.setBattleDay(war.getBattleDay().plusDays(1));
 	}
 
-	public static Integer resolveScheduledProvinceId(War war) {
-		List<Integer> nodes = CampaignProgressionService.resolveNextBattleNodes(war);
-		if (nodes.isEmpty()) {
+	public static Integer resolveBattleProvinceId(War war) {
+		if (war == null) {
 			return null;
 		}
-		if (nodes.size() == 1) {
-			return nodes.get(0);
+		if (war.getScheduledBattleProvinceId() != null) {
+			return war.getScheduledBattleProvinceId();
 		}
-		if (nodes.size() == 2 && war.isDefenderChoiceResolved()) {
-			return nodes.get(0);
+		return resolveScheduledProvinceId(war);
+	}
+
+	public static boolean scheduleBattleAtProvince(War war, int provinceId, Instant scheduledAt) {
+		if (war == null || scheduledAt == null) {
+			return false;
 		}
-		return null;
+		LocalDate battleDay = war.getBattleDay();
+		Integer scheduleHour = BattleWindowService.resolveScheduleHour(battleDay, scheduledAt);
+		if (scheduleHour == null || !BattleWindowService.isValidHour(scheduleHour)) {
+			return false;
+		}
+		if (battleDay == null) {
+			battleDay = scheduleHour == 24
+					? scheduledAt.atZone(BattleWindowService.SCHEDULE_ZONE).toLocalDate().minusDays(1)
+					: scheduledAt.atZone(BattleWindowService.SCHEDULE_ZONE).toLocalDate();
+			war.setBattleDay(battleDay);
+		}
+		war.setScheduledBattleHour(scheduleHour);
+		war.setScheduledBattleAt(scheduledAt);
+		war.setScheduledBattleProvinceId(provinceId);
+		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
+		CampaignBattleLaunchService.prepareScheduledBattle(war);
+		return war.getScheduledBattleAt() != null;
+	}
+
+	public static boolean markScheduledAtProvince(War war, int provinceId) {
+		if (war == null) {
+			return false;
+		}
+		war.setScheduledBattleProvinceId(provinceId);
+		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
+		return CampaignBattleLaunchService.prepareScheduledBattle(war) != null;
+	}
+
+	public static Integer resolveScheduledProvinceId(War war) {
+		if (needsPostBattleChoice(war) && !isPostBattleChoiceResolved(war)) {
+			return null;
+		}
+		OptionalInt next = CampaignCapabilityService.nextBattleProvince(war);
+		return next.isPresent() ? next.getAsInt() : null;
 	}
 
 	private static void clearForceQuorumNextClose(War war) {

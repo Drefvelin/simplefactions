@@ -7,7 +7,6 @@ import java.util.List;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
@@ -28,9 +27,6 @@ import me.Plugins.SimpleFactions.War.WarGoal;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.enums.SFGUI;
-import me.Plugins.SimpleFactions.War.battle.ui.BattleInventoryManager;
-import me.Plugins.SimpleFactions.War.battle.warband.Warband;
-import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 
 public class WarView {
 	public InventoryManager inv;
@@ -85,12 +81,6 @@ public class WarView {
 		}
 		if (showCampaign) {
 			i.setItem(49, creator.createCampaignButton(w));
-		}
-		Faction f = FactionManager.getByLeader(player.getName());
-		if(f != null) {
-			if(w.getParticipant(f) != null) {
-				i.setItem(13, creator.createMusterItem(w.getParticipant(f)));
-			}
 		}
 		i.setItem(53, inv.createBackButton(SFGUI.WAR_VIEW));
 		if(open) player.openInventory(i);
@@ -169,19 +159,6 @@ public class WarView {
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				inv.openCampaignView(p, w);
 				return;
-			} else if(e.getSlot() == 13) {
-				Faction pf = FactionManager.getByLeader(p.getName());
-				if(pf == null) return;
-				Participant par = w.getParticipant(pf);
-				if(par == null) return;
-				if(WarbandManager.getByString(par.getLeader().getId()) != null) return;
-				p.playSound(p, Sound.ITEM_GOAT_HORN_SOUND_2, SoundCategory.MASTER, 10f, 0.6f);
-				boolean offense = false;
-				if(w.getType(pf).equalsIgnoreCase("main_attacker")) offense = true;
-				if(par.isCivilWar()) offense = false;
-				WarbandManager.addWarband(new Warband(w, par, offense));
-				BattleInventoryManager warinv = new BattleInventoryManager();
-				warinv.warbandList(p);
 			}
 			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
 			String id = e.getCurrentItem().getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.STRING);

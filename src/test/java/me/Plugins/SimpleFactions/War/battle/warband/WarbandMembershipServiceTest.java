@@ -15,6 +15,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 
 class WarbandMembershipServiceTest {
 	private UUID leaderId;
@@ -65,22 +67,6 @@ class WarbandMembershipServiceTest {
 	}
 
 	@Test
-	void evaluateRejoin_slotFullBlocksRejoin() throws Exception {
-		Faction faction = mock(Faction.class);
-		when(faction.getId()).thenReturn("fac1");
-
-		Warband warband = createOpenWarband("alpha", leaderId, memberId);
-		markAsFaction(warband);
-		WarbandSlot slot = new WarbandSlot(1);
-		slot.change(1);
-		warband.getSlots().put(faction, slot);
-
-		WarbandRejoinState state = new WarbandRejoinState("alpha", faction);
-
-		assertFalse(service.evaluateRejoin(warband, memberId, faction, state));
-	}
-
-	@Test
 	void evaluateRejoin_factionMismatchBlocksRejoin() throws Exception {
 		Faction slotFaction = mock(Faction.class);
 		when(slotFaction.getId()).thenReturn("fac1");
@@ -89,11 +75,27 @@ class WarbandMembershipServiceTest {
 
 		Warband warband = createOpenWarband("alpha", leaderId, memberId);
 		markAsFaction(warband);
-		warband.getSlots().put(slotFaction, new WarbandSlot(5));
 
 		WarbandRejoinState state = new WarbandRejoinState("alpha", slotFaction);
 
 		assertFalse(service.evaluateRejoin(warband, memberId, otherFaction, state));
+	}
+
+	@Test
+	void pendingLeaderDisplayName() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("atk");
+		when(defender.getId()).thenReturn("def");
+		when(attacker.getName()).thenReturn("Brume");
+		when(attacker.getLeader()).thenReturn("Alice");
+
+		War war = new War(1, attacker, defender);
+		Warband shell = Warband.createCampaignSideShell(war, war.getAttackers(), BattleTemplate.ATTACKER_SIDE);
+
+		assertTrue(shell.isPendingLeader());
+		assertEquals("Pending signup", shell.getLeaderDisplayName());
+		assertEquals("The Brume Host", shell.getName());
 	}
 
 	private Warband createOpenWarband(String id, UUID leader, UUID member) {

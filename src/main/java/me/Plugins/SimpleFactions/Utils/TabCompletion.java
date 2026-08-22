@@ -22,7 +22,6 @@ import me.Plugins.SimpleFactions.War.schedule.BattleWindowService;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
-import me.Plugins.TLibs.Utils.TabCleaner;
 
 public class TabCompletion implements TabCompleter{
 
@@ -164,7 +163,6 @@ public class TabCompletion implements TabCompleter{
 					completions.add("startelection");
 					completions.add("endelection");
 				}
-				TabCleaner.cleanTab(completions, args);
 				return completions;
 			}
 		} else if(eitherCommand(cmd) && args.length == 2 && args[0].equalsIgnoreCase("create")){
@@ -193,7 +191,6 @@ public class TabCompletion implements TabCompleter{
 				for(var s : f.getSettlementHandler().getAll()) {
 					completions.add(s.getId());
 				}
-				TabCleaner.cleanTab(completions, args);
 				return completions;
 			}
 		} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("delete")){
@@ -437,7 +434,6 @@ public class TabCompletion implements TabCompleter{
 					for (War war : WarManager.getActive()) {
 						completions.add(String.valueOf(war.getId()));
 					}
-					TabCleaner.cleanTab(completions, args);
 					return completions;
 				}
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("warschedule")) {
@@ -449,7 +445,32 @@ public class TabCompletion implements TabCompleter{
 					completions.add("castvote");
 					completions.add("forcequorum");
 					completions.add("setscheduled");
-					TabCleaner.cleanTab(completions, args);
+					completions.add("battlecreate");
+					completions.add("battledelete");
+					completions.add("battlestart");
+					completions.add("winbattle");
+					completions.add("battlechoice");
+					completions.add("defenderchoice");
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 4
+					&& args[0].equalsIgnoreCase("warschedule")
+					&& Permissions.isAdmin(sender)) {
+				if ("winbattle".equalsIgnoreCase(args[2])) {
+					List<String> completions = new ArrayList<>();
+					completions.add("attacker");
+					completions.add("defender");
+					return completions;
+				}
+				if ("battlechoice".equalsIgnoreCase(args[2])
+						|| "defenderchoice".equalsIgnoreCase(args[2])
+						|| "pushchoice".equalsIgnoreCase(args[2])
+						|| "holdchoice".equalsIgnoreCase(args[2])) {
+					List<String> completions = new ArrayList<>();
+					completions.add("push");
+					completions.add("hold");
+					completions.add("attack");
+					completions.add("accept");
 					return completions;
 				}
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 4
@@ -460,7 +481,6 @@ public class TabCompletion implements TabCompleter{
 					for (int hour : BattleWindowService.listValidHours()) {
 						completions.add(String.valueOf(hour));
 					}
-					TabCleaner.cleanTab(completions, args);
 					return completions;
 				}
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 5
@@ -471,7 +491,6 @@ public class TabCompletion implements TabCompleter{
 					completions.add("attacker");
 					completions.add("defender");
 					completions.add("both");
-					TabCleaner.cleanTab(completions, args);
 					return completions;
 				}
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("destroytitle")){

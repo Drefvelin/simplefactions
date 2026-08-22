@@ -1,6 +1,7 @@
 package me.Plugins.SimpleFactions.War;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -21,11 +22,18 @@ import me.Plugins.SimpleFactions.Database.WarData;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
+import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarStatus;
 import me.Plugins.SimpleFactions.War.enums.WarType;
+import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
+import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 
 class WarMapperTest {
 
@@ -79,6 +87,9 @@ class WarMapperTest {
 		when(war.isWhitePeaceProposedByAttacker()).thenReturn(false);
 		when(war.isWhitePeaceProposedByDefender()).thenReturn(true);
 		when(war.getCampaignBattlesFought()).thenReturn(2);
+		when(war.getCampaignBattleSchedule()).thenReturn(List.of());
+		when(war.getCampaignScheduleIndex()).thenReturn(0);
+		when(war.getFortControllers()).thenReturn(Map.of("fort_a", CampaignCoalition.DEFENDER));
 		when(war.getBattleSchedulePhase()).thenReturn(BattleSchedulePhase.SCHEDULED);
 		when(war.getBattleDay()).thenReturn(LocalDate.parse("2026-08-21"));
 		when(war.getScheduledBattleAt()).thenReturn(Instant.parse("2026-08-21T21:00:00Z"));
@@ -101,7 +112,7 @@ class WarMapperTest {
 
 		WarData data = WarMapper.toData(war);
 
-		assertEquals(2, data.schemaVersion);
+		assertEquals(3, data.schemaVersion);
 		assertEquals(7, data.id);
 		assertEquals("subjugate", data.goal);
 		assertEquals("subjugate", data.warType);
@@ -133,6 +144,35 @@ class WarMapperTest {
 		assertEquals("2026-08-19T12:00:00Z", data.startedAt);
 		assertNull(data.endReason);
 		assertTrue(data.attackers.participants.get(0).warGoals.isEmpty());
+	}
+
+	@Test
+	void fromData_defaultsMissingCampaignBattlesFoughtAndInitiativeHolder() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			WarData data = new WarData();
+			data.schemaVersion = 2;
+			data.id = 9;
+			data.status = "active";
+			data.attackers = new me.Plugins.SimpleFactions.Database.SideData();
+			data.attackers.leader = "faction_a";
+			data.defenders = new me.Plugins.SimpleFactions.Database.SideData();
+			data.defenders.leader = "faction_b";
+
+			War war = WarMapper.fromData(data);
+
+			assertEquals(0, war.getCampaignBattlesFought());
+			assertEquals(BelligerentRole.ATTACKER, war.getInitiativeHolder());
+			assertEquals(CampaignCoalition.AGGRESSOR, war.getInitiativeHolderCoalition());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
 	}
 
 	@Test
@@ -170,5 +210,233 @@ class WarMapperTest {
 			FactionManager.factions.remove(attacker);
 			FactionManager.factions.remove(defender);
 		}
+	}
+
+	@Test
+	void fromData_v2DerivesCoalitionAndPushTarget() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			WarData data = new WarData();
+			data.schemaVersion = 2;
+			data.id = 11;
+			data.status = "active";
+			data.campaignPhase = CampaignPhase.COUNTER_PUSH.toJson();
+			data.objectiveHeldBy = ObjectiveHolder.DEFENDER.toJson();
+			data.initiativeHolder = BelligerentRole.DEFENDER.name();
+			data.attackers = new me.Plugins.SimpleFactions.Database.SideData();
+			data.attackers.leader = "faction_a";
+			me.Plugins.SimpleFactions.Database.ParticipantData atk = new me.Plugins.SimpleFactions.Database.ParticipantData();
+			atk.leader = "faction_a";
+			data.attackers.participants.add(atk);
+			data.defenders = new me.Plugins.SimpleFactions.Database.SideData();
+			data.defenders.leader = "faction_b";
+			me.Plugins.SimpleFactions.Database.ParticipantData def = new me.Plugins.SimpleFactions.Database.ParticipantData();
+			def.leader = "faction_b";
+			data.defenders.participants.add(def);
+
+			War war = WarMapper.fromData(data);
+
+			assertEquals(CampaignCoalition.DEFENDER, war.getInitiativeHolderCoalition());
+			assertEquals(CampaignPushTarget.TOWARD_AGGRESSOR_CAPITAL, war.getPushTarget());
+			assertEquals(PostBattleChoicePhase.NONE, war.getPostBattleChoicePhase());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void fromData_v3ReadsRuntimeFields() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			WarData data = new WarData();
+			data.schemaVersion = 3;
+			data.id = 12;
+			data.status = "active";
+			data.initiativeHolderCoalition = CampaignCoalition.DEFENDER.toJson();
+			data.pushTarget = CampaignPushTarget.RETAKE_OBJECTIVE.toJson();
+			data.postBattleChoicePhase = PostBattleChoicePhase.LOSER_ATTACK_PEACE.toJson();
+			data.postBattleWinnerCoalition = CampaignCoalition.AGGRESSOR.toJson();
+			data.postBattleChoiceResolved = false;
+			data.lastBattleOffensiveCoalition = CampaignCoalition.AGGRESSOR.toJson();
+			data.holdPeaceProposalActive = true;
+			data.campaignPhase = CampaignPhase.INVASION.toJson();
+			data.objectiveHeldBy = ObjectiveHolder.ATTACKER.toJson();
+			data.attackers = new me.Plugins.SimpleFactions.Database.SideData();
+			data.attackers.leader = "faction_a";
+			me.Plugins.SimpleFactions.Database.ParticipantData atk = new me.Plugins.SimpleFactions.Database.ParticipantData();
+			atk.leader = "faction_a";
+			data.attackers.participants.add(atk);
+			data.defenders = new me.Plugins.SimpleFactions.Database.SideData();
+			data.defenders.leader = "faction_b";
+			me.Plugins.SimpleFactions.Database.ParticipantData def = new me.Plugins.SimpleFactions.Database.ParticipantData();
+			def.leader = "faction_b";
+			data.defenders.participants.add(def);
+
+			War war = WarMapper.fromData(data);
+
+			assertEquals(CampaignCoalition.DEFENDER, war.getInitiativeHolderCoalition());
+			assertEquals(CampaignPushTarget.RETAKE_OBJECTIVE, war.getPushTarget());
+			assertEquals(PostBattleChoicePhase.LOSER_ATTACK_PEACE, war.getPostBattleChoicePhase());
+			assertEquals(CampaignCoalition.AGGRESSOR, war.getPostBattleWinnerCoalition());
+			assertFalse(war.isPostBattleChoiceResolved());
+			assertEquals(CampaignCoalition.AGGRESSOR, war.getLastBattleOffensiveCoalition());
+			assertTrue(war.isHoldPeaceProposalActive());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void roundTrip_campaignBattleSchedule() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			WarData data = minimalWarData();
+			data.campaignScheduleIndex = 1;
+			me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData field = new me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData();
+			field.provinceId = 10;
+			field.kind = CampaignBattleKind.FIELD.toJson();
+			me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData siege = new me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData();
+			siege.provinceId = 20;
+			siege.kind = CampaignBattleKind.SIEGE.toJson();
+			siege.fortInstallationId = "fort_a";
+			me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData objective = new me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData();
+			objective.provinceId = 42;
+			objective.kind = CampaignBattleKind.FIELD.toJson();
+			objective.required = true;
+			data.campaignBattleSchedule = List.of(field, siege, objective);
+
+			War war = WarMapper.fromData(data);
+			assertEquals(3, war.getCampaignBattleSchedule().size());
+			assertEquals(1, war.getCampaignScheduleIndex());
+			assertEquals(CampaignBattleKind.FIELD, war.getCampaignBattleSchedule().get(0).kind());
+			assertEquals(CampaignBattleKind.SIEGE, war.getCampaignBattleSchedule().get(1).kind());
+			assertEquals("fort_a", war.getCampaignBattleSchedule().get(1).fortInstallationId());
+			assertTrue(war.getCampaignBattleSchedule().get(2).required());
+
+			WarData roundTripped = WarMapper.toData(war);
+			assertEquals(1, roundTripped.campaignScheduleIndex.intValue());
+			assertEquals(3, roundTripped.campaignBattleSchedule.size());
+			assertEquals("siege", roundTripped.campaignBattleSchedule.get(1).kind);
+			assertEquals("fort_a", roundTripped.campaignBattleSchedule.get(1).fortInstallationId);
+			assertTrue(roundTripped.campaignBattleSchedule.get(2).required);
+
+			War reloaded = WarMapper.fromData(roundTripped);
+			assertEquals(war.getCampaignBattleSchedule(), reloaded.getCampaignBattleSchedule());
+			assertEquals(war.getCampaignScheduleIndex(), reloaded.getCampaignScheduleIndex());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void fromData_missingScheduleDefaultsEmpty() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			WarData data = minimalWarData();
+			data.campaignBattleSchedule = null;
+			data.campaignScheduleIndex = null;
+
+			War war = WarMapper.fromData(data);
+
+			assertTrue(war.getCampaignBattleSchedule().isEmpty());
+			assertEquals(0, war.getCampaignScheduleIndex());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void roundTrip_fortControllers() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			WarData data = minimalWarData();
+			data.fortControllers = new HashMap<>();
+			data.fortControllers.put("fort_a", CampaignCoalition.DEFENDER.toJson());
+			data.fortControllers.put("fort_b", CampaignCoalition.AGGRESSOR.toJson());
+			data.fortControllers.put("fort_bad", "unknown");
+
+			War war = WarMapper.fromData(data);
+			assertEquals(CampaignCoalition.DEFENDER, war.getFortControllers().get("fort_a"));
+			assertEquals(CampaignCoalition.AGGRESSOR, war.getFortControllers().get("fort_b"));
+			assertFalse(war.getFortControllers().containsKey("fort_bad"));
+
+			WarData roundTripped = WarMapper.toData(war);
+			assertEquals("defender", roundTripped.fortControllers.get("fort_a"));
+			assertEquals("aggressor", roundTripped.fortControllers.get("fort_b"));
+			assertFalse(roundTripped.fortControllers.containsKey("fort_bad"));
+
+			War reloaded = WarMapper.fromData(roundTripped);
+			assertEquals(war.getFortControllers(), reloaded.getFortControllers());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void fromData_missingFortControllersDefaultsEmpty() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			WarData data = minimalWarData();
+			data.fortControllers = null;
+
+			War war = WarMapper.fromData(data);
+
+			assertTrue(war.getFortControllers().isEmpty());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	private static WarData minimalWarData() {
+		WarData data = new WarData();
+		data.id = 9;
+		data.status = "active";
+		data.attackers = new me.Plugins.SimpleFactions.Database.SideData();
+		data.attackers.leader = "faction_a";
+		me.Plugins.SimpleFactions.Database.ParticipantData atk = new me.Plugins.SimpleFactions.Database.ParticipantData();
+		atk.leader = "faction_a";
+		data.attackers.participants.add(atk);
+		data.defenders = new me.Plugins.SimpleFactions.Database.SideData();
+		data.defenders.leader = "faction_b";
+		me.Plugins.SimpleFactions.Database.ParticipantData def = new me.Plugins.SimpleFactions.Database.ParticipantData();
+		def.leader = "faction_b";
+		data.defenders.participants.add(def);
+		return data;
 	}
 }

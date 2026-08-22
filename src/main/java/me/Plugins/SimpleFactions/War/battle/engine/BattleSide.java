@@ -21,7 +21,6 @@ public class BattleSide {
 	private LifeType lt;
 	private int lives;
 	private int maxLives;
-	private List<LifeRecord> records = new ArrayList<LifeRecord>();
 	private List<Location> respawnPoints = new ArrayList<Location>();
 	private Location jail;
 	
@@ -34,13 +33,6 @@ public class BattleSide {
 	}
 
 	public int getLives() {
-		if(lt.equals(LifeType.PER_PLAYER)) {
-			int l = 0;
-			for(LifeRecord r : records) {
-				l = l+r.getLives();
-			}
-			return l;
-		}
 		return lives;
 	}
 	public boolean hasPlayer(Player p) {
@@ -54,19 +46,27 @@ public class BattleSide {
 		lifeBar.setColor(BarColor.GREEN);
 		lifeBar.setStyle(BarStyle.SOLID);
 		lifeBar.setTitle(id);
-		if(lt.equals(LifeType.PER_PLAYER)) {
-			this.records.clear();
-			for(Warband w : bands) {
-				for(Player p : w.getPlayers()) {
-					addRecord(p, lives);
-				}
-			}
-		} else {
-			this.lives = lives;
-			this.maxLives = lives;
+		this.lives = lives;
+		this.maxLives = lives;
+	}
+
+	public int getMaxLives() {
+		return maxLives;
+	}
+
+	public void restoreLives(int lives, int maxLives) {
+		this.lives = Math.max(0, lives);
+		this.maxLives = Math.max(1, maxLives);
+		if (this.maxLives < this.lives) {
+			this.maxLives = this.lives;
 		}
+		lifeBar.setColor(BarColor.GREEN);
+		lifeBar.setStyle(BarStyle.SOLID);
+		lifeBar.setTitle("§f" + id + ": §e" + this.lives);
+		lifeBar.setProgress(Math.min(1.0, (double) this.lives / (double) this.maxLives));
 	}
 	public void updateBossBar(List<Player> list) {
+		lifeBar.setVisible(true);
 		for(Player p : list) {
 			if(!lifeBar.getPlayers().contains(p)) {
 				lifeBar.addPlayer(p);
@@ -78,10 +78,12 @@ public class BattleSide {
 	public void removeBossBar() {
 		if (lifeBar != null) {
 			lifeBar.removeAll();
+			lifeBar.setVisible(false);
 		}
 	}
 
 	public void addBossBarPlayer(Player p) {
+		lifeBar.setVisible(true);
 		lifeBar.addPlayer(p);
 	}
 
@@ -112,33 +114,6 @@ public class BattleSide {
 	public void removeBand(Warband b) {
 		bands.remove(b);
 	}
-	public List<LifeRecord> getRecords() {
-		return records;
-	}
-	public void addRecord(Player p, int amount) {
-		LifeRecord r = new LifeRecord(p, amount);
-		records.add(r);
-		this.maxLives = maxLives+amount;
-	}
-	public boolean hasRecord(Player p) {
-		for(LifeRecord r : records) {
-			if(r.getPlayer().equals(p)) return true;
-		}
-		return false;
-	}
-	public LifeRecord getRecord(Player p) {
-		for(LifeRecord r : records) {
-			if(r.getPlayer().equals(p)) return r;
-		}
-		return null;
-	}
-	public void updateRecord(Player p, int change) {
-		for(LifeRecord r : records) {
-			if(r.getPlayer().equals(p)) {
-				r.update(change);
-			}
-		}
-	}
 	public List<Location> getRespawnPoints() {
 		return respawnPoints;
 	}
@@ -162,14 +137,16 @@ public class BattleSide {
 		}
 	}
 
-	public void checkRecords() {
-		for(Warband w : bands) {
-			for(Player p : w.getPlayers()) {
-				if(!hasRecord(p)) {
-					addRecord(p, this.lives);
-				}
-			}
+	/**
+	 * Applies a battle death to collective lives. Lives are total respawns remaining for the side.
+	 * @return true when there was no respawn left before this death (respawn at jail)
+	 */
+	public boolean applyDeathAndNeedsJailRespawn() {
+		if (lives <= 0) {
+			return true;
 		}
+		tickLife();
+		return false;
 	}
 
 	public Integer getAllParticipants() {

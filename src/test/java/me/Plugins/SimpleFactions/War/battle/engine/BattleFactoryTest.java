@@ -23,6 +23,7 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Loaders.BattleTemplateLoader;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
+import me.Plugins.SimpleFactions.War.battle.enums.LifeType;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplateService;
 
@@ -62,7 +63,7 @@ class BattleFactoryTest {
 	}
 
 	@Test
-	void applyTemplate_seedsSiegeContestMetadata() {
+	void applyTemplate_siege_settingsOnly() {
 		YamlConfiguration config = new YamlConfiguration();
 		config.set("type", "siege");
 		config.set("contest_duration_seconds", 240);
@@ -80,14 +81,14 @@ class BattleFactoryTest {
 
 			assertEquals("siege_default", battle.getTemplateName());
 			assertEquals(240, battle.getContestDurationSeconds());
-			assertTrue(battle.getContestArea() != null);
-			assertTrue(battle.getContestArea().getMin() != null);
-			assertTrue(battle.getContestArea().getMax() != null);
+			assertNull(battle.getContestArea());
+			assertNotNull(battle.getSideById("attacker"));
+			assertNull(battle.getSideById("attacker").getSpawn());
 		});
 	}
 
 	@Test
-	void applyTemplate_seedsLayoutAndMetadata() {
+	void applyTemplate_raid_settingsOnly() {
 		YamlConfiguration config = new YamlConfiguration();
 		config.set("type", "raid");
 		config.set("defender_respawn_mode", "infinite");
@@ -103,8 +104,30 @@ class BattleFactoryTest {
 
 			assertEquals("raid_template", battle.getTemplateName());
 			assertEquals(DefenderRespawnMode.INFINITE, battle.getDefenderRespawnMode());
-			assertNotNull(battle.getRaidTarget());
-			assertEquals("target", battle.getRaidTarget().getId());
+			assertNull(battle.getRaidTarget());
+			assertTrue(battle.getPoints().isEmpty());
+		});
+	}
+
+	@Test
+	void applyTemplate_field_noCapturePoints() {
+		YamlConfiguration config = new YamlConfiguration();
+		config.set("type", "field");
+		config.set("lives", 30);
+		config.set("life_type", "COLLECTIVE");
+		config.set("capture_points", java.util.List.of(
+				java.util.Map.of("id", "alpha", "location", java.util.Map.of("x", 110, "y", 70, "z", 200))));
+		BattleTemplateLoader.putForTests(new BattleTemplate("field_default", config));
+
+		withMockBossBar(() -> {
+			Battle battle = BattleFactory.createBlank(BattleType.FIELD, "test_field");
+			BattleFactory.applyTemplate(battle, "field_default");
+
+			assertEquals("field_default", battle.getTemplateName());
+			assertEquals(LifeType.COLLECTIVE, battle.getLifeType());
+			assertEquals(30, battle.getLives());
+			assertTrue(battle.getPoints().isEmpty());
+			assertNull(battle.getSideById("attacker").getSpawn());
 		});
 	}
 
@@ -214,6 +237,26 @@ class BattleFactoryTest {
 			Battle battle = BattleFactory.createBlank(BattleType.RAID, "campaign_raid");
 			BattleFactory.applyCampaignDefault(battle);
 			assertEquals("raid_template", battle.getTemplateName());
+			assertNull(battle.getRaidTarget());
+			assertTrue(battle.getPoints().isEmpty());
+		});
+	}
+
+	@Test
+	void applyCampaignDefault_field_noCapturePoints() {
+		Cache.battleCampaignTemplateField = "field_default";
+		YamlConfiguration config = new YamlConfiguration();
+		config.set("type", "field");
+		config.set("lives", 25);
+		config.set("life_type", "COLLECTIVE");
+		BattleTemplateLoader.putForTests(new BattleTemplate("field_default", config));
+
+		withMockBossBar(() -> {
+			Battle battle = BattleFactory.createBlank(BattleType.FIELD, "campaign_field");
+			BattleFactory.applyCampaignDefault(battle);
+			assertEquals("field_default", battle.getTemplateName());
+			assertTrue(battle.getPoints().isEmpty());
 		});
 	}
 }
+

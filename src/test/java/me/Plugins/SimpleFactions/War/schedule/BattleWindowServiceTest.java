@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -36,17 +35,26 @@ class BattleWindowServiceTest {
 	}
 
 	@Test
-	void computeScheduledBattleAt_hour20_usesBattleDay() {
+	void computeScheduledBattleAt_hour20_usesBattleDayInScheduleZone() {
 		LocalDate battleDay = LocalDate.of(2026, 8, 21);
 		Instant instant = BattleWindowService.computeScheduledBattleAt(battleDay, 20);
-		assertEquals(battleDay.atTime(20, 0).atZone(ZoneOffset.UTC).toInstant(), instant);
+		assertEquals(battleDay.atTime(20, 0).atZone(BattleWindowService.SCHEDULE_ZONE).toInstant(), instant);
 	}
 
 	@Test
-	void computeScheduledBattleAt_hour24_usesNextDayMidnight() {
+	void computeScheduledBattleAt_hour24_usesNextDayMidnightInScheduleZone() {
 		LocalDate battleDay = LocalDate.of(2026, 8, 21);
 		Instant instant = BattleWindowService.computeScheduledBattleAt(battleDay, 24);
-		assertEquals(battleDay.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant(), instant);
+		assertEquals(
+				battleDay.plusDays(1).atStartOfDay(BattleWindowService.SCHEDULE_ZONE).toInstant(),
+				instant);
+	}
+
+	@Test
+	void resolveScheduleHour_mapsMidnightNextDayToHour24() {
+		LocalDate battleDay = LocalDate.of(2026, 8, 21);
+		Instant instant = BattleWindowService.computeScheduledBattleAt(battleDay, 24);
+		assertEquals(24, BattleWindowService.resolveScheduleHour(battleDay, instant));
 	}
 
 	@Test

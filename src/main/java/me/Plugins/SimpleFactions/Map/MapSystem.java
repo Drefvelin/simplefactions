@@ -101,10 +101,18 @@ public class MapSystem {
 	}
 	
 	public void claim(Player p, Faction f, int pid, boolean sea) {
+		claim(p, f, pid, sea, false);
+	}
+
+	public void claimForCapital(Player p, Faction f, int pid, boolean sea) {
+		claim(p, f, pid, sea, true);
+	}
+
+	private void claim(Player p, Faction f, int pid, boolean sea, boolean forCapital) {
 		if(pid == 0) {
 			p.sendMessage("§cThis location has no province!");
 			return;
-		} else if(f.getProvinces().contains(pid)) {
+		} else if(f.ownsProvince(pid)) {
 			p.sendMessage("§cYour faction already owns this province!");
 			return;
 		} else {
@@ -128,16 +136,28 @@ public class MapSystem {
 		    	return;
 			}
 		}
-		claimProvince(p, f, owner, pid, stolen);
+		claimProvince(p, f, owner, pid, stolen, forCapital);
 	}
 
 	private void claimProvince(Player p, Faction f, Faction owner, int province, boolean stolen) {
+		claimProvince(p, f, owner, province, stolen, false);
+	}
+
+	private void claimProvince(
+			Player p,
+			Faction f,
+			Faction owner,
+			int province,
+			boolean stolen,
+			boolean forCapital) {
 		double cost = TitleManager.getClaimCost(f);
 		if(f.getPrestige() < cost) {
 			p.sendMessage("§cYou need at least §f" + cost + "§c prestige to claim a new province §7(currently " + f.getPrestige() + ")");
 			return;
 		}
-		if(TitleLoader.getByProvince(province) == null && f.getUntitledProvinces().size() >= Cache.maxUntitledProvinces) {
+		if(!forCapital
+				&& TitleLoader.getByProvince(province) == null
+				&& f.getUntitledProvinces().size() >= Cache.maxUntitledProvinces) {
 			p.sendMessage("§cYou have too many untitled provinces, form a county first!");
 		    return;
 		}

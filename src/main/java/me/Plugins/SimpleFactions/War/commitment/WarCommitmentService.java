@@ -133,6 +133,79 @@ public final class WarCommitmentService {
 		commitmentsByWar.remove(warId);
 	}
 
+	public static void restoreCommitments(int warId, List<WarCommitment> commitments) {
+		if (warId <= 0) {
+			return;
+		}
+		if (commitments == null || commitments.isEmpty()) {
+			commitmentsByWar.remove(warId);
+			return;
+		}
+		commitmentsByWar.put(warId, new ArrayList<>(commitments));
+	}
+
+	public static int debitCount(
+			int warId,
+			String factionId,
+			String sourceFactionId,
+			String regimentId,
+			int amount) {
+		if (amount <= 0 || factionId == null || regimentId == null) {
+			return 0;
+		}
+		List<WarCommitment> commitments = commitmentsByWar.get(warId);
+		if (commitments == null || commitments.isEmpty()) {
+			return 0;
+		}
+		for (int i = 0; i < commitments.size(); i++) {
+			WarCommitment commitment = commitments.get(i);
+			if (!matchesCommitment(commitment, factionId, sourceFactionId, regimentId)) {
+				continue;
+			}
+			int debited = Math.min(amount, commitment.count());
+			if (debited <= 0) {
+				return 0;
+			}
+			int remaining = commitment.count() - debited;
+			if (remaining <= 0) {
+				commitments.remove(i);
+			} else {
+				commitments.set(i, new WarCommitment(
+						commitment.warId(),
+						commitment.factionId(),
+						commitment.sourceFactionId(),
+						commitment.regimentId(),
+						remaining,
+						commitment.committedAt()));
+			}
+			if (commitments.isEmpty()) {
+				commitmentsByWar.remove(warId);
+			}
+			return debited;
+		}
+		return 0;
+	}
+
+	private static boolean matchesCommitment(
+			WarCommitment commitment,
+			String factionId,
+			String sourceFactionId,
+			String regimentId) {
+		if (commitment.factionId() == null || !commitment.factionId().equalsIgnoreCase(factionId)) {
+			return false;
+		}
+		if (!commitment.regimentId().equalsIgnoreCase(regimentId)) {
+			return false;
+		}
+		if (sourceFactionId == null) {
+			return commitment.sourceFactionId() == null;
+		}
+		return sourceFactionId.equalsIgnoreCase(commitment.sourceFactionId());
+	}
+
+	/**
+	 * Raw commitment sum without pool/militia/live-slot rules. Use {@link me.Plugins.SimpleFactions.War.battle.military.BattlePoolService} for battle pools (61.03+).
+	 */
 	public static int totalCommittedRegiments(
 			int warId,
 			Set<String> factionIds,

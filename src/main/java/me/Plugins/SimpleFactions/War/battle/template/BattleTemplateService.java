@@ -61,6 +61,9 @@ public final class BattleTemplateService {
 		if (type == BattleType.RAID && mode.getDefenderRespawnMode() == null) {
 			mode.setDefenderRespawnMode(Cache.battleRaidDefenderRespawnModeDefault);
 		}
+		if (mode.getCapturePointsEnabled() == null) {
+			mode.setCapturePointsEnabled(type == BattleType.FIELD);
+		}
 		return mode;
 	}
 
@@ -80,6 +83,7 @@ public final class BattleTemplateService {
 		copy.setDefenderRespawnMode(source.getDefenderRespawnMode());
 		copy.setDefenderLives(source.getDefenderLives());
 		copy.setRaidTarget(source.getRaidTarget());
+		copy.setCapturePointsEnabled(source.getCapturePointsEnabled());
 		return copy;
 	}
 }

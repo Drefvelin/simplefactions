@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.Objects.Handler;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -48,9 +49,22 @@ public class ProvinceHandler {
 	}
 
 	public void setCapital(int i, boolean force) {
-		if(!provinces.contains(i) && !force) return;
+		setCapital(i, force, true);
+	}
+
+	public void setCapital(int i, boolean force, boolean notifySettlement) {
+		if (i != -1 && !provinces.contains(i) && !force) {
+			return;
+		}
+		int old = capital;
+		if (old == i) {
+			return;
+		}
 		capital = i;
 		SimpleFactions.getInstance().getProvinceManager().recalculateForSingleGuild(f.getOrCreateMainGuild(), true);
+		if (notifySettlement && old != -1) {
+			f.getSettlementHandler().onGuildDepartedCapital(old);
+		}
 	}
 
     public boolean hasProvince(int i) {
@@ -362,31 +376,17 @@ public class ProvinceHandler {
 	public void revalidateClaims() {
 		ProvinceManager pm = SimpleFactions.getInstance().getProvinceManager();
 
-		Set<Integer> legal = new HashSet<>();
-
-		// 1) Validate guild capitals
 		for (Guild g : f.getGuildHandler().getGuilds()) {
 			if (!g.hasCapital()) continue;
 
 			int cap = g.getCapital();
-			if (!isCapitalStillLegal(pm, cap)) {
+			if (!isCapitalStillLegal(pm, cap, capital)) {
 				g.setCapital(-1);
 			}
 		}
 
-		// 2) Flood from faction capital (land only)
-		if (hasCapital()) {
-            legal.add(capital);
-			floodLand(pm, capital, legal);
-		}
+		Set<Integer> legal = computeLegalProvinces(pm, capital);
 
-		// 3) Flood from valid guild capitals
-		for (Guild g : f.getGuildHandler().getGuilds()) {
-			if (!g.hasCapital()) continue;
-			floodLand(pm, g.getCapital(), legal);
-		}
-
-		// 4) Unclaim illegal provinces
 		for (int p : new ArrayList<>(provinces)) {
 			if (!legal.contains(p)) {
 				removeProvince(p, true);
@@ -394,14 +394,54 @@ public class ProvinceHandler {
 		}
 	}
 
+	public List<Integer> previewProvincesLostIfCapitalMoved(int newCapital) {
+		if (!hasCapital() || newCapital == capital) {
+			return List.of();
+		}
+		ProvinceManager pm = SimpleFactions.getInstance().getProvinceManager();
+		Set<Integer> legal = computeLegalProvinces(pm, newCapital);
+		List<Integer> lost = new ArrayList<>();
+		for (int p : provinces) {
+			if (!legal.contains(p)) {
+				lost.add(p);
+			}
+		}
+		lost.sort(Comparator.naturalOrder());
+		return lost;
+	}
+
+	private Set<Integer> computeLegalProvinces(ProvinceManager pm, int factionCapital) {
+		Set<Integer> legal = new HashSet<>();
+
+		for (Guild g : f.getGuildHandler().getGuilds()) {
+			if (!g.hasCapital()) continue;
+
+			int cap = g.getCapital();
+			if (!isCapitalStillLegal(pm, cap, factionCapital)) {
+				continue;
+			}
+			legal.add(cap);
+			floodLand(pm, cap, legal);
+		}
+
+		if (factionCapital != -1) {
+			legal.add(factionCapital);
+			floodLand(pm, factionCapital, legal);
+		}
+
+		return legal;
+	}
+
 	private boolean isCapitalStillLegal(ProvinceManager pm, int capitalId) {
-		// Land-connected to faction capital?
-		if (hasCapital() && isLandConnected(pm, capital, capitalId)) {
+		return isCapitalStillLegal(pm, capitalId, capital);
+	}
+
+	private boolean isCapitalStillLegal(ProvinceManager pm, int guildCapitalId, int factionCapitalId) {
+		if (factionCapitalId != -1 && isLandConnected(pm, factionCapitalId, guildCapitalId)) {
 			return true;
 		}
 
-		// Sea-connected?
-		return isSeaAdjacent(pm, pm.get(capitalId));
+		return isSeaAdjacent(pm, pm.get(guildCapitalId));
 	}
 
 	private void floodLand(ProvinceManager pm, int start, Set<Integer> out) {

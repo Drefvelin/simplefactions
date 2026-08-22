@@ -9,10 +9,17 @@ import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.battle.engine.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.BattleFactory;
 import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
+import me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
+import me.Plugins.SimpleFactions.War.battle.naming.BattleNamingService;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
+import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
+import me.Plugins.SimpleFactions.War.progression.CampaignOffensiveForfeitService;
 import me.Plugins.SimpleFactions.War.schedule.BattleScheduleService;
 import me.Plugins.SimpleFactions.War.schedule.BattleSideMembers;
+import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService;
+import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
+import me.Plugins.SimpleFactions.SimpleFactions;
 
 public final class CampaignBattleLaunchService {
 	private CampaignBattleLaunchService() {
@@ -24,6 +31,7 @@ public final class CampaignBattleLaunchService {
 		}
 		Battle existing = BattleManager.getByWarId(war.getId());
 		if (existing != null) {
+			CampaignBattleRosterService.ensureEnrolled(war, existing);
 			return existing;
 		}
 
@@ -44,8 +52,10 @@ public final class CampaignBattleLaunchService {
 		}
 		Battle existing = BattleManager.getByWarId(war.getId());
 		if (existing != null) {
-			if (!existing.hasStarted()) {
-				existing.start();
+			String startError = startPreparedBattle(war, existing);
+			if (startError != null) {
+				SimpleFactions.plugin.getLogger().warning(
+						"[SimpleFactions] Could not start autoresolve battle: " + startError);
 			}
 			return existing;
 		}
@@ -56,8 +66,12 @@ public final class CampaignBattleLaunchService {
 		}
 
 		Battle battle = createCampaignBattle(war, provinceId, true);
-		if (battle != null && !battle.hasStarted()) {
-			battle.start();
+		if (battle != null) {
+			String startError = startPreparedBattle(war, battle);
+			if (startError != null) {
+				SimpleFactions.plugin.getLogger().warning(
+						"[SimpleFactions] Could not start autoresolve battle: " + startError);
+			}
 		}
 		return battle;
 	}
@@ -74,20 +88,45 @@ public final class CampaignBattleLaunchService {
 			return false;
 		}
 
+		Integer provinceId = war.getScheduledBattleProvinceId();
+		if (provinceId == null) {
+			provinceId = BattleScheduleService.resolveScheduledProvinceId(war);
+		}
+		if (provinceId != null
+				&& CampaignOffensiveForfeitService.applyIfBattleOffensiveCannotAttack(war, provinceId)) {
+			return true;
+		}
+
 		Battle battle = BattleManager.getByWarId(war.getId());
 		if (battle == null) {
 			battle = prepareScheduledBattle(war);
 		}
-		if (battle == null || battle.hasStarted()) {
+		String startError = startPreparedBattle(war, battle);
+		if (startError != null) {
+			SimpleFactions.plugin.getLogger().warning(
+					"[SimpleFactions] Could not start scheduled battle: " + startError);
 			return false;
 		}
-
-		battle.start();
 		return true;
 	}
 
+	/** Returns null on success, or an error message. */
+	public static String startPreparedBattle(War war, Battle battle) {
+		if (battle == null) {
+			return "No campaign battle for this war.";
+		}
+		if (battle.hasStarted()) {
+			return "Battle already started.";
+		}
+		CampaignBattleRosterService.ensureEnrolled(war, battle);
+		return battle.start();
+	}
+
 	private static Battle createCampaignBattle(War war, int provinceId, boolean immediateStart) {
-		BattleType type = CampaignBattleTypeResolver.resolve(war, provinceId);
+		ScheduledCampaignBattle slot = CampaignScheduleService.currentSlot(war)
+				.filter(current -> current.provinceId() == provinceId)
+				.orElse(null);
+		BattleType type = CampaignBattleTypeResolver.resolve(war, slot);
 		String battleId = campaignBattleId(war.getId(), provinceId);
 
 		Battle battle = BattleFactory.createBlank(type, battleId);
@@ -96,11 +135,18 @@ public final class CampaignBattleLaunchService {
 		battle.setLocked(false);
 		battle.setTeleport(true);
 		BattleFactory.applyCampaignDefault(battle);
+		if (slot != null
+				&& (slot.kind() == CampaignBattleKind.NAVAL
+						|| slot.kind() == CampaignBattleKind.NAVAL_INVASION)) {
+			battle.setNavalVariant(true);
+		}
+		BattleNamingService.applyCampaignName(battle, war, provinceId, type);
 		BattleManager.addBattle(battle);
 		CampaignBattleRosterService.enrollWarbands(war, battle);
 		if (!immediateStart) {
-			broadcastJoinMessage(war, battleId);
+			broadcastJoinMessage(war, battle);
 		}
+		BattlePersistenceService.persistBattle(battle);
 		return battle;
 	}
 
@@ -108,9 +154,9 @@ public final class CampaignBattleLaunchService {
 		return "campaign_w" + warId + "_p" + provinceId;
 	}
 
-	private static void broadcastJoinMessage(War war, String battleId) {
-		String message = "§aCampaign battle ready. Join with §e/battle join "
-				+ battleId + " attacker §7or §edefender";
+	private static void broadcastJoinMessage(War war, Battle battle) {
+		String message = "§a" + battle.getDisplayName()
+				+ " ready. Sign up with §e/warband list §7and join your faction warband.";
 		for (String memberName : BattleSideMembers.collectEligibleMemberNames(war.getAttackers())) {
 			Player player = Bukkit.getPlayerExact(memberName);
 			if (player != null && player.isOnline()) {

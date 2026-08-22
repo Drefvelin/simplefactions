@@ -1,33 +1,35 @@
 package me.Plugins.SimpleFactions.War.battle.warband;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
-import me.Plugins.SimpleFactions.Army.LevyEntry;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.Participant;
+import me.Plugins.SimpleFactions.War.Side;
 import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Warband {
 	private String id;
 	private String name;
 	private UUID leaderId;
 	private Set<UUID> memberIds = new LinkedHashSet<>();
+	private Set<UUID> dummyMemberIds = new LinkedHashSet<>();
+	private Map<UUID, String> dummyDisplayNames = new HashMap<>();
 	private Set<UUID> invitedIds = new HashSet<>();
 	private boolean locked;
 	private boolean faction;
-	private HashMap<Faction, WarbandSlot> slots = new HashMap<>();
+	private String campaignSideId;
 
 	public static Warband createWithMemberIds(String id, UUID leaderId, boolean locked, UUID... members) {
 		Warband warband = new Warband();
@@ -57,44 +59,49 @@ public class Warband {
 		this.faction = false;
 	}
 
-	public Warband(War w, Participant par, boolean offense) {
-		this.id = par.getLeader().getId();
-		this.name = par.getLeader().getName() + " §7Host";
-		Player l = Bukkit.getPlayerExact(par.getLeader().getLeader());
-		if (l != null) {
-			this.leaderId = l.getUniqueId();
-			this.memberIds.add(l.getUniqueId());
-		} else {
-			this.leaderId = UUID.nameUUIDFromBytes(("warband:" + this.id).getBytes());
-		}
-		this.locked = true;
-		this.faction = true;
-		WarbandSlot slot = new WarbandSlot(par.getLeader().getMilitary().getManpowerNoLevy(offense));
-		slot.change(1);
-		slots.put(par.getLeader(), slot);
-		for (LevyEntry entry : par.getLeader().getMilitary().getRegiment("levy").getEntries()) {
-			if (w.isMainParticipant(entry.getFrom())) continue;
-			slots.put(entry.getFrom(), new WarbandSlot(entry.getAmount()));
-		}
-		for (Faction f : par.getAllies().keySet()) {
-			if (par.getAllies().get(f)) {
-				slots.put(f, new WarbandSlot(f.getMilitary().getManpower(true)));
+	public static String campaignSideWarbandId(int warId, String battleSideId) {
+		return "campaign_w" + warId + "_" + battleSideId;
+	}
+
+	public static Warband createCampaignSideShell(War war, Side side, String battleSideId) {
+		Warband warband = new Warband();
+		warband.id = campaignSideWarbandId(war.getId(), battleSideId);
+		warband.name = "The " + side.getLeader().getName() + " Host";
+		warband.leaderId = pendingLeaderUuid(warband.id);
+		warband.locked = true;
+		warband.faction = true;
+		warband.campaignSideId = battleSideId;
+		return warband;
+	}
+
+	public static UUID pendingLeaderUuid(String warbandId) {
+		return UUID.nameUUIDFromBytes(("warband_pending:" + warbandId).getBytes(StandardCharsets.UTF_8));
+	}
+
+	public static boolean isPendingLeader(String warbandId, UUID leaderId) {
+		return warbandId != null && leaderId != null && leaderId.equals(pendingLeaderUuid(warbandId));
+	}
+
+	public boolean isPendingLeader() {
+		return isPendingLeader(id, leaderId);
+	}
+
+	public void resetToPendingLeader() {
+		this.leaderId = pendingLeaderUuid(id);
+	}
+
+	public int getRealMemberCount() {
+		return Math.max(0, memberIds.size() - dummyMemberIds.size());
+	}
+
+	public UUID getOldestRealMemberId(UUID excludeId) {
+		for (UUID memberId : memberIds) {
+			if (memberId.equals(excludeId) || isDummyMember(memberId)) {
+				continue;
 			}
+			return memberId;
 		}
-		if (l != null) {
-			for (Faction f : slots.keySet()) {
-				for (String p : f.getMembers()) {
-					Player m = Bukkit.getPlayerExact(p);
-					if (m != null && m.isOnline() && !m.equals(l)) {
-						m.sendTitle(
-								StringFormatter.formatHex("#449459Muster Call!"),
-								StringFormatter.formatHex("#a89d80Your faction is mustering an army, join in #c4904b/warband list"),
-								5, 80, 20);
-						m.playSound(m, Sound.ITEM_GOAT_HORN_SOUND_2, SoundCategory.MASTER, 10f, 0.6f);
-					}
-				}
-			}
-		}
+		return null;
 	}
 
 	public void addPlayer(Player p) {
@@ -108,6 +115,8 @@ public class Warband {
 
 	public void removeMember(UUID memberId) {
 		memberIds.remove(memberId);
+		dummyMemberIds.remove(memberId);
+		dummyDisplayNames.remove(memberId);
 	}
 
 	public void removePlayer(Player p) {
@@ -142,13 +151,102 @@ public class Warband {
 		return memberIds.size();
 	}
 
+	public void addDummyMembers(Collection<UUID> ids, Map<UUID, String> displayNames) {
+		if (ids == null || ids.isEmpty()) {
+			return;
+		}
+		for (UUID id : ids) {
+			if (id == null || id.equals(leaderId)) {
+				continue;
+			}
+			if (memberIds.add(id)) {
+				dummyMemberIds.add(id);
+				if (displayNames != null && displayNames.containsKey(id)) {
+					dummyDisplayNames.put(id, displayNames.get(id));
+				}
+			}
+		}
+	}
+
+	public boolean isDummyMember(UUID id) {
+		return id != null && dummyMemberIds.contains(id);
+	}
+
+	public int getDummyMemberCount() {
+		return dummyMemberIds.size();
+	}
+
+	public void clearDummyMembers() {
+		if (dummyMemberIds.isEmpty()) {
+			return;
+		}
+		boolean leaderWasDummy = isDummyMember(leaderId);
+		for (UUID dummyId : new ArrayList<>(dummyMemberIds)) {
+			memberIds.remove(dummyId);
+		}
+		dummyMemberIds.clear();
+		dummyDisplayNames.clear();
+		if (leaderWasDummy || (leaderId != null && !memberIds.contains(leaderId))) {
+			UUID realLeader = getOldestRealMemberId(null);
+			if (realLeader != null) {
+				setLeaderId(realLeader);
+			} else if (isFaction()) {
+				resetToPendingLeader();
+			}
+		}
+	}
+
+	public String getMemberDisplayName(UUID memberId) {
+		if (memberId == null) {
+			return "Unknown";
+		}
+		if (isDummyMember(memberId)) {
+			String name = dummyDisplayNames.get(memberId);
+			return name != null && !name.isBlank() ? name : "Unknown";
+		}
+		Player online = Bukkit.getPlayer(memberId);
+		if (online != null && online.getName() != null) {
+			return online.getName();
+		}
+		OfflinePlayer offline = Bukkit.getOfflinePlayer(memberId);
+		if (offline.getName() != null && !offline.getName().isBlank()) {
+			return offline.getName();
+		}
+		return "Unknown";
+	}
+
+	public List<String> getMemberDisplayNamesForLore(int maxNames) {
+		List<String> names = new ArrayList<>();
+		if (maxNames <= 0 || memberIds.isEmpty()) {
+			return names;
+		}
+		UUID leader = leaderId;
+		if (leader != null && !isPendingLeader() && hasMember(leader)) {
+			names.add(getMemberDisplayName(leader) + " (leader)");
+		}
+		for (UUID memberId : memberIds) {
+			if (names.size() >= maxNames) {
+				break;
+			}
+			if (leader != null && !isPendingLeader() && memberId.equals(leader)) {
+				continue;
+			}
+			names.add(getMemberDisplayName(memberId));
+		}
+		return names;
+	}
+
 	public java.util.Collection<UUID> getMemberIds() {
 		return java.util.Collections.unmodifiableSet(memberIds);
 	}
 
+	/** Online Bukkit players only; excludes devmode dummy members. */
 	public List<Player> getOnlineMembers() {
 		List<Player> online = new ArrayList<>();
 		for (UUID memberId : memberIds) {
+			if (isDummyMember(memberId)) {
+				continue;
+			}
 			Player p = Bukkit.getPlayer(memberId);
 			if (p != null && p.isOnline()) {
 				online.add(p);
@@ -157,12 +255,27 @@ public class Warband {
 		return online;
 	}
 
+	public int getOnlineMemberCount() {
+		return getOnlineMembers().size();
+	}
+
 	public String getId() {
 		return this.id;
 	}
 
 	public String getName() {
 		return name;
+	}
+
+	public String getCampaignSideId() {
+		return campaignSideId;
+	}
+
+	public String getLeaderDisplayName() {
+		if (isPendingLeader()) {
+			return "Pending signup";
+		}
+		return getMemberDisplayName(leaderId);
 	}
 
 	public Player getLeader() {
@@ -204,16 +317,36 @@ public class Warband {
 		this.leaderId = p.getUniqueId();
 	}
 
-	public HashMap<Faction, WarbandSlot> getSlots() {
-		return slots;
+	public void setLeaderId(UUID leaderId) {
+		this.leaderId = leaderId;
 	}
 
-	public boolean hasSlot(Faction f) {
-		return slots.containsKey(f);
+	public Set<UUID> getInvitedIds() {
+		return java.util.Collections.unmodifiableSet(invitedIds);
 	}
 
-	public WarbandSlot getSlot(Faction f) {
-		if (!hasSlot(f)) return null;
-		return slots.get(f);
+	public static Warband fromPersistence(
+			String id,
+			String name,
+			UUID leaderId,
+			List<UUID> memberIds,
+			List<UUID> invitedIds,
+			boolean locked,
+			boolean faction,
+			String campaignSideId) {
+		Warband warband = new Warband();
+		warband.id = id;
+		warband.name = name;
+		warband.leaderId = leaderId != null ? leaderId : pendingLeaderUuid(id);
+		warband.locked = locked;
+		warband.faction = faction;
+		warband.campaignSideId = campaignSideId;
+		if (memberIds != null) {
+			warband.memberIds.addAll(memberIds);
+		}
+		if (invitedIds != null) {
+			warband.invitedIds.addAll(invitedIds);
+		}
+		return warband;
 	}
 }

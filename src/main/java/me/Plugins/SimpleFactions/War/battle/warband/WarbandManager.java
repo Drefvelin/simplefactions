@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -20,12 +21,16 @@ import org.bukkit.scheduler.BukkitRunnable;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignWarbandSignupService;
 import me.Plugins.SimpleFactions.War.battle.engine.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.engine.BattleSide;
+import me.Plugins.SimpleFactions.War.battle.ui.BattleInventoryManager;
+import me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService;
 
 public class WarbandManager implements Listener {
 	private static List<Warband> bands = new ArrayList<>();
+	private static final BattleInventoryManager inventoryManager = new BattleInventoryManager();
 
 	public static void resetForTests() {
 		bands.clear();
@@ -88,8 +93,23 @@ public class WarbandManager implements Listener {
 					friendIcon(online);
 					allyIcon(online);
 				}
+				refreshOpenWarbandLists();
 			}
 		}.runTaskTimer(SimpleFactions.plugin, 0L, 20L);
+	}
+
+	private void refreshOpenWarbandLists() {
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			Inventory top = player.getOpenInventory().getTopInventory();
+			if (top == null) {
+				continue;
+			}
+			if (!BattleInventoryManager.WARBAND_LIST_TITLE.equalsIgnoreCase(
+					player.getOpenInventory().getTitle())) {
+				continue;
+			}
+			inventoryManager.populateWarbandList(top);
+		}
 	}
 
 	private void friendIcon(List<Player> list) {
@@ -122,7 +142,7 @@ public class WarbandManager implements Listener {
 	@EventHandler
 	public void invenClick(InventoryClickEvent e) {
 		Player p = (Player) e.getWhoClicked();
-		if (e.getView().getTitle().equalsIgnoreCase("§7Warband List")) {
+		if (e.getView().getTitle().equalsIgnoreCase(BattleInventoryManager.WARBAND_LIST_TITLE)) {
 			e.setCancelled(true);
 			if (e.getCurrentItem() == null) return;
 			ItemStack warbandItem = e.getCurrentItem();
@@ -134,26 +154,24 @@ public class WarbandManager implements Listener {
 			} else if (WarbandManager.getByPlayer(p) != null) {
 				p.sendMessage("§cAlready in a warband, leave your current warband first!");
 				p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				refreshOpenWarbandLists();
 				return;
 			} else if (w.isFaction()) {
 				Faction f = FactionManager.getByMember(p.getName());
 				if (f == null) {
 					p.sendMessage("§cThis is a faction warband, you need a faction to join");
+					refreshOpenWarbandLists();
 					return;
 				}
-				if (!w.hasSlot(f)) {
-					p.sendMessage("§cYour faction is not part of this warband");
-					return;
-				}
-				WarbandSlot slot = w.getSlot(f);
-				if (slot.isFull()) {
-					p.sendMessage("§cYour faction has already filled all its slots!");
+				String signupError = CampaignWarbandSignupService.signup(p, w, f);
+				if (signupError != null) {
+					p.sendMessage("§c" + signupError);
+					p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					refreshOpenWarbandLists();
 					return;
 				}
 				p.sendMessage("§aJoined §e" + w.getId());
 				p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-				w.addPlayer(p);
-				slot.change(1);
 			} else if (w.isLocked()) {
 				if (w.isInvited(p)) {
 					w.addPlayer(p);
@@ -168,6 +186,8 @@ public class WarbandManager implements Listener {
 				p.sendMessage("§aJoined §e" + w.getId());
 				p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			}
+			BattlePersistenceService.persistWarband(w);
+			refreshOpenWarbandLists();
 		}
 	}
 }

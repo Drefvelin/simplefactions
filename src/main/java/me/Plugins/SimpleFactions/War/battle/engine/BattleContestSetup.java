@@ -11,11 +11,19 @@ public final class BattleContestSetup {
 	}
 
 	public static void setContestMin(Battle battle, Location location) {
+		if (location == null) {
+			throw new IllegalArgumentException("Location is required");
+		}
+		BattlePlacementValidator.validatePlacementOrThrow(battle, location, "Contest area min");
 		ensureContestArea(battle);
 		battle.getContestArea().setMin(BattleLocation.fromBukkitLocation(location));
 	}
 
 	public static void setContestMax(Battle battle, Location location) {
+		if (location == null) {
+			throw new IllegalArgumentException("Location is required");
+		}
+		BattlePlacementValidator.validatePlacementOrThrow(battle, location, "Contest area max");
 		ensureContestArea(battle);
 		battle.getContestArea().setMax(BattleLocation.fromBukkitLocation(location));
 	}

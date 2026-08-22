@@ -34,8 +34,10 @@ import me.Plugins.SimpleFactions.Utils.Permissions;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.WarCommandHelper;
 import me.Plugins.SimpleFactions.War.WarDebugFormatter;
+import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
 import me.Plugins.SimpleFactions.War.schedule.WarScheduleAdminResult;
 import me.Plugins.SimpleFactions.War.schedule.WarScheduleAdminService;
+import me.Plugins.SimpleFactions.War.schedule.WarScheduleFeedbackFormatter;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -827,7 +829,7 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cThis location has no province!");
 					return true;
 				}
-				if(f.getProvinces().isEmpty() && args.length < 2) {
+				if(args.length < 2 && f.getSettlementHandler().requiresFoundingName(claim)) {
 					p.sendMessage("§cName required to found your capital city: §e/faction setcapital <name>");
 					return true;
 				}
@@ -835,12 +837,23 @@ public class CommandManager implements Listener, CommandExecutor{
 					return true;
 				}
 				String name = args.length == 2 ? args[1] : null;
-				CapitalResult result = f.getSettlementHandler().resolveFactionCapital(p, claim, name);
-				p.sendMessage(result.getMessage());
-				if(result.isSuccess()) {
-					f.setCapital(claim);
-					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				CapitalResult result = f.getSettlementHandler().validateFactionCapital(p, claim, name);
+				if(!result.isSuccess()) {
+					p.sendMessage(result.getMessage());
+					return true;
 				}
+				if(f.hasCapital() && claim == f.getCapital()) {
+					p.sendMessage("§aCapital is already set here.");
+					return true;
+				}
+				if(f.hasCapital() && claim != f.getCapital()) {
+					List<Integer> lost = f.getProvinceHandler().previewProvincesLostIfCapitalMoved(claim);
+					if(!lost.isEmpty()) {
+						CapitalMovePrompt.begin(p, f, claim, name, lost.size());
+						return true;
+					}
+				}
+				CapitalMovePrompt.applyFactionCapitalMove(p, f, claim, name);
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setrulingsystem") && args.length == 2) {
 				Faction f = FactionManager.getByLeader(p.getName());
@@ -1370,17 +1383,48 @@ public class CommandManager implements Listener, CommandExecutor{
 						}
 						yield WarScheduleAdminService.setScheduled(w, args[3]);
 					}
+					case "battlecreate" -> WarScheduleAdminService.battleCreate(w);
+					case "battledelete" -> WarScheduleAdminService.battleDelete(w);
+					case "battlestart" -> WarScheduleAdminService.battleStart(w);
+					case "winbattle" -> {
+						if (args.length < 4) {
+							yield WarScheduleAdminResult.error("Usage: warschedule <id> winbattle attacker|defender");
+						}
+						BelligerentRole winner = parseBelligerentRoleArg(args[3]);
+						if (winner == null) {
+							yield WarScheduleAdminResult.error("Winner must be attacker or defender.");
+						}
+						yield WarScheduleAdminService.winBattle(w, winner);
+					}
+					case "battlechoice", "defenderchoice", "pushchoice", "holdchoice" -> {
+						if (args.length < 4) {
+							yield WarScheduleAdminResult.error(
+									"Usage: warschedule <id> battlechoice push|hold|attack|accept");
+						}
+						yield WarScheduleAdminService.battleChoice(w, args[3]);
+					}
 					default -> WarScheduleAdminResult.error(
-							"Unknown subcommand. Use: opencvote, closevote, skipday, castvote, forcequorum, setscheduled");
+							"Unknown subcommand. Use: opencvote, closevote, skipday, castvote, forcequorum, setscheduled, battlecreate, battledelete, battlestart, winbattle, battlechoice");
 				};
 				if (result.success()) {
 					WarManager.persist(w);
 					p.sendMessage("§a" + result.message());
-					for (String line : WarDebugFormatter.formatStatusLines(w)) {
+					Integer castHour = null;
+					if ("castvote".equals(subcommand) && args.length >= 4) {
+						try {
+							castHour = Integer.parseInt(args[3]);
+						} catch (NumberFormatException ignored) {
+							// castvote branch already validated hour
+						}
+					}
+					for (String line : WarScheduleFeedbackFormatter.format(subcommand, w, castHour)) {
 						p.sendMessage(line);
 					}
 				} else {
 					p.sendMessage("§c" + result.message());
+				}
+				for (String line : WarScheduleAdminService.devModeReminderLines()) {
+					p.sendMessage(line);
 				}
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("destroytitle") && args.length == 2) {
@@ -1510,14 +1554,43 @@ public class CommandManager implements Listener, CommandExecutor{
 	}
 
 	private boolean tryClaimForCapital(Player p, Faction f, int claim) {
-		Faction owner = FactionManager.getByProvince(claim);
+		Faction owner = resolveProvinceOwner(claim);
 		if(owner != null && !owner.getId().equalsIgnoreCase(f.getId())) {
 			p.sendMessage("§cThis province is already owned by another faction!");
 			return false;
 		}
-		if(!f.getProvinces().contains(claim)) {
-			FactionManager.getMap().claim(p, f, claim, true);
+		if(!f.getProvinces().isEmpty() && !f.ownsProvince(claim)) {
+			p.sendMessage("§cYour faction doesn't own this province!");
+			return false;
 		}
-		return f.getProvinces().contains(claim);
+		if(f.getProvinces().isEmpty() && !f.ownsProvince(claim)) {
+			FactionManager.getMap().claimForCapital(p, f, claim, true);
+		}
+		return f.ownsProvince(claim);
+	}
+
+	private static Faction resolveProvinceOwner(int provinceId) {
+		Faction owner = FactionManager.getByProvince(provinceId);
+		if (owner != null) {
+			return owner;
+		}
+		Title title = TitleLoader.getByProvince(provinceId);
+		if (title == null) {
+			return null;
+		}
+		return FactionManager.getTitleOwner(title);
+	}
+
+	private static BelligerentRole parseBelligerentRoleArg(String value) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		if (value.equalsIgnoreCase("attacker")) {
+			return BelligerentRole.ATTACKER;
+		}
+		if (value.equalsIgnoreCase("defender")) {
+			return BelligerentRole.DEFENDER;
+		}
+		return null;
 	}
 }

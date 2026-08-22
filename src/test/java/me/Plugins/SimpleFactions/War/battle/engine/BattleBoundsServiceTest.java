@@ -2,16 +2,12 @@ package me.Plugins.SimpleFactions.War.battle.engine;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Constructor;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -24,12 +20,10 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import me.Plugins.SimpleFactions.Map.ProvinceGrid;
-import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
-import me.Plugins.SimpleFactions.enums.Terrain;
 
 class BattleBoundsServiceTest {
 	private ProvinceManager provinceManager;
@@ -43,13 +37,13 @@ class BattleBoundsServiceTest {
 	}
 
 	@Test
-	void resolve_usesExistingProvinceId() {
+	void resolve_alwaysSetsEmptyAllowedProvinces() {
 		Battle battle = fieldBattle("test");
 		battle.setProvinceId(42);
 
 		BattleBoundsService.resolveAllowedProvinces(battle, plugin);
 
-		assertEquals(Set.of(42), battle.getAllowedProvinceIds());
+		assertEquals(Collections.emptySet(), battle.getAllowedProvinceIds());
 	}
 
 	@Test
@@ -64,26 +58,7 @@ class BattleBoundsServiceTest {
 		BattleBoundsService.resolveAllowedProvinces(battle, plugin);
 
 		assertEquals(Integer.valueOf(77), battle.getProvinceId());
-		assertTrue(battle.getAllowedProvinceIds().contains(77));
-	}
-
-	@Test
-	void resolve_navalAddsAdjacentSeaProvince() throws Exception {
-		Province land = province(10, Terrain.PLAINS);
-		Province sea = province(11, Terrain.SEA);
-		link(land, sea);
-		load(land, sea);
-
-		ProvinceGrid grid = gridWithProvince(10, 10, 1, 1, 10);
-		when(plugin.getProvinceGrid()).thenReturn(grid);
-
-		Battle battle = fieldBattle("naval");
-		battle.setProvinceId(10);
-		battle.setNavalVariant(true);
-
-		BattleBoundsService.resolveAllowedProvinces(battle, plugin);
-
-		assertEquals(Set.of(10, 11), battle.getAllowedProvinceIds());
+		assertEquals(Collections.emptySet(), battle.getAllowedProvinceIds());
 	}
 
 	@Test
@@ -91,7 +66,6 @@ class BattleBoundsServiceTest {
 		Battle battle = fieldBattle("test");
 		battle.setBattleType(BattleType.RAID);
 		setStarted(battle, true);
-		battle.setAllowedProvinceIds(Set.of(10));
 
 		assertFalse(BattleBoundsService.applies(battle));
 	}
@@ -108,9 +82,9 @@ class BattleBoundsServiceTest {
 	}
 
 	@Test
-	void isProvinceAllowed_falseForUnset() {
+	void isProvinceAllowed_alwaysTrue() {
 		Battle battle = fieldBattle("test");
-		assertFalse(BattleBoundsService.isProvinceAllowed(battle, 10));
+		assertTrue(BattleBoundsService.isProvinceAllowed(battle, 10));
 	}
 
 	private Battle fieldBattle(String id) {
@@ -134,23 +108,6 @@ class BattleBoundsServiceTest {
 		} catch (ReflectiveOperationException e) {
 			throw new RuntimeException(e);
 		}
-	}
-
-	private Province province(int id, Terrain terrain) {
-		return new Province(id, terrain.name(), 50);
-	}
-
-	private void link(Province a, Province b) {
-		a.addNeighbour(b.getId());
-		b.addNeighbour(a.getId());
-	}
-
-	private void load(Province... provinces) {
-		Map<Integer, Province> map = new HashMap<>();
-		for (Province province : provinces) {
-			map.put(province.getId(), province);
-		}
-		provinceManager.start(map);
 	}
 
 	private ProvinceGrid gridWithProvince(int width, int height, int x, int z, int provinceId) throws Exception {

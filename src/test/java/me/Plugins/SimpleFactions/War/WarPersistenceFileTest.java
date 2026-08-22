@@ -44,7 +44,7 @@ class WarPersistenceFileTest {
 		tempDir = Files.createTempDirectory("sf-war-persist-");
 		savedFactions.addAll(FactionManager.factions);
 		FactionManager.factions.clear();
-		me.Plugins.SimpleFactions.Cache.warInitiativePerSide = 4;
+		me.Plugins.SimpleFactions.Cache.warInitiativeFactor = 1.5;
 	}
 
 	@AfterEach
@@ -101,7 +101,7 @@ class WarPersistenceFileTest {
 		War restored = WarMapper.fromData(restoredData);
 
 		assertNotNull(restoredData);
-		assertEquals(2, restoredData.schemaVersion);
+		assertEquals(3, restoredData.schemaVersion);
 		assertEquals(3, restoredData.id);
 		assertEquals("active", restoredData.status);
 		assertEquals("subjugate", restoredData.goal);

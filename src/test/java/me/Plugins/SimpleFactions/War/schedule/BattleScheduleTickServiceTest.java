@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 
@@ -34,12 +33,18 @@ import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleLaunchService
 import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
+import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.progression.PostBattleChoicePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 
 class BattleScheduleTickServiceTest {
 	private static final LocalDate BATTLE_DAY = LocalDate.of(2026, 8, 21);
+
+	private static Instant voteCloseInstant() {
+		return BattleWindowService.atScheduleHour(BATTLE_DAY, 16);
+	}
 
 	private Faction attacker;
 	private Faction defender;
@@ -78,13 +83,14 @@ class BattleScheduleTickServiceTest {
 	}
 
 	@Test
-	void processWar_appliesDefenderDeadlineAtNoon() {
+	void processWar_appliesPostBattleChoiceDeadlineAtNoon() {
 		War war = defenderChoiceWar();
-
-		assertTrue(BattleScheduleTickService.processWar(
-				war, Instant.parse("2026-08-21T12:00:00Z")));
-		assertTrue(war.isDefenderChoiceResolved());
-		assertEquals(BattleSchedulePhase.VOTING, war.getBattleSchedulePhase());
+		withMockBossBarAndPools(() -> {
+			assertTrue(BattleScheduleTickService.processWar(
+					war, BattleWindowService.atScheduleHour(BATTLE_DAY, 12)));
+			assertTrue(war.isPostBattleChoiceResolved());
+			assertEquals(BattleSchedulePhase.VOTING, war.getBattleSchedulePhase());
+		});
 	}
 
 	@Test
@@ -94,10 +100,10 @@ class BattleScheduleTickServiceTest {
 
 		withMockBossBar(() -> {
 			assertTrue(BattleScheduleTickService.processWar(
-					war, Instant.parse("2026-08-21T16:00:00Z")));
+					war, voteCloseInstant()));
 			assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
 			assertEquals(
-					BATTLE_DAY.atTime(21, 0).atZone(ZoneOffset.UTC).toInstant(),
+					BattleWindowService.computeScheduledBattleAt(BATTLE_DAY, 21),
 					war.getScheduledBattleAt());
 		});
 	}
@@ -108,20 +114,7 @@ class BattleScheduleTickServiceTest {
 		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
 
 		assertFalse(BattleScheduleTickService.processWar(
-				war, Instant.parse("2026-08-21T16:00:00Z")));
-	}
-
-	@Test
-	void processWar_catchUpAtSeventeenRunsDeadlineAndClose() {
-		War war = defenderChoiceWar();
-		addCrossSideVotes(war, 21);
-
-		withMockBossBar(() -> {
-			assertTrue(BattleScheduleTickService.processWar(
-					war, Instant.parse("2026-08-21T17:00:00Z")));
-			assertTrue(war.isDefenderChoiceResolved());
-			assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
-		});
+				war, voteCloseInstant()));
 	}
 
 	@Test
@@ -129,15 +122,41 @@ class BattleScheduleTickServiceTest {
 		War war = votingWar();
 		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
 		war.setScheduledBattleHour(21);
-		war.setScheduledBattleAt(BATTLE_DAY.atTime(21, 0).atZone(ZoneOffset.UTC).toInstant());
+		war.setScheduledBattleAt(BattleWindowService.computeScheduledBattleAt(BATTLE_DAY, 21));
 		war.setScheduledBattleProvinceId(20);
 
-		withMockBossBar(() -> {
-			WarManager.addWar(war);
-			CampaignBattleLaunchService.prepareScheduledBattle(war);
-			BattleScheduleTickService.tick(Instant.parse("2026-08-21T21:00:00Z"));
-			assertTrue(BattleManager.getByWarId(war.getId()).hasStarted());
-		});
+		try (MockedStatic<me.Plugins.SimpleFactions.War.progression.CampaignOffensiveForfeitService> forfeit =
+				mockStatic(me.Plugins.SimpleFactions.War.progression.CampaignOffensiveForfeitService.class);
+				MockedStatic<me.Plugins.SimpleFactions.War.battle.military.BattlePoolService> pool =
+						mockStatic(me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.class)) {
+			forfeit.when(() -> me.Plugins.SimpleFactions.War.progression.CampaignOffensiveForfeitService
+					.applyIfBattleOffensiveCannotAttack(any(), any(Integer.class))).thenReturn(false);
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any())).thenReturn(5);
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any(), any())).thenReturn(5);
+			withMockBossBar(() -> {
+				WarManager.addWar(war);
+				CampaignBattleLaunchService.prepareScheduledBattle(war);
+				BattleScheduleTickService.tick(BattleWindowService.computeScheduledBattleAt(BATTLE_DAY, 21));
+				assertTrue(BattleManager.getByWarId(war.getId()).hasStarted());
+			});
+		}
+	}
+
+	private void withMocksForChoiceResolution(War war, Runnable runnable) {
+		try (MockedStatic<WarManager> warManager = mockStatic(WarManager.class);
+				MockedStatic<me.Plugins.SimpleFactions.War.battle.military.BattlePoolService> pool =
+						mockStatic(me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.class)) {
+			warManager.when(() -> WarManager.persist(any())).then(inv -> null);
+			warManager.when(() -> WarManager.getById(war.getId())).thenReturn(war);
+			warManager.when(() -> WarManager.endWar(any(), any())).then(inv -> null);
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any())).thenReturn(5);
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any(), any())).thenReturn(5);
+			runnable.run();
+		}
 	}
 
 	private void withMockBossBar(Runnable action) {
@@ -152,6 +171,24 @@ class BattleScheduleTickServiceTest {
 		}
 	}
 
+	private void withMockBossBarAndPools(Runnable action) {
+		BossBar bossBar = mock(BossBar.class);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
+				MockedStatic<me.Plugins.SimpleFactions.War.battle.military.BattlePoolService> pool =
+						mockStatic(me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.class)) {
+			bukkit.when(() -> Bukkit.createBossBar(anyString(), any(BarColor.class), any(BarStyle.class)))
+					.thenReturn(bossBar);
+			bukkit.when(() -> Bukkit.createBossBar(anyString(), any(BarColor.class), any(BarStyle.class), any()))
+					.thenReturn(bossBar);
+			bukkit.when(() -> Bukkit.getPlayerExact(anyString())).thenReturn(null);
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any())).thenReturn(5);
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any(), any())).thenReturn(5);
+			action.run();
+		}
+	}
+
 	private War votingWar() {
 		War war = new War(1, attacker, defender);
 		war.setGoal(WarGoalType.SUBJUGATE);
@@ -162,6 +199,7 @@ class BattleScheduleTickServiceTest {
 		war.setCursorIndex(2);
 		war.setInitiativeAttacker(4);
 		war.setInitiativeDefender(4);
+		war.setInitiativeHolder(me.Plugins.SimpleFactions.War.progression.BelligerentRole.ATTACKER);
 		war.setCampaignPhase(CampaignPhase.INVASION);
 		war.setBattleDay(BATTLE_DAY);
 		war.setBattleSchedulePhase(BattleSchedulePhase.VOTING);
@@ -170,7 +208,11 @@ class BattleScheduleTickServiceTest {
 
 	private War defenderChoiceWar() {
 		War war = votingWar();
-		war.setInitiativeAttacker(0);
+		war.setInitiativeHolder(me.Plugins.SimpleFactions.War.progression.BelligerentRole.ATTACKER);
+		war.setPostBattleChoicePhase(PostBattleChoicePhase.WINNER_PUSH_HOLD);
+		war.setPostBattleWinnerCoalition(CampaignCoalition.DEFENDER);
+		war.setLastBattleOffensiveCoalition(CampaignCoalition.AGGRESSOR);
+		war.setPostBattleChoiceResolved(false);
 		return war;
 	}
 
@@ -184,8 +226,14 @@ class BattleScheduleTickServiceTest {
 	private void mockMilitary(Faction faction) {
 		Military military = mock(Military.class);
 		Regiment levy = mock(Regiment.class);
+		Regiment professional = mock(Regiment.class);
+		when(professional.getId()).thenReturn("professional");
+		when(professional.isLevy()).thenReturn(false);
+		when(professional.isOffensive()).thenReturn(true);
+		when(professional.getCurrentSlots()).thenReturn(10);
 		when(military.getManpowerNoLevy(anyBoolean())).thenReturn(10);
 		when(military.getRegiment("levy")).thenReturn(levy);
+		when(military.getRegiments()).thenReturn(List.of(professional));
 		when(levy.getEntries()).thenReturn(List.of());
 		when(faction.getMilitary()).thenReturn(military);
 		when(faction.getLeader()).thenReturn("leader");

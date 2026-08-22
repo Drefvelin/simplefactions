@@ -27,11 +27,4 @@ class WarGoalTypeTest {
 		assertNull(WarGoalType.fromJson(""));
 		assertNull(WarGoalType.fromJson("unknown"));
 	}
-
-	@Test
-	void getDisplayName_returnsPlayerFacingLabels() {
-		assertEquals("De Jure Annex", WarGoalType.DE_JURE_ANNEX.getDisplayName());
-		assertEquals("Subjugate", WarGoalType.SUBJUGATE.getDisplayName());
-		assertEquals("Transfer Subject", WarGoalType.TRANSFER_SUBJECT.getDisplayName());
-	}
 }

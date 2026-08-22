@@ -1,8 +1,7 @@
 package me.Plugins.SimpleFactions.War.battle.enums;
 
 public enum LifeType {
-	COLLECTIVE,
-	PER_PLAYER;
+	COLLECTIVE;
 
 	public String toJson() {
 		return name();
@@ -11,6 +10,9 @@ public enum LifeType {
 	public static LifeType fromJson(String value) {
 		if (value == null || value.isBlank()) {
 			return null;
+		}
+		if ("PER_PLAYER".equalsIgnoreCase(value)) {
+			return COLLECTIVE;
 		}
 		for (LifeType type : values()) {
 			if (type.name().equalsIgnoreCase(value)) {

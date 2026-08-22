@@ -130,7 +130,11 @@ public class RelationView {
 			} else if(e.getSlot() == 24) {
 				Faction attacker = FactionManager.getByLeader(p.getName());
 				if (attacker == null) return;
-				// DEBUG: declare pre-checks disabled for war testing — re-enable before production
+				if (WarManager.exists(attacker, f)) {
+					p.sendMessage("§cYour faction is already in a war with that faction.");
+					return;
+				}
+				// DEBUG: other declare pre-checks disabled for war testing — re-enable before production
 				/*
 				if (Cache.warRequireDeclareCode) {
 					p.sendMessage("§cWar declaration requires a staff code (not enabled yet).");
@@ -138,10 +142,6 @@ public class RelationView {
 				}
 				if(attacker.getRelation(f.getId()).getOpinion() > Cache.warDeclareOpinionThreshold) {
 					p.sendMessage("§cYour opinion of the target is too high");
-					return;
-				}
-				if(WarManager.exists(attacker, f)) {
-					p.sendMessage("§cYour faction is already part of a war with the target!");
 					return;
 				}
 				if(f.numOnline() < 1){

@@ -32,6 +32,12 @@ public class MilitaryView {
 		if(open) {
 			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.MILITARY_VIEW), 54, "§7Military View");
 		}
+		for (int slot = 3; slot <= 8; slot++) {
+			i.setItem(slot, new ItemStack(Material.AIR, 1));
+		}
+		for (int slot = 21; slot <= 26; slot++) {
+			i.setItem(slot, new ItemStack(Material.AIR, 1));
+		}
 		Military m = f.getMilitary();
 		i.setItem(10, creator.createMilitarySummary(f));
 		for(int x = 0; x<m.getRegiments().size(); x++) {
@@ -46,6 +52,9 @@ public class MilitaryView {
 					i.setItem(a, creator.createRegimentDecreaseButton(f, r));
 				}
 			}
+		}
+		for (int slot = 12 + m.getRegiments().size(); slot <= 44; slot++) {
+			i.setItem(slot, new ItemStack(Material.AIR, 1));
 		}
 		for(int x = 0; x<3; x++) {
 			int slot = x+39;

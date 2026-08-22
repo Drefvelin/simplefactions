@@ -21,6 +21,10 @@ public class InventoryUpdater {
 	public InventoryUpdater(InventoryManager inv) {
 		this.inv = inv;
 	}
+
+	static boolean usesGuildBranch(SFGUI type) {
+		return type.equals(SFGUI.GUILD_VIEW) || type.equals(SFGUI.UPGRADE_VIEW);
+	}
 	
 	public void updateInventory() {
 		for(Player p : Bukkit.getOnlinePlayers()) {
@@ -28,15 +32,18 @@ public class InventoryUpdater {
 			Inventory i = p.getOpenInventory().getTopInventory();
 			if(i.getHolder() instanceof SFInventoryHolder) {
 				SFInventoryHolder h = (SFInventoryHolder) i.getHolder();
-				Guild guild = FactionManager.getGuildByString(h.getId());
-				Faction f = FactionManager.getByString(h.getId());
-				if(guild != null) {
+				if (usesGuildBranch(h.getType())) {
+					Guild guild = FactionManager.getGuildByString(h.getId());
+					if (guild == null) {
+						continue;
+					}
 					if(h.getType().equals(SFGUI.GUILD_VIEW)) {
 						inv.guildView(p, guild, i);
-					} else if(h.getType().equals(SFGUI.UPGRADE_VIEW)) {
+					} else {
 						inv.upgradeView(p, guild, i);
 					}
 				} else {
+					Faction f = FactionManager.getByString(h.getId());
 					if(f == null) continue;
 					if(h.getType().equals(SFGUI.MILITARY_VIEW)) {
 						inv.militaryView(i, p, f, false);

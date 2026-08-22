@@ -8,15 +8,11 @@ import org.junit.jupiter.api.Test;
 class BattleSchedulePhaseTest {
 
 	@Test
-	void toJson_returnsStableIds() {
+	void fromJson_parsesKnownValues() {
 		assertEquals("idle", BattleSchedulePhase.IDLE.toJson());
 		assertEquals("voting", BattleSchedulePhase.VOTING.toJson());
 		assertEquals("scheduled", BattleSchedulePhase.SCHEDULED.toJson());
 		assertEquals("autoresolve_pending", BattleSchedulePhase.AUTORESOLVE_PENDING.toJson());
-	}
-
-	@Test
-	void fromJson_parsesKnownValues() {
 		assertEquals(BattleSchedulePhase.VOTING, BattleSchedulePhase.fromJson("voting"));
 		assertEquals(BattleSchedulePhase.SCHEDULED, BattleSchedulePhase.fromJson("SCHEDULED"));
 	}

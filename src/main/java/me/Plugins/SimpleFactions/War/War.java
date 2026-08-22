@@ -3,6 +3,7 @@ package me.Plugins.SimpleFactions.War;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -19,11 +20,16 @@ import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarStatus;
 import me.Plugins.SimpleFactions.War.enums.WarType;
+import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
+import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class War {
 	private int id;
-	private int schemaVersion = 2;
+	private int schemaVersion = 3;
 	private Side attackers;
 	private Side defenders;
 	private WarGoalType goal;
@@ -39,6 +45,7 @@ public class War {
 	private int cursorIndex;
 	private int initiativeAttacker;
 	private int initiativeDefender;
+	private BelligerentRole initiativeHolder = BelligerentRole.ATTACKER;
 	private List<Integer> occupiedByAttacker;
 	private List<Integer> occupiedByDefender;
 	private List<Integer> lastBattleOccupied;
@@ -47,6 +54,10 @@ public class War {
 	private boolean whitePeaceProposedByAttacker;
 	private boolean whitePeaceProposedByDefender;
 	private int campaignBattlesFought;
+	private List<ScheduledCampaignBattle> campaignBattleSchedule = new ArrayList<>();
+	private int campaignScheduleIndex;
+	private Map<String, CampaignCoalition> fortControllers = new HashMap<>();
+	private Map<String, Integer> locationBattleCounts = new HashMap<>();
 	private BattleSchedulePhase battleSchedulePhase = BattleSchedulePhase.IDLE;
 	private LocalDate battleDay;
 	private Instant scheduledBattleAt;
@@ -57,6 +68,13 @@ public class War {
 	private boolean autoresolveProposedByDefender;
 	private int postponementsThisCycle;
 	private boolean defenderChoiceResolved;
+	private CampaignCoalition initiativeHolderCoalition = CampaignCoalition.AGGRESSOR;
+	private CampaignPushTarget pushTarget = CampaignPushTarget.TOWARD_OBJECTIVE;
+	private PostBattleChoicePhase postBattleChoicePhase = PostBattleChoicePhase.NONE;
+	private CampaignCoalition postBattleWinnerCoalition;
+	private boolean postBattleChoiceResolved = true;
+	private CampaignCoalition lastBattleOffensiveCoalition;
+	private boolean holdPeaceProposalActive;
 	private boolean forceQuorumNextClose;
 	private Instant startedAt;
 	private Instant endedAt;
@@ -114,7 +132,7 @@ public class War {
 		return schemaVersion;
 	}
 
-	void setSchemaVersion(int schemaVersion) {
+	public void setSchemaVersion(int schemaVersion) {
 		this.schemaVersion = schemaVersion;
 	}
 
@@ -230,6 +248,17 @@ public class War {
 		this.initiativeDefender = initiativeDefender;
 	}
 
+	public BelligerentRole getInitiativeHolder() {
+		return initiativeHolder;
+	}
+
+	public void setInitiativeHolder(BelligerentRole initiativeHolder) {
+		this.initiativeHolder = initiativeHolder;
+		this.initiativeHolderCoalition = initiativeHolder == BelligerentRole.DEFENDER
+				? CampaignCoalition.DEFENDER
+				: CampaignCoalition.AGGRESSOR;
+	}
+
 	public List<Integer> getOccupiedByAttacker() {
 		return occupiedByAttacker;
 	}
@@ -292,6 +321,69 @@ public class War {
 
 	public void setCampaignBattlesFought(int campaignBattlesFought) {
 		this.campaignBattlesFought = campaignBattlesFought;
+	}
+
+	public List<ScheduledCampaignBattle> getCampaignBattleSchedule() {
+		return campaignBattleSchedule;
+	}
+
+	public void setCampaignBattleSchedule(List<ScheduledCampaignBattle> campaignBattleSchedule) {
+		if (campaignBattleSchedule == null || campaignBattleSchedule.isEmpty()) {
+			this.campaignBattleSchedule = new ArrayList<>();
+			return;
+		}
+		this.campaignBattleSchedule = new ArrayList<>(campaignBattleSchedule);
+	}
+
+	public int getCampaignScheduleIndex() {
+		return campaignScheduleIndex;
+	}
+
+	public void setCampaignScheduleIndex(int campaignScheduleIndex) {
+		this.campaignScheduleIndex = Math.max(0, campaignScheduleIndex);
+	}
+
+	public Map<String, CampaignCoalition> getFortControllers() {
+		return Collections.unmodifiableMap(fortControllers);
+	}
+
+	public void setFortControllers(Map<String, CampaignCoalition> fortControllers) {
+		if (fortControllers == null || fortControllers.isEmpty()) {
+			this.fortControllers = new HashMap<>();
+			return;
+		}
+		this.fortControllers = new HashMap<>(fortControllers);
+	}
+
+	public void putFortController(String fortInstallationId, CampaignCoalition coalition) {
+		if (fortInstallationId == null || fortInstallationId.isBlank() || coalition == null) {
+			return;
+		}
+		fortControllers.put(fortInstallationId, coalition);
+	}
+
+	public int getLocationBattleCount(String locationKey) {
+		if (locationKey == null || locationKey.isBlank()) {
+			return 0;
+		}
+		return locationBattleCounts.getOrDefault(locationKey, 0);
+	}
+
+	public void recordLocationBattle(String locationKey) {
+		if (locationKey == null || locationKey.isBlank()) {
+			return;
+		}
+		locationBattleCounts.put(locationKey, getLocationBattleCount(locationKey) + 1);
+	}
+
+	public Map<String, Integer> getLocationBattleCounts() {
+		return locationBattleCounts;
+	}
+
+	public void setLocationBattleCounts(Map<String, Integer> locationBattleCounts) {
+		this.locationBattleCounts = locationBattleCounts != null
+				? new HashMap<>(locationBattleCounts)
+				: new HashMap<>();
 	}
 
 	public BattleSchedulePhase getBattleSchedulePhase() {
@@ -375,6 +467,65 @@ public class War {
 
 	public void setDefenderChoiceResolved(boolean defenderChoiceResolved) {
 		this.defenderChoiceResolved = defenderChoiceResolved;
+	}
+
+	public CampaignCoalition getInitiativeHolderCoalition() {
+		return initiativeHolderCoalition;
+	}
+
+	public void setInitiativeHolderCoalition(CampaignCoalition initiativeHolderCoalition) {
+		this.initiativeHolderCoalition = initiativeHolderCoalition;
+	}
+
+	public CampaignPushTarget getPushTarget() {
+		return pushTarget;
+	}
+
+	public void setPushTarget(CampaignPushTarget pushTarget) {
+		this.pushTarget = pushTarget;
+	}
+
+	public PostBattleChoicePhase getPostBattleChoicePhase() {
+		return postBattleChoicePhase;
+	}
+
+	public void setPostBattleChoicePhase(PostBattleChoicePhase postBattleChoicePhase) {
+		this.postBattleChoicePhase = postBattleChoicePhase != null
+				? postBattleChoicePhase
+				: PostBattleChoicePhase.NONE;
+	}
+
+	public CampaignCoalition getPostBattleWinnerCoalition() {
+		return postBattleWinnerCoalition;
+	}
+
+	public void setPostBattleWinnerCoalition(CampaignCoalition postBattleWinnerCoalition) {
+		this.postBattleWinnerCoalition = postBattleWinnerCoalition;
+	}
+
+	public boolean isPostBattleChoiceResolved() {
+		return postBattleChoiceResolved;
+	}
+
+	public void setPostBattleChoiceResolved(boolean postBattleChoiceResolved) {
+		this.postBattleChoiceResolved = postBattleChoiceResolved;
+		this.defenderChoiceResolved = postBattleChoiceResolved;
+	}
+
+	public CampaignCoalition getLastBattleOffensiveCoalition() {
+		return lastBattleOffensiveCoalition;
+	}
+
+	public void setLastBattleOffensiveCoalition(CampaignCoalition lastBattleOffensiveCoalition) {
+		this.lastBattleOffensiveCoalition = lastBattleOffensiveCoalition;
+	}
+
+	public boolean isHoldPeaceProposalActive() {
+		return holdPeaceProposalActive;
+	}
+
+	public void setHoldPeaceProposalActive(boolean holdPeaceProposalActive) {
+		this.holdPeaceProposalActive = holdPeaceProposalActive;
 	}
 
 	public boolean isForceQuorumNextClose() {
@@ -492,6 +643,13 @@ public class War {
 
 	public boolean isMainParticipant(Faction f) {
 		return getParticipant(f) != null;
+	}
+
+	public boolean isParticipating(Faction f) {
+		if (f == null) {
+			return false;
+		}
+		return attackers.isParticipating(f) || defenders.isParticipating(f);
 	}
 
 	public String getType(Faction f) {

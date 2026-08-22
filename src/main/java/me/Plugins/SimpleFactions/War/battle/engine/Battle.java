@@ -15,6 +15,10 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 import me.Plugins.SimpleFactions.War.battle.enums.LifeType;
+import me.Plugins.SimpleFactions.War.battle.military.BattleCasualtyLedger;
+import me.Plugins.SimpleFactions.War.battle.military.BattleLivesService;
+import me.Plugins.SimpleFactions.War.battle.engine.FieldWinService;
+import me.Plugins.SimpleFactions.War.battle.engine.SiegeWinService;
 import me.Plugins.SimpleFactions.War.battle.template.CapturePointDefinition;
 import me.Plugins.SimpleFactions.War.battle.template.ContestArea;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleInventoryManager;
@@ -22,6 +26,7 @@ import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 
 public class Battle {
 	private String id;
+	private String displayName;
 	private List<BattleSide> sides = new ArrayList<BattleSide>();
 	private List<CapturePoint> points = new ArrayList<CapturePoint>();
 	private boolean friendlyFire;
@@ -45,6 +50,7 @@ public class Battle {
 	private Location navalSpawn;
 	private Set<Integer> allowedProvinceIds = Collections.emptySet();
 	private boolean sequentialCapture;
+	private boolean capturePointsEnabled;
 	private int contestHoldRemainingSeconds;
 	public List<CapturePoint> getPoints() {
 		return points;
@@ -78,6 +84,15 @@ public class Battle {
 	public String getId() {
 		return this.id;
 	}
+
+	public String getDisplayName() {
+		return displayName != null && !displayName.isBlank() ? displayName : id;
+	}
+
+	public void setDisplayName(String displayName) {
+		this.displayName = displayName;
+	}
+
 	public void setLives(int l) {
 		this.lives = l;
 	}
@@ -99,11 +114,22 @@ public class Battle {
 		this.points.add(p);
 	}
 	public void removePoint(CapturePoint p) {
-		for(int i = 0; i<sides.size(); i++) {
-			if(points.get(i).getLoc().equals(p.getLoc())) {
+		if (p != null) {
+			removePointById(p.getId());
+		}
+	}
+
+	public boolean removePointById(String id) {
+		if (id == null) {
+			return false;
+		}
+		for (int i = 0; i < points.size(); i++) {
+			if (points.get(i).getId().equalsIgnoreCase(id)) {
 				points.remove(i);
+				return true;
 			}
 		}
+		return false;
 	}
 	public PointManager getPointManager() {
 		return this.pm;
@@ -161,6 +187,10 @@ public class Battle {
 	public boolean hasStarted() {
 		return this.started;
 	}
+
+	public void setStarted(boolean started) {
+		this.started = started;
+	}
 	
 	public void setFriendlyFire(boolean b) {
 		this.friendlyFire = b;
@@ -168,19 +198,33 @@ public class Battle {
 	public void setKeepInventory(boolean b) {
 		this.keepInventory = b;
 	}
-	public void start() {
-		if(this.started) return;
+	public String start() {
+		if(this.started) return null;
+		if (battleType != BattleType.RAID) {
+			String startError = BattlePlacementValidator.validateForStart(this);
+			if (startError != null) {
+				return startError;
+			}
+		}
 		this.started = true;
 		if (battleType == BattleType.RAID) {
 			BattleRaidSetup.onStart(this);
 		} else {
 			BattleBoundsService.resolveAllowedProvinces(this);
-			for(BattleSide s : sides) {
-				s.setLives(lives);
+			if (warId != null && (battleType == BattleType.FIELD || battleType == BattleType.SIEGE)) {
+				BattleLivesService.applyCampaignLives(this);
 			}
 			if (battleType == BattleType.SIEGE) {
 				contestHoldRemainingSeconds = BattleContestSetup.getEffectiveDurationSeconds(this);
 			}
+			if (battleType == BattleType.FIELD) {
+				FieldWinService.checkFieldWin(this);
+			} else if (battleType == BattleType.SIEGE) {
+				SiegeWinService.checkSiegeWin(this);
+			}
+		}
+		if (battleType == BattleType.FIELD && isCapturePointsEnabled() && isSequentialCapture()) {
+			BattleCapturePoints.syncLinearChain(this);
 		}
 		startTitle();
 		pm.setPoints(this.points);
@@ -200,6 +244,7 @@ public class Battle {
 				}
 			}
 		}
+		return null;
 	}
 	public void end() {
 		if(!this.started) return;
@@ -208,6 +253,7 @@ public class Battle {
 		contestHoldRemainingSeconds = 0;
 		SiegeContestService.clearBattleState(this);
 		RaidAttackerEliminationService.clearBattleState(this);
+		BattleCasualtyLedger.clear(this);
 		pm.end(getAllParticipants());
 		for(BattleSide s : sides) {
 			s.removeBossBar();
@@ -243,9 +289,7 @@ public class Battle {
 		}
 	}
 	private void tickPoints() {
-		if (battleType == BattleType.FIELD) {
-			pm.tick();
-		} else if (battleType == BattleType.RAID && !pm.getPoints().isEmpty()) {
+		if (capturePointsEnabled && !pm.getPoints().isEmpty()) {
 			pm.tick();
 		}
 	}
@@ -253,9 +297,6 @@ public class Battle {
 	public void tick() {
 		if(!started) return;
 		for(BattleSide s : sides) {
-			if(this.lt.equals(LifeType.PER_PLAYER)) {
-				s.checkRecords();
-			}
 			s.updateBossBar(getAllParticipants());
 		}
 		tickPoints();
@@ -391,6 +432,7 @@ public class Battle {
 		lt = LifeType.COLLECTIVE;
 		lives = 25;
 		sequentialCapture = false;
+		capturePointsEnabled = false;
 	}
 
 	public Set<Integer> getAllowedProvinceIds() {
@@ -411,6 +453,14 @@ public class Battle {
 
 	public void setSequentialCapture(boolean sequentialCapture) {
 		this.sequentialCapture = sequentialCapture;
+	}
+
+	public boolean isCapturePointsEnabled() {
+		return capturePointsEnabled;
+	}
+
+	public void setCapturePointsEnabled(boolean capturePointsEnabled) {
+		this.capturePointsEnabled = capturePointsEnabled;
 	}
 
 	public int getContestHoldRemainingSeconds() {

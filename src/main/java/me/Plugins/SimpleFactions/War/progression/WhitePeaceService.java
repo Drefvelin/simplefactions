@@ -4,7 +4,6 @@ import java.util.Optional;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 
 public final class WhitePeaceService {
@@ -15,11 +14,17 @@ public final class WhitePeaceService {
 			return Optional.empty();
 		}
 
-		war.setWhitePeaceProposedByAttacker(shouldProposeAttacker(war));
-		war.setWhitePeaceProposedByDefender(shouldProposeDefender(war));
+		for (CampaignCoalition coalition : CampaignCoalition.values()) {
+			boolean propose = !CampaignCapabilityService.canReachTarget(war, coalition);
+			if (war.isHoldPeaceProposalActive()
+					&& war.getPostBattleWinnerCoalition() == coalition) {
+				propose = true;
+			}
+			CampaignCoalitionService.setWhitePeaceProposed(war, coalition, propose);
+		}
 
 		if (shouldAutoEnd(war)) {
-			return Optional.of(WarEndReason.AUTO_WHITE_PEACE);
+			return Optional.of(WarEndReason.WHITE_PEACE);
 		}
 		return Optional.empty();
 	}
@@ -46,32 +51,6 @@ public final class WhitePeaceService {
 			return war.isWhitePeaceProposedByDefender();
 		}
 		return war.isWhitePeaceProposedByAttacker();
-	}
-
-	static boolean shouldProposeAttacker(War war) {
-		if (!isValidWar(war)) {
-			return false;
-		}
-		if (war.getInitiativeAttacker() == 0 && war.getInitiativeDefender() == 0) {
-			return true;
-		}
-		int steps = CampaignProgressionService.stepsToCapitulationTarget(war, BelligerentRole.ATTACKER);
-		return steps > war.getInitiativeAttacker();
-	}
-
-	static boolean shouldProposeDefender(War war) {
-		if (!isValidWar(war)) {
-			return false;
-		}
-		if (war.getInitiativeAttacker() == 0 && war.getInitiativeDefender() == 0) {
-			return true;
-		}
-		CampaignPhase phase = war.getCampaignPhase();
-		if (phase != CampaignPhase.COUNTER_PUSH) {
-			return false;
-		}
-		int steps = CampaignProgressionService.stepsToCapitulationTarget(war, BelligerentRole.DEFENDER);
-		return steps > war.getInitiativeDefender();
 	}
 
 	private static boolean isValidWar(War war) {

@@ -1,0 +1,10 @@
+{
+  "id": "campaign_w1_attacker",
+  "name": "The faction Host",
+  "leaderId": "ddb47e45-6e8c-36e7-948a-0752a9e3b484",
+  "memberIds": [],
+  "invitedIds": [],
+  "locked": true,
+  "faction": true,
+  "campaignSideId": "attacker"
+}

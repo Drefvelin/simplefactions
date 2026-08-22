@@ -22,6 +22,7 @@ import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 
 public class PointManager {
 	private Battle b;
+	private final CapturePointMarkerService markers = new CapturePointMarkerService();
 	public List<CapturePoint> points = new ArrayList<CapturePoint>();
 	public List<CapturePoint> getPoints() {
 		return points;
@@ -47,11 +48,12 @@ public class PointManager {
 		}
 		for(CapturePoint p : points) {
 			p.updateNearbyEntities();
-			if (!b.isSequentialCapture() || CapturePoint.isFrontPoint(p, points)) {
+			if (!b.isSequentialCapture() || CapturePoint.isFrontPoint(p, points, b)) {
 				p.updateSides(b.getSides());
 			}
 			subtitle(p);
 		}
+		markers.tick(b, this);
 	}
 	private void scoreboard(Player p) {
 		ScoreboardManager manager = Bukkit.getScoreboardManager();
@@ -84,6 +86,7 @@ public class PointManager {
 		return false;
 	}
 	public void end(List<Player> list) {
+		markers.reset();
 		for(Player p : list) {
 			Scoreboard board = p.getScoreboard();
 			Objective obj = board.getObjective("pointDummy");

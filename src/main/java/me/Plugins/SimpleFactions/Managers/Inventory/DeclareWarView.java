@@ -133,7 +133,8 @@ public class DeclareWarView {
 		}
 		War war = WarManager.declareWar(attacker, defender, goal, targetTitleId, subjectFactionId);
 		if (war == null) {
-			player.sendMessage("§cCould not declare war: no campaign route could be generated.");
+			String error = WarManager.getLastDeclareError();
+			player.sendMessage(error != null ? error : "§cCould not declare war.");
 			return;
 		}
 		inv.warList(player);

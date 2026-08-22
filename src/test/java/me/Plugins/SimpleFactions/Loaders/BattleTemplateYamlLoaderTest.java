@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
+import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
+import me.Plugins.SimpleFactions.War.battle.enums.LifeType;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 
 class BattleTemplateYamlLoaderTest {
@@ -37,28 +39,21 @@ class BattleTemplateYamlLoaderTest {
 	}
 
 	@Test
-	void load_parsesSampleYamlAndWorldFallback() throws IOException {
+	void load_parsesSettingsOnlyYaml() throws IOException {
 		Path yamlFile = tempDir.resolve("battle-templates.yml");
 		Files.writeString(yamlFile, """
 				raid_template:
 				  type: raid
-				  attacker:
-				    spawn: { x: 1, y: 64, z: 2 }
-				  defender:
-				    spawn: { x: 3, y: 64, z: 4 }
 				  defender_respawn_mode: infinite
-				  raid_target:
-				    id: target
-				    location: { x: 5, y: 64, z: 6 }
+				  friendly_fire: true
+				  keep_inventory: true
 				field_default:
 				  type: field
-				  attacker:
-				    spawn: { x: 10, y: 70, z: 20 }
-				  defender:
-				    spawn: { x: 11, y: 70, z: 21 }
-				  capture_points:
-				    - id: alpha
-				      location: { x: 12, y: 70, z: 22 }
+				  capture_points_enabled: true
+				  lives: 25
+				  life_type: COLLECTIVE
+				  friendly_fire: true
+				  keep_inventory: true
 				""");
 
 		new BattleTemplateLoader().load(yamlFile.toFile());
@@ -66,14 +61,14 @@ class BattleTemplateYamlLoaderTest {
 		BattleTemplate raid = BattleTemplateLoader.getByName("raid_template");
 		assertNotNull(raid);
 		assertEquals(BattleType.RAID, raid.getType());
-		assertNotNull(raid.getConfig().getAttacker().getSpawn());
-		assertEquals("TFMC_Map", raid.getConfig().getAttacker().getSpawn().getWorld());
-		assertNotNull(raid.getConfig().getRaidTarget());
+		assertEquals(DefenderRespawnMode.INFINITE, raid.getConfig().getDefenderRespawnMode());
+		assertTrue(raid.getConfig().getFriendlyFire());
 
 		BattleTemplate field = BattleTemplateLoader.getByName("field_default");
 		assertNotNull(field);
-		assertEquals(1, field.getConfig().getCapturePoints().size());
-		assertEquals("alpha", field.getConfig().getCapturePoints().get(0).getId());
+		assertEquals(Boolean.TRUE, field.getConfig().getCapturePointsEnabled());
+		assertEquals(25, field.getConfig().getLives());
+		assertEquals(LifeType.COLLECTIVE, field.getConfig().getLifeType());
 	}
 
 	@Test
@@ -82,8 +77,7 @@ class BattleTemplateYamlLoaderTest {
 		Files.writeString(yamlFile, """
 				broken:
 				  type: not_a_type
-				  attacker:
-				    spawn: { x: 0, y: 64, z: 0 }
+				  friendly_fire: true
 				""");
 
 		new BattleTemplateLoader().load(yamlFile.toFile());
@@ -91,3 +85,4 @@ class BattleTemplateYamlLoaderTest {
 		assertTrue(BattleTemplateLoader.getAll().isEmpty());
 	}
 }
+

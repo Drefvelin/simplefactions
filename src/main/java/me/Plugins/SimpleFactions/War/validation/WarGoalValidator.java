@@ -8,8 +8,11 @@ import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
+import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.War.Side;
+import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 
 /**
@@ -43,6 +46,15 @@ public class WarGoalValidator {
 	private WarValidationResult validateShared(WarDeclareRequest request) {
 		if (request.getAttacker().getId().equalsIgnoreCase(request.getDefender().getId())) {
 			return WarValidationResult.fail("§cYou cannot declare war on your own faction.");
+		}
+		War sharedWar = WarManager.findSharedActiveWar(request.getAttacker(), request.getDefender());
+		if (sharedWar != null) {
+			Side attackerSide = sharedWar.getSide(request.getAttacker());
+			Side defenderSide = sharedWar.getSide(request.getDefender());
+			if (attackerSide != null && attackerSide.equals(defenderSide)) {
+				return WarValidationResult.fail("§cYou are already allied with that faction in an active war.");
+			}
+			return WarValidationResult.fail("§cYou are already at war with that faction.");
 		}
 		return WarValidationResult.ok();
 	}

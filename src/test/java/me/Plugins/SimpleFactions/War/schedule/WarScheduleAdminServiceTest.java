@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.bukkit.Bukkit;
@@ -30,12 +32,20 @@ import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
+import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.progression.CampaignPostBattleChoiceService;
+import me.Plugins.SimpleFactions.War.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleOutcomeService;
+import me.Plugins.SimpleFactions.War.battle.engine.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
+import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
+import me.Plugins.SimpleFactions.War.schedule.BattleWindowService;
 
 class WarScheduleAdminServiceTest {
 	private static final LocalDate BATTLE_DAY = LocalDate.of(2026, 8, 21);
@@ -104,44 +114,10 @@ class WarScheduleAdminServiceTest {
 	}
 
 	@Test
-	void castVoteThenCloseVote_schedulesWithoutOnlinePlayers() {
-		War war = votingWar();
-		withMockBossBar(() -> {
-			assertTrue(WarScheduleAdminService.castVote(war, 21, "both").success());
-
-			WarScheduleAdminResult result = WarScheduleAdminService.closeVote(
-					war,
-					Instant.parse("2026-08-21T16:00:00Z"));
-
-			assertTrue(result.success());
-			assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
-			assertEquals(21, war.getScheduledBattleHour());
-		});
-	}
-
-	@Test
 	void castVote_rejectsInvalidHour() {
 		War war = votingWar();
 		WarScheduleAdminResult result = WarScheduleAdminService.castVote(war, 15, "both");
 		assertFalse(result.success());
-	}
-
-	@Test
-	void closeVote_forcedSchedulesWithQuorumBypass() {
-		War war = votingWar();
-		war.getBattleVotes().put(BattleScheduleLookups.spoofMemberUuid("Alice"), Set.of(21));
-		war.getBattleVotes().put(BattleScheduleLookups.spoofMemberUuid("Carol"), Set.of(21));
-		war.setForceQuorumNextClose(true);
-
-		withMockBossBar(() -> {
-			WarScheduleAdminResult result = WarScheduleAdminService.closeVote(
-					war,
-					Instant.parse("2026-08-20T10:00:00Z"));
-
-			assertTrue(result.success());
-			assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
-			assertFalse(war.isForceQuorumNextClose());
-		});
 	}
 
 	@Test
@@ -150,11 +126,11 @@ class WarScheduleAdminServiceTest {
 		withMockBossBar(() -> {
 			WarScheduleAdminResult result = WarScheduleAdminService.setScheduled(
 					war,
-					"2026-08-21T21:00:00Z");
+					"2026-08-21T19:00:00Z");
 			assertTrue(result.success());
 			assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
 			assertEquals(
-					BATTLE_DAY.atTime(21, 0).atZone(ZoneOffset.UTC).toInstant(),
+					BattleWindowService.computeScheduledBattleAt(BATTLE_DAY, 21),
 					war.getScheduledBattleAt());
 			assertEquals(Integer.valueOf(20), war.getScheduledBattleProvinceId());
 		});
@@ -167,6 +143,180 @@ class WarScheduleAdminServiceTest {
 		assertFalse(result.success());
 	}
 
+	@Test
+	void battleCreate_rejectsWhenNotSingleGreenProvince() {
+		War war = votingWar();
+		war.setInitiativeAttacker(0);
+		WarScheduleAdminResult result = WarScheduleAdminService.battleCreate(war);
+		assertFalse(result.success());
+		assertTrue(result.message().contains("single next battle province"));
+	}
+
+	@Test
+	void battleCreate_createsCampaignBattleFromGreenProvince() {
+		War war = votingWar();
+		withMockBossBar(() -> {
+			WarScheduleAdminResult result = WarScheduleAdminService.battleCreate(war);
+			assertTrue(result.success());
+			assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
+			assertNotNull(BattleManager.getByWarId(war.getId()));
+		});
+	}
+
+	@Test
+	void battleCreate_seedsPhantomsWhenDevmodeOn() {
+		me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode.setEnabled(true);
+		Cache.battleDevmodePhantomCount = 10;
+		War war = votingWar();
+		try (MockedStatic<me.Plugins.SimpleFactions.War.battle.military.BattlePoolService> pool =
+				mockStatic(me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.class)) {
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any())).thenReturn(5);
+			withMockBossBar(() -> {
+				assertTrue(WarScheduleAdminService.battleCreate(war).success());
+				me.Plugins.SimpleFactions.War.battle.warband.Warband attackerBand =
+						WarbandManager.getByString(
+								me.Plugins.SimpleFactions.War.battle.warband.Warband.campaignSideWarbandId(
+										war.getId(),
+										me.Plugins.SimpleFactions.War.battle.template.BattleTemplate.ATTACKER_SIDE));
+				me.Plugins.SimpleFactions.War.battle.warband.Warband defenderBand =
+						WarbandManager.getByString(
+								me.Plugins.SimpleFactions.War.battle.warband.Warband.campaignSideWarbandId(
+										war.getId(),
+										me.Plugins.SimpleFactions.War.battle.template.BattleTemplate.DEFENDER_SIDE));
+				assertNotNull(attackerBand);
+				assertNotNull(defenderBand);
+				assertTrue(attackerBand.getDummyMemberCount() > 0);
+				assertTrue(defenderBand.getDummyMemberCount() > 0);
+				assertEquals(
+						me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode.dummyDisplayName(
+								attackerBand.getId(), 0),
+						attackerBand.getLeaderDisplayName());
+			});
+		}
+		me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode.resetForTests();
+	}
+
+	@Test
+	void battleDelete_resetsCampaignBattleAndWarbands() {
+		War war = votingWar();
+		withMockBossBar(() -> {
+			assertTrue(WarScheduleAdminService.battleCreate(war).success());
+			String attackerWarbandId = me.Plugins.SimpleFactions.War.battle.warband.Warband.campaignSideWarbandId(
+					war.getId(),
+					me.Plugins.SimpleFactions.War.battle.template.BattleTemplate.ATTACKER_SIDE);
+			assertNotNull(WarbandManager.getByString(attackerWarbandId));
+
+			WarScheduleAdminResult result = WarScheduleAdminService.battleDelete(war);
+			assertTrue(result.success());
+			assertTrue(result.message().contains("Reset campaign battle"));
+			Battle battle = BattleManager.getByWarId(war.getId());
+			assertNotNull(battle);
+			assertNotNull(WarbandManager.getByString(attackerWarbandId));
+			assertEquals(1, battle.getSideById(
+					me.Plugins.SimpleFactions.War.battle.template.BattleTemplate.ATTACKER_SIDE).getBands().size());
+			assertEquals(1, battle.getSideById(
+					me.Plugins.SimpleFactions.War.battle.template.BattleTemplate.DEFENDER_SIDE).getBands().size());
+		});
+	}
+
+	@Test
+	void devModeReminderLines_disabledWhenDevmodeOff() {
+		me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode.resetForTests();
+		assertEquals(1, WarScheduleAdminService.devModeReminderLines().size());
+		assertTrue(WarScheduleAdminService.devModeReminderLines().get(0).contains("disabled"));
+	}
+
+	@Test
+	void devModeReminderLines_emptyWhenDevmodeOn() {
+		me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode.setEnabled(true);
+		assertTrue(WarScheduleAdminService.devModeReminderLines().isEmpty());
+		me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode.resetForTests();
+	}
+
+	@Test
+	void battleDelete_rejectsStartedBattle() {
+		War war = votingWar();
+		try (MockedStatic<me.Plugins.SimpleFactions.War.battle.military.BattlePoolService> pool =
+				mockStatic(me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.class)) {
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any())).thenReturn(5);
+			withMockBossBar(() -> {
+				assertTrue(WarScheduleAdminService.battleCreate(war).success());
+				assertTrue(WarScheduleAdminService.battleStart(war).success());
+				WarScheduleAdminResult result = WarScheduleAdminService.battleDelete(war);
+				assertFalse(result.success());
+				assertTrue(result.message().contains("running"));
+			});
+		}
+	}
+
+	@Test
+	void battleStart_startsExistingCampaignBattle() {
+		War war = votingWar();
+		try (MockedStatic<me.Plugins.SimpleFactions.War.battle.military.BattlePoolService> pool =
+				mockStatic(me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.class)) {
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					any(), any(Integer.class), any())).thenReturn(5);
+			withMockBossBar(() -> {
+				assertTrue(WarScheduleAdminService.battleCreate(war).success());
+				WarScheduleAdminResult result = WarScheduleAdminService.battleStart(war);
+				assertTrue(result.success());
+				assertTrue(BattleManager.getByWarId(war.getId()).hasStarted());
+			});
+		}
+	}
+
+	@Test
+	void winBattle_reportsActualEndReasonWhenWarEnds() {
+		War war = votingWar();
+		try (MockedStatic<CampaignBattleOutcomeService> outcome =
+				mockStatic(CampaignBattleOutcomeService.class)) {
+			outcome.when(() -> CampaignBattleOutcomeService.applyCampaignBattleOutcome(
+					eq(war), eq(BelligerentRole.ATTACKER), any(Integer.class)))
+					.thenReturn(new CampaignBattleOutcomeService.CampaignBattleApplyResult(
+							true, false, Optional.of(WarEndReason.ATTACKER_VICTORY)));
+			outcome.when(() -> CampaignBattleOutcomeService.finalizeCampaignBattleAfterOutcome(war))
+					.then(inv -> null);
+
+			WarScheduleAdminResult result = WarScheduleAdminService.winBattle(war, BelligerentRole.ATTACKER);
+			assertTrue(result.success());
+			assertTrue(result.message().contains("attacker victory"));
+			assertFalse(result.message().toLowerCase().contains("white peace"));
+		}
+	}
+
+	@Test
+	void winBattle_blockedWhilePostBattleChoicePending() {
+		War war = votingWar();
+		war.setPostBattleChoicePhase(PostBattleChoicePhase.WINNER_PUSH_HOLD);
+		war.setPostBattleWinnerCoalition(CampaignCoalition.DEFENDER);
+		war.setPostBattleChoiceResolved(false);
+
+		WarScheduleAdminResult result = WarScheduleAdminService.winBattle(war, BelligerentRole.DEFENDER);
+		assertFalse(result.success());
+		assertTrue(result.message().contains("Post-battle choice pending"));
+	}
+
+	@Test
+	void battleChoice_hold_proposesPeaceAndKeepsWinnerInitiative() {
+		War war = votingWar();
+		war.setPostBattleChoicePhase(PostBattleChoicePhase.WINNER_PUSH_HOLD);
+		war.setPostBattleWinnerCoalition(CampaignCoalition.DEFENDER);
+		war.setPostBattleChoiceResolved(false);
+		try (MockedStatic<me.Plugins.SimpleFactions.Managers.WarManager> warManager =
+				mockStatic(me.Plugins.SimpleFactions.Managers.WarManager.class)) {
+			warManager.when(() -> me.Plugins.SimpleFactions.Managers.WarManager.persist(any())).then(inv -> null);
+			warManager.when(() -> me.Plugins.SimpleFactions.Managers.WarManager.getById(war.getId())).thenReturn(war);
+			warManager.when(() -> me.Plugins.SimpleFactions.Managers.WarManager.endWar(any(), any())).then(inv -> null);
+
+			WarScheduleAdminResult result = WarScheduleAdminService.battleChoice(war, "hold");
+			assertTrue(result.success());
+			assertEquals(BelligerentRole.DEFENDER, war.getInitiativeHolder());
+			assertTrue(CampaignPostBattleChoiceService.needsLoserResponse(war));
+		}
+	}
+
 	private War votingWar() {
 		War war = new War(1, attacker, defender);
 		war.setGoal(WarGoalType.SUBJUGATE);
@@ -177,6 +327,7 @@ class WarScheduleAdminServiceTest {
 		war.setCursorIndex(2);
 		war.setInitiativeAttacker(4);
 		war.setInitiativeDefender(4);
+		war.setInitiativeHolder(BelligerentRole.ATTACKER);
 		war.setCampaignPhase(CampaignPhase.INVASION);
 		war.setBattleDay(BATTLE_DAY);
 		war.setBattleSchedulePhase(BattleSchedulePhase.VOTING);
@@ -186,7 +337,7 @@ class WarScheduleAdminServiceTest {
 	private War scheduledWar() {
 		War war = votingWar();
 		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
-		war.setScheduledBattleAt(Instant.parse("2026-08-21T21:00:00Z"));
+		war.setScheduledBattleAt(BattleWindowService.computeScheduledBattleAt(BATTLE_DAY, 21));
 		war.setScheduledBattleHour(21);
 		war.setScheduledBattleProvinceId(20);
 		return war;

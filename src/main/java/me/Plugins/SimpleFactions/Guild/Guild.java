@@ -349,6 +349,9 @@ public class Guild {
 
     public void setCapital(int i, boolean notifySettlement) {
         if (isBase()) {
+            if (host != null) {
+                host.setCapital(i, i == -1, notifySettlement);
+            }
             return;
         }
         int old = capital;

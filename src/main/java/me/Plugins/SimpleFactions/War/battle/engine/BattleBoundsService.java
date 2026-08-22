@@ -1,10 +1,6 @@
 package me.Plugins.SimpleFactions.War.battle.engine;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Map.ProvinceGrid;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
@@ -34,11 +30,10 @@ public final class BattleBoundsService {
 		if (battle == null) {
 			return;
 		}
+		battle.setAllowedProvinceIds(java.util.Collections.emptySet());
 		if (battle.getBattleType() == BattleType.RAID) {
-			battle.setAllowedProvinceIds(java.util.Collections.emptySet());
 			return;
 		}
-		Set<Integer> allowed = new HashSet<>();
 		Integer provinceId = battle.getProvinceId();
 		if (provinceId == null || provinceId <= 0) {
 			provinceId = resolveProvinceFromSpawn(battle, plugin);
@@ -46,51 +41,17 @@ public final class BattleBoundsService {
 				battle.setProvinceId(provinceId);
 			}
 		}
-		if (provinceId != null && provinceId > 0) {
-			allowed.add(provinceId);
-		}
-		if (battle.isNavalVariant() && provinceId != null && provinceId > 0 && plugin != null) {
-			ProvinceManager pm = plugin.getProvinceManager();
-			if (pm != null) {
-				Integer seaNeighbour = findAdjacentSeaProvince(pm, provinceId);
-				if (seaNeighbour != null) {
-					allowed.add(seaNeighbour);
-				}
-			}
-		}
-		battle.setAllowedProvinceIds(allowed);
 	}
 
-	public static boolean isInBounds(Battle battle, Player player) {
-		if (battle == null || player == null || !applies(battle)) {
-			return true;
-		}
-		Set<Integer> allowed = battle.getAllowedProvinceIds();
-		if (allowed == null || allowed.isEmpty()) {
-			return true;
-		}
-		SimpleFactions plugin = SimpleFactions.getInstance();
-		if (plugin == null) {
-			return true;
-		}
-		ProvinceGrid grid = plugin.getProvinceGrid();
-		if (grid == null) {
-			return true;
-		}
-		Location loc = player.getLocation();
-		int provinceId = grid.getAt(loc.getBlockX(), loc.getBlockZ());
-		return isProvinceAllowed(battle, provinceId);
+	public static boolean isInBounds(Battle battle, org.bukkit.entity.Player player) {
+		return true;
 	}
 
 	public static boolean isProvinceAllowed(Battle battle, int provinceId) {
-		if (battle == null || provinceId <= 0) {
-			return false;
-		}
-		Set<Integer> allowed = battle.getAllowedProvinceIds();
-		return allowed != null && allowed.contains(provinceId);
+		return true;
 	}
 
-	private static Integer resolveProvinceFromSpawn(Battle battle, SimpleFactions plugin) {
+	static Integer resolveProvinceFromSpawn(Battle battle, SimpleFactions plugin) {
 		if (plugin == null) {
 			return null;
 		}

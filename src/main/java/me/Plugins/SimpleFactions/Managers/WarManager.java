@@ -22,12 +22,18 @@ import me.Plugins.SimpleFactions.War.commitment.WarCommitmentService;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
+import me.Plugins.SimpleFactions.War.progression.CampaignDeclareValidator;
 import me.Plugins.SimpleFactions.War.validation.WarDeclareRequest;
 import me.Plugins.SimpleFactions.War.validation.WarGoalValidator;
 import me.Plugins.SimpleFactions.War.validation.WarValidationResult;
 
 public class WarManager {
 	private static List<War> wars = new ArrayList<>();
+	private static String lastDeclareError;
+	
+	public static String getLastDeclareError() {
+		return lastDeclareError;
+	}
 	
 	public static War declareWar(
 			Faction attacker,
@@ -38,6 +44,15 @@ public class WarManager {
 		WarDeclareRequest request = new WarDeclareRequest(attacker, defender, goal, targetTitleId, subjectFactionId);
 		WarValidationResult validation = new WarGoalValidator().validate(request);
 		if (!validation.isValid()) {
+			lastDeclareError = validation.getMessage();
+			return null;
+		}
+
+		lastDeclareError = null;
+
+		WarValidationResult military = CampaignDeclareValidator.validateAttackerCanDeclare(attacker);
+		if (!military.isValid()) {
+			lastDeclareError = military.getMessage();
 			return null;
 		}
 
@@ -57,10 +72,11 @@ public class WarManager {
 			war.setSubjectFactionId(subjectFactionId);
 		}
 		if (!populateCampaignIfNeeded(war)) {
+			lastDeclareError = "§cCould not declare war: no campaign route could be generated.";
 			return null;
 		}
-		addWar(war);
 		WarCommitmentService.commitAllParticipants(war);
+		addWar(war);
 		if (civilWar) {
 			war.getParticipant(attacker).setCivilWar(true);
 			war.getParticipant(defender).setCivilWar(true);
@@ -142,26 +158,33 @@ public class WarManager {
 		new Database().saveWar(war);
 	}
 	
-	public static boolean exists(Faction attacker, Faction defender) {
-		for (War w : wars) {
-			if (!w.isActive()) continue;
-			if (w.isMainParticipant(attacker) && w.isMainParticipant(defender)) return true;
-			Side s = w.getSide(attacker);
-			if (s == null) continue;
-			if (s.equals(w.getSide(defender))) return true;
+	public static War findSharedActiveWar(Faction a, Faction b) {
+		if (a == null || b == null) {
+			return null;
 		}
-		return false;
+		for (War war : wars) {
+			if (!war.isActive()) {
+				continue;
+			}
+			if (war.isParticipating(a) && war.isParticipating(b)) {
+				return war;
+			}
+		}
+		return null;
 	}
-	
+
+	public static boolean exists(Faction attacker, Faction defender) {
+		return findSharedActiveWar(attacker, defender) != null;
+	}
+
 	public static boolean existsHostile(Faction attacker, Faction defender) {
-		for(War w : wars) {
-			Side s = w.getSide(attacker);
-			if(s == null) continue;
-			Side d = w.getSide(defender);
-			if(d == null) continue;
-		    if(!s.equals(d)) return true;
+		War war = findSharedActiveWar(attacker, defender);
+		if (war == null) {
+			return false;
 		}
-		return false;
+		Side attackerSide = war.getSide(attacker);
+		Side defenderSide = war.getSide(defender);
+		return attackerSide != null && defenderSide != null && !attackerSide.equals(defenderSide);
 	}
 
 	public static void start() {
@@ -190,7 +213,9 @@ public class WarManager {
 
 	private static void notifyWarEnded(War w, WarEndReason reason) {
 		String message = switch (reason) {
-			case WHITE_PEACE, AUTO_WHITE_PEACE -> "§7The war has ended in white peace.";
+			case WHITE_PEACE -> "§7The war has ended in white peace.";
+			case ATTACKER_VICTORY -> "§7The war has ended. The attacker coalition wins.";
+			case DEFENDER_VICTORY -> "§7The war has ended. The defender coalition wins.";
 			default -> "§7The war has ended.";
 		};
 		for (String member : w.getAttackers().getLeader().getMembers()) {

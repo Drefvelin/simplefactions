@@ -71,21 +71,36 @@ public class SettlementHandler {
         if (guild.isBase()) {
             return CapitalResult.fail("§cUse §e/faction setcapital §cto set the faction capital");
         }
-        if (!faction.hasProvince(province)) {
+        if (!faction.ownsProvince(province)) {
             return CapitalResult.fail("§cYour faction doesn't own this province!");
         }
-        return resolveCapital(player, province, nameOpt, guild.getCapital(), false);
+        return resolveCapital(player, province, nameOpt, guild.getCapital(), false, false);
     }
 
     public CapitalResult resolveFactionCapital(Player player, int province, String nameOpt) {
-        if (!faction.hasProvince(province)) {
+        return applyFactionCapital(player, province, nameOpt);
+    }
+
+    public CapitalResult validateFactionCapital(Player player, int province, String nameOpt) {
+        if (!faction.ownsProvince(province)) {
             return CapitalResult.fail("§cYour faction doesn't own this province!");
         }
         if (byId.isEmpty() && (nameOpt == null || nameOpt.isBlank())) {
             return CapitalResult.fail(
                     "§cName required to found your capital city: §e/faction setcapital <name>");
         }
-        return resolveCapital(player, province, nameOpt, faction.getCapital(), false);
+        return resolveCapital(player, province, nameOpt, faction.getCapital(), true, true);
+    }
+
+    public CapitalResult applyFactionCapital(Player player, int province, String nameOpt) {
+        if (!faction.ownsProvince(province)) {
+            return CapitalResult.fail("§cYour faction doesn't own this province!");
+        }
+        if (byId.isEmpty() && (nameOpt == null || nameOpt.isBlank())) {
+            return CapitalResult.fail(
+                    "§cName required to found your capital city: §e/faction setcapital <name>");
+        }
+        return resolveCapital(player, province, nameOpt, faction.getCapital(), true, false);
     }
 
     public boolean requiresFoundingName(int province) {
@@ -109,7 +124,7 @@ public class SettlementHandler {
         if (!faction.hasProvince(newCapital)) {
             return CapitalResult.fail("§cYour faction doesn't own this province!");
         }
-        return resolveCapital(player, newCapital, nameOpt, -1, true);
+        return resolveCapital(player, newCapital, nameOpt, -1, true, false);
     }
 
     private CapitalResult resolveCapital(
@@ -117,7 +132,8 @@ public class SettlementHandler {
             int province,
             String nameOpt,
             int currentCapital,
-            boolean fromRelocate) {
+            boolean fromRelocate,
+            boolean dryRun) {
         Province prov = SimpleFactions.getInstance().getProvinceManager().get(province);
         if (province == 0 || prov == null || !prov.isValid()) {
             return CapitalResult.fail("§cThis location has no province!");
@@ -145,6 +161,17 @@ public class SettlementHandler {
 
         if (nameOpt == null || nameOpt.isBlank()) {
             return CapitalResult.fail("§cName required to found a settlement here");
+        }
+
+        if (dryRun) {
+            String id = Formatter.formatId(nameOpt);
+            if (id.isBlank()) {
+                return CapitalResult.fail("§cInvalid settlement name");
+            }
+            if (byId.containsKey(id)) {
+                return CapitalResult.fail("§cA settlement with that id already exists");
+            }
+            return CapitalResult.ok("§aReady to found settlement");
         }
 
         return found(
@@ -221,7 +248,7 @@ public class SettlementHandler {
             }
         }
         if (s.contains(faction.getCapital())) {
-            faction.setCapital(-1);
+            faction.setCapital(-1, true, false);
         }
 
         byId.remove(s.getId());

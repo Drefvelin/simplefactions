@@ -9,10 +9,11 @@ import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService.CampaignBattleContext;
 import me.Plugins.SimpleFactions.War.battle.engine.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.engine.BattleSide;
-import me.Plugins.SimpleFactions.War.battle.enums.LifeType;
 
 public class WarbandMembershipService {
 	private static WarbandMembershipService instance;
@@ -35,16 +36,10 @@ public class WarbandMembershipService {
 		if (warband == null) {
 			return;
 		}
-		Faction faction = resolveFactionForSlot(warband, playerId);
+		Faction faction = resolveFactionForWarband(warband, playerId);
 		detachFromBattle(playerId, warband);
 		pendingRejoin.put(playerId, new WarbandRejoinState(warband.getId(), faction));
 		warband.removeMember(playerId);
-		if (faction != null) {
-			WarbandSlot slot = warband.getSlot(faction);
-			if (slot != null) {
-				slot.change(-1);
-			}
-		}
 	}
 
 	public boolean handleJoin(Player player) {
@@ -65,15 +60,6 @@ public class WarbandMembershipService {
 			return false;
 		}
 		warband.addMember(playerId);
-		if (state.hasFaction()) {
-			Faction faction = findFactionInWarband(warband, state.getFactionId());
-			if (faction != null) {
-				WarbandSlot slot = warband.getSlot(faction);
-				if (slot != null) {
-					slot.change(1);
-				}
-			}
-		}
 		if (onlinePlayer != null) {
 			restoreBattleState(onlinePlayer);
 		}
@@ -93,21 +79,40 @@ public class WarbandMembershipService {
 			if (!state.hasFaction()) {
 				return false;
 			}
-			Faction faction = findFactionInWarband(warband, state.getFactionId());
+			Faction faction = FactionManager.getByString(state.getFactionId());
 			if (faction == null) {
 				return false;
 			}
 			if (playerFaction == null || !playerFaction.equals(faction)) {
 				return false;
 			}
-			WarbandSlot slot = warband.getSlot(faction);
-			return slot != null && !slot.isFull();
+			CampaignBattleContext ctx = CampaignBattleJoinService.findCampaignBattleForWarband(warband);
+			if (ctx != null && ctx.battle().hasStarted()) {
+				return CampaignBattleJoinService.validateWarbandMemberJoin(
+						ctx.war(), ctx.battle(), ctx.sideId(), warband, playerNameFromId(playerId), playerId) == null;
+			}
+			if (ctx != null) {
+				return CampaignBattleJoinService.validateRosterHasRoom(
+						ctx.war(), ctx.battle(), ctx.sideId(), warband, 1) == null;
+			}
+			return true;
 		}
 		if (warband.isLocked()) {
 			Player player = getOnlinePlayer(playerId);
 			return player != null && warband.isInvited(player);
 		}
 		return true;
+	}
+
+	private String playerNameFromId(UUID playerId) {
+		Player player = getOnlinePlayer(playerId);
+		if (player != null && player.getName() != null) {
+			return player.getName();
+		}
+		if (Bukkit.getOfflinePlayer(playerId).getName() != null) {
+			return Bukkit.getOfflinePlayer(playerId).getName();
+		}
+		return null;
 	}
 
 	private Player getOnlinePlayer(UUID playerId) {
@@ -117,7 +122,7 @@ public class WarbandMembershipService {
 		return Bukkit.getPlayer(playerId);
 	}
 
-	private Faction resolveFactionForSlot(Warband warband, UUID playerId) {
+	private Faction resolveFactionForWarband(Warband warband, UUID playerId) {
 		if (!warband.isFaction()) {
 			return null;
 		}
@@ -125,20 +130,7 @@ public class WarbandMembershipService {
 		if (player == null) {
 			return null;
 		}
-		Faction faction = FactionManager.getByMember(player.getName());
-		if (faction == null || !warband.hasSlot(faction)) {
-			return null;
-		}
-		return faction;
-	}
-
-	private Faction findFactionInWarband(Warband warband, String factionId) {
-		for (Faction faction : warband.getSlots().keySet()) {
-			if (faction.getId().equals(factionId)) {
-				return faction;
-			}
-		}
-		return null;
+		return FactionManager.getByMember(player.getName());
 	}
 
 	private void detachFromBattle(UUID playerId, Warband warband) {
@@ -174,8 +166,5 @@ public class WarbandMembershipService {
 			return;
 		}
 		side.addBossBarPlayer(player);
-		if (battle.getLifeType().equals(LifeType.PER_PLAYER) && !side.hasRecord(player)) {
-			side.addRecord(player, battle.getLives());
-		}
 	}
 }

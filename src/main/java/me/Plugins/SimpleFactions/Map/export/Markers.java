@@ -12,6 +12,7 @@ import com.google.gson.JsonObject;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
@@ -91,7 +92,8 @@ public final class Markers {
 
                 JsonArray zocProvinces = new JsonArray();
                 for (int provinceId :
-                        ZocRealm.computeZocProvinces(faction, installation.getProvince())) {
+                        ZocRealm.computeZocProvincesForExport(
+                                installation, faction, WarManager.getActive())) {
                     zocProvinces.add(provinceId);
                 }
                 row.add("zoc_provinces", zocProvinces);

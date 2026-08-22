@@ -326,7 +326,11 @@ public class Faction {
 	}
 
 	public void setCapital(int i, boolean force) {
-		provinceHandler.setCapital(i, force);
+		setCapital(i, force, true);
+	}
+
+	public void setCapital(int i, boolean force, boolean notifySettlement) {
+		provinceHandler.setCapital(i, force, notifySettlement);
 	}
 
 	public double getTaxRate(TaxTarget target, String id, boolean effective) {
@@ -433,6 +437,14 @@ public class Faction {
 
 	public boolean hasProvince(int i) {
 		return provinceHandler.hasProvince(i);
+	}
+
+	public boolean ownsProvince(int provinceId) {
+		if (provinceHandler.hasProvince(provinceId)) {
+			return true;
+		}
+		Title title = TitleLoader.getByProvince(provinceId);
+		return title != null && hasTitle(title);
 	}
 	
 	public void addProvince(int i) {

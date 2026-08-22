@@ -2,8 +2,11 @@ package me.Plugins.SimpleFactions;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+
+import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 
 import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Terrain;
@@ -36,7 +39,9 @@ public class Cache {
 
 	public static boolean warRequireDeclareCode;
 	public static int warDeclareOpinionThreshold;
-	public static int warInitiativePerSide;
+	public static double warInitiativeFactor = 1.5;
+	public static int warPortSeaZocRadius = 2;
+	public static Map<WarGoalType, Integer> warGoalMaxBattles = new EnumMap<>(WarGoalType.class);
 	public static int warDeclinedAllyStabilityPenalty;
 	public static boolean warFirstBattleAtBorder;
 	public static int warProvincesBetweenBattles;
@@ -56,9 +61,13 @@ public class Cache {
 	public static boolean warBattleVotingPassIfEither;
 	public static int warBattleVotingDevMinPlayers;
 	public static boolean warBattleVotingDevMinPlayersEnabled;
+	public static int warBattleLivesPerRegiment;
+	public static int warBattleMinSideLives;
 
 	public static int battleProvincePollIntervalTicks;
 	public static int battleProvinceLeaveCountdownSeconds;
+	public static int battleCaptureMinPlayers;
+	public static int battleDevmodePhantomCount;
 	public static int battleSiegeContestDurationSeconds;
 	public static DefenderRespawnMode battleRaidDefenderRespawnModeDefault;
 	public static String battleCampaignTemplateField;

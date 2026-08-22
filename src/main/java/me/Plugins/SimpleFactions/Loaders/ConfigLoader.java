@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.Loaders;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.EnumMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -10,6 +11,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
+import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.SimpleFactions.laws.LawEffect;
@@ -42,7 +44,16 @@ public class ConfigLoader {
 
 		Cache.warRequireDeclareCode = config.getBoolean("war.require_declare_code", false);
 		Cache.warDeclareOpinionThreshold = config.getInt("war.declare_opinion_threshold", -50);
-		Cache.warInitiativePerSide = config.getInt("war.initiative_per_side", 4);
+		Cache.warInitiativeFactor = config.getDouble("war.initiative_factor", 1.5);
+		Cache.warPortSeaZocRadius = config.getInt("war.port_sea_zoc_radius", 2);
+		Cache.warGoalMaxBattles = new EnumMap<>(WarGoalType.class);
+		for (WarGoalType goal : WarGoalType.values()) {
+			int maxBattles = config.getInt("war.goals." + goal.name() + ".max_battles", -1);
+			if (maxBattles < 0) {
+				maxBattles = config.getInt("war.goals." + goal.toJson() + ".max_battles", 4);
+			}
+			Cache.warGoalMaxBattles.put(goal, maxBattles);
+		}
 		Cache.warFirstBattleAtBorder = config.getBoolean("war.battle_cadence.first_battle_at_border", true);
 		Cache.warProvincesBetweenBattles = config.getInt("war.battle_cadence.provinces_between_battles", 1);
 		Cache.warOccupationIncludeEnemyNeighbors = config.getBoolean("war.occupation.include_enemy_neighbors", true);
@@ -68,8 +79,13 @@ public class ConfigLoader {
 		}
 		validateBattleScheduleConfig(config);
 
+		Cache.warBattleLivesPerRegiment = config.getInt("war.battle_military.lives_per_regiment", 5);
+		Cache.warBattleMinSideLives = config.getInt("war.battle_military.min_side_lives", 1);
+
 		Cache.battleProvincePollIntervalTicks = config.getInt("battle.province_poll_interval_ticks", 20);
 		Cache.battleProvinceLeaveCountdownSeconds = config.getInt("battle.province_leave_countdown_seconds", 10);
+		Cache.battleCaptureMinPlayers = config.getInt("battle.capture_min_players", 1);
+		Cache.battleDevmodePhantomCount = config.getInt("battle.devmode.phantom_count", 10);
 		Cache.battleSiegeContestDurationSeconds = config.getInt("battle.siege.contest_duration_seconds", 180);
 		Cache.battleRaidDefenderRespawnModeDefault = DefenderRespawnMode.fromJson(
 				config.getString("battle.raid.defender_respawn_mode_default", "INFINITE"));
@@ -127,6 +143,7 @@ public class ConfigLoader {
 	}
 
 	private static void validateBattleScheduleConfig(FileConfiguration config) {
+		// Hours in war.battle_schedule are Europe/Paris (CET/CEST), not UTC.
 		int defenderDeadline = Cache.warDefenderChoiceDeadlineHour;
 		int voteClose = Cache.warVoteCloseHour;
 		int windowStart = Cache.warBattleWindowStartHour;
@@ -159,6 +176,12 @@ public class ConfigLoader {
 	private static void validateBattlePresenceConfig() {
 		if (Cache.battleProvincePollIntervalTicks < 1) {
 			failBattleSchedule("battle.province_poll_interval_ticks must be >= 1");
+		}
+		if (Cache.battleCaptureMinPlayers < 1) {
+			failBattleSchedule("battle.capture_min_players must be >= 1");
+		}
+		if (Cache.battleDevmodePhantomCount < 0) {
+			failBattleSchedule("battle.devmode.phantom_count must be >= 0");
 		}
 	}
 

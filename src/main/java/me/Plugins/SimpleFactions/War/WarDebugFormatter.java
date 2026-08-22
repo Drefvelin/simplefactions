@@ -1,5 +1,6 @@
 package me.Plugins.SimpleFactions.War;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +10,7 @@ import com.google.gson.GsonBuilder;
 
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.War.progression.CampaignProgressionService;
+import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 
 public final class WarDebugFormatter {
 	private static final Gson GSON = new GsonBuilder().serializeNulls().create();
@@ -31,11 +33,14 @@ public final class WarDebugFormatter {
 		summary.put("cursorIndex", war.getCursorIndex());
 		summary.put("initiativeAttacker", war.getInitiativeAttacker());
 		summary.put("initiativeDefender", war.getInitiativeDefender());
+		summary.put("initiativeHolder", war.getInitiativeHolder() != null ? war.getInitiativeHolder().name() : null);
 		summary.put("campaignPhase", war.getCampaignPhase() != null ? war.getCampaignPhase().toJson() : null);
 		summary.put("objectiveHeldBy", war.getObjectiveHeldBy() != null ? war.getObjectiveHeldBy().toJson() : null);
 		summary.put("whitePeaceProposedByAttacker", war.isWhitePeaceProposedByAttacker());
 		summary.put("whitePeaceProposedByDefender", war.isWhitePeaceProposedByDefender());
 		summary.put("campaignBattlesFought", war.getCampaignBattlesFought());
+		summary.put("campaignScheduleIndex", war.getCampaignScheduleIndex());
+		summary.put("campaignBattleSchedule", serializeCampaignSchedule(war));
 		summary.put("occupiedByAttacker", war.getOccupiedByAttacker());
 		summary.put("occupiedByDefender", war.getOccupiedByDefender());
 		summary.put("lastBattleOccupied", war.getLastBattleOccupied());
@@ -53,8 +58,49 @@ public final class WarDebugFormatter {
 		summary.put("defenderChoiceResolved", war.isDefenderChoiceResolved());
 		summary.put("forceQuorumNextClose", war.isForceQuorumNextClose() ? true : null);
 		summary.put("startedAt", war.getStartedAt() != null ? war.getStartedAt().toString() : null);
-		summary.put("commitments", WarManager.getCommitmentsForWar(war.getId()).size());
+		List<Map<String, Object>> commitmentRows = serializeCommitmentRows(
+				WarManager.getCommitmentsForWar(war.getId()));
+		summary.put("commitmentRows", commitmentRows);
+		summary.put("commitments", commitmentRows.size());
 		return List.of("§7" + GSON.toJson(summary));
+	}
+
+	private static List<Map<String, Object>> serializeCommitmentRows(List<WarCommitment> commitments) {
+		List<Map<String, Object>> rows = new ArrayList<>();
+		if (commitments == null || commitments.isEmpty()) {
+			return rows;
+		}
+		for (WarCommitment commitment : commitments) {
+			Map<String, Object> row = new LinkedHashMap<>();
+			row.put("factionId", commitment.factionId());
+			if (commitment.sourceFactionId() != null) {
+				row.put("sourceFactionId", commitment.sourceFactionId());
+			}
+			row.put("regimentId", commitment.regimentId());
+			row.put("count", commitment.count());
+			rows.add(row);
+		}
+		return rows;
+	}
+
+	private static List<Map<String, Object>> serializeCampaignSchedule(War war) {
+		List<Map<String, Object>> rows = new ArrayList<>();
+		if (war == null || war.getCampaignBattleSchedule() == null) {
+			return rows;
+		}
+		List<ScheduledCampaignBattle> schedule = war.getCampaignBattleSchedule();
+		for (int index = 0; index < schedule.size(); index++) {
+			ScheduledCampaignBattle slot = schedule.get(index);
+			Map<String, Object> row = new LinkedHashMap<>();
+			row.put("index", index);
+			row.put("provinceId", slot.provinceId());
+			row.put("kind", slot.kind() != null ? slot.kind().toJson() : null);
+			row.put("required", slot.required());
+			row.put("fortInstallationId", slot.fortInstallationId());
+			row.put("portInstallationId", slot.portInstallationId());
+			rows.add(row);
+		}
+		return rows;
 	}
 
 	private static Integer resolveCursorProvinceId(War war) {

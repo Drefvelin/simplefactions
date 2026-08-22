@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": 5,
   "status": "active",
   "goal": "subjugate",
@@ -15,8 +15,9 @@
     30
   ],
   "cursorIndex": 2,
-  "initiativeAttacker": 4,
-  "initiativeDefender": 4,
+  "initiativeAttacker": 3,
+  "initiativeDefender": 3,
+  "initiativeHolder": "ATTACKER",
   "occupiedByAttacker": [],
   "occupiedByDefender": [],
   "lastBattleOccupied": [],
@@ -25,15 +26,35 @@
   "whitePeaceProposedByAttacker": false,
   "whitePeaceProposedByDefender": false,
   "campaignBattlesFought": 0,
+  "campaignBattleSchedule": [
+    {
+      "provinceId": 20,
+      "kind": "field",
+      "required": false
+    },
+    {
+      "provinceId": 30,
+      "kind": "field",
+      "required": true
+    }
+  ],
+  "campaignScheduleIndex": 0,
+  "fortControllers": {},
+  "locationBattleCounts": {},
   "battleSchedulePhase": "voting",
-  "battleDay": "2026-08-21",
+  "battleDay": "2026-08-24",
   "battleVotes": {},
   "autoresolveProposedByAttacker": false,
   "autoresolveProposedByDefender": false,
   "postponementsThisCycle": 0,
   "defenderChoiceResolved": false,
+  "initiativeHolderCoalition": "aggressor",
+  "pushTarget": "toward_objective",
+  "postBattleChoicePhase": "none",
+  "postBattleChoiceResolved": true,
+  "holdPeaceProposalActive": false,
   "forceQuorumNextClose": false,
-  "startedAt": "2026-08-20T21:03:54.799385800Z",
+  "startedAt": "2026-08-22T23:54:19.341264Z",
   "attackers": {
     "leader": "atk",
     "participants": [

@@ -2,8 +2,12 @@ package me.Plugins.SimpleFactions.War.battle.engine;
 
 import org.bukkit.entity.Player;
 
+import me.Plugins.SimpleFactions.Managers.WarManager;
+import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
+import me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService;
 
 public final class BattleJoinService {
 	private BattleJoinService() {
@@ -16,7 +20,18 @@ public final class BattleJoinService {
 		if (leader == null) {
 			return "Only players can join battles";
 		}
+		String redirect = campaignPlayerJoinRedirect(battle);
+		if (redirect != null) {
+			return redirect;
+		}
 		return join(WarbandManager.getByLeader(leader), battle, sideId);
+	}
+
+	static String campaignPlayerJoinRedirect(Battle battle) {
+		if (battle != null && battle.getWarId() != null) {
+			return "Sign up with /warband list - your faction warband is already on this battle";
+		}
+		return null;
 	}
 
 	/**
@@ -38,7 +53,8 @@ public final class BattleJoinService {
 		if (battle.isLocked()) {
 			return "Battle is locked";
 		}
-		if (BattleManager.getBattleByMemberId(warband.getLeaderId()) != null) {
+		if (!warband.isPendingLeader()
+				&& BattleManager.getBattleByMemberId(warband.getLeaderId()) != null) {
 			return "Already signed up for a battle";
 		}
 		BattleSide side = battle.getSideById(sideId);
@@ -50,7 +66,19 @@ public final class BattleJoinService {
 				return "Already signed up for this battle";
 			}
 		}
+		if (battle.getWarId() != null) {
+			War war = WarManager.getById(battle.getWarId());
+			if (war == null || !war.isActive()) {
+				return "War not found";
+			}
+			String campaignError = CampaignBattleJoinService.validateJoin(war, battle, warband, sideId);
+			if (campaignError != null) {
+				return campaignError;
+			}
+		}
 		side.addBand(warband);
+		BattlePersistenceService.persistBattle(battle);
+		BattlePersistenceService.persistWarband(warband);
 		return null;
 	}
 }

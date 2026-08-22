@@ -25,7 +25,6 @@ import me.Plugins.SimpleFactions.War.Side;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.WarGoal;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
-import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 
 public class WarCreator {
 	public ItemStack createCampaignButton(War w) {
@@ -46,22 +45,6 @@ public class WarCreator {
 		return i;
 	}
 
-	public ItemStack createMusterItem(Participant par) {
-		ItemStack i = IconGetter.getIconOrDefault("muster", Material.IRON_HELMET);
-		ItemMeta m = i.getItemMeta();
-		m.setDisplayName(StringFormatter.formatHex("#7fbd73Muster Army"));
-		m.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-		List<String> lore = new ArrayList<>();
-		if(WarbandManager.getByString(par.getLeader().getId()) != null) {
-			lore.add(StringFormatter.formatHex("#a39ba8Already mustered! View in #d4c9ae/warband list"));
-		} else {
-			lore.add(StringFormatter.formatHex("#d4c9aeClick to create a faction warband"));
-		}
-		m.setLore(lore);
-		i.setItemMeta(m);
-		return i;
-	}
-	
 	public ItemStack createWarGoalItem(WarGoal goal, Faction target, boolean main) {
 		ItemStack i = new ItemStack(Material.EMERALD, 1);
 		

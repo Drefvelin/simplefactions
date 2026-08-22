@@ -7,35 +7,72 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.commitment.WarCommitmentService;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
+import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
+import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 
 class WarDebugFormatterTest {
 
-	@Test
-	void parseWarId_parsesValidInteger() {
-		assertEquals(Optional.of(3), WarCommandHelper.parseWarId("3"));
+	@AfterEach
+	void tearDown() {
+		WarCommitmentService.clearCommitments(3);
 	}
 
 	@Test
-	void parseWarId_rejectsInvalidInput() {
-		assertTrue(WarCommandHelper.parseWarId("abc").isEmpty());
-		assertTrue(WarCommandHelper.parseWarId("").isEmpty());
-		assertTrue(WarCommandHelper.parseWarId(null).isEmpty());
+	void formatStatusLines_includesCommitmentRows() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		when(attacker.getName()).thenReturn("Attacker");
+		when(defender.getName()).thenReturn("Defender");
+
+		War war = new War(3, attacker, defender);
+		seedCommitment(new WarCommitment(
+				3, "faction_a", null, "militia", 4, Instant.parse("2026-08-21T10:00:00Z")));
+		seedCommitment(new WarCommitment(
+				3, "faction_a", "subject_a", WarCommitment.LEVY_REGIMENT_ID, 6, Instant.parse("2026-08-21T10:00:00Z")));
+
+		String json = WarDebugFormatter.formatStatusLines(war).get(0);
+
+		assertTrue(json.contains("\"commitments\":2"));
+		assertTrue(json.contains("\"commitmentRows\""));
+		assertTrue(json.contains("\"factionId\":\"faction_a\""));
+		assertTrue(json.contains("\"regimentId\":\"militia\""));
+		assertTrue(json.contains("\"count\":4"));
+		assertTrue(json.contains("\"sourceFactionId\":\"subject_a\""));
+		assertTrue(json.contains("\"regimentId\":\"levy\""));
+		assertTrue(json.contains("\"count\":6"));
+	}
+
+	private static void seedCommitment(WarCommitment row) {
+		try {
+			java.lang.reflect.Field field = WarCommitmentService.class.getDeclaredField("commitmentsByWar");
+			field.setAccessible(true);
+			@SuppressWarnings("unchecked")
+			Map<Integer, List<WarCommitment>> store =
+					(Map<Integer, List<WarCommitment>>) field.get(null);
+			store.computeIfAbsent(row.warId(), ignored -> new ArrayList<>()).add(row);
+		} catch (ReflectiveOperationException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Test
@@ -70,8 +107,13 @@ class WarDebugFormatterTest {
 		war.setBattleVotes(votes);
 		war.setPostponementsThisCycle(2);
 
-		String json = WarDebugFormatter.formatStatusLines(war).get(0);
+		List<String> lines = WarDebugFormatter.formatStatusLines(war);
 
+		assertEquals(1, lines.size());
+		String json = lines.get(0);
+		assertTrue(json.contains("\"id\":3"));
+		assertTrue(json.contains("\"goal\":\"subjugate\""));
+		assertTrue(json.contains("\"status\":\"active\""));
 		assertTrue(json.contains("\"objectiveProvinceId\":42"));
 		assertTrue(json.contains("\"campaignStartProvinceId\":17"));
 		assertTrue(json.contains("\"campaignProvinces\":[17,23,42]"));
@@ -92,26 +134,44 @@ class WarDebugFormatterTest {
 	}
 
 	@Test
-	void formatStatusLines_includesV2FieldsWithDefaults() {
+	void formatStatusLines_includesNavalCampaignSchedule() {
 		Faction attacker = mock(Faction.class);
 		Faction defender = mock(Faction.class);
 		when(attacker.getId()).thenReturn("faction_a");
 		when(defender.getId()).thenReturn("faction_b");
-		when(attacker.getName()).thenReturn("Attacker");
-		when(defender.getName()).thenReturn("Defender");
 
 		War war = new War(3, attacker, defender);
-		war.setGoal(WarGoalType.SUBJUGATE);
-		war.setWarType(WarType.SUBJUGATE);
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(12, CampaignBattleKind.NAVAL, false, null, "port_a"),
+				new ScheduledCampaignBattle(14, CampaignBattleKind.NAVAL_INVASION, false, null)));
+		war.setCampaignScheduleIndex(0);
 
-		List<String> lines = WarDebugFormatter.formatStatusLines(war);
+		String json = WarDebugFormatter.formatStatusLines(war).get(0);
 
-		assertEquals(1, lines.size());
-		String json = lines.get(0);
-		assertTrue(json.contains("\"id\":3"));
-		assertTrue(json.contains("\"goal\":\"subjugate\""));
-		assertTrue(json.contains("\"initiativeAttacker\":0"));
-		assertTrue(json.contains("\"initiativeDefender\":0"));
-		assertTrue(json.contains("\"status\":\"active\""));
+		assertTrue(json.contains("\"kind\":\"naval\""));
+		assertTrue(json.contains("\"portInstallationId\":\"port_a\""));
+		assertTrue(json.contains("\"kind\":\"naval_invasion\""));
+	}
+
+	@Test
+	void formatStatusLines_includesCampaignSchedule() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+
+		War war = new War(3, attacker, defender);
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(18, CampaignBattleKind.SIEGE, false, "fort_a")));
+		war.setCampaignScheduleIndex(1);
+
+		String json = WarDebugFormatter.formatStatusLines(war).get(0);
+
+		assertTrue(json.contains("\"campaignScheduleIndex\":1"));
+		assertTrue(json.contains("\"campaignBattleSchedule\""));
+		assertTrue(json.contains("\"provinceId\":18"));
+		assertTrue(json.contains("\"kind\":\"siege\""));
+		assertTrue(json.contains("\"fortInstallationId\":\"fort_a\""));
 	}
 }

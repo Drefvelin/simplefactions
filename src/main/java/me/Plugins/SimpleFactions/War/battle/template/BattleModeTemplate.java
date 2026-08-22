@@ -22,6 +22,7 @@ public class BattleModeTemplate {
 	private TemplateSideConfig navalSpawn;
 	private DefenderRespawnMode defenderRespawnMode;
 	private Integer defenderLives;
+	private Boolean capturePointsEnabled;
 	private CapturePointDefinition raidTarget;
 
 	public static BattleModeTemplate fromSection(ConfigurationSection section) {
@@ -57,6 +58,9 @@ public class BattleModeTemplate {
 		mode.defenderRespawnMode = DefenderRespawnMode.fromJson(section.getString("defender_respawn_mode"));
 		if (section.contains("defender_lives")) {
 			mode.defenderLives = section.getInt("defender_lives");
+		}
+		if (section.contains("capture_points_enabled")) {
+			mode.capturePointsEnabled = section.getBoolean("capture_points_enabled");
 		}
 		ConfigurationSection raidTargetSection = section.getConfigurationSection("raid_target");
 		if (raidTargetSection != null) {
@@ -197,5 +201,13 @@ public class BattleModeTemplate {
 
 	public void setRaidTarget(CapturePointDefinition raidTarget) {
 		this.raidTarget = raidTarget;
+	}
+
+	public Boolean getCapturePointsEnabled() {
+		return capturePointsEnabled;
+	}
+
+	public void setCapturePointsEnabled(Boolean capturePointsEnabled) {
+		this.capturePointsEnabled = capturePointsEnabled;
 	}
 }

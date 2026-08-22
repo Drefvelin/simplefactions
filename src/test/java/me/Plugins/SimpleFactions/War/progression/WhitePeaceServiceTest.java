@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -11,7 +12,9 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
@@ -30,46 +33,86 @@ class WhitePeaceServiceTest {
 		defender = mock(Faction.class);
 		when(attacker.getId()).thenReturn("atk");
 		when(defender.getId()).thenReturn("def");
+		when(attacker.getCapital()).thenReturn(5);
+		Cache.warFirstBattleAtBorder = true;
+		Cache.warProvincesBetweenBattles = 1;
 	}
 
 	@Test
-	void recalculateProposals_marksAttackerWhenUnreachable() {
+	void recalculateProposals_marksAggressorWhenUnreachable() {
 		War war = baseWar();
-		war.setInitiativeAttacker(1);
-		war.setCursorIndex(1);
+		try (MockedStatic<CampaignCapabilityService> capability = mockStatic(CampaignCapabilityService.class)) {
+			capability.when(() -> CampaignCapabilityService.canReachTarget(war, CampaignCoalition.AGGRESSOR))
+					.thenReturn(false);
+			capability.when(() -> CampaignCapabilityService.canReachTarget(war, CampaignCoalition.DEFENDER))
+					.thenReturn(true);
+
+			assertEquals(Optional.empty(), WhitePeaceService.recalculateProposals(war));
+			assertTrue(war.isWhitePeaceProposedByAttacker());
+			assertFalse(war.isWhitePeaceProposedByDefender());
+		}
+	}
+
+	@Test
+	void recalculateProposals_clearsAggressorWhenReachable() {
+		War war = baseWar();
+		war.setWhitePeaceProposedByAttacker(true);
+		try (MockedStatic<CampaignCapabilityService> capability = mockStatic(CampaignCapabilityService.class)) {
+			capability.when(() -> CampaignCapabilityService.canReachTarget(war, CampaignCoalition.AGGRESSOR))
+					.thenReturn(true);
+			capability.when(() -> CampaignCapabilityService.canReachTarget(war, CampaignCoalition.DEFENDER))
+					.thenReturn(true);
+
+			WhitePeaceService.recalculateProposals(war);
+			assertFalse(war.isWhitePeaceProposedByAttacker());
+		}
+	}
+
+	@Test
+	void recalculateProposals_marksDefenderUnreachable() {
+		War war = baseWar();
+		try (MockedStatic<CampaignCapabilityService> capability = mockStatic(CampaignCapabilityService.class)) {
+			capability.when(() -> CampaignCapabilityService.canReachTarget(war, CampaignCoalition.AGGRESSOR))
+					.thenReturn(true);
+			capability.when(() -> CampaignCapabilityService.canReachTarget(war, CampaignCoalition.DEFENDER))
+					.thenReturn(false);
+
+			WhitePeaceService.recalculateProposals(war);
+			assertTrue(war.isWhitePeaceProposedByDefender());
+		}
+	}
+
+	@Test
+	void recalculateProposals_shortAxisAtObjective_doesNotAutoEnd() {
+		War war = shortAxisWarAtObjective();
 		assertEquals(Optional.empty(), WhitePeaceService.recalculateProposals(war));
-		assertTrue(war.isWhitePeaceProposedByAttacker());
+		assertFalse(war.isWhitePeaceProposedByAttacker());
 		assertFalse(war.isWhitePeaceProposedByDefender());
 	}
 
 	@Test
-	void recalculateProposals_clearsAttackerWhenReachable() {
+	void recalculateProposals_freshWarWithoutRegiments_doesNotAutoEnd() {
 		War war = baseWar();
-		war.setInitiativeAttacker(4);
-		war.setWhitePeaceProposedByAttacker(true);
-		WhitePeaceService.recalculateProposals(war);
-		assertFalse(war.isWhitePeaceProposedByAttacker());
-	}
-
-	@Test
-	void recalculateProposals_marksDefenderUnreachableInCounterPush() {
-		War war = baseWar();
-		war.setCampaignPhase(CampaignPhase.COUNTER_PUSH);
-		war.setInitiativeDefender(1);
 		war.setCursorIndex(2);
-		WhitePeaceService.recalculateProposals(war);
-		assertTrue(war.isWhitePeaceProposedByDefender());
+		assertEquals(Optional.empty(), WhitePeaceService.recalculateProposals(war));
+		assertFalse(war.isWhitePeaceProposedByAttacker());
+		assertFalse(war.isWhitePeaceProposedByDefender());
 	}
 
 	@Test
-	void recalculateProposals_bothInitiativeZeroAutoEnd() {
+	void recalculateProposals_autoEndsWhenBothStrategicallyExhausted() {
 		War war = baseWar();
-		war.setInitiativeAttacker(0);
-		war.setInitiativeDefender(0);
-		Optional<WarEndReason> reason = WhitePeaceService.recalculateProposals(war);
-		assertEquals(WarEndReason.AUTO_WHITE_PEACE, reason.orElse(null));
-		assertTrue(war.isWhitePeaceProposedByAttacker());
-		assertTrue(war.isWhitePeaceProposedByDefender());
+		try (MockedStatic<CampaignCapabilityService> capability = mockStatic(CampaignCapabilityService.class)) {
+			capability.when(() -> CampaignCapabilityService.canReachTarget(war, CampaignCoalition.AGGRESSOR))
+					.thenReturn(false);
+			capability.when(() -> CampaignCapabilityService.canReachTarget(war, CampaignCoalition.DEFENDER))
+					.thenReturn(false);
+
+			Optional<WarEndReason> reason = WhitePeaceService.recalculateProposals(war);
+			assertEquals(WarEndReason.WHITE_PEACE, reason.orElse(null));
+			assertTrue(war.isWhitePeaceProposedByAttacker());
+			assertTrue(war.isWhitePeaceProposedByDefender());
+		}
 	}
 
 	@Test
@@ -99,7 +142,29 @@ class WhitePeaceServiceTest {
 		war.setInitiativeAttacker(4);
 		war.setInitiativeDefender(4);
 		war.setCampaignPhase(CampaignPhase.INVASION);
+		war.setPushTarget(CampaignPushTarget.TOWARD_OBJECTIVE);
 		war.setObjectiveHeldBy(ObjectiveHolder.DEFENDER);
+		war.setPostBattleChoicePhase(PostBattleChoicePhase.NONE);
+		war.setPostBattleChoiceResolved(true);
+		return war;
+	}
+
+	private War shortAxisWarAtObjective() {
+		War war = new War(1, attacker, defender);
+		war.setGoal(WarGoalType.SUBJUGATE);
+		war.setWarType(WarType.SUBJUGATE);
+		war.setObjectiveProvinceId(10);
+		war.setCampaignStartProvinceId(5);
+		war.setCampaignProvinces(List.of(5, 10));
+		war.setCursorIndex(1);
+		war.setCampaignBattlesFought(1);
+		war.setInitiativeAttacker(4);
+		war.setInitiativeDefender(4);
+		war.setCampaignPhase(CampaignPhase.INVASION);
+		war.setPushTarget(CampaignPushTarget.TOWARD_OBJECTIVE);
+		war.setObjectiveHeldBy(ObjectiveHolder.DEFENDER);
+		war.setPostBattleChoicePhase(PostBattleChoicePhase.NONE);
+		war.setPostBattleChoiceResolved(true);
 		return war;
 	}
 }

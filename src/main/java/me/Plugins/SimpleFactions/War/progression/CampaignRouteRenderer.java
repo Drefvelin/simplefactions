@@ -2,14 +2,19 @@ package me.Plugins.SimpleFactions.War.progression;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import org.bukkit.Material;
 
+import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.Side;
 import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.pathfinder.BelligerentTerritory;
 import me.Plugins.SimpleFactions.War.pathfinder.ProvinceOwnerLookup;
+import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService;
+import me.Plugins.SimpleFactions.War.schedule.CampaignUiCopy;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public final class CampaignRouteRenderer {
@@ -27,9 +32,6 @@ public final class CampaignRouteRenderer {
 		List<Integer> actions = actionProvinceIds(war);
 		if (actions.size() == 1 && actions.get(0) == provinceId) {
 			return Material.GREEN_CONCRETE;
-		}
-		if (actions.size() == 2 && actions.contains(provinceId)) {
-			return Material.YELLOW_CONCRETE;
 		}
 		return resolveOwnershipMaterial(war, viewer, provinceId, owners);
 	}
@@ -59,26 +61,87 @@ public final class CampaignRouteRenderer {
 		return war != null && war.getCursorIndex() == axisIndex;
 	}
 
-	public static List<String> buildRouteLore(War war, int provinceId, int axisIndex) {
+	public static List<String> buildRouteLore(War war, int provinceId, ProvinceOwnerLookup owners) {
 		List<String> lore = new ArrayList<>();
-		lore.add(StringFormatter.formatHex("#a39ba8Province #d4c9ae" + provinceId));
-		if (isCursorIndex(war, axisIndex)) {
-			lore.add(StringFormatter.formatHex("#e6c84aCursor - current front"));
+		if (war == null) {
+			return lore;
 		}
-		if (war.getObjectiveProvinceId() != null && war.getObjectiveProvinceId() == provinceId) {
-			lore.add(StringFormatter.formatHex("#e6c84aObjective"));
+
+		String objectiveLine = resolveObjectiveLine(war, provinceId);
+		if (objectiveLine != null) {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.OBJECTIVE + objectiveLine));
 		}
-		if (war.getCampaignStartProvinceId() != null && war.getCampaignStartProvinceId() == provinceId) {
-			lore.add(StringFormatter.formatHex("#e6c84aFirst battle province"));
+
+		appendBattleKindLine(lore, war, provinceId);
+
+		appendRealmLines(lore, war, provinceId, owners);
+
+		List<Integer> actions = actionProvinceIds(war);
+		if (actions.size() == 1 && actions.get(0) == provinceId) {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.NEXT_BATTLE + "Next battle"));
 		}
+		return lore;
+	}
+
+	private static void appendBattleKindLine(List<String> lore, War war, int provinceId) {
+		CampaignScheduleService.slotForProvince(war, provinceId).ifPresent(slot -> {
+			String label = CampaignUiCopy.formatBattleKind(slot.kind());
+			if (label != null) {
+				lore.add(StringFormatter.formatHex(CampaignUiCopy.BATTLE_KIND + label));
+			}
+		});
+	}
+
+	private static String resolveObjectiveLine(War war, int provinceId) {
 		Integer attackerCapital = war.getAttackers().getLeader().getCapital();
 		if (attackerCapital != null && attackerCapital > 0 && attackerCapital == provinceId) {
-			lore.add(StringFormatter.formatHex("#a39ba8Attacker capital"));
+			return "Attacker Capital";
 		}
 		Integer defenderCapital = war.getDefenders().getLeader().getCapital();
 		if (defenderCapital != null && defenderCapital > 0 && defenderCapital == provinceId) {
-			lore.add(StringFormatter.formatHex("#a39ba8Defender capital"));
+			return "Defender Capital";
 		}
-		return lore;
+		Integer objectiveId = war.getObjectiveProvinceId();
+		if (objectiveId == null || objectiveId != provinceId) {
+			return null;
+		}
+		ObjectiveHolder holder = war.getObjectiveHeldBy();
+		if (holder == ObjectiveHolder.ATTACKER) {
+			return "Attacker Target Region";
+		}
+		return "Defender Target Region";
+	}
+
+	private static void appendRealmLines(
+			List<String> lore,
+			War war,
+			int provinceId,
+			ProvinceOwnerLookup owners) {
+		BelligerentTerritory territory = BelligerentTerritory.fromWar(war, owners);
+		Faction owner = TitleManager.getByProvince(provinceId);
+		if (owner == null) {
+			return;
+		}
+
+		boolean attackerSide = territory.isAttackerSide(provinceId);
+		boolean defenderSide = territory.isDefenderSide(provinceId);
+		if (!attackerSide && !defenderSide) {
+			return;
+		}
+
+		Faction sideLeader = attackerSide
+				? war.getAttackers().getLeader()
+				: war.getDefenders().getLeader();
+		String leaderName = sideLeader.getName();
+		lore.add(StringFormatter.formatHex(
+				CampaignUiCopy.LABEL + "Part of " + CampaignUiCopy.VALUE + leaderName + CampaignUiCopy.LABEL + " Realm"));
+
+		if (!normalizeId(owner.getId()).equals(normalizeId(sideLeader.getId()))) {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.MUTED + "(Owned by " + owner.getName() + ")"));
+		}
+	}
+
+	private static String normalizeId(String id) {
+		return id == null ? null : id.toLowerCase(Locale.ROOT);
 	}
 }

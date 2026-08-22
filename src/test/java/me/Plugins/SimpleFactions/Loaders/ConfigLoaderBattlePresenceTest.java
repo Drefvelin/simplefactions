@@ -38,6 +38,8 @@ class ConfigLoaderBattlePresenceTest {
 	@BeforeEach
 	void setUp() throws IOException {
 		tempDir = Files.createTempDirectory("sf-config-presence-");
+		Cache.battleCaptureMinPlayers = 0;
+		Cache.battleDevmodePhantomCount = 0;
 	}
 
 	@AfterEach
@@ -66,6 +68,80 @@ class ConfigLoaderBattlePresenceTest {
 		Path file = writeConfig("""
 				battle:
 				  province_poll_interval_ticks: 0
+				""" + INSTALLATIONS);
+
+		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadConfig(file.toFile()));
+	}
+
+	@Test
+	void loadConfig_defaultCaptureMinPlayers() throws IOException {
+		Path file = writeConfig("""
+				battle:
+				  province_poll_interval_ticks: 20
+				""" + INSTALLATIONS);
+
+		new ConfigLoader().loadConfig(file.toFile());
+
+		assertEquals(1, Cache.battleCaptureMinPlayers);
+	}
+
+	@Test
+	void loadConfig_customCaptureMinPlayers() throws IOException {
+		Path file = writeConfig("""
+				battle:
+				  province_poll_interval_ticks: 20
+				  capture_min_players: 2
+				""" + INSTALLATIONS);
+
+		new ConfigLoader().loadConfig(file.toFile());
+
+		assertEquals(2, Cache.battleCaptureMinPlayers);
+	}
+
+	@Test
+	void loadConfig_invalidCaptureMinPlayersThrows() throws IOException {
+		Path file = writeConfig("""
+				battle:
+				  province_poll_interval_ticks: 20
+				  capture_min_players: 0
+				""" + INSTALLATIONS);
+
+		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadConfig(file.toFile()));
+	}
+
+	@Test
+	void loadConfig_defaultDevmodePhantomCount() throws IOException {
+		Path file = writeConfig("""
+				battle:
+				  province_poll_interval_ticks: 20
+				""" + INSTALLATIONS);
+
+		new ConfigLoader().loadConfig(file.toFile());
+
+		assertEquals(10, Cache.battleDevmodePhantomCount);
+	}
+
+	@Test
+	void loadConfig_customDevmodePhantomCount() throws IOException {
+		Path file = writeConfig("""
+				battle:
+				  province_poll_interval_ticks: 20
+				  devmode:
+				    phantom_count: 5
+				""" + INSTALLATIONS);
+
+		new ConfigLoader().loadConfig(file.toFile());
+
+		assertEquals(5, Cache.battleDevmodePhantomCount);
+	}
+
+	@Test
+	void loadConfig_invalidDevmodePhantomCountThrows() throws IOException {
+		Path file = writeConfig("""
+				battle:
+				  province_poll_interval_ticks: 20
+				  devmode:
+				    phantom_count: -1
 				""" + INSTALLATIONS);
 
 		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadConfig(file.toFile()));

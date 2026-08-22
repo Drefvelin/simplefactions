@@ -1,6 +1,6 @@
 # Wars — automated campaign system (planning lock)
 
-> **Implementation status:** **Step 56 foundation shipped** (2026-08-19). **Step 57 pathfinder & campaign shipped** (2026-08-20). **Step 58 initiative & occupation shipped** (2026-08-20). **Step 59 battle scheduling shipped** (2026-08-20). **Step 60.09 campaign battle launch shipped** (2026-08-20). **Step 61.01 military & casualties planning lock** (2026-08-20); code batches **61.02–61.07** pending. Still planned: raid routes (**66**), map export (**67**), declare codes (**68**).
+> **Implementation status:** **Step 56 foundation shipped** (2026-08-19). **Step 57 pathfinder & campaign shipped** (2026-08-20). **Step 58 initiative & occupation shipped** (2026-08-20). **Step 59 battle scheduling shipped** (2026-08-20). **Step 60.09 campaign battle launch shipped** (2026-08-20). **Step 61 military & casualties shipped** (2026-08-21): war commitment snapshot, battle pool, collective lives, casualty ledger/apply. **Step 61b battle dev mode shipped** (2026-08-21): capture min 1, devmode phantoms, campaign join cap. **Step 61c campaign UX shipped** (2026-08-21): rules-only templates, formatted `warschedule` output, explicit warband signup, JSON battle/warband persistence (61c.09). **Step 63 war end closure shipped** (2026-08-22). **Step 64 campaign battle schedule & fort sieges shipped** (2026-08-23): schedule, fort control, trim/initiative, resolver/launch, GUI battle kinds, battle zone removal (lock: [64.01](../../ProvinceSystem/Planning/batches/step-64/01-planning-lock.md)). **Step 65 naval & invasions shipped** (2026-08-23): port sea ZOC naval slots, naval invasion, siege override on amphibious landing, campaign GUI naval kinds, `navalVariant` launch, war-aware fort ZOC export (lock: [65.01](../../ProvinceSystem/Planning/batches/step-65/01-planning-lock.md)). Still planned: inter-battle raids (**66**), raid war type (**66**), map export (**67**), declare codes (**68**).
 >
 > **ProvinceSystem:** [step-44](../../ProvinceSystem/Planning/batches/step-44/00-index.md) (map occupation overlay) · [map-export-schema.json](../../ProvinceSystem/Planning/assets/map-export-schema.json)
 
@@ -10,7 +10,7 @@
 
 Previous-season wars were informal: players arranged fights in Discord, staff sometimes ruled outcomes, and the in-game war GUI was barely used. That caused drama and unfairness.
 
-**v1 automated wars** are fully system-driven after staff approve a declaration ticket. Staff set battle **templates** (spawns, jails, capture points) only. Players vote on battle times, join auto-created battles, and the campaign advances on the map without manual organisation.
+**v1 automated wars** are fully system-driven after staff approve a declaration ticket. Staff set battle **rule presets** in templates (lives, friendly fire, keep inventory, durations). Staff place **battle geometry** (spawns, jails, capture points) per scheduled fight via `/battle edit`. Players vote on battle times, sign up via warband join, and the campaign advances on the map without manual organisation.
 
 ---
 
@@ -19,7 +19,7 @@ Previous-season wars were informal: players arranged fights in Discord, staff so
 | Principle | Rule |
 |-----------|------|
 | **Automated** | Campaign route, schedule, progression, goal enforcement, and occupation are system-driven. |
-| **Staff-light** | Staff maintain battle templates; ticket/code gate only in production (step 68). No mid-battle rulings. |
+| **Staff-light** | Staff maintain **rule presets** and place battle geometry per scheduled fight; ticket/code gate only in production (step 68). No mid-battle rulings. |
 | **Transparent** | Campaign line, occupation zones, next battle, votes, and initiative visible in-game and on the web map. |
 | **Wars encouraged** | Reparations are rare and attacker-only. White peace and initiative exhaustion avoid punishing failed wars too harshly. |
 | **One goal** | One war = one war goal. No per-participant goal picking. |
@@ -216,73 +216,158 @@ When **capital itself** is the war target, capital province is the objective.
 
 ### Battle cadence
 
-- **One campaign battle per day** (config) inside **battle window** (default **20:00–24:00 Zulu**, hourly slots).
+- **One campaign battle per day** (config) inside **battle window** (default **20:00–24:00 CET**, hourly slots; see step 59).
 - Exact hour chosen by [voting](#battle-scheduling--voting).
-- **First campaign battle** is always at **`campaign_provinces[cursor_index]`** (border **B** at declare), regardless of **N**.
-- **Later field battles:** every **N** provinces along the campaign line (config), plus mandatory battles at special nodes (objective capture/recapture, fort ZOC **siege** before advance, capital-as-target final battle). Battle **scheduling** and site pick → steps **59–63**; step **58** only applies outcomes after a battle is fought.
-- Fort ZOC on line → **siege** before advance. Capital in fort ZOC → siege then final battle.
+- **First campaign battle** is always at **`campaign_provinces[cursor_index]`** (border **B** at declare), regardless of schedule slot order when indices align.
+- **Full battle list** is built at declare (see [Campaign battle schedule](#campaign-battle-schedule-locked-step-64)), trimmed to per-goal `max_battles`, then fought in order via `campaignScheduleIndex`.
+- Fort ZOC on line → **siege** when the line passes through the ZOC and the fort is enemy-controlled. Capital in fort ZOC → siege then objective field battle.
 
-**Target feel:** ~**3 campaign battles** between major factions if attacker never loses; back-and-forth can use up to **~8** with initiative caps.
+**Target feel:** default **4** battles per goal after trim; starting initiative fuel `ceil(4 × 1.5) = 6` with default `initiative_factor`. Back-and-forth spends fuel until exhaustion or victory.
+
+### Campaign battle schedule (locked step 64)
+
+**Planning lock:** [step-64/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-64/01-planning-lock.md) · [step-65/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-65/01-planning-lock.md) (naval)
+
+At declare, after the campaign axis is set:
+
+```text
+natural  = CampaignScheduleBuilder.build(axis, forts, cadence)
+trimmed  = CampaignScheduleTrimmer.trim(natural, max_battles[goal])
+war.campaignBattleSchedule = trimmed
+war.campaignScheduleIndex = 0
+fuel     = ceil(trimmed.size() * initiative_factor)  // both coalitions
+```
+
+#### Two layers: template vs display
+
+| Layer | Purpose | Values |
+|-------|---------|--------|
+| **`BattleType`** | Win rules (capture vs contest) | `FIELD`, `SIEGE` (no `BattleType.NAVAL`) |
+| **`CampaignBattleKind`** | GUI label / staff setup expectations | `Field Battle`, `Siege`, `Naval Battle`, `Naval Invasion` |
+
+Objective battles use **field** template and **Field Battle** display (required slot, never trimmed). Naval kinds use **`FIELD`** template plus **`navalVariant`** on the battle (staff sea spawn layout).
+
+#### Natural slots (before trim)
+
+| Slot | When | `BattleType` | Display |
+|------|------|--------------|---------|
+| **Siege** | Axis passes through province in operational fort ZOC; fort controller is enemy | `SIEGE` | Siege |
+| **Naval** | Axis sea run blocked by enemy port sea ZOC | `FIELD` + `navalVariant` | Naval Battle |
+| **Naval invasion** | First defender-owned land after sea run (unless fort ZOC override) | `FIELD` + `navalVariant` | Naval Invasion |
+| **Field** | Every `provinces_between_battles` along axis | `FIELD` | Field Battle |
+| **Objective** | Always at `objectiveProvinceId` | `FIELD` | Field Battle (`required`) |
+
+Siege fires **once per fort** on the line (battle at fort province). Overlapping ZOC: **oldest** operational fort wins per province (`completedAt`, then id).
+
+#### Port sea ZOC (shipped step 65)
+
+Sea zones use **`Terrain.SEA`** only (not `Province.isSea()` / rivers). At declare, scan the axis for contiguous **SEA** runs (pathfinder pass 2).
+
+| Rule | Detail |
+|------|--------|
+| **Port coverage** | BFS from **SEA neighbours of the port land province**; expand only across ocean tiles; radius **`war.port_sea_zoc_radius`** (default **2**) |
+| **Blocking port** | Operational port whose owner coalition is **enemy of aggressor** at declare and whose coverage intersects any sea province in the run |
+| **Naval slot** | One **`NAVAL`** per blocking port at the **port installation province** (`portInstallationId` on slot); friendly port covering the run → no naval slot |
+| **No enemy port** | Sea on axis alone does **not** insert a naval slot |
+| **Naval invasion** | First **defender-owned land** after the sea run → **`NAVAL_INVASION`**; landing in **enemy-controlled** fort ZOC → **`SIEGE`** at fort instead (no invasion slot) |
+| **Overlap** | Oldest operational port wins per sea province (`completedAt`, then `id`) |
+
+#### Trim priority (lowest cut first)
+
+Objective (required) → siege → naval → naval invasion → field cadence. Within a tier, drop slots **farthest from objective** first (`CampaignScheduleTrimmer` ships naval kinds).
+
+#### War-time fort control
+
+Installation DB ownership does **not** change. `fortControllers` on the war tracks who **controls the ZOC**. Siege winner becomes controller. Counter-push through enemy-held ZOC **inserts a siege slot** at `campaignScheduleIndex` before the next battle resolves.
+
+#### Progression
+
+- `nextBattleProvince(war)` → `campaignBattleSchedule[campaignScheduleIndex].provinceId` (after re-siege insert check).
+- Each fought campaign battle increments `campaignScheduleIndex` and `campaignBattlesFought`.
+- `cursorIndex` still advances on winner **Push** per existing rules.
+
+#### Persistence (new war JSON fields)
+
+| Field | Role |
+|-------|------|
+| `campaignBattleSchedule` | Ordered trimmed slots |
+| `campaignScheduleIndex` | Next slot index |
+| `fortControllers` | installation id → coalition key |
+
+Slot shape: `provinceId`, `kind`, `required`, optional `fortInstallationId` (siege), optional `portInstallationId` (naval).
 
 ### Cursor movement (after each fought battle)
 
-| Outcome | Cursor |
-|---------|--------|
-| Side currently **pushing toward objective** wins | **Forward** (+1 along line toward objective) |
-| Pushing side **loses** | **Backward** (−1) |
+Cursor moves only when the **battle winner chooses Push** after the battle. **Hold** keeps the cursor in place and auto-proposes white peace.
 
-Direction follows **who won last battle**, not static attacker/defender role.
+| Winner choice | Cursor |
+|---------------|--------|
+| **Push** | Advances along the current `pushTarget` (toward objective, toward aggressor capital, or retake objective) |
+| **Hold** | Unchanged; white peace proposed to the loser |
 
-### Initiative (locked)
+### Initiative (locked; updated step 64)
 
 | Rule | Default |
 |------|---------|
-| Each side starts with **N initiative** | **4** (config) |
-| Each **fought** campaign battle consumes **1** from the **offensive** side (who is pushing toward objective that battle) |
-| **Postponed** battle (low votes) | **No** initiative spent |
-| Offensive side at **0 initiative** | Cannot launch a **new offensive** (cannot spend initiative to attack) |
+| Starting fuel (both coalitions) | `ceil(trimmed_schedule.size() × initiative_factor)` |
+| `initiative_factor` | **1.5** (config) |
+| Per-goal `max_battles` | **4** each (`DE_JURE_ANNEX`, `SUBJUGATE`, `TRANSFER_SUBJECT`) |
+| **`initiativeHolderCoalition`** | Which coalition may schedule the next campaign battle and is battle-offensive (starts **aggressor** at declare) |
+| Each **fought** battle | **Battle offensive coalition** (holder at battle start) loses **1** fuel when the battle ends |
+| **Winner** | Becomes initiative holder after post-battle choices resolve (unless Hold assigns attack to the loser) |
+| **Postponed** battle (low votes) | **No** fuel spent; holder unchanged |
+| Coalition at **0 fuel** while holding initiative | Cannot schedule until they win initiative back |
 
-### Attacker initiative exhausted — defender choice (not mandatory counter-attack)
+**Removed:** `war.initiative_per_side` fixed fuel at declare. Fuel is derived from **final** trimmed battle count only (re-siege inserts do not recompute fuel).
 
-When **attacker initiative = 0**, the **defender war leader** chooses (not auto-forced into a counter-offensive):
+### Post-battle choice (every battle)
 
-| Defender choice | Result |
-|-----------------|--------|
-| **White peace** | War ends. **No** reparations. |
-| **Counter-push** | Optional offensive: fight **leftward** on the campaign axis toward **attacker capital** (line already includes capital direction). |
-| **Hold** | **No** counter-push. War stays active on the current front. Attacker still cannot attack (0 initiative). Attacker must **accept** a pending white peace proposal or wait while the front sits (e.g. after a successful **siege defense**, defender is not forced into a field battle they would lose). If the attacker later regains no initiative (none in v1), stalemate resolves via [white peace proposals](#white-peace-proposals-locked). |
+After **every** campaign battle, the **winner's war leader** chooses on the campaign view (or admin `battlechoice`):
 
-**Counter-push is never mandatory.** A defender who just won a costly siege may **hold** rather than counter-attack into unfavorable odds.
+| Winner choice | Result |
+|---------------|--------|
+| **Push** | Continue the offensive; cursor moves per `pushTarget`; voting reopens |
+| **Hold** | Front held; winner auto-proposes white peace; **loser** chooses **Attack** or **Accept peace** |
 
-If the attacker still has initiative remaining, they may spend **1** to schedule another attack on the current front (e.g. **attack the fort again** after a failed siege). That is normal offensive spend, not the "attacker exhausted" branch above.
+**Loser response after Hold:**
+
+| Loser choice | Result |
+|--------------|--------|
+| **Attack** | Loser gets initiative at the held front; voting reopens |
+| **Accept peace** | White peace; war ends with no goal |
+
+**Defaults at deadline:** winner **Push**; loser **Attack** after Hold.
+
+**Mandatory Hold (moment C):** if the battle winner cannot field an offensive army at the **next** battle province after a Push (troops must be ready immediately), the winner is treated as having chosen **Hold** - the loser gets **Attack** / **Accept peace** without a Push/Hold prompt.
+
+While `postBattleChoicePhase` is not `NONE`, **no** new battle may be scheduled (vote close blocked until choice or deadline).
+
+### Declare gate (locked)
+
+War declare is blocked unless the **declaring attacker faction** has at least **1 offensive manpower** from live military (`Military.getManpower(true)`). Regiment types count when marked `offense: true` in `regiments.yml` (levy or professional). No first-battle province or `canAttack()` check at declare.
+
+### Battle offensive forfeit (locked)
+
+At **scheduled battle time**, if the **battle offensive coalition** (initiative holder) cannot `canAttack()` at that province, they **forfeit** the battle: the opponent wins with no casualties, then normal post-battle choice rules apply. The same forfeit applies in the military walkover chain when the initiative holder cannot attack.
 
 ### White peace proposals (locked)
 
-Replace blunt auto-end on unreachable counter-push with **proposal + accept**:
+Symmetric reach checks per **coalition** via `CampaignCapabilityService.canReachTarget`:
 
-Each side tracks whether it has **auto-proposed white peace** when it **cannot reach its current capitulation target** with **remaining initiative**:
-
-| Side | Capitulation target (for reach check) |
-|------|-------------------------------------|
-| Attacker (invasion / retake) | **Objective** province (or capital when capital is the war terminus) |
-| Defender (counter-push phase) | **Attacker capital** |
-
-**Reach check:** `steps_needed` = provinces along **`campaign_provinces[]`** from **`cursor_index`** toward that side's capitulation target; compare to that side's **remaining initiative**.
+| Coalition | Capitulation target (axis steps from cursor) |
+|-----------|-----------------------------------------------|
+| Aggressor | Objective province index |
+| Defender | Aggressor capital index |
 
 | Situation | Result |
 |-----------|--------|
-| One side cannot reach its target | That side **auto-proposes white peace** (flag on war record; visible in GUI / `warstatus`) |
-| Other war leader **accepts** the proposal | **White peace** — war ends, **no** goal, **no** reparations |
-| **Both** sides auto-propose (includes **both initiative = 0**) | **Automatic white peace** — no acceptance step |
-| Voluntary mutual agreement | Leaders agree white peace anytime (step **62** UI/command) |
+| One coalition cannot reach its target | That coalition **auto-proposes white peace** |
+| Other war leader **accepts** | **White peace** - war ends, no goal, no reparations |
+| **Both** coalitions auto-propose (includes **neither can attack**) | **Automatic white peace** |
+| Neither coalition can mount next offensive (VOTING/SCHEDULED) | **Automatic white peace** (offensive stalemate) |
+| Hold peace proposal active | Winner's coalition stays flagged until next battle ends |
 
-**Examples:**
-
-- Defender chose counter-push but `steps_needed > initiative_defender` → defender auto-proposes; attacker may accept or continue if they still have initiative and a reachable target.
-- Attacker at 0 initiative, defender **holds** (no counter-push) → if neither side can reach capitulation with remaining initiative, both flags → **automatic white peace**.
-- Attacker needs **3** steps to objective, has **2** initiative → attacker auto-proposes; defender may accept (end) or **hold** and wait (defender is not forced to accept).
-
-Persist proposal flags on the war record (e.g. `whitePeaceProposedByAttacker`, `whitePeaceProposedByDefender`); cleared if the strategic picture changes (implement batch defines when recalc runs — typically after each fought battle and phase change).
+Persist `whitePeaceProposedByAttacker` / `whitePeaceProposedByDefender` (coalition flags); recalc after each choice resolution and walkover chain.
 
 ### Both sides initiative = 0
 
@@ -293,9 +378,9 @@ Persist proposal flags on the war record (e.g. `whitePeaceProposedByAttacker`, `
 1. Attacker wins at **objective** → objective held (attacker occupation).
 2. Next battle: defenders **retake** at objective (defender offensive).
 3. **Defenders win** → objective stays defender; cursor stays at objective; attackers must attack objective again.
-4. **Attackers win retake attempt** → defenders push back: cursor **−1** on campaign line.
+4. **Attackers win retake attempt** → **attacker victory** (war ends; no cursor rollback).
 
-Capital as objective: capital battle won → **auto surrender** (no retake loop).
+Capital as objective: capital battle won → **auto victory** (no retake loop). Symmetric rule: aggressor wins at **defender capital** → attacker victory; defender wins at **attacker capital** → defender victory. Failed retake at objective (attackers win while `retake_objective` is active) → attacker victory.
 
 ---
 
@@ -303,7 +388,7 @@ Capital as objective: capital battle won → **auto surrender** (no retake loop)
 
 **Planning lock:** [step-58/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-58/01-planning-lock.md)
 
-Primary player surface for campaign line, next battle choice, white peace accept, and (step 59) battle hour voting. **GUI-first** — no player commands for hold, counter-push, or accept peace.
+Primary player surface for campaign line, post-battle Push/Hold choice, white peace accept, and battle hour voting. **GUI-first** for campaign choices.
 
 ### Navigation
 
@@ -311,7 +396,7 @@ War list → War view → **Campaign** button → **Campaign view**.
 
 ### Route row
 
-- Horizontal row: **attacker direction left**, **defender direction right**.
+- Horizontal row: **aggressor direction left**, **defender direction right**.
 - One slot per province on **`campaign_provinces[]`** (paginate if long).
 - **Cursor marker** on **`cursor_index`** (separate from block color).
 
@@ -319,27 +404,24 @@ War list → War view → **Campaign** button → **Campaign view**.
 
 | Material | Meaning |
 |----------|---------|
-| **Blue concrete** | Province owned by **your** belligerent coalition (main, subjects, called allies) |
+| **Blue concrete** | Province owned by **your** belligerent coalition |
 | **Red concrete** | Province owned by **enemy** belligerent coalition |
 | **Green concrete** | **Next battle** when only one valid option |
-| **Yellow concrete** | **Choice** between two valid next battles (war leader click) |
 
-**Not de jure.** **Not occupation bulge** for these colors — use **belligerent territorial ownership** (`ProvinceOwnerLookup` + war side membership). Neutral/unowned provinces on the line: **red** for both sides (v1).
-
-**No gray.** **No white.** Every battle has a winner.
-
-Green/yellow mark **action** slots; ownership remains visible in item lore.
+**Not de jure.** Use **belligerent territorial ownership**. Neutral provinces on the line: **red** for both sides (v1).
 
 ### Leader interactions
 
 | Situation | Campaign view |
 |-----------|----------------|
-| Attacker has initiative | Attacker leader sees **green** on next attack node |
-| Attacker initiative = 0 | Defender leader sees **yellow** on current front (**hold**) and next node **left** (**counter-push**); confirm dialog |
+| Winner choice pending | **Push** / **Hold** buttons (slots 40-41) |
+| Loser response after Hold | **Attack** / **Accept white peace** buttons (slots 42-43) |
+| War leader (no choice pending) | **Surrender** (slot 47) |
+| Enemy white peace proposed | **Accept peace** (slot 48) when eligible |
 | White peace proposed | Other war leader **Accept white peace** button |
 | Both auto-propose | Automatic white peace |
 
-Fort / objective / capital: lore tags; siege rules in step **63**.
+Fort / objective / capital: lore tags; scheduled battle kind (**Field Battle** / **Siege**) on route provinces; siege provinces show enchant glint.
 
 Voting hour toggles and schedule info: Campaign view slots **28-32** (hour multi-select), info book slot **4**, autoresolve propose slots **49-51** (step **59**, shipped 2026-08-20).
 
@@ -419,15 +501,18 @@ Config under `war.battle_voting`:
 | `battleVotes` | UUID → selected hours |
 | `autoresolveProposedByAttacker/Defender` | Dual-leader autoresolve flags |
 | `postponementsThisCycle` | Debug counter |
-| `defenderChoiceResolved` | Defender hold/counter choice locked (auto-Hold at deadline) |
+| `postBattleChoicePhase` | `NONE`, `WINNER_PUSH_HOLD`, `LOSER_ATTACK_PEACE` |
+| `postBattleChoiceResolved` | Choice locked (deadline defaults applied) |
+| `initiativeHolderCoalition` | `aggressor` or `defender` coalition key |
+| `pushTarget` | `toward_objective`, `toward_aggressor_capital`, `retake_objective` |
+| `defenderChoiceResolved` | Legacy alias of `postBattleChoiceResolved` (v2 saves) |
 | `forceQuorumNextClose` | Dev-only: next admin/tick close bypasses quorum ([DEV-SHORTCUTS.md](../../ProvinceSystem/Planning/DEV-SHORTCUTS.md)) |
 
 ### Runtime (59.06)
 
-- **UTC scheduler:** `BattleScheduleTickService` polls every minute; processes each active `VOTING` war once per UTC hour change. At `defender_choice_deadline_hour` applies auto-Hold when needed; at `vote_close_hour` runs tally (schedule, postpone, or autoresolve). Persists on change.
-- **Campaign battle launch (60.09):** On `SCHEDULED`, `CampaignBattleLaunchService` creates `campaign_w{id}_p{prov}` from campaign template, auto-rosters warbands, broadcasts `/battle join`. Tick starts fight at `scheduledBattleAt`. Autoresolve accept starts immediately. On `BattleEndedEvent`, progression + occupation apply and phase returns to `VOTING`. Regiment casualties apply in **61.06** (locked in **61.01**, not yet implemented).
-- **Declare hook:** `WarManager.declareWar` -> `populateCampaign` -> `initScheduleState` sets `VOTING`, `battleDay`, empty votes.
-- **Admin dev commands:** `/faction warschedule <warId> <subcommand>` (`opencvote`, `closevote`, `skipday`, `castvote`, `forcequorum`, `setscheduled`). Permission `simplefactions.admin`. Remove before prod.
+- **UTC scheduler:** `BattleScheduleTickService` polls every minute; at `defender_choice_deadline_hour` applies post-battle choice defaults; at `vote_close_hour` runs tally. Persists on change.
+- **Campaign battle launch:** On `SCHEDULED`, `CampaignBattleLaunchService` creates campaign battle, enrolls warbands. On `BattleEndedEvent`, casualties apply, then `CampaignBattleOutcomeService` spends fuel, begins winner Push/Hold choice, and may chain military walkovers after choice resolves.
+- **Admin dev commands:** `/faction warschedule <warId> battlechoice push|hold|attack|accept` (aliases: `defenderchoice`, `pushchoice`, `holdchoice`). Permission `simplefactions.admin`.
 
 ---
 
@@ -437,7 +522,7 @@ Config under `war.battle_voting`:
 
 SimpleFactions runs **one** province location poll for all online players every **1 second**. It fires **`PlayerProvinceEnterEvent`** / **`PlayerProvinceLeaveEvent`** when a player's province changes.
 
-Battles (province-leave penalty), and future systems (ZOC, raids), **subscribe to these events** instead of running separate location scans.
+Battles and future systems (ZOC, raids) **subscribe to these events** instead of running separate location scans. Province-leave battle penalty **removed** in step **64.08**.
 
 Lookup: [`RestServer.getProvince`](./ProvinceGrid.md) → local `ProvinceGrid`.
 
@@ -445,17 +530,17 @@ Lookup: [`RestServer.getProvince`](./ProvinceGrid.md) → local `ProvinceGrid`.
 
 Same pattern as professions → RPCharacters. SF owns campaign battles, join flow, lives, and campaign linkage. Warbands battle engine (capture points, deaths, respawn) becomes an SF submodule.
 
-### Battle modes (locked step 60)
+### Battle modes (locked step 60; zones removed step 64.08)
 
 | Mode | Win | Region | Respawns |
 |------|-----|--------|----------|
-| **Field** | Side eliminated when **lives = 0** and all online fighters are in **jail** (capture points gate spawn teleports only) | Battle **province** (+ naval add-on) | Campaign: collective lives from committed regiments (61.04). Staff manual: template lives |
-| **Siege** | Hold **contest area** until timer hits **0** (ETW-style bidirectional timer); defender elimination also ends battle | Same as field | Same as field |
+| **Field** | Side eliminated when **lives = 0** and all online fighters are in **jail** (capture points gate spawn teleports only) | **No province fence** (64.08) | Campaign: collective lives from committed regiments (61.04). Staff manual: per-side lives in side edit GUI |
+| **Siege** | Hold **contest area** until timer hits **0** (ETW-style bidirectional timer); defender elimination also ends battle | **No province fence** (64.08) | Same as field |
 | **Raid** | Capture **target** to 100%; defender eliminated when `LIVES` mode exhausted | **No fence** - map-wide movement | Attackers: **none** (elimination on death/disconnect). Defenders: **infinite** or **set lives** (template) |
 
-**Naval variant** (field + siege only): template flag adds the **adjacent sea province** to allowed set; **attacker spawn** on naval point. Campaign sea routing stays step **64**.
+**Naval variant** (field + siege only): template flag for staff layout (**attacker spawn** on naval point). Campaign schedule inserts **`NAVAL`** / **`NAVAL_INVASION`** slots; launch sets **`navalVariant`** on field battles (step 65 shipped). Does not enforce province bounds after 64.08.
 
-**Province-leave penalty** (field + siege): leave allowed province set → **10s countdown** → death → respawn at **side spawn**. Uses central province events. **Raids:** no leave penalty.
+**Province-leave penalty:** **removed** step 64.08 (was: leave allowed set → 10s → death). Staff place spawns, jails, capture points, and contest areas anywhere on the map.
 
 ### Automatic vs manual battles
 
@@ -463,22 +548,64 @@ Same pattern as professions → RPCharacters. SF owns campaign battles, join flo
 |------|-----|
 | **Campaign battle** | System-created from schedule; join via command; mode = field or siege from campaign context |
 | **Raid battle** | Target settlement/province; raid war (66) or inter-battle raid (65) |
-| **Manual battle** | Lore / staff events — **remains** for non-campaign fights |
+| **Manual battle** | Lore / staff events — **remains** for non-campaign fights. **One manual battle at a time** (61c.09); persisted to `plugins/SimpleFactions/Battles/`; delete via battle edit GUI (slot 22) or admin flow |
 
-### Staff template battles
+### Staff template battles (61c)
 
-From war GUI (staff): **template** per province — **spawns**, **jails**, **capture points** (field), **contest area** + duration (siege), **naval variant**, **defender respawn mode** (raid). Reused for campaign battles at that province.
+**YAML templates** (`battle-templates.yml`) apply **battle rules only**: lives, friendly fire, keep inventory, siege/raid durations, defender respawn mode, naval variant flag. They do **not** seed spawns, jails, or capture point coordinates.
+
+For each **campaign battle**, staff use `/battle edit` (or battle GUI) to place spawns, jails, capture points (field), contest area + duration (siege), and naval spawn when applicable. Manual (non-campaign) battles from the war GUI reuse the same edit flow. **Fast edit:** open Sides, click a side, use Set spawn / Set jail / Add point at your feet (61c.10).
+
+### Capture points enabled (`capture_points_enabled`)
+
+Template YAML key (default `true` on `field_default`, `false` on siege/raid). When enabled:
+
+- Battle edit slot 23 opens the points list
+- Side Edit shows **Add point** (auto-names A, B, C per side)
+- Capture point tick runs during the fight
+
+When disabled, siege/raid use contest area or raid target UI on slot 23 instead.
+
+### Battle & warband persistence (61c.09)
+
+| Path | Content |
+|------|---------|
+| `plugins/SimpleFactions/Battles/battle_{id}.json` | Battle layout, rules, started state, side warband id references |
+| `plugins/SimpleFactions/Warbands/warband_{id}.json` | Roster, leader, campaign shell fields (devmode dummy members not saved) |
+
+- **Autosave:** every 60s and on plugin disable.
+- **Resume:** `started=true` battles restore lives, capture progress, and contest timer; tick loop continues without re-teleport/title.
+- **Manual limit:** only one battle with `warId == null`; `/battle create` blocked until deleted.
+- **Orphan cleanup:** manual warbands not attached to any persisted battle are removed on save/disable.
+- **Campaign end:** `CampaignBattleOutcomeService` deletes battle + campaign warband JSON when the war outcome resolves the fight.
 
 ### In-battle rules
 
-- Leave allowed **provinces** (field/siege) → **10s countdown** → death → respawn at **side spawn** (central province tracker).
+- **No province-leave penalty** (removed 64.08). Movement is unrestricted during field/siege battles.
 - Friendly fire / keep inventory per template config.
 - **Raid attackers** do not respawn; fight until eliminated.
 - **Raid defenders:** infinite respawns or finite lives per template.
 
+### Battle dev mode and capture (61b + 61c, test server)
+
+Solo staging on the test server: [DEV-SHORTCUTS.md](../../ProvinceSystem/Planning/DEV-SHORTCUTS.md). Full campaign E2E: [step-61c/05-docs-verify.md](../../ProvinceSystem/Planning/batches/step-61c/05-docs-verify.md).
+
+| Topic | Detail |
+|-------|--------|
+| Capture threshold | `battle.capture_min_players` (default **1**). The side with strictly more players in the zone ticks capture. |
+| Devmode | `/battle devmode on\|off\|status` (admin, volatile). **On:** fills every active campaign battle side warband with up to `phantom_count` dummy roster members (re-applies after restart). **Off:** strips dummy members from all warbands. Dummies are not persisted to disk. Manual `/warband create` also seeds dummies when devmode on. Dummies count toward roster display, lives subtraction, and join cap preview. Capture markers and capture presence still use online real players only. |
+| Campaign join | When `battle.warId != null`: joining faction must be on the battle side; side roster capped by **pool lives** (`livesPerRegiment × committedRegiments`, pre-battle) or side lives (mid-battle join costs 1 life). `/battle join` redirects to `/warband list` signup. One auto warband per battle side. Player-facing errors: wrong side, roster full, no lives left, blocked rejoin after mid-battle leave. |
+
+Config under `battle:`:
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `capture_min_players` | `1` | Min players at a capture zone |
+| `devmode.phantom_count` | `10` | Dummy roster fill on manual warband create or campaign seed when devmode on |
+
 ### Manpower pool per battle (locked step 61.01)
 
-Planning lock: [step-61/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-61/01-planning-lock.md) · levy detail: [step-61/01b-levy-vassal-lock.md](../../ProvinceSystem/Planning/batches/step-61/01b-levy-vassal-lock.md). Implementation batches **61.02–61.07**.
+Planning lock: [step-61/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-61/01-planning-lock.md) · levy detail: [step-61/01b-levy-vassal-lock.md](../../ProvinceSystem/Planning/batches/step-61/01b-levy-vassal-lock.md). Implementation batches **61.02–61.07 shipped** (2026-08-21).
 
 Offense/defense regiment pools depend on **where the battle is fought** and **campaign phase**, not who declared war. Use `CampaignProgressionService.getOffensiveSide(war)` to determine which belligerent role is offensive; that side's factions use offensive regiments, the other side uses defensive regiments.
 
@@ -507,23 +634,26 @@ Minimal rules (locked 61.01 + 61.01b):
 | **New vassal** (of main, subject fighter, or ally) | No new rows |
 | **Vassal bond breaks** | Remove rows for broken subject **and its subject subtree**; if a fighting subject leaves, remove all rows it held |
 
-Today `WarManager.getCommitmentsForWar` returns real snapshot rows via `WarCommitmentService` (61.02). Re-commit is forbidden per own-regiment row. Levy rows use `sourceFactionId`. Commitments are in-memory until 61.06 persistence.
+Today `WarManager.getCommitmentsForWar` returns snapshot rows via `WarCommitmentService` (61.02). Re-commit is forbidden per own-regiment row. Levy rows use `sourceFactionId`. Commitments persist on war JSON (`WarData.commitments`, 61.06) and reload on server start.
+
+**Admin debug:** `/faction warstatus <warId>` prints one JSON line per war. Use `commitmentRows` to inspect per-faction rows (`factionId`, optional `sourceFactionId`, `regimentId`, `count`). Example own row: `{"factionId":"atk","regimentId":"militia","count":4}`. Example levy row: `{"factionId":"atk","sourceFactionId":"sub","regimentId":"levy","count":6}`. The `commitments` field is the row count (same as `commitmentRows.length`). After a campaign battle ends, re-run `warstatus` to confirm rows and counts decreased (61.06).
 
 Militia eligibility is filtered at **battle pool** time, not at commit.
 
 ### Lives (collective, campaign field + siege)
 
-Applies when `battle.warId != null` and type is **FIELD** or **SIEGE** at `battle.start()` (61.04). Staff manual battles (`warId == null`) and **raids** keep 60 template lives.
+Applies when `battle.warId != null` and type is **FIELD** or **SIEGE** at `battle.start()` (61.04). Campaign lives are **computed per side** from war commitment and roster size; the battle editor shows a read-only preview before start. `/battle setlives` is rejected on campaign battles. Staff manual battles (`warId == null`) configure **per-side lives** in the side edit GUI (FIELD/SIEGE); **raids** keep template defender lives.
 
 **Formula (per side):**
 
 ```text
-sideLives = max(minSideLives, livesPerRegiment × committedRegiments − playersAtStart)
+sideLives = max(minSideLives, livesPerRegiment × committedRegiments − rosterFighters)
 ```
 
 - `committedRegiments`: eligible pool total from battle pool resolver (61.03)
-- `playersAtStart`: unique online fighters on that side at start
-- `max_players ≤ lives`
+- `rosterFighters`: unique warband roster members on that side (includes devmode dummies; offline real players included)
+- Capture markers and capture presence still count **online real players only**
+- Pre-battle join cap uses **pool lives** (committed regiments × lives per regiment); mid-battle join costs 1 life from the started side pool
 
 Config under `war.battle_military`:
 
@@ -534,11 +664,11 @@ Config under `war.battle_military`:
 
 ### Casualties (locked step 61.01)
 
-**Ledger (61.05):** During campaign field/siege battles, track per-side casualties from deaths, disconnects after start, and province-leave penalty deaths. No ledger for staff manual or raid battles.
+**Ledger (61.05):** During campaign field/siege battles, track per-side casualties from deaths and disconnects after start. Province-leave penalty deaths **removed** with 64.08. No ledger for staff manual or raid battles.
 
-**Apply (61.06):** After battle via `CampaignBattleOutcomeService` (before `openVote`). Order: militia first (when eligible at battle province), then army + levies split **proportionally** across contributors. Debits `WarCommitment.count` and faction `Regiment.currentSlots` (permanent until rebuilt). Applies even when **no winner**.
+**Apply (61.06):** After battle via `CampaignBattleOutcomeService` (before `openVote`). Implemented in `BattleCasualtyService`: militia first (when eligible at battle province), then army + levies split **proportionally** across contributors. Debits `WarCommitment.count` and faction `Regiment.currentSlots` (permanent until rebuilt). Applies even when **no winner**. Side casualties are snapshotted on `BattleEndedEvent` before the ledger clears.
 
-**Out of scope for 61:** staff battles, goal apply (**62**), fort ZOC siege pick (**63**), raid war type (**66**).
+**Out of scope for 61:** staff battles, goal apply (**62**), campaign battle schedule / fort sieges (**64**), raid war type (**66**).
 
 ### Levies (war-scoped)
 
@@ -555,21 +685,27 @@ Config under `war.battle_military`:
 
 ## Naval & installations
 
-### Campaign naval segments
+**Planning lock:** [step-65/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-65/01-planning-lock.md)
 
-Sea zones from province sea neighbours. Hostile **port** covering a sea zone blocks passage → **naval battle** required before land continues.
+### Campaign naval segments (shipped step 65)
+
+Full rules: [Port sea ZOC](#port-sea-zoc-shipped-step-65) under campaign battle schedule.
+
+- Enemy **port** sea ZOC blocking an axis sea run → **`NAVAL`** schedule slot at the port province (`navalVariant` field battle).
+- First **defender-owned land** after a sea run → **`NAVAL_INVASION`** (or **siege** if landing province is in enemy-controlled fort ZOC).
+- Sea on axis without an enemy blocking port → no naval slot.
 
 ### Port protection
 
-Port covers **up to 2 sea zones** away (config). Coastal forts (~20 blocks from coast, like ports) align with installation battle rules.
+`war.port_sea_zoc_radius` (default **2**): sea-hop BFS from the port's adjacent ocean tiles. Distinct from `port-sea-proximity-blocks` (construction validation only). See [Installations.md](./Installations.md#config).
 
 ### Installation pick per battle
 
-Attacker and defender each choose which **port / airport / fort** they use for that battle (cannot use all every time). **Blocking port** is mandatory for defender in naval gate battles. Airports used in attack can be bombed in inter-battle air raids.
+**Deferred** (not in step 65 scope). Schedule slots carry `portInstallationId` for the **blocking** port only. Full attacker/defender port / airport / fort pick UI may ship later or in step 66 prep. Airports used in attack can be bombed in inter-battle air raids (step 66).
 
-Fort ZOC on campaign line → **siege battle** before advance. Capital inside fort ZOC → siege then final battle.
+Fort ZOC on campaign line → **siege** when line passes through ZOC and fort is enemy-controlled. War-time fort controller may differ from installation owner; see [Campaign battle schedule](#campaign-battle-schedule-locked-step-64). Capital inside fort ZOC → siege then objective field battle.
 
-See [Installations.md](./Installations.md) for fort/port/airport pipeline. War-based ZOC suppression (`ZocRealm` TODO) ships with war rework.
+See [Installations.md](./Installations.md) for fort/port/airport pipeline. War-aware ZOC on map export (`ZocRealm` controller filter) **shipped** step 65; see [Installations.md](./Installations.md#fort-zoc-export-forts).
 
 ---
 
@@ -577,10 +713,21 @@ See [Installations.md](./Installations.md) for fort/port/airport pipeline. War-b
 
 | Outcome | Trigger | Goal | Reparations |
 |---------|---------|------|-------------|
-| **Attacker win** | Defender surrenders, loses objective, loses capital when capital is target | Goal applied | No |
-| **Defender win** | Attacker surrenders, loses capital | — | **Attacker pays** |
-| **White peace** | Leader accept of auto-proposal, voluntary mutual agreement, or **both** sides auto-propose (unreachable capitulation / both initiative 0) | None | **No** |
+| **Attacker victory** | Aggressor wins battle at defender capital, failed objective retake, or defender leader **surrenders** (slot 47) | Goal apply (future) | No |
+| **Defender victory** | Defender wins battle at attacker capital, or attacker leader **surrenders** (slot 47) | — | **Attacker pays** (future) |
+| **White peace** | Leader accept of auto-proposal, voluntary mutual agreement, mutual exhaustion auto-proposal, or offensive stalemate | None | **No** |
 | **Raid success** | Raid battle won at settlement | Pillage | No (unless attacker loses — N/A for one-shot raid) |
+
+### `WarEndReason` values (shipped step 63)
+
+| Value | Meaning |
+|-------|---------|
+| `white_peace` | No winner; no goal |
+| `attacker_victory` | Attacker coalition wins |
+| `defender_victory` | Defender coalition wins |
+| `admin_end` | Staff / command end |
+
+Opening the campaign view **recalculates** white peace proposal flags only; it does **not** auto-end the war.
 
 ### War reparations (attacker-only)
 
@@ -614,13 +761,15 @@ Full step list and dependencies: [ProvinceSystem/Planning/war-build-order.md](..
 | **58** — Initiative & occupation **done** | Cursor, initiative, occupation bulge, counter-push | SF |
 | **59** — Scheduling **done** | Battle window, voting, postpone, scheduler, `warschedule` dev | SF |
 | **60** — Warbands & battles **done** | Province tracker, field/siege/raid, templates, schedule hook, auto-join | SF |
-| **61** — Military & casualties | Lives, militia, levies, regiment losses (**61.01–61.02 done**; code 61.03+) | SF |
-| **62** — End & goals | Surrender, white peace, goal apply, reparations | SF |
-| **63** — Forts & sieges | ZOC gates on campaign line | SF |
-| **64** — Naval & installations | Sea zones, port pick per battle | SF |
-| **65** — Inter-battle raids | Naval/air/fort between battles | SF |
-| **66** — Raid war type | One-battle border settlement raid | SF |
-| **67** — Map export | `wars[]` occupation payload | SF |
+| **61** — Military & casualties **done** | Commit snapshot, battle pool, collective lives, casualty ledger/apply (61.02–61.07) | SF |
+| **61b** — Battle dev mode **done** | Solo staging: devmode, capture min, campaign join cap | SF |
+| **61c** — Campaign UX **done** | Rules-only templates, formatted `warschedule`, warband signup, battle/warband JSON persistence (61c.09), side fast edit GUI (61c.10) | SF |
+| **62** — Campaign capability **done** | Reach checks, walkovers, declare gate | SF |
+| **63** — War end closure **done** | `WarResolutionService`, surrender GUI, capital auto-victory, stalemate peace | SF |
+| **64** — Campaign schedule & fort sieges **done** | Battle list at declare, fort ZOC sieges, war-time fort control, trim, initiative from schedule, GUI battle kinds, remove battle zones | SF |
+| **65** — Naval & invasions **done** | Port ZOC naval battles, naval invasion slots, siege override, GUI naval kinds, war ZOC export | SF |
+| **66** — Inter-battle raids **planned** | Naval/air/fort between battles | SF |
+| **67** — Map export **planned** | `wars[]` occupation payload | SF |
 | **44** — Map layer | Occupation tint on website | PS |
 | **68** — Declare codes | Ticket → code production gate | SF |
 
@@ -656,9 +805,8 @@ See git history and `War/` package for legacy files.
 ## Open items for implement batches
 
 - Exact **X** provinces for raid war border distance  
-- **N** provinces between campaign battles (after mandatory first battle at border)  
 - **Occupation bulge** adjacency rule (which extra provinces per battle win)  
 - Reparations **%** and **days** defaults  
 - When to **recalculate** white peace auto-proposal flags after cursor / phase change  
 
-These are config or implement-batch detail, not open design questions.
+`provinces_between_battles`, `max_battles`, and `initiative_factor` are locked in step **64** (see config schema in [64.01](../../ProvinceSystem/Planning/batches/step-64/01-planning-lock.md)).
