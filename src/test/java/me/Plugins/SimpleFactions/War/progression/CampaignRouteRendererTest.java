@@ -24,6 +24,9 @@ import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.War.pathfinder.TitleManagerProvinceOwnerLookup;
+import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService.ScheduleLeg;
 import me.Plugins.SimpleFactions.War.schedule.CampaignUiCopy;
 import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -68,7 +71,7 @@ class CampaignRouteRendererTest {
 					Material.RED_CONCRETE,
 					CampaignRouteRenderer.resolveMaterial(routeWar, attacker, 30, owners));
 			assertEquals(
-					Material.GREEN_CONCRETE,
+					Material.RED_CONCRETE,
 					CampaignRouteRenderer.resolveMaterial(routeWar, attacker, 20, owners));
 			assertEquals(
 					Material.RED_CONCRETE,
@@ -83,7 +86,8 @@ class CampaignRouteRendererTest {
 				new ScheduledCampaignBattle(20, CampaignBattleKind.FIELD, false, null)));
 		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
 			stubOwnership(titleManager);
-			List<String> lore = CampaignRouteRenderer.buildRouteLore(war, 20, owners);
+			List<String> lore = CampaignRouteRenderer.buildRouteLore(
+					war, new CampaignRouteEntry(20, 2, 0), owners);
 			assertTrue(lore.contains(StringFormatter.formatHex(CampaignUiCopy.BATTLE_KIND + "Field Battle")));
 		}
 	}
@@ -95,7 +99,8 @@ class CampaignRouteRendererTest {
 				new ScheduledCampaignBattle(18, CampaignBattleKind.SIEGE, false, "fort_a")));
 		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
 			titleManager.when(() -> TitleManager.getByProvince(18)).thenReturn(defender);
-			List<String> lore = CampaignRouteRenderer.buildRouteLore(war, 18, owners);
+			List<String> lore = CampaignRouteRenderer.buildRouteLore(
+					war, new CampaignRouteEntry(18, 1, 0), owners);
 			assertTrue(lore.contains(StringFormatter.formatHex(CampaignUiCopy.BATTLE_KIND + "Siege")));
 		}
 	}
@@ -107,7 +112,8 @@ class CampaignRouteRendererTest {
 				new ScheduledCampaignBattle(20, CampaignBattleKind.NAVAL, false, null, "port_a")));
 		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
 			stubOwnership(titleManager);
-			List<String> lore = CampaignRouteRenderer.buildRouteLore(war, 20, owners);
+			List<String> lore = CampaignRouteRenderer.buildRouteLore(
+					war, new CampaignRouteEntry(20, 2, 0), owners);
 			assertTrue(lore.contains(StringFormatter.formatHex(CampaignUiCopy.BATTLE_KIND + "Naval Battle")));
 		}
 	}
@@ -119,7 +125,8 @@ class CampaignRouteRendererTest {
 				new ScheduledCampaignBattle(21, CampaignBattleKind.NAVAL_INVASION, false, null)));
 		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
 			titleManager.when(() -> TitleManager.getByProvince(21)).thenReturn(defender);
-			List<String> lore = CampaignRouteRenderer.buildRouteLore(war, 21, owners);
+			List<String> lore = CampaignRouteRenderer.buildRouteLore(
+					war, new CampaignRouteEntry(21, 2, 0), owners);
 			assertTrue(lore.contains(StringFormatter.formatHex(CampaignUiCopy.BATTLE_KIND + "Naval Invasion")));
 		}
 	}
@@ -168,6 +175,319 @@ class CampaignRouteRendererTest {
 
 			List<String> lore = CampaignRouteRenderer.buildRouteLore(war, 10, owners);
 			assertTrue(lore.stream().anyMatch(line -> line.contains("(Owned by VassalHold)")));
+		}
+	}
+
+	@Test
+	void buildRouteLore_siegeOmitsDefenderCapitalObjective() {
+		War war = baseWar();
+		war.setObjectiveProvinceId(705);
+		when(defender.getCapital()).thenReturn(705);
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(705, CampaignBattleKind.SIEGE, false, "Greenfort"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.FIELD, true, null)));
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			titleManager.when(() -> TitleManager.getByProvince(705)).thenReturn(defender);
+			List<String> siegeLore = CampaignRouteRenderer.buildRouteLore(
+					war, new CampaignRouteEntry(705, 2, 0), owners);
+			assertFalse(siegeLore.stream().anyMatch(line -> line.contains("Defender Capital")));
+
+			List<String> fieldLore = CampaignRouteRenderer.buildRouteLore(
+					war, new CampaignRouteEntry(705, 2, 1), owners);
+			assertTrue(fieldLore.stream().anyMatch(line -> line.contains("Defender Capital")));
+		}
+	}
+
+	@Test
+	void buildRouteEntries_brumeShaped_expandsMultipleBattlesOnSameProvince() {
+		War war = baseWar();
+		war.setCampaignProvinces(List.of(452, 795, 705));
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(795, CampaignBattleKind.NAVAL, false, null, "port"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.SIEGE, false, "Greenfort"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.FIELD, true, null)));
+		war.setCampaignScheduleIndex(0);
+
+		List<CampaignRouteEntry> entries = CampaignRouteRenderer.buildRouteEntries(war);
+		assertEquals(3, entries.size());
+		assertEquals(795, entries.get(0).provinceId());
+		assertEquals(CampaignBattleKind.NAVAL, war.getCampaignBattleSchedule().get(entries.get(0).scheduleIndex()).kind());
+		assertEquals(705, entries.get(1).provinceId());
+		assertEquals(CampaignBattleKind.SIEGE, war.getCampaignBattleSchedule().get(entries.get(1).scheduleIndex()).kind());
+		assertEquals(705, entries.get(2).provinceId());
+		assertEquals(CampaignBattleKind.FIELD, war.getCampaignBattleSchedule().get(entries.get(2).scheduleIndex()).kind());
+		entries.forEach(entry -> assertTrue(entry.hasBattleSlot()));
+	}
+
+	@Test
+	void buildRouteEntries_afterSiege_showsOnlyFieldOnCapital() {
+		War war = baseWar();
+		war.setCampaignProvinces(List.of(452, 795, 705));
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(795, CampaignBattleKind.NAVAL, false, null, "port"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.SIEGE, false, "Greenfort"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.FIELD, true, null)));
+		war.setCampaignScheduleIndex(2);
+
+		List<CampaignRouteEntry> entries = CampaignRouteRenderer.buildRouteEntries(war);
+		assertEquals(3, entries.size());
+		assertEquals(795, entries.get(0).provinceId());
+		assertEquals(0, entries.get(0).scheduleIndex());
+		assertEquals(705, entries.get(2).provinceId());
+		assertEquals(2, entries.get(2).scheduleIndex());
+		entries.forEach(entry -> assertTrue(entry.hasBattleSlot()));
+	}
+
+	@Test
+	void buildRouteEntries_offAxisSiegeSortsByChronologyProvince() {
+		War war = baseWar();
+		war.setCampaignProvinces(List.of(452, 709, 713, 705));
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(709, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(
+						704,
+						CampaignBattleKind.SIEGE,
+						false,
+						"Lan_Airfield",
+						null,
+						713),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.FIELD, true, null)));
+
+		List<CampaignRouteEntry> entries = CampaignRouteRenderer.buildRouteEntries(war);
+		assertEquals(3, entries.size());
+		assertEquals(709, entries.get(0).provinceId());
+		assertEquals(704, entries.get(1).provinceId());
+		assertEquals(2, entries.get(1).axisIndex());
+		assertEquals(705, entries.get(2).provinceId());
+	}
+
+	@Test
+	void buildRouteEntries_includesCounterLegSlots() {
+		War war = baseWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(30, CampaignBattleKind.FIELD, true, null)));
+		war.setCampaignCounterSchedule(List.of(
+				new ScheduledCampaignBattle(10, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(5, CampaignBattleKind.FIELD, true, null)));
+
+		List<CampaignRouteEntry> entries = CampaignRouteRenderer.buildRouteEntries(war);
+		assertEquals(4, entries.size());
+		assertEquals(5, entries.get(0).provinceId());
+		assertEquals(ScheduleLeg.COUNTER, entries.get(0).scheduleLeg());
+		assertEquals(1, entries.get(0).scheduleIndex());
+		assertEquals(10, entries.get(1).provinceId());
+		assertEquals(ScheduleLeg.COUNTER, entries.get(1).scheduleLeg());
+		assertEquals(0, entries.get(1).scheduleIndex());
+		assertEquals(20, entries.get(2).provinceId());
+		assertEquals(ScheduleLeg.INVASION, entries.get(2).scheduleLeg());
+		assertEquals(30, entries.get(3).provinceId());
+		assertEquals(ScheduleLeg.INVASION, entries.get(3).scheduleLeg());
+	}
+
+	@Test
+	void buildRouteLore_counterSlot_doesNotShowCounterPushLabel() {
+		War war = baseWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(30, CampaignBattleKind.FIELD, true, null)));
+		war.setCampaignCounterSchedule(List.of(
+				new ScheduledCampaignBattle(10, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(5, CampaignBattleKind.FIELD, true, null)));
+		war.setPushTarget(CampaignPushTarget.TOWARD_AGGRESSOR_CAPITAL);
+		war.setInitiativeHolderCoalition(CampaignCoalition.DEFENDER);
+
+		List<String> lore = CampaignRouteRenderer.buildRouteLore(
+				war,
+				new CampaignRouteEntry(10, 1, 0, ScheduleLeg.COUNTER),
+				owners);
+		assertFalse(lore.stream().anyMatch(line -> line.contains("Counter-push schedule")));
+		assertTrue(lore.stream().anyMatch(line -> line.contains("Next battle")));
+	}
+
+	@Test
+	void buildRouteEntries_brumeAxis_geographicOrder() {
+		War war = baseWar();
+		war.setCampaignProvinces(List.of(452, 782, 758, 757, 672, 709, 713, 705));
+		war.setCampaignStartProvinceId(709);
+		war.setObjectiveProvinceId(705);
+		war.setCursorIndex(5);
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(709, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(713, CampaignBattleKind.SIEGE, false, "fort"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.FIELD, true, null)));
+		war.setCampaignCounterSchedule(List.of(
+				new ScheduledCampaignBattle(782, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(672, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(452, CampaignBattleKind.FIELD, true, null)));
+
+		List<CampaignRouteEntry> entries = CampaignRouteRenderer.buildRouteEntries(war);
+		assertEquals(6, entries.size());
+		assertEquals(452, entries.get(0).provinceId());
+		assertEquals(ScheduleLeg.COUNTER, entries.get(0).scheduleLeg());
+		assertEquals(782, entries.get(1).provinceId());
+		assertEquals(672, entries.get(2).provinceId());
+		assertEquals(709, entries.get(3).provinceId());
+		assertEquals(ScheduleLeg.INVASION, entries.get(3).scheduleLeg());
+		assertEquals(713, entries.get(4).provinceId());
+		assertEquals(705, entries.get(5).provinceId());
+		assertTrue(CampaignRouteRenderer.isBorderFirstBattleSlot(war, entries.get(3)));
+	}
+
+	@Test
+	void buildRouteEntries_maxEightSlots_sortsGeographically() {
+		War war = baseWar();
+		war.setCampaignProvinces(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
+		war.setCursorIndex(5);
+		List<ScheduledCampaignBattle> invasion = List.of(
+				new ScheduledCampaignBattle(6, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(7, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(8, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(9, CampaignBattleKind.FIELD, true, null));
+		List<ScheduledCampaignBattle> counter = List.of(
+				new ScheduledCampaignBattle(5, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(4, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(3, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(2, CampaignBattleKind.FIELD, true, null));
+		war.setCampaignBattleSchedule(invasion);
+		war.setCampaignCounterSchedule(counter);
+
+		List<CampaignRouteEntry> entries = CampaignRouteRenderer.buildRouteEntries(war);
+		assertEquals(8, entries.size());
+		assertEquals(2, entries.get(0).provinceId());
+		assertEquals(3, entries.get(1).provinceId());
+		assertEquals(4, entries.get(2).provinceId());
+		assertEquals(5, entries.get(3).provinceId());
+		assertEquals(6, entries.get(4).provinceId());
+		assertEquals(9, entries.get(7).provinceId());
+	}
+
+	@Test
+	void buildRouteLore_currentScheduleSlot_showsNextBattle() {
+		War war = baseWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(795, CampaignBattleKind.NAVAL, false, null, "port"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.SIEGE, false, "fort")));
+		war.setCampaignScheduleIndex(0);
+
+		List<String> lore = CampaignRouteRenderer.buildRouteLore(
+				war,
+				new CampaignRouteEntry(795, 1, 0),
+				owners);
+		assertTrue(lore.stream().anyMatch(line -> line.contains("Next battle")));
+	}
+
+	@Test
+	void resolveOwnershipMaterial_neutralProvince_usesGrayConcrete() {
+		War war = baseWar();
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			titleManager.when(() -> TitleManager.getByProvince(5)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(10)).thenReturn(null);
+			titleManager.when(() -> TitleManager.getByProvince(20)).thenReturn(defender);
+			titleManager.when(() -> TitleManager.getByProvince(30)).thenReturn(defender);
+
+			assertEquals(
+					Material.GRAY_CONCRETE,
+					CampaignRouteRenderer.resolveOwnershipMaterial(war, attacker, 10, owners));
+		}
+	}
+
+	@Test
+	void buildRouteEntries_noAxisFiller_allSlotsHaveScheduleIndex() {
+		War war = baseWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.FIELD, false, null)));
+		war.setCampaignCounterSchedule(List.of(
+				new ScheduledCampaignBattle(10, CampaignBattleKind.FIELD, false, null)));
+
+		List<CampaignRouteEntry> entries = CampaignRouteRenderer.buildRouteEntries(war);
+		assertEquals(2, entries.size());
+		entries.forEach(entry -> assertTrue(entry.hasBattleSlot()));
+	}
+
+	@Test
+	void buildRouteLore_foughtSlot_showsFought() {
+		War war = baseWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(30, CampaignBattleKind.FIELD, true, null)));
+		war.setCampaignScheduleIndex(1);
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			stubOwnership(titleManager);
+			List<String> lore = CampaignRouteRenderer.buildRouteLore(
+					war, new CampaignRouteEntry(20, 2, 0), owners);
+			assertTrue(lore.stream().anyMatch(line -> line.contains("Fought")));
+			assertFalse(lore.stream().anyMatch(line -> line.contains("Next battle")));
+		}
+	}
+
+	@Test
+	void resolveRouteEntryMaterial_brumeShapedSchedule_greensNavalBeforeCapital() {
+		War war = baseWar();
+		war.setCampaignProvinces(List.of(452, 795, 705));
+		war.setCampaignStartProvinceId(705);
+		war.setObjectiveProvinceId(705);
+		war.setCursorIndex(2);
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(795, CampaignBattleKind.NAVAL, false, null, "port"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.SIEGE, false, "fort"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.FIELD, true, null)));
+		war.setCampaignScheduleIndex(0);
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			titleManager.when(() -> TitleManager.getByProvince(5)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(452)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(795)).thenReturn(null);
+			titleManager.when(() -> TitleManager.getByProvince(705)).thenReturn(defender);
+
+			ScheduledCampaignBattle naval = war.getCampaignBattleSchedule().get(0);
+			assertEquals(
+					Material.TRIDENT,
+					CampaignRouteRenderer.resolveRouteEntryMaterial(
+							war,
+							attacker,
+							new CampaignRouteEntry(795, 1, 0),
+							naval,
+							owners));
+			ScheduledCampaignBattle siege = war.getCampaignBattleSchedule().get(1);
+			assertEquals(
+					Material.RED_CONCRETE,
+					CampaignRouteRenderer.resolveRouteEntryMaterial(
+							war,
+							attacker,
+							new CampaignRouteEntry(705, 2, 1),
+							siege,
+							owners));
+		}
+	}
+
+	@Test
+	void resolveMaterial_brumeShapedSchedule_usesOwnershipOnly() {
+		War war = baseWar();
+		war.setCampaignProvinces(List.of(452, 795, 705));
+		war.setCampaignStartProvinceId(705);
+		war.setObjectiveProvinceId(705);
+		war.setCursorIndex(2);
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(795, CampaignBattleKind.NAVAL, false, null, "port"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.SIEGE, false, "fort"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.FIELD, true, null)));
+		war.setCampaignScheduleIndex(0);
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			titleManager.when(() -> TitleManager.getByProvince(5)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(452)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(795)).thenReturn(null);
+			titleManager.when(() -> TitleManager.getByProvince(705)).thenReturn(defender);
+
+			assertEquals(
+					Material.GRAY_CONCRETE,
+					CampaignRouteRenderer.resolveMaterial(war, attacker, 795, owners));
+			assertEquals(
+					Material.RED_CONCRETE,
+					CampaignRouteRenderer.resolveMaterial(war, attacker, 705, owners));
 		}
 	}
 

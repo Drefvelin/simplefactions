@@ -42,6 +42,7 @@ public class Cache {
 	public static double warInitiativeFactor = 1.5;
 	public static int warPortSeaZocRadius = 2;
 	public static Map<WarGoalType, Integer> warGoalMaxBattles = new EnumMap<>(WarGoalType.class);
+	public static final int MAX_BATTLES_PER_LEG = 4;
 	public static int warDeclinedAllyStabilityPenalty;
 	public static boolean warFirstBattleAtBorder;
 	public static int warProvincesBetweenBattles;
@@ -49,6 +50,9 @@ public class Cache {
 	public static double warPathfinderNeutralPenalty;
 	public static boolean warPathfinderSeaPassEnabled;
 	public static double warPathfinderWaterCost;
+
+	public static boolean loggingEnabled;
+	public static boolean wipeLog;
 
 	public static int warBattleWindowStartHour;
 	public static int warBattleWindowEndHour;

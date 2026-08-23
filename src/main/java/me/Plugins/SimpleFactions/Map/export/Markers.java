@@ -102,6 +102,11 @@ public final class Markers {
         }
         root.add("forts", forts);
 
+        JsonArray wars = WarMapExporter.exportWars(WarManager.getActive());
+        if (!wars.isEmpty()) {
+            root.add("wars", wars);
+        }
+
         File parent = out.getParentFile();
         if (parent != null) {
             parent.mkdirs();

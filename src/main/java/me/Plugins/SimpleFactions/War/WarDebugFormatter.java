@@ -10,6 +10,7 @@ import com.google.gson.GsonBuilder;
 
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.War.progression.CampaignProgressionService;
+import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService;
 import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 
 public final class WarDebugFormatter {
@@ -40,7 +41,9 @@ public final class WarDebugFormatter {
 		summary.put("whitePeaceProposedByDefender", war.isWhitePeaceProposedByDefender());
 		summary.put("campaignBattlesFought", war.getCampaignBattlesFought());
 		summary.put("campaignScheduleIndex", war.getCampaignScheduleIndex());
-		summary.put("campaignBattleSchedule", serializeCampaignSchedule(war));
+		summary.put("campaignBattleSchedule", serializeCampaignSchedule(war, CampaignScheduleService.ScheduleLeg.INVASION));
+		summary.put("campaignCounterScheduleIndex", war.getCampaignCounterScheduleIndex());
+		summary.put("campaignCounterSchedule", serializeCampaignSchedule(war, CampaignScheduleService.ScheduleLeg.COUNTER));
 		summary.put("occupiedByAttacker", war.getOccupiedByAttacker());
 		summary.put("occupiedByDefender", war.getOccupiedByDefender());
 		summary.put("lastBattleOccupied", war.getLastBattleOccupied());
@@ -83,12 +86,17 @@ public final class WarDebugFormatter {
 		return rows;
 	}
 
-	private static List<Map<String, Object>> serializeCampaignSchedule(War war) {
+	private static List<Map<String, Object>> serializeCampaignSchedule(
+			War war,
+			CampaignScheduleService.ScheduleLeg leg) {
 		List<Map<String, Object>> rows = new ArrayList<>();
-		if (war == null || war.getCampaignBattleSchedule() == null) {
+		if (war == null) {
 			return rows;
 		}
-		List<ScheduledCampaignBattle> schedule = war.getCampaignBattleSchedule();
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleService.scheduleListForLeg(war, leg);
+		if (schedule == null) {
+			return rows;
+		}
 		for (int index = 0; index < schedule.size(); index++) {
 			ScheduledCampaignBattle slot = schedule.get(index);
 			Map<String, Object> row = new LinkedHashMap<>();

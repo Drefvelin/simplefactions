@@ -7,6 +7,8 @@ import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.battle.naming.BattleNamingService;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.resolution.WarResolutionService;
+import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService;
+import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.pathfinder.TitleManagerProvinceOwnerLookup;
 import me.Plugins.SimpleFactions.SimpleFactions;
 
@@ -61,7 +63,8 @@ public final class CampaignMilitaryWalkoverService {
 		war.setLastBattleOffensiveCoalition(CampaignCoalitionService.getInitiativeHolderCoalition(war));
 		CampaignBattleEndService.spendOffensiveFuel(war);
 		CampaignBattleEndService.advanceAlongPushTarget(war);
-		BattleNamingService.recordLocationBattle(war, battleProvinceId);
+		ScheduledCampaignBattle foughtSlot = CampaignScheduleService.slotAtActiveIndex(war).orElse(null);
+		BattleNamingService.recordLocationBattle(war, battleProvinceId, foughtSlot);
 		occupationService().applyBattleWin(
 				war,
 				battleProvinceId,

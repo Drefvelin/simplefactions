@@ -32,6 +32,8 @@ public class WarData {
     public Integer campaignBattlesFought;
     public List<ScheduledCampaignBattleData> campaignBattleSchedule;
     public Integer campaignScheduleIndex;
+    public List<ScheduledCampaignBattleData> campaignCounterSchedule;
+    public Integer campaignCounterScheduleIndex;
     public Map<String, String> fortControllers;
     public Map<String, Integer> locationBattleCounts;
     public String battleSchedulePhase;
@@ -68,5 +70,6 @@ public class WarData {
         locationBattleCounts = new HashMap<>();
         fortControllers = new HashMap<>();
         campaignBattleSchedule = new ArrayList<>();
+        campaignCounterSchedule = new ArrayList<>();
     }
 }

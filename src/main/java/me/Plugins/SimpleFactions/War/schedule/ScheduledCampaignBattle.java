@@ -8,14 +8,24 @@ public record ScheduledCampaignBattle(
 		CampaignBattleKind kind,
 		boolean required,
 		String fortInstallationId,
-		String portInstallationId) {
+		String portInstallationId,
+		Integer chronologyProvinceId) {
 
 	public ScheduledCampaignBattle(
 			int provinceId,
 			CampaignBattleKind kind,
 			boolean required,
 			String fortInstallationId) {
-		this(provinceId, kind, required, fortInstallationId, null);
+		this(provinceId, kind, required, fortInstallationId, null, null);
+	}
+
+	public ScheduledCampaignBattle(
+			int provinceId,
+			CampaignBattleKind kind,
+			boolean required,
+			String fortInstallationId,
+			String portInstallationId) {
+		this(provinceId, kind, required, fortInstallationId, portInstallationId, null);
 	}
 
 	public ScheduledCampaignBattle {
@@ -28,6 +38,13 @@ public record ScheduledCampaignBattle(
 		if (portInstallationId != null && portInstallationId.isBlank()) {
 			portInstallationId = null;
 		}
+		if (chronologyProvinceId != null && chronologyProvinceId <= 0) {
+			chronologyProvinceId = null;
+		}
+	}
+
+	public int sortProvinceId() {
+		return chronologyProvinceId != null ? chronologyProvinceId : provinceId;
 	}
 
 	public BattleType battleType() {

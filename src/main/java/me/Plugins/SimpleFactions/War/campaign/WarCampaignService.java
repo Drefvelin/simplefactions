@@ -27,12 +27,18 @@ import me.Plugins.SimpleFactions.War.pathfinder.TitleManagerProvinceOwnerLookup;
 import me.Plugins.SimpleFactions.War.schedule.BattleWindowService;
 import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleBuilder;
 import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleTrimmer;
+import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleValidator;
 import me.Plugins.SimpleFactions.War.schedule.FortControlService;
 import me.Plugins.SimpleFactions.War.schedule.FortZocIndex;
 import me.Plugins.SimpleFactions.War.schedule.PortSeaZocIndex;
+import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService.ScheduleLeg;
 import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
+import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleLogger;
+import me.Plugins.SimpleFactions.Managers.LogManager;
 
 public class WarCampaignService {
+	private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(WarCampaignService.class.getName());
+
 	private final ObjectiveProvincePicker picker;
 	private final ProvincePathfinder pathfinder;
 
@@ -46,12 +52,24 @@ public class WarCampaignService {
 			return false;
 		}
 
+		LogManager.beginSession("populateCampaign warId=" + war.getId());
+		try {
+			return populateCampaignInternal(war);
+		} finally {
+			LogManager.flush();
+		}
+	}
+
+	private boolean populateCampaignInternal(War war) {
+
 		Faction defender = war.getDefenders().getLeader();
 		Faction attacker = war.getAttackers().getLeader();
 		OptionalInt regionalObjective = picker.pickObjective(war, defender);
 		if (regionalObjective.isEmpty()) {
+			LogManager.line("FAIL no regional objective");
 			return false;
 		}
+		LogManager.line("regionalObjective=%d", regionalObjective.getAsInt());
 
 		int attackerCapital = attacker.getCapital();
 		if (attackerCapital <= 0) {
@@ -60,10 +78,16 @@ public class WarCampaignService {
 
 		PathfinderResult borderResult = pathfinder.computeCampaignLine(war, regionalObjective.getAsInt());
 		if (!borderResult.isFound()) {
+			LogManager.line("FAIL pathfinder could not find campaign line");
 			return false;
 		}
 
 		int borderStart = borderResult.getStartProvinceId();
+		LogManager.line(
+				"pathfinder borderStart=%d path=%s cost=%s",
+				borderStart,
+				borderResult.getPath(),
+				borderResult.getTotalCost());
 		BelligerentTerritory territory = BelligerentTerritory.fromWar(war, new TitleManagerProvinceOwnerLookup());
 		int objective = resolveFinalObjective(
 				war,
@@ -71,16 +95,20 @@ public class WarCampaignService {
 				borderStart,
 				regionalObjective.getAsInt(),
 				territory);
+		LogManager.line("finalObjective=%d", objective);
 
 		PathfinderResult rightSegment = pathfinder.findRouteWithFallback(borderStart, objective, territory);
 		if (!rightSegment.isFound()) {
+			LogManager.line("FAIL no route border->objective");
 			return false;
 		}
 
 		PathfinderResult leftSegment = pathfinder.findRouteWithFallback(attackerCapital, borderStart, territory);
 		if (!leftSegment.isFound()) {
+			LogManager.line("FAIL no route capital->border");
 			return false;
 		}
+		LogManager.line("leftSegment=%s rightSegment=%s", leftSegment.getPath(), rightSegment.getPath());
 
 		List<Integer> axis = mergeAxisPaths(leftSegment.getPath(), rightSegment.getPath());
 		int cursorIndex = axis.indexOf(borderStart);
@@ -98,19 +126,39 @@ public class WarCampaignService {
 			return false;
 		}
 		FortControlService.initializeAtDeclare(war);
-		List<ScheduledCampaignBattle> natural = CampaignScheduleBuilder.build(
+		FortZocIndex fortIndex = FortZocIndex.fromGameState();
+		PortSeaZocIndex portIndex = PortSeaZocIndex.fromGameState();
+		int capitalIndex = axis.indexOf(attackerCapital);
+		CampaignScheduleBuilder.BuiltSchedules built = CampaignScheduleBuilder.buildAll(
 				war,
 				axis,
 				cursorIndex,
 				objectiveIndex,
-				FortZocIndex.fromGameState(),
-				PortSeaZocIndex.fromGameState());
-		List<ScheduledCampaignBattle> trimmed = CampaignScheduleTrimmer.trim(
-				natural,
-				CampaignScheduleTrimmer.maxBattlesForGoal(war.getGoal()));
-		war.setCampaignBattleSchedule(trimmed);
+				capitalIndex,
+				fortIndex,
+				portIndex);
+		List<ScheduledCampaignBattle> invasionNatural = built.invasion();
+		List<ScheduledCampaignBattle> counterNatural = built.counter();
+		CampaignScheduleLogger.logSchedule("Invasion natural", war, axis, invasionNatural);
+		CampaignScheduleLogger.logSchedule("Counter natural", war, ScheduleLeg.COUNTER, axis, counterNatural);
+		int maxPerLeg = CampaignScheduleTrimmer.maxBattlesPerLegForGoal(war.getGoal());
+		LogManager.line("trim maxPerLeg=%d", maxPerLeg);
+		LogManager.section("Trim invasion");
+		List<ScheduledCampaignBattle> invasionTrimmed = CampaignScheduleTrimmer.trimInvasion(invasionNatural, maxPerLeg);
+		LogManager.section("Trim counter");
+		List<ScheduledCampaignBattle> counterTrimmed = CampaignScheduleTrimmer.trimCounter(counterNatural, maxPerLeg);
+		CampaignScheduleLogger.logSchedule("Invasion trimmed", war, axis, invasionTrimmed);
+		CampaignScheduleLogger.logSchedule("Counter trimmed", war, ScheduleLeg.COUNTER, axis, counterTrimmed);
+		war.setCampaignBattleSchedule(invasionTrimmed);
+		war.setCampaignCounterSchedule(counterTrimmed);
+		boolean validInvasion = CampaignScheduleValidator.isValidInvasionSchedule(war, axis, invasionTrimmed);
+		LogManager.line("invasionValidator=%s", validInvasion);
+		if (!validInvasion) {
+			LOGGER.warning("Invasion schedule violates chronological invariants for war " + war.getId());
+		}
 		war.setCampaignScheduleIndex(0);
-		applyInitiativeFromSchedule(war, trimmed);
+		war.setCampaignCounterScheduleIndex(0);
+		applyInitiativeFromLegs(war, invasionTrimmed, counterTrimmed);
 
 		initProgressionState(war);
 		initScheduleState(war);
@@ -182,11 +230,28 @@ public class WarCampaignService {
 		return merged;
 	}
 
+	static void applyInitiativeFromLegs(
+			War war,
+			List<ScheduledCampaignBattle> invasion,
+			List<ScheduledCampaignBattle> counter) {
+		war.setInitiativeAttacker(initiativeFuelForLegCount(invasion == null ? 0 : invasion.size(), true));
+		war.setInitiativeDefender(initiativeFuelForLegCount(counter == null ? 0 : counter.size(), false));
+	}
+
+	public static int initiativeFuelForLegCount(int slotCount) {
+		return initiativeFuelForLegCount(slotCount, false);
+	}
+
+	public static int initiativeFuelForLegCount(int slotCount, boolean invasionEmptyFallback) {
+		if (slotCount <= 0) {
+			return invasionEmptyFallback ? 6 : 0;
+		}
+		return (int) Math.ceil(slotCount * Cache.warInitiativeFactor);
+	}
+
+	@Deprecated
 	static void applyInitiativeFromSchedule(War war, List<ScheduledCampaignBattle> schedule) {
-		int size = schedule == null ? 0 : schedule.size();
-		int fuel = (int) Math.ceil(size * Cache.warInitiativeFactor);
-		war.setInitiativeAttacker(fuel);
-		war.setInitiativeDefender(fuel);
+		applyInitiativeFromLegs(war, schedule, schedule);
 	}
 
 	static void initProgressionState(War war) {

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -27,6 +26,8 @@ import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
+import me.Plugins.SimpleFactions.War.progression.CampaignRouteEntry;
+import me.Plugins.SimpleFactions.War.progression.CampaignRouteRenderer;
 import me.Plugins.SimpleFactions.War.progression.CampaignChoiceService;
 import me.Plugins.SimpleFactions.War.progression.CampaignPostBattleChoiceService;
 import me.Plugins.SimpleFactions.War.progression.WhitePeaceService;
@@ -41,11 +42,8 @@ import me.Plugins.SimpleFactions.War.schedule.BattleWindowService;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 
 public class CampaignView {
-	private static final int ROUTE_SLOTS_PER_PAGE = 9;
+	private static final int ROUTE_SLOT_COUNT = 9;
 	private static final int ROUTE_START_SLOT = 10;
-	private static final int PREV_PAGE_SLOT = 9;
-	private static final int NEXT_PAGE_SLOT = 19;
-	private static final int NEXT_PAGE_ALT_SLOT = 26;
 	private static final int VOTING_HELP_SLOT = 27;
 
 	public InventoryManager inv;
@@ -55,7 +53,7 @@ public class CampaignView {
 		this.inv = inv;
 	}
 
-	public void campaignView(Player player, War war, int routePage, boolean open) {
+	public void campaignView(Player player, War war, boolean open) {
 		if (war == null || !war.isActive() || war.getWarType() == WarType.RAID) {
 			player.sendMessage("§cThis war has no campaign view.");
 			return;
@@ -65,6 +63,7 @@ public class CampaignView {
 			player.sendMessage("§cThis war has no campaign route.");
 			return;
 		}
+		List<CampaignRouteEntry> routeEntries = CampaignRouteRenderer.buildRouteEntries(war);
 
 		Faction viewerFaction = FactionManager.getByLeader(player.getName());
 		if (viewerFaction == null) {
@@ -75,11 +74,8 @@ public class CampaignView {
 			return;
 		}
 
-		int maxPage = Math.max(0, (axis.size() - 1) / ROUTE_SLOTS_PER_PAGE);
-		int page = Math.max(0, Math.min(routePage, maxPage));
-
 		Inventory inventory = SimpleFactions.plugin.getServer().createInventory(
-				new CampaignInventoryHolder(war.getId(), page, SFGUI.CAMPAIGN_VIEW),
+				new CampaignInventoryHolder(war.getId(), SFGUI.CAMPAIGN_VIEW),
 				54,
 				war.getName() + " §7Campaign");
 
@@ -95,32 +91,23 @@ public class CampaignView {
 
 		populateHourToggles(inventory, war, viewerFaction, player.getUniqueId());
 
-		int axisOffset = page * ROUTE_SLOTS_PER_PAGE;
-		Integer campaignStartId = war.getCampaignStartProvinceId();
+		int entryLimit = Math.min(routeEntries.size(), ROUTE_SLOT_COUNT);
 		int firstBattleMarkerSlot = -1;
-		for (int i = 0; i < ROUTE_SLOTS_PER_PAGE; i++) {
-			int axisIndex = axisOffset + i;
+		for (int i = 0; i < ROUTE_SLOT_COUNT; i++) {
 			int slot = ROUTE_START_SLOT + i;
-			if (axisIndex >= axis.size()) {
+			if (i >= entryLimit) {
 				inventory.setItem(slot, new ItemStack(Material.AIR));
 				continue;
 			}
-			int provinceId = axis.get(axisIndex);
-			inventory.setItem(slot, creator.createRouteProvinceItem(war, viewerFaction, provinceId, axisIndex));
-			if (campaignStartId != null && campaignStartId == provinceId) {
+			CampaignRouteEntry routeEntry = routeEntries.get(i);
+			inventory.setItem(slot, creator.createRouteEntryItem(war, viewerFaction, routeEntry));
+			if (firstBattleMarkerSlot < 0
+					&& CampaignRouteRenderer.isBorderFirstBattleSlot(war, routeEntry)) {
 				firstBattleMarkerSlot = slot + 9;
 			}
 		}
 		if (firstBattleMarkerSlot >= 0) {
 			inventory.setItem(firstBattleMarkerSlot, creator.createFirstBattleMarkerItem());
-		}
-
-		if (page > 0) {
-			inventory.setItem(PREV_PAGE_SLOT, creator.createPageButton("Previous page", war.getId(), page - 1));
-		}
-		if (page < maxPage) {
-			int nextPageSlot = firstBattleMarkerSlot == NEXT_PAGE_SLOT ? NEXT_PAGE_ALT_SLOT : NEXT_PAGE_SLOT;
-			inventory.setItem(nextPageSlot, creator.createPageButton("Next page", war.getId(), page + 1));
 		}
 
 		if (canSurrender(player, war)) {
@@ -235,18 +222,6 @@ public class CampaignView {
 		}
 		ItemMeta meta = clicked.getItemMeta();
 
-		Integer pageWarId = meta.getPersistentDataContainer().get(
-				new NamespacedKey(SimpleFactions.plugin, "campaign_page_war"),
-				PersistentDataType.INTEGER);
-		Integer page = meta.getPersistentDataContainer().get(
-				new NamespacedKey(SimpleFactions.plugin, "campaign_page"),
-				PersistentDataType.INTEGER);
-		if (pageWarId != null && page != null && pageWarId == war.getId()) {
-			campaignView(player, war, page, true);
-			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-			return;
-		}
-
 		Integer voteWarId = meta.getPersistentDataContainer().get(
 				new NamespacedKey(SimpleFactions.plugin, "campaign_vote_war"),
 				PersistentDataType.INTEGER);
@@ -254,7 +229,7 @@ public class CampaignView {
 				new NamespacedKey(SimpleFactions.plugin, "campaign_vote_hour"),
 				PersistentDataType.INTEGER);
 		if (voteWarId != null && voteHour != null && voteWarId == war.getId()) {
-			handleHourToggleClick(player, war, voteHour, holder.getRoutePage());
+			handleHourToggleClick(player, war, voteHour);
 			return;
 		}
 
@@ -267,7 +242,7 @@ public class CampaignView {
 		if (autoresolveWarId != null
 				&& autoresolveSide != null
 				&& autoresolveWarId == war.getId()) {
-			handleAutoresolveClick(player, war, BelligerentRole.valueOf(autoresolveSide), holder.getRoutePage());
+			handleAutoresolveClick(player, war, BelligerentRole.valueOf(autoresolveSide));
 			return;
 		}
 
@@ -393,7 +368,7 @@ public class CampaignView {
 		}
 	}
 
-	private void handleHourToggleClick(Player player, War war, int hour, int routePage) {
+	private void handleHourToggleClick(Player player, War war, int hour) {
 		Faction faction = FactionManager.getByMember(player.getName());
 		if (faction == null || !BattleVoterEligibility.isEligibleVoter(war, faction)) {
 			player.sendMessage("§cYou cannot vote for battle hours right now.");
@@ -413,15 +388,14 @@ public class CampaignView {
 		if (result == BattleVoteToggleResult.ADDED || result == BattleVoteToggleResult.REMOVED) {
 			WarManager.persist(war);
 			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-			campaignView(player, war, routePage, true);
+			campaignView(player, war, true);
 		}
 	}
 
 	private void handleAutoresolveClick(
 			Player player,
 			War war,
-			BelligerentRole side,
-			int routePage) {
+			BelligerentRole side) {
 		boolean allowed = switch (side) {
 			case ATTACKER -> isAttackerLeader(player, war);
 			case DEFENDER -> isDefenderLeader(player, war);
@@ -433,7 +407,7 @@ public class CampaignView {
 		switch (BattleAutoresolveService.sendProposeRequest(player, war, side)) {
 			case SENT -> {
 				player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-				campaignView(player, war, routePage, true);
+				campaignView(player, war, true);
 			}
 			case OPPOSING_LEADER_OFFLINE -> player.sendMessage("§cThe opposing war leader is not online.");
 			case NOT_ALLOWED -> player.sendMessage("§cYou cannot propose autoresolve right now.");
@@ -452,7 +426,7 @@ public class CampaignView {
 			return;
 		}
 		if (!confirmed) {
-			campaignView(player, war, 0, true);
+			campaignView(player, war, true);
 			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			return;
 		}
@@ -534,7 +508,7 @@ public class CampaignView {
 			}
 		}
 		player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
-		campaignView(player, war, 0, true);
+		campaignView(player, war, true);
 	}
 
 	public boolean canSurrender(Player player, War war) {

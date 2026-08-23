@@ -28,6 +28,8 @@
   "campaignBattlesFought": 0,
   "campaignBattleSchedule": [],
   "campaignScheduleIndex": 0,
+  "campaignCounterSchedule": [],
+  "campaignCounterScheduleIndex": 0,
   "fortControllers": {},
   "locationBattleCounts": {},
   "battleSchedulePhase": "scheduled",
@@ -46,7 +48,7 @@
   "postBattleChoiceResolved": true,
   "holdPeaceProposalActive": false,
   "forceQuorumNextClose": false,
-  "startedAt": "2026-08-22T23:54:23.576773700Z",
+  "startedAt": "2026-08-23T23:00:43.993843600Z",
   "attackers": {
     "leader": "atk",
     "participants": [

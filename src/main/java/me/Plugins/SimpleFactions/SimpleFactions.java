@@ -171,6 +171,10 @@ public class SimpleFactions extends JavaPlugin{
 	}
 	public void loadConfigs() {
 		configLoader.loadConfig(new File(getDataFolder(), "config.yml"));
+		me.Plugins.SimpleFactions.Managers.LogManager.configure(
+				Cache.loggingEnabled,
+				Cache.wipeLog,
+				getDataFolder());
 		//coinLoader.loadCoins(new File(getDataFolder(), "coins.yml"));
 		rankLoader.loadRanks(new File(getDataFolder(), "ranks.yml"));
 		regimentLoader.loadRegiments(new File(getDataFolder(), "regiments.yml"));

@@ -1,0 +1,58 @@
+package me.Plugins.SimpleFactions.Managers;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+class LogManagerTest {
+
+	@TempDir
+	Path tempDir;
+
+	@Test
+	void flush_writesSessionWhenEnabled() throws Exception {
+		LogManager.configure(true, false, tempDir.toFile());
+		LogManager.beginSession("test-session");
+		LogManager.line("hello");
+		LogManager.flush();
+
+		Path logFile = tempDir.resolve("log.txt");
+		assertTrue(Files.exists(logFile));
+		String content = Files.readString(logFile);
+		assertTrue(content.contains("test-session"));
+		assertTrue(content.contains("hello"));
+	}
+
+	@Test
+	void flush_noOpWhenDisabled() throws Exception {
+		LogManager.configure(false, false, tempDir.toFile());
+		LogManager.beginSession("test-session");
+		LogManager.line("hello");
+		LogManager.flush();
+
+		assertEquals(false, Files.exists(tempDir.resolve("log.txt")));
+	}
+
+	@Test
+	void append_writesImmediatelyWhenEnabled() throws Exception {
+		LogManager.configure(true, false, tempDir.toFile());
+		LogManager.append("one-off");
+
+		String content = Files.readString(tempDir.resolve("log.txt"));
+		assertTrue(content.contains("one-off"));
+	}
+
+	@Test
+	void configure_wipeLog_deletesExistingFile() throws Exception {
+		Path logFile = tempDir.resolve("log.txt");
+		Files.writeString(logFile, "old content");
+		LogManager.configure(false, true, tempDir.toFile());
+
+		assertEquals(false, Files.exists(logFile));
+	}
+}

@@ -6,6 +6,7 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -37,7 +38,7 @@ public class PlayerManager implements Listener{
     }
 
     //Loans and stuff
-    @EventHandler
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
     public void signBook(PlayerEditBookEvent e) {
         if(!e.isSigning()) return;
         BookMeta meta = e.getPreviousBookMeta();

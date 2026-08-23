@@ -73,12 +73,20 @@ public class BelligerentTerritory {
 		return ownerId != null && defenderIds.contains(normalizeId(ownerId));
 	}
 
-	public boolean isNeutral(int provinceId) {
+	public boolean isWilderness(int provinceId) {
+		return owners.getOwnerFactionId(provinceId) == null;
+	}
+
+	public boolean isForeignNation(int provinceId) {
 		String ownerId = owners.getOwnerFactionId(provinceId);
 		if (ownerId == null) {
-			return true;
+			return false;
 		}
 		return !allBelligerentIds.contains(normalizeId(ownerId));
+	}
+
+	public boolean isNeutral(int provinceId) {
+		return isWilderness(provinceId) || isForeignNation(provinceId);
 	}
 
 	public List<Integer> findInvasionEntryProvinces(ProvinceManager pm) {

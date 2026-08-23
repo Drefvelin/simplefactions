@@ -4,39 +4,140 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.progression.CampaignCapabilityService;
 import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.progression.CampaignCoalitionService;
 import me.Plugins.SimpleFactions.War.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.installation.Installation;
 
 public final class CampaignScheduleService {
+	public enum ScheduleLeg {
+		INVASION,
+		COUNTER
+	}
+
 	private CampaignScheduleService() {
 	}
 
+	/** True when the invasion leg schedule is non-empty (GUI / route rendering). */
 	public static boolean hasSchedule(War war) {
 		return war != null
 				&& war.getCampaignBattleSchedule() != null
 				&& !war.getCampaignBattleSchedule().isEmpty();
 	}
 
+	public static boolean hasActiveSchedule(War war) {
+		if (war == null) {
+			return false;
+		}
+		List<ScheduledCampaignBattle> schedule = activeScheduleList(war);
+		return schedule != null && !schedule.isEmpty();
+	}
+
+	public static ScheduleLeg activeLeg(War war) {
+		return switch (CampaignCapabilityService.effectivePushTarget(war)) {
+			case TOWARD_AGGRESSOR_CAPITAL -> ScheduleLeg.COUNTER;
+			case TOWARD_OBJECTIVE, RETAKE_OBJECTIVE -> ScheduleLeg.INVASION;
+		};
+	}
+
+	static List<ScheduledCampaignBattle> activeScheduleList(War war) {
+		return activeLeg(war) == ScheduleLeg.COUNTER
+				? war.getCampaignCounterSchedule()
+				: war.getCampaignBattleSchedule();
+	}
+
+	static int activeScheduleIndex(War war) {
+		return activeLeg(war) == ScheduleLeg.COUNTER
+				? war.getCampaignCounterScheduleIndex()
+				: war.getCampaignScheduleIndex();
+	}
+
+	public static int getActiveScheduleIndex(War war) {
+		return activeScheduleIndex(war);
+	}
+
+	public static List<ScheduledCampaignBattle> scheduleListForLeg(War war, ScheduleLeg leg) {
+		if (war == null) {
+			return List.of();
+		}
+		return leg == ScheduleLeg.COUNTER
+				? war.getCampaignCounterSchedule()
+				: war.getCampaignBattleSchedule();
+	}
+
+	public static int scheduleIndexForLeg(War war, ScheduleLeg leg) {
+		if (war == null) {
+			return 0;
+		}
+		return leg == ScheduleLeg.COUNTER
+				? war.getCampaignCounterScheduleIndex()
+				: war.getCampaignScheduleIndex();
+	}
+
+	public static boolean hasScheduleForLeg(War war, ScheduleLeg leg) {
+		List<ScheduledCampaignBattle> schedule = scheduleListForLeg(war, leg);
+		return schedule != null && !schedule.isEmpty();
+	}
+
+	static void setActiveScheduleIndex(War war, int index) {
+		if (activeLeg(war) == ScheduleLeg.COUNTER) {
+			war.setCampaignCounterScheduleIndex(index);
+		} else {
+			war.setCampaignScheduleIndex(index);
+		}
+	}
+
+	static void setActiveScheduleList(War war, List<ScheduledCampaignBattle> schedule) {
+		if (activeLeg(war) == ScheduleLeg.COUNTER) {
+			war.setCampaignCounterSchedule(schedule);
+		} else {
+			war.setCampaignBattleSchedule(schedule);
+		}
+	}
+
 	public static Optional<ScheduledCampaignBattle> slotAt(War war, int index) {
-		if (war == null || war.getCampaignBattleSchedule() == null) {
+		return slotAt(war, index, ScheduleLeg.INVASION);
+	}
+
+	public static Optional<ScheduledCampaignBattle> slotAt(War war, int index, ScheduleLeg leg) {
+		if (war == null || leg == null) {
 			return Optional.empty();
 		}
-		List<ScheduledCampaignBattle> schedule = war.getCampaignBattleSchedule();
-		if (index < 0 || index >= schedule.size()) {
+		List<ScheduledCampaignBattle> schedule = scheduleListForLeg(war, leg);
+		if (schedule == null || index < 0 || index >= schedule.size()) {
+			return Optional.empty();
+		}
+		return Optional.of(schedule.get(index));
+	}
+
+	private static Optional<ScheduledCampaignBattle> activeSlotAt(War war, int index) {
+		if (war == null) {
+			return Optional.empty();
+		}
+		List<ScheduledCampaignBattle> schedule = activeScheduleList(war);
+		if (schedule == null || index < 0 || index >= schedule.size()) {
 			return Optional.empty();
 		}
 		return Optional.of(schedule.get(index));
 	}
 
 	public static Optional<ScheduledCampaignBattle> slotForProvince(War war, int provinceId) {
-		if (!hasSchedule(war)) {
+		if (!hasActiveSchedule(war)) {
 			return Optional.empty();
 		}
-		for (ScheduledCampaignBattle slot : war.getCampaignBattleSchedule()) {
+		Optional<ScheduledCampaignBattle> current = currentSlotWithoutReSiege(war);
+		if (current.isPresent() && current.get().provinceId() == provinceId) {
+			return current;
+		}
+		List<ScheduledCampaignBattle> schedule = activeScheduleList(war);
+		int fromIndex = Math.max(0, activeScheduleIndex(war));
+		for (int i = fromIndex; i < schedule.size(); i++) {
+			ScheduledCampaignBattle slot = schedule.get(i);
 			if (slot.provinceId() == provinceId) {
 				return Optional.of(slot);
 			}
@@ -44,33 +145,88 @@ public final class CampaignScheduleService {
 		return Optional.empty();
 	}
 
+	public static Optional<Integer> firstOnAxisScheduleProvince(War war) {
+		return firstOnAxisScheduleIndex(war, ScheduleLeg.INVASION)
+				.flatMap(index -> slotAt(war, index).map(ScheduledCampaignBattle::provinceId));
+	}
+
+	public static Optional<Integer> firstOnAxisScheduleIndex(War war) {
+		return firstOnAxisScheduleIndex(war, ScheduleLeg.INVASION);
+	}
+
+	public static Optional<Integer> firstOnAxisScheduleIndex(War war, ScheduleLeg leg) {
+		if (!hasScheduleForLeg(war, leg) || war.getCampaignProvinces() == null) {
+			return Optional.empty();
+		}
+		List<Integer> axis = war.getCampaignProvinces();
+		List<ScheduledCampaignBattle> schedule = scheduleListForLeg(war, leg);
+		for (int i = 0; i < schedule.size(); i++) {
+			if (axis.contains(schedule.get(i).provinceId())) {
+				return Optional.of(i);
+			}
+		}
+		return Optional.empty();
+	}
+
+	public static String resolveInstallationName(String installationId) {
+		if (installationId == null || installationId.isBlank()) {
+			return null;
+		}
+		for (Faction faction : FactionManager.factions) {
+			if (faction == null) {
+				continue;
+			}
+			for (Installation installation : faction.getInstallationHandler().getAll()) {
+				if (installationId.equals(installation.getId())) {
+					return installation.getName();
+				}
+			}
+		}
+		return installationId;
+	}
+
+	private static Optional<ScheduledCampaignBattle> currentSlotWithoutReSiege(War war) {
+		if (!hasActiveSchedule(war)) {
+			return Optional.empty();
+		}
+		return activeSlotAt(war, activeScheduleIndex(war));
+	}
+
 	public static Optional<ScheduledCampaignBattle> currentSlot(War war) {
-		if (!hasSchedule(war)) {
+		if (!hasActiveSchedule(war)) {
 			return Optional.empty();
 		}
 		ensureReSiegeInsert(war);
-		return slotAt(war, war.getCampaignScheduleIndex());
+		return activeSlotAt(war, activeScheduleIndex(war));
+	}
+
+	/** Current slot on the active leg without inserting a re-siege battle. */
+	public static Optional<ScheduledCampaignBattle> slotAtActiveIndex(War war) {
+		if (!hasActiveSchedule(war)) {
+			return Optional.empty();
+		}
+		return activeSlotAt(war, activeScheduleIndex(war));
 	}
 
 	public static void advanceIndex(War war) {
 		if (war == null) {
 			return;
 		}
-		war.setCampaignScheduleIndex(war.getCampaignScheduleIndex() + 1);
+		setActiveScheduleIndex(war, activeScheduleIndex(war) + 1);
 	}
 
-	public static void insertSiegeAtCurrentIndex(War war, OperationalFort fort) {
+	public static void insertSiegeAtCurrentIndex(War war, OperationalFort fort, int axisProvinceId) {
 		if (war == null || fort == null || fort.id() == null) {
 			return;
 		}
-		List<ScheduledCampaignBattle> schedule = new ArrayList<>(war.getCampaignBattleSchedule());
-		int index = Math.max(0, Math.min(war.getCampaignScheduleIndex(), schedule.size()));
+		List<ScheduledCampaignBattle> schedule = new ArrayList<>(activeScheduleList(war));
+		int index = Math.max(0, Math.min(activeScheduleIndex(war), schedule.size()));
 		schedule.add(index, new ScheduledCampaignBattle(
-				fort.province(),
+				axisProvinceId,
 				CampaignBattleKind.SIEGE,
 				false,
 				fort.id()));
-		war.setCampaignBattleSchedule(schedule);
+		setActiveScheduleList(war, schedule);
 	}
 
 	public static void ensureReSiegeInsert(War war) {
@@ -78,7 +234,7 @@ public final class CampaignScheduleService {
 	}
 
 	static void ensureReSiegeInsert(War war, FortZocIndex fortIndex) {
-		if (!hasSchedule(war) || !CampaignCapabilityService.isValidWar(war) || fortIndex == null) {
+		if (!hasActiveSchedule(war) || !CampaignCapabilityService.isValidWar(war) || fortIndex == null) {
 			return;
 		}
 		CampaignCoalition advancing = CampaignCoalitionService.getInitiativeHolderCoalition(war);
@@ -86,8 +242,8 @@ public final class CampaignScheduleService {
 			return;
 		}
 
-		int index = war.getCampaignScheduleIndex();
-		Optional<ScheduledCampaignBattle> current = slotAt(war, index);
+		int index = activeScheduleIndex(war);
+		Optional<ScheduledCampaignBattle> current = activeSlotAt(war, index);
 
 		for (int axisIndex : advancingAxisIndices(war)) {
 			int provinceId = war.getCampaignProvinces().get(axisIndex);
@@ -105,13 +261,13 @@ public final class CampaignScheduleService {
 			if (scheduleAlreadyHasSiegeForFort(war, index, operationalFort.id())) {
 				return;
 			}
-			insertSiegeAtCurrentIndex(war, operationalFort);
+			insertSiegeAtCurrentIndex(war, operationalFort, provinceId);
 			return;
 		}
 	}
 
 	private static boolean scheduleAlreadyHasSiegeForFort(War war, int fromIndex, String fortInstallationId) {
-		List<ScheduledCampaignBattle> schedule = war.getCampaignBattleSchedule();
+		List<ScheduledCampaignBattle> schedule = activeScheduleList(war);
 		for (int i = fromIndex; i < schedule.size(); i++) {
 			if (isSiegeForFort(schedule.get(i), fortInstallationId)) {
 				return true;

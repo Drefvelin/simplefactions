@@ -50,10 +50,20 @@ public class MapSystem {
 	}
 
 	public void uploadAll() {
+		prepareUploadFiles();
+		uploadPreparedFiles();
+	}
+
+	/** Export JSON payloads to MapAPI / Input (main thread). */
+	public void prepareUploadFiles() {
 		exportProvinces();
 		exportGuilds();
 		exportMarkers();
 		compiler.exportAllFactionsToNationJson();
+	}
+
+	/** POST exported files to ProvinceSystem (safe off main thread). */
+	public void uploadPreparedFiles() {
 		RestServer.upload("nation", new File("plugins/SimpleFactions/MapAPI/nation.json"));
 		RestServer.upload("province_data", new File("plugins/SimpleFactions/MapAPI/province_data.json"));
 		RestServer.upload("guilds", new File("plugins/SimpleFactions/MapAPI/guilds.json"));
@@ -67,14 +77,19 @@ public class MapSystem {
 	public void updateMap() {
 		lastUpdate = 0;
 		compiler.exportQueue(queues);
-		RestServer.upload("queue", new File("plugins/SimpleFactions/MapAPI/queue.json"));
 		Database db = new Database();
 		for(Faction fac : FactionManager.factions) {
 			db.saveFaction(fac);
 		}
-		uploadAll();
-		RestServer.commenceRegen("queued");
-		clear();
+		prepareUploadFiles();
+		File queueFile = new File("plugins/SimpleFactions/MapAPI/queue.json");
+		SimpleFactions plugin = SimpleFactions.getInstance();
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+			RestServer.upload("queue", queueFile);
+			uploadPreparedFiles();
+			RestServer.commenceRegen("queued");
+			Bukkit.getScheduler().runTask(plugin, this::clear);
+		});
 	}
 	
 	public void fullRegen() {
@@ -83,8 +98,12 @@ public class MapSystem {
 		for(Faction fac : FactionManager.factions) {
 			db.saveFaction(fac);
 		}
-		uploadAll();
-		RestServer.commenceRegen("fullregen");
+		prepareUploadFiles();
+		SimpleFactions plugin = SimpleFactions.getInstance();
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+			uploadPreparedFiles();
+			RestServer.commenceRegen("fullregen");
+		});
 	}
 	
 	public void enqueue(String type, String value) {

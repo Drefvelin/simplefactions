@@ -39,10 +39,23 @@
     }
   ],
   "campaignScheduleIndex": 0,
+  "campaignCounterSchedule": [
+    {
+      "provinceId": 10,
+      "kind": "field",
+      "required": false
+    },
+    {
+      "provinceId": 5,
+      "kind": "field",
+      "required": true
+    }
+  ],
+  "campaignCounterScheduleIndex": 0,
   "fortControllers": {},
   "locationBattleCounts": {},
   "battleSchedulePhase": "voting",
-  "battleDay": "2026-08-24",
+  "battleDay": "2026-08-25",
   "battleVotes": {},
   "autoresolveProposedByAttacker": false,
   "autoresolveProposedByDefender": false,
@@ -54,7 +67,7 @@
   "postBattleChoiceResolved": true,
   "holdPeaceProposalActive": false,
   "forceQuorumNextClose": false,
-  "startedAt": "2026-08-22T23:54:19.341264Z",
+  "startedAt": "2026-08-23T23:00:41.269912500Z",
   "attackers": {
     "leader": "atk",
     "participants": [

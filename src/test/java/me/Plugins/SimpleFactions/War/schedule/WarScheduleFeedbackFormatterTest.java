@@ -77,6 +77,24 @@ class WarScheduleFeedbackFormatterTest {
 	}
 
 	@Test
+	void opencvote_showsBothLegSchedules() {
+		War war = votingWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.FIELD, false, null)));
+		war.setCampaignCounterSchedule(List.of(
+				new ScheduledCampaignBattle(10, CampaignBattleKind.FIELD, false, null)));
+		war.setCampaignScheduleIndex(0);
+		war.setPushTarget(me.Plugins.SimpleFactions.War.progression.CampaignPushTarget.TOWARD_AGGRESSOR_CAPITAL);
+
+		List<String> lines = WarScheduleFeedbackFormatter.format("opencvote", war);
+		String combined = stripColorCodes(String.join("\n", lines));
+		assertTrue(combined.contains("Invasion schedule"));
+		assertTrue(combined.contains("Counter schedule"));
+		assertTrue(combined.contains("province 10"));
+		assertTrue(combined.contains("(current)"));
+	}
+
+	@Test
 	void opencvote_showsScheduleSlots() {
 		War war = votingWar();
 		war.setCampaignBattleSchedule(List.of(

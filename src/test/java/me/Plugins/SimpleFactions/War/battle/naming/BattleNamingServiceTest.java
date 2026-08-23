@@ -1,6 +1,9 @@
 package me.Plugins.SimpleFactions.War.battle.naming;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -10,6 +13,9 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.War.battle.engine.Battle;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
+import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
+import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService.ScheduleLeg;
+import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.settlement.Settlement;
 
 class BattleNamingServiceTest {
@@ -75,5 +81,57 @@ class BattleNamingServiceTest {
 		BattleNamingService.recordLocationBattle(war, 999);
 		String key = BattleNamingService.resolveLocationKey(999);
 		assertEquals(1, war.getLocationBattleCount(key));
+	}
+
+	@Test
+	void resolveScheduledOrdinal_twoFieldSlotsSameProvince() {
+		War war = new War(1, mock(Faction.class), mock(Faction.class));
+		ScheduledCampaignBattle first = new ScheduledCampaignBattle(100, CampaignBattleKind.FIELD, false, null);
+		ScheduledCampaignBattle second = new ScheduledCampaignBattle(100, CampaignBattleKind.FIELD, true, null);
+		war.setCampaignBattleSchedule(List.of(first, second));
+
+		assertEquals(1, BattleNamingService.resolveScheduledOrdinal(war, ScheduleLeg.INVASION, 0, first));
+		assertEquals(2, BattleNamingService.resolveScheduledOrdinal(war, ScheduleLeg.INVASION, 1, second));
+	}
+
+	@Test
+	void resolveScheduledOrdinal_respectsFoughtCount() {
+		War war = new War(1, mock(Faction.class), mock(Faction.class));
+		war.recordLocationBattle("wilderness:100");
+		ScheduledCampaignBattle slot = new ScheduledCampaignBattle(100, CampaignBattleKind.FIELD, false, null);
+		war.setCampaignBattleSchedule(List.of(slot));
+
+		assertEquals(2, BattleNamingService.resolveScheduledOrdinal(war, ScheduleLeg.INVASION, 0, slot));
+	}
+
+	@Test
+	void resolveScheduledDisplayName_siegeThenFieldAtCapital() {
+		War war = new War(1, mock(Faction.class), mock(Faction.class));
+		ScheduledCampaignBattle naval = new ScheduledCampaignBattle(
+				795, CampaignBattleKind.NAVAL, false, null, "port");
+		ScheduledCampaignBattle siege = new ScheduledCampaignBattle(705, CampaignBattleKind.SIEGE, false, "Greenfort");
+		ScheduledCampaignBattle field = new ScheduledCampaignBattle(705, CampaignBattleKind.FIELD, true, null);
+		war.setCampaignBattleSchedule(List.of(naval, siege, field));
+
+		assertEquals(
+				"Siege of Greenfort",
+				BattleNamingService.resolveScheduledDisplayName(
+						war, ScheduleLeg.INVASION, 1, siege, 705));
+		String fieldName = BattleNamingService.resolveScheduledDisplayName(
+				war, ScheduleLeg.INVASION, 2, field, 705);
+		assertTrue(fieldName.startsWith("Battle of "));
+		assertEquals(1, BattleNamingService.resolveScheduledOrdinal(war, ScheduleLeg.INVASION, 1, siege));
+		assertEquals(1, BattleNamingService.resolveScheduledOrdinal(war, ScheduleLeg.INVASION, 2, field));
+	}
+
+	@Test
+	void applyCampaignName_siegeUsesFortKey() {
+		War war = new War(1, mock(Faction.class), mock(Faction.class));
+		ScheduledCampaignBattle siege = new ScheduledCampaignBattle(705, CampaignBattleKind.SIEGE, false, "Greenfort");
+		Battle battle = new Battle("campaign_w1_p705");
+
+		BattleNamingService.applyCampaignName(battle, war, 705, BattleType.SIEGE, siege);
+
+		assertEquals("Siege of Greenfort", battle.getDisplayName());
 	}
 }

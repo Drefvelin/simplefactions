@@ -1,6 +1,6 @@
 # Wars — automated campaign system (planning lock)
 
-> **Implementation status:** **Step 56 foundation shipped** (2026-08-19). **Step 57 pathfinder & campaign shipped** (2026-08-20). **Step 58 initiative & occupation shipped** (2026-08-20). **Step 59 battle scheduling shipped** (2026-08-20). **Step 60.09 campaign battle launch shipped** (2026-08-20). **Step 61 military & casualties shipped** (2026-08-21): war commitment snapshot, battle pool, collective lives, casualty ledger/apply. **Step 61b battle dev mode shipped** (2026-08-21): capture min 1, devmode phantoms, campaign join cap. **Step 61c campaign UX shipped** (2026-08-21): rules-only templates, formatted `warschedule` output, explicit warband signup, JSON battle/warband persistence (61c.09). **Step 63 war end closure shipped** (2026-08-22). **Step 64 campaign battle schedule & fort sieges shipped** (2026-08-23): schedule, fort control, trim/initiative, resolver/launch, GUI battle kinds, battle zone removal (lock: [64.01](../../ProvinceSystem/Planning/batches/step-64/01-planning-lock.md)). **Step 65 naval & invasions shipped** (2026-08-23): port sea ZOC naval slots, naval invasion, siege override on amphibious landing, campaign GUI naval kinds, `navalVariant` launch, war-aware fort ZOC export (lock: [65.01](../../ProvinceSystem/Planning/batches/step-65/01-planning-lock.md)). Still planned: inter-battle raids (**66**), raid war type (**66**), map export (**67**), declare codes (**68**).
+> **Implementation status:** **Step 56 foundation shipped** (2026-08-19). **Step 57 pathfinder & campaign shipped** (2026-08-20). **Step 58 initiative & occupation shipped** (2026-08-20). **Step 59 battle scheduling shipped** (2026-08-20). **Step 60.09 campaign battle launch shipped** (2026-08-20). **Step 61 military & casualties shipped** (2026-08-21): war commitment snapshot, battle pool, collective lives, casualty ledger/apply. **Step 61b battle dev mode shipped** (2026-08-21): capture min 1, devmode phantoms, campaign join cap. **Step 61c campaign UX shipped** (2026-08-21): rules-only templates, formatted `warschedule` output, explicit warband signup, JSON battle/warband persistence (61c.09). **Step 63 war end closure shipped** (2026-08-22). **Step 64 campaign battle schedule & fort sieges shipped** (2026-08-23): schedule, fort control, trim/initiative, resolver/launch, GUI battle kinds, battle zone removal (lock: [64.01](../../ProvinceSystem/Planning/batches/step-64/01-planning-lock.md)). **Step 65 naval & invasions shipped** (2026-08-23): port sea ZOC naval slots, naval invasion, siege override on amphibious landing, campaign GUI naval kinds, `navalVariant` launch, war-aware fort ZOC export (lock: [65.01](../../ProvinceSystem/Planning/batches/step-65/01-planning-lock.md)). **Step 70 per-side battle caps & initiative shipped** (2026-08-23): dual-leg schedules (`campaignBattleSchedule` + `campaignCounterSchedule`), per-leg `max_battles_per_leg` trim, asymmetric `initiativeAttacker` / `initiativeDefender`, counter-push active schedule, dual-leg route GUI (lock: [70.01](../../ProvinceSystem/Planning/batches/step-70/01-planning-lock.md)). **Step 70d chronological leg schedules shipped** (2026-08-23): `placeBattle` axis-order insertion, FB invasion leg, naval prepend before landing, no new `NAVAL_INVASION` emission (lock: [70d.02](../../ProvinceSystem/Planning/batches/step-70d/02-planning-lock-fb.md)). Still planned: inter-battle raids (**71**), raid war type (**67**), map export (**68**), declare codes (**69**).
 >
 > **ProvinceSystem:** [step-44](../../ProvinceSystem/Planning/batches/step-44/00-index.md) (map occupation overlay) · [map-export-schema.json](../../ProvinceSystem/Planning/assets/map-export-schema.json)
 
@@ -128,29 +128,36 @@ Uses a new **`ProvincePathfinder`** module (not embedded in `ProvinceManager` tr
 | Terrain | Pathfinder rule |
 |---------|-----------------|
 | **WATER** (rivers, lakes) | Always crossable on **land passes** at normal terrain cost (~`0.75`). Routes may cross water so paths do not zigzag around rivers. |
-| **SEA** (ocean) | **Impassable** on land passes 1 and 3. Only traversable in **pass 2** (naval/amphibious). |
+| **SEA** (ocean) | **Impassable** on land pass 1. Only traversable in **pass 2** (naval/amphibious). |
 
 **Note:** `Province.isSea()` returns true for both WATER and SEA. Pathfinder code must use `terrain == Terrain.SEA` for ocean logic, not `isSea()`.
 
 ### Neutral provinces (locked)
 
-**Neutral** = province owner not in the war belligerent set (attacker side + defender side, including subjects and called allies).
+**Neutral** splits into two cases for pathfinding:
 
-| Pass | Neutral handling |
-|------|------------------|
-| **1** Land, no neutral | Blocked |
-| **2** Sea, no neutral | Blocked |
-| **3** Land + neutral | Allowed with heavy penalty (`war.pathfinder.neutral_penalty`, default `8.0`) |
+| Type | Definition | Route UI |
+|------|------------|----------|
+| **Wilderness** | Province has no owner (`owner == null`) | Gray tiles on campaign route |
+| **Foreign nation** | Owner exists but is not a war belligerent | Gray tiles on campaign route |
+
+Belligerent set = attacker side + defender side, including subjects and called allies.
+
+| Pass | Wilderness | Foreign nation |
+|------|------------|----------------|
+| **1** Land | Allowed at normal terrain cost | Blocked |
+| **2** Sea | N/A (land tiles irrelevant on sea hops) | Blocked on **land** tiles; sea tiles always allowed |
+
+`war.pathfinder.neutral_penalty` is no longer used by the pathfinder fallback chain.
 
 ### Route priority (locked)
 
 Run passes **in order**; first pass that finds a route wins:
 
-1. **Land campaign** - land + WATER; no SEA; no neutral  
-2. **Sea campaign** - SEA hops between coastal belligerent provinces; no neutral  
-3. **Land + neutral fallback** - same traversability as pass 1; neutrals penalized  
+1. **Land campaign** - land + WATER + wilderness; no SEA; foreign nations blocked  
+2. **Sea campaign** - SEA hops between coastal belligerent provinces; foreign-owned land blocked  
 
-No sea-first routing; land is always preferred when possible.
+No sea-first routing; land (including through wilderness) is always preferred when possible.
 
 **Future (not v1):** generate 2–3 alternative campaigns (e.g. long land vs risky naval); attacker chooses after declare.
 
@@ -158,7 +165,7 @@ No sea-first routing; land is always preferred when possible.
 
 **Intent:** shortest invasion corridor from **attacker–defender border** toward **objective province**, not capital-to-capital through messy borders.
 
-1. For each province **B** on the **defender** side of the border (defender-owned adjacent to attacker-owned), pathfind **B → objective** using passes 1→2→3.
+1. For each province **B** on the **defender** side of the border (defender-owned adjacent to attacker-owned), pathfind **B → objective** using passes 1→2.
 2. Pick **B** with minimum total cost → **`campaignStartProvinceId`** (first battle / invasion entry).
 3. If no land border: use defender provinces adjacent to **sea** as **B** candidates; pathfind **B → objective** (sea landing on enemy soil).
 
@@ -186,11 +193,11 @@ Step 57 shipped **`B → objective`** only. Step **58** replaces this with a **f
 
 **Counter-push:** defender fights **leftward** on the **existing** line toward attacker capital — no polyline append at choice time.
 
-**Raid war type:** unchanged — step **66**.
+**Raid war type:** unchanged — step **67**.
 
 ### Raid war type route
 
-Shortest path: attacker border → settlement (within X border distance). One battle at settlement. Implemented in step **66**, not step 57.
+Shortest path: attacker border → settlement (within X border distance). One battle at settlement. Implemented in step **67**, not step 57.
 
 ---
 
@@ -218,32 +225,63 @@ When **capital itself** is the war target, capital province is the objective.
 
 - **One campaign battle per day** (config) inside **battle window** (default **20:00–24:00 CET**, hourly slots; see step 59).
 - Exact hour chosen by [voting](#battle-scheduling--voting).
-- **First campaign battle** is always at **`campaign_provinces[cursor_index]`** (border **B** at declare), regardless of schedule slot order when indices align.
-- **Full battle list** is built at declare (see [Campaign battle schedule](#campaign-battle-schedule-locked-step-64)), trimmed to per-goal `max_battles`, then fought in order via `campaignScheduleIndex`.
+- **First invasion battle** is always at **`campaign_provinces[cursor_index]`** (border **B** at declare), regardless of schedule slot order when indices align.
+- **Two battle lists** are built at declare (see [Campaign battle schedule](#campaign-battle-schedule-locked-step-64-70)), each trimmed to per-goal **`max_battles_per_leg`**, then fought via the **active** leg index for the current `pushTarget`.
 - Fort ZOC on line → **siege** when the line passes through the ZOC and the fort is enemy-controlled. Capital in fort ZOC → siege then objective field battle.
+- **Field cadence (step 70b):** default **`war.battle_cadence.provinces_between_battles: 3`**. Each leg walks its segment once; place a non-required **field** slot when `offset % N == 0` from the leg start (`N` = config value). This is a **grid from leg start**, not step-since-last-battle counting.
+  - **Invasion:** `cadenceOrigin = borderIndex` (`cursor_index` at declare); offset = `abs(axisIndex - borderIndex)`.
+  - **Counter:** `cadenceOrigin = borderIndex - 1` (first tile **left** of border **B**); offset = `abs(axisIndex - (borderIndex - 1))`.
+  - Sieges, naval, and required terminal slots do not suppress cadence on the same province when rules both apply.
+  - Planning lock: [70b.01 field cadence](../../ProvinceSystem/Planning/batches/step-70b/01-planning-lock.md#locked--field-cadence-70b-change).
 
-**Target feel:** default **4** battles per goal after trim; starting initiative fuel `ceil(4 × 1.5) = 6` with default `initiative_factor`. Back-and-forth spends fuel until exhaustion or victory.
+**Target feel:** default **4** slots per leg after trim (up to **8** total across both directions). Example: invasion 4 slots / counter 2 slots → starting fuel **6 / 3** at `initiative_factor` **1.5**. Back-and-forth spends fuel until exhaustion or victory.
 
-### Campaign battle schedule (locked step 64)
+### Campaign battle schedule (locked step 64; updated step 70d)
 
-**Planning lock:** [step-64/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-64/01-planning-lock.md) · [step-65/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-65/01-planning-lock.md) (naval)
+**Planning lock:** [step-64/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-64/01-planning-lock.md) · [step-65/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-65/01-planning-lock.md) (naval) · [step-70/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-70/01-planning-lock.md) (dual legs) · [step-70d/02-planning-lock-fb.md](../../ProvinceSystem/Planning/batches/step-70d/02-planning-lock-fb.md) (FB legs + axis insert)
 
 At declare, after the campaign axis is set:
 
 ```text
-natural  = CampaignScheduleBuilder.build(axis, forts, cadence)
-trimmed  = CampaignScheduleTrimmer.trim(natural, max_battles[goal])
-war.campaignBattleSchedule = trimmed
+built            = CampaignScheduleBuilder.buildAll(war, axis, cursorIndex, objectiveIndex, capitalIndex, fortIndex, portIndex)
+invasionTrimmed  = CampaignScheduleTrimmer.trimInvasion(built.invasion(), max_battles_per_leg[goal])
+counterTrimmed   = CampaignScheduleTrimmer.trimCounter(built.counter(), max_battles_per_leg[goal])
+war.campaignBattleSchedule = invasionTrimmed
+war.campaignCounterSchedule = counterTrimmed
 war.campaignScheduleIndex = 0
-fuel     = ceil(trimmed.size() * initiative_factor)  // both coalitions
+war.campaignCounterScheduleIndex = 0
+initiativeAttacker = ceil(invasionTrimmed.size × initiative_factor)
+initiativeDefender = ceil(counterTrimmed.size × initiative_factor)
 ```
+
+Only **`CampaignBattlePlacer.placeBattle`** mutates a leg list. Each slot is **inserted** at the correct axis position (fight order = list order = geographic order along that leg's segment). Same-province tie-break: siege → optional field → required field.
+
+#### FB legs (step 70d)
+
+| Leg | Segment | List order |
+|-----|---------|------------|
+| **Invasion** | FB province → DT (defender target) | Chronological along axis (increasing index) |
+| **Counter** | `axis[cursorIndex - 1]` → AC (aggressor capital) | Chronological along axis (decreasing index); never includes border **B** |
+
+**FB** = first invasion battle (required **FIELD** at border **B** = `campaign_provinces[cursor_index]`). If a **NAVAL** battle happens before landing, NAVAL is list index **0** and the FB field at **B** stays at index **1**.
+
+**Example (Brume vs Lantan):** axis `452, 782, 758, 757, 672, 709, 713, 705`. Invasion list: `709 FIELD` → `713 SIEGE` → `705 required` (optional `795 NAVAL` prefix when harbour covers sea). Geographic GUI row (70c): `452 - 782 - 672 - [709] - 713 siege - 705`.
+
+#### Two legs (axis walk)
+
+| Leg | Axis walk | First battle province |
+|-----|-----------|----------------------|
+| **Invasion** | border → objective | `campaign_provinces[cursor_index]` (border **B** / FB) |
+| **Counter** | `borderIndex - 1` → aggressor capital | First slot **left of border** (border itself is invasion-only) |
+
+Natural slot rules (field cadence, fort siege, port naval) apply on **each leg independently** with coalition-appropriate direction. New wars do **not** emit `NAVAL_INVASION` slots (enum kept for old saves / display only).
 
 #### Two layers: template vs display
 
 | Layer | Purpose | Values |
 |-------|---------|--------|
 | **`BattleType`** | Win rules (capture vs contest) | `FIELD`, `SIEGE` (no `BattleType.NAVAL`) |
-| **`CampaignBattleKind`** | GUI label / staff setup expectations | `Field Battle`, `Siege`, `Naval Battle`, `Naval Invasion` |
+| **`CampaignBattleKind`** | GUI label / staff setup expectations | `Field Battle`, `Siege`, `Naval Battle`, `Naval Invasion` (legacy saves) |
 
 Objective battles use **field** template and **Field Battle** display (required slot, never trimmed). Naval kinds use **`FIELD`** template plus **`navalVariant`** on the battle (staff sea spawn layout).
 
@@ -251,50 +289,67 @@ Objective battles use **field** template and **Field Battle** display (required 
 
 | Slot | When | `BattleType` | Display |
 |------|------|--------------|---------|
+| **Border / FB field** | Always at border **B** on invasion leg (phase 1 anchor) | `FIELD` | Field Battle |
 | **Siege** | Axis passes through province in operational fort ZOC; fort controller is enemy | `SIEGE` | Siege |
-| **Naval** | Axis sea run blocked by enemy port sea ZOC | `FIELD` + `navalVariant` | Naval Battle |
-| **Naval invasion** | First defender-owned land after sea run (unless fort ZOC override) | `FIELD` + `navalVariant` | Naval Invasion |
-| **Field** | Every `provinces_between_battles` along axis | `FIELD` | Field Battle |
+| **Naval** | Invasion: enemy port sea ZOC blocks sea on axis segment AC→DT; prepended at index 0 | `FIELD` + `navalVariant` | Naval Battle |
+| **Field** | Leg walk: `offset % provinces_between_battles == 0` from leg start (non-terminal provinces) | `FIELD` | Field Battle |
 | **Objective** | Always at `objectiveProvinceId` | `FIELD` | Field Battle (`required`) |
 
-Siege fires **once per fort** on the line (battle at fort province). Overlapping ZOC: **oldest** operational fort wins per province (`completedAt`, then id).
+Siege fires **once per fort** on the line. The slot **`provinceId`** is the **fort home province** (e.g. Greenfort → **713**); **`fortInstallationId`** names the fort. When the fort home is **off the campaign axis**, **`chronologyProvinceId`** stores the axis tile where ZOC was entered; fight order and GUI geographic sort use that tile. On-axis fort homes sort by `provinceId` as before. The invasion leg never schedules battles after the objective province. Overlapping ZOC: **oldest** operational fort wins per province (`completedAt`, then id).
 
-#### Port sea ZOC (shipped step 65)
+#### Port sea ZOC (shipped step 65; updated step 70d)
 
-Sea zones use **`Terrain.SEA`** only (not `Province.isSea()` / rivers). At declare, scan the axis for contiguous **SEA** runs (pathfinder pass 2).
+Sea zones use **`Terrain.SEA`** only (not `Province.isSea()` / rivers). Invasion sea scan walks axis indices **0 → objective** (AC toward DT) for contiguous **SEA** runs.
 
 | Rule | Detail |
 |------|--------|
 | **Port coverage** | BFS from **SEA neighbours of the port land province**; expand only across ocean tiles; radius **`war.port_sea_zoc_radius`** (default **2**) |
 | **Blocking port** | Operational port whose owner coalition is **enemy of aggressor** at declare and whose coverage intersects any sea province in the run |
-| **Naval slot** | One **`NAVAL`** per blocking port at the **port installation province** (`portInstallationId` on slot); friendly port covering the run → no naval slot |
+| **Naval slot** | One **`NAVAL`** per blocking port at the **first sea province on the axis sea run** (`portInstallationId` on slot); invasion leg prepends at index 0 (before FB field); friendly port covering the run → no naval slot |
 | **No enemy port** | Sea on axis alone does **not** insert a naval slot |
-| **Naval invasion** | First **defender-owned land** after the sea run → **`NAVAL_INVASION`**; landing in **enemy-controlled** fort ZOC → **`SIEGE`** at fort instead (no invasion slot) |
+| **Landing** | Amphibious landing is the FB **FIELD** at border **B**; no new **`NAVAL_INVASION`** slot is emitted |
 | **Overlap** | Oldest operational port wins per sea province (`completedAt`, then `id`) |
 
-#### Trim priority (lowest cut first)
+#### Trim priority (step 70d)
 
-Objective (required) → siege → naval → naval invasion → field cadence. Within a tier, drop slots **farthest from objective** first (`CampaignScheduleTrimmer` ships naval kinds).
+Each leg is trimmed **independently** via `CampaignScheduleTrimmer.maxBattlesPerLegForGoal`:
+
+| Leg | Policy |
+|-----|--------|
+| **Invasion** | Drop optional **FIELD** from **DT side** first; never drop required objective; protect index **0** (FB field); if index 0 is **NAVAL**, also protect index **1** (FB field). Then drop legacy `NAVAL_INVASION`, **NAVAL**, **SIEGE** if still over cap |
+| **Counter** | Drop optional **FIELD** from border-adjacent side first (lowest axis index on counter segment) |
+
+Config key **`max_battles_per_leg`** (default **4** per goal). Legacy **`max_battles`** is a deprecated alias with the same per-leg semantics (step 64 used it as a single total invasion cap).
 
 #### War-time fort control
 
-Installation DB ownership does **not** change. `fortControllers` on the war tracks who **controls the ZOC**. Siege winner becomes controller. Counter-push through enemy-held ZOC **inserts a siege slot** at `campaignScheduleIndex` before the next battle resolves.
+Installation DB ownership does **not** change. `fortControllers` on the war tracks who **controls the ZOC**. Siege winner becomes controller. Counter-push through enemy-held ZOC **inserts a siege slot** on the **active** leg schedule at the active index before the next battle resolves.
 
-#### Progression
+#### Progression (active leg)
 
-- `nextBattleProvince(war)` → `campaignBattleSchedule[campaignScheduleIndex].provinceId` (after re-siege insert check).
-- Each fought campaign battle increments `campaignScheduleIndex` and `campaignBattlesFought`.
+| `pushTarget` | Active schedule | Active index |
+|--------------|-----------------|--------------|
+| `TOWARD_OBJECTIVE` | `campaignBattleSchedule` | `campaignScheduleIndex` |
+| `TOWARD_AGGRESSOR_CAPITAL` | `campaignCounterSchedule` | `campaignCounterScheduleIndex` |
+| `RETAKE_OBJECTIVE` | invasion schedule | `campaignScheduleIndex` |
+
+- `nextBattleProvince(war)` → active leg `currentSlot` province (after re-siege insert check).
+- Each fought campaign battle increments the **active** schedule index and `campaignBattlesFought`. Switching `pushTarget` does **not** reset the other leg's index.
 - `cursorIndex` still advances on winner **Push** per existing rules.
 
-#### Persistence (new war JSON fields)
+#### Persistence (war JSON fields)
 
 | Field | Role |
 |-------|------|
-| `campaignBattleSchedule` | Ordered trimmed slots |
-| `campaignScheduleIndex` | Next slot index |
+| `campaignBattleSchedule` | Invasion leg slots (border → objective) |
+| `campaignScheduleIndex` | Next slot index on invasion leg |
+| `campaignCounterSchedule` | Counter leg slots (border − 1 → aggressor capital) |
+| `campaignCounterScheduleIndex` | Next slot index on counter leg |
+| `initiativeAttacker` | Starting fuel from invasion leg slot count (persisted at declare) |
+| `initiativeDefender` | Starting fuel from counter leg slot count (persisted at declare) |
 | `fortControllers` | installation id → coalition key |
 
-Slot shape: `provinceId`, `kind`, `required`, optional `fortInstallationId` (siege), optional `portInstallationId` (naval).
+Slot shape: `provinceId` (axis tile where the battle is fought), `kind`, `required`, optional `fortInstallationId` (siege), optional `portInstallationId` (naval).
 
 ### Cursor movement (after each fought battle)
 
@@ -305,20 +360,24 @@ Cursor moves only when the **battle winner chooses Push** after the battle. **Ho
 | **Push** | Advances along the current `pushTarget` (toward objective, toward aggressor capital, or retake objective) |
 | **Hold** | Unchanged; white peace proposed to the loser |
 
-### Initiative (locked; updated step 64)
+### Initiative (locked; updated step 70)
 
 | Rule | Default |
 |------|---------|
-| Starting fuel (both coalitions) | `ceil(trimmed_schedule.size() × initiative_factor)` |
+| Attacker starting fuel | `ceil(invasion_leg_slot_count × initiative_factor)` |
+| Defender starting fuel | `ceil(counter_leg_slot_count × initiative_factor)` |
+| Empty counter leg | Defender fuel **0** |
 | `initiative_factor` | **1.5** (config) |
-| Per-goal `max_battles` | **4** each (`DE_JURE_ANNEX`, `SUBJUGATE`, `TRANSFER_SUBJECT`) |
+| Per-goal `max_battles_per_leg` | **4** each (`DE_JURE_ANNEX`, `SUBJUGATE`, `TRANSFER_SUBJECT`) |
 | **`initiativeHolderCoalition`** | Which coalition may schedule the next campaign battle and is battle-offensive (starts **aggressor** at declare) |
 | Each **fought** battle | **Battle offensive coalition** (holder at battle start) loses **1** fuel when the battle ends |
 | **Winner** | Becomes initiative holder after post-battle choices resolve (unless Hold assigns attack to the loser) |
 | **Postponed** battle (low votes) | **No** fuel spent; holder unchanged |
 | Coalition at **0 fuel** while holding initiative | Cannot schedule until they win initiative back |
 
-**Removed:** `war.initiative_per_side` fixed fuel at declare. Fuel is derived from **final** trimmed battle count only (re-siege inserts do not recompute fuel).
+**Legacy load:** wars declared before step 70 without `campaignCounterSchedule` in JSON default defender fuel to the invasion-based symmetric value; re-declare to rebuild both legs.
+
+**Removed:** symmetric fuel from a single schedule for both coalitions. Re-siege inserts do not recompute fuel.
 
 ### Post-battle choice (every battle)
 
@@ -386,7 +445,7 @@ Capital as objective: capital battle won → **auto victory** (no retake loop). 
 
 ## Campaign GUI (locked)
 
-**Planning lock:** [step-58/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-58/01-planning-lock.md)
+**Planning lock:** [step-58/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-58/01-planning-lock.md) · [step-70b/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-70b/01-planning-lock.md) (schedule-only route row) · [step-70c/01-planning-lock.md](../../ProvinceSystem/Planning/batches/step-70c/01-planning-lock.md) (geographic order)
 
 Primary player surface for campaign line, post-battle Push/Hold choice, white peace accept, and battle hour voting. **GUI-first** for campaign choices.
 
@@ -396,19 +455,53 @@ War list → War view → **Campaign** button → **Campaign view**.
 
 ### Route row
 
-- Horizontal row: **aggressor direction left**, **defender direction right**.
-- One slot per province on **`campaign_provinces[]`** (paginate if long).
-- **Cursor marker** on **`cursor_index`** (separate from block color).
+**Source of truth:** `campaignBattleSchedule` + `campaignCounterSchedule` on war JSON. The route row shows **only** scheduled battle slots - never axis provinces without a slot.
+
+| Rule | Detail |
+|------|--------|
+| **Order** | Geographic: all slots from both legs merged and sorted by `campaignProvinces` index ascending (attacker-cap side left, defender objective right) |
+| **Row layout** | Single row, inventory slots 10-18 (max 9 items); no pagination |
+| **Cap** | `max_battles_per_leg` hard max **4** per goal at config load (max 8 battle items total) |
+| **Both legs visible** | Full war plan at declare, regardless of active `pushTarget` |
+| **First-battle marker** | Below the slot at border **B** (`campaignProvinces[cursorIndex]`; invasion schedule index 0 when tied) |
+| **Axis fields** | `campaign_provinces[]` / `cursor_index` also drive map line and cursor push |
+
+Schedule-only: never render axis provinces without a persisted slot. No `Counter-push schedule` lore.
 
 ### Concrete legend (viewer-relative)
 
 | Material | Meaning |
 |----------|---------|
-| **Blue concrete** | Province owned by **your** belligerent coalition |
-| **Red concrete** | Province owned by **enemy** belligerent coalition |
-| **Green concrete** | **Next battle** when only one valid option |
+| **Blue concrete** | Province owned by **your** belligerent coalition (upcoming slots) |
+| **Red concrete** | Province owned by **enemy** belligerent coalition (upcoming slots) |
+| **Green concrete** | **Next battle** on the **active** leg's current schedule slot |
+| **Gray concrete** | **Fought** slot (`index < activeIndex` on that leg) |
+
+Naval kinds use trident / iron sword icons instead of concrete when applicable.
 
 **Not de jure.** Use **belligerent territorial ownership**. Neutral provinces on the line: **red** for both sides (v1).
+
+Route row lists **all** slots from **both** legs (invasion then counter). Green concrete / "Next battle" lore follow the **active** leg for the current `pushTarget`. Fought slots stay visible with **Fought** lore and gray styling.
+
+### Display names
+
+Player-facing title per schedule slot (GUI item name and export `display_name`):
+
+| Kind | Pattern |
+|------|---------|
+| Field | `{ordinal}Battle of {location}` |
+| Siege | `{ordinal}Siege of {location}` |
+| Naval / invasion | Same as field template; kind shown in lore |
+
+**Location** resolution: settlement name → fort name → county title → `Wilderness`.
+
+**Ordinal** at render/export time:
+
+```text
+ordinal = locationBattleCounts[key] + 1 + count(previous slots in SAME leg with same location key)
+```
+
+Siege slots use `fort:{installationId}` as the location key. Two scheduled fields at the same settlement before any are fought → `Battle of Lanbury`, then `Second Battle of Lanbury`. Implemented in `BattleNamingService.resolveScheduledDisplayName`.
 
 ### Leader interactions
 
@@ -421,7 +514,9 @@ War list → War view → **Campaign** button → **Campaign view**.
 | White peace proposed | Other war leader **Accept white peace** button |
 | Both auto-propose | Automatic white peace |
 
-Fort / objective / capital: lore tags; scheduled battle kind (**Field Battle** / **Siege**) on route provinces; siege provinces show enchant glint.
+Fort / objective / capital: lore tags; scheduled battle kind (**Field Battle** / **Siege** / naval kinds) on route provinces for **both** legs; siege provinces show enchant glint.
+
+Admin **`/warstatus`** and **`warschedule`** output include invasion and counter schedule indices and slot lists.
 
 Voting hour toggles and schedule info: Campaign view slots **28-32** (hour multi-select), info book slot **4**, autoresolve propose slots **49-51** (step **59**, shipped 2026-08-20).
 
@@ -538,7 +633,7 @@ Same pattern as professions → RPCharacters. SF owns campaign battles, join flo
 | **Siege** | Hold **contest area** until timer hits **0** (ETW-style bidirectional timer); defender elimination also ends battle | **No province fence** (64.08) | Same as field |
 | **Raid** | Capture **target** to 100%; defender eliminated when `LIVES` mode exhausted | **No fence** - map-wide movement | Attackers: **none** (elimination on death/disconnect). Defenders: **infinite** or **set lives** (template) |
 
-**Naval variant** (field + siege only): template flag for staff layout (**attacker spawn** on naval point). Campaign schedule inserts **`NAVAL`** / **`NAVAL_INVASION`** slots; launch sets **`navalVariant`** on field battles (step 65 shipped). Does not enforce province bounds after 64.08.
+**Naval variant** (field + siege only): template flag for staff layout (**attacker spawn** on naval point). Campaign schedule inserts **`NAVAL`** slots (prepended on invasion leg when port blocks sea); launch sets **`navalVariant`** on field battles (step 65 shipped). Legacy **`NAVAL_INVASION`** slots from old saves still display and launch with naval variant. Does not enforce province bounds after 64.08.
 
 **Province-leave penalty:** **removed** step 64.08 (was: leave allowed set → 10s → death). Staff place spawns, jails, capture points, and contest areas anywhere on the map.
 
@@ -668,7 +763,7 @@ Config under `war.battle_military`:
 
 **Apply (61.06):** After battle via `CampaignBattleOutcomeService` (before `openVote`). Implemented in `BattleCasualtyService`: militia first (when eligible at battle province), then army + levies split **proportionally** across contributors. Debits `WarCommitment.count` and faction `Regiment.currentSlots` (permanent until rebuilt). Applies even when **no winner**. Side casualties are snapshotted on `BattleEndedEvent` before the ledger clears.
 
-**Out of scope for 61:** staff battles, goal apply (**62**), campaign battle schedule / fort sieges (**64**), raid war type (**66**).
+**Out of scope for 61:** staff battles, goal apply (**62**), campaign battle schedule / fort sieges (**64**), raid war type (**67**).
 
 ### Levies (war-scoped)
 
@@ -691,8 +786,7 @@ Config under `war.battle_military`:
 
 Full rules: [Port sea ZOC](#port-sea-zoc-shipped-step-65) under campaign battle schedule.
 
-- Enemy **port** sea ZOC blocking an axis sea run → **`NAVAL`** schedule slot at the port province (`navalVariant` field battle).
-- First **defender-owned land** after a sea run → **`NAVAL_INVASION`** (or **siege** if landing province is in enemy-controlled fort ZOC).
+- Enemy **port** sea ZOC blocking an axis sea run → **`NAVAL`** schedule slot prepended on the invasion leg (index 0; `navalVariant` field battle). Landing fight is the FB **FIELD** at border **B** (no new **`NAVAL_INVASION`** slot).
 - Sea on axis without an enemy blocking port → no naval slot.
 
 ### Port protection
@@ -701,7 +795,7 @@ Full rules: [Port sea ZOC](#port-sea-zoc-shipped-step-65) under campaign battle 
 
 ### Installation pick per battle
 
-**Deferred** (not in step 65 scope). Schedule slots carry `portInstallationId` for the **blocking** port only. Full attacker/defender port / airport / fort pick UI may ship later or in step 66 prep. Airports used in attack can be bombed in inter-battle air raids (step 66).
+**Deferred** (not in step 65 scope). Schedule slots carry `portInstallationId` for the **blocking** port only. Full attacker/defender port / airport / fort pick UI may ship later. Airports used in attack can be bombed in inter-battle air raids (step **71**).
 
 Fort ZOC on campaign line → **siege** when line passes through ZOC and fort is enemy-controlled. War-time fort controller may differ from installation owner; see [Campaign battle schedule](#campaign-battle-schedule-locked-step-64). Capital inside fort ZOC → siege then objective field battle.
 
@@ -748,6 +842,21 @@ Exported in `map_markers.json` (or sidecar) per [`map-export-schema.json`](../..
 
 Emit on declare, after each battle, and on war end. Chronicle events: `war_declared`, `battle_scheduled`, `battle_result`, `province_occupied`, `war_ended`.
 
+### Web map campaign visualization (step 66, shipped 2026-08-23)
+
+Active campaign wars export a **`wars[]` route slice** in `map_markers.json` (SF `WarMapExporter` + PS loader enrichment). The ProvinceSystem web map renders:
+
+| Feature | Source | Notes |
+|---------|--------|-------|
+| Smooth dotted campaign line | `campaign_provinces[]` / `campaign_line_points[]` | Catmull-Rom spline; border `#2a1810` + dash `#8b3a3a` |
+| Battle pins | `campaign_battle_schedule[]` + `campaign_counter_schedule[]` | One `battle.png` per slot (`leg` + `schedule_index`); siege/port coords from installation when set |
+| Pin hover | `display_name` or `kind_label` + `province_name` + `status` | Prefer `{display_name} - {status}` when SF export includes `display_name` (step 70b) |
+| Next battle highlight | slot `status === "next"` on active leg | 1.1x scale + ring on pin |
+
+Visible on nation, county, duchy, kingdom, empire, and trade map modes (same as settlement markers).
+
+**Not shipped in step 66:** occupation province tint (`occupied_by_*` lists) - deferred to step **68** (SF export) and step **44** batch 03 (PS overlay). Re-upload `map_markers` or wait for the next regen after deploy so active wars pick up the route slice.
+
 ---
 
 ## Build steps (locked)
@@ -768,10 +877,15 @@ Full step list and dependencies: [ProvinceSystem/Planning/war-build-order.md](..
 | **63** — War end closure **done** | `WarResolutionService`, surrender GUI, capital auto-victory, stalemate peace | SF |
 | **64** — Campaign schedule & fort sieges **done** | Battle list at declare, fort ZOC sieges, war-time fort control, trim, initiative from schedule, GUI battle kinds, remove battle zones | SF |
 | **65** — Naval & invasions **done** | Port ZOC naval battles, naval invasion slots, siege override, GUI naval kinds, war ZOC export | SF |
-| **66** — Inter-battle raids **planned** | Naval/air/fort between battles | SF |
-| **67** — Map export **planned** | `wars[]` occupation payload | SF |
-| **44** — Map layer | Occupation tint on website | PS |
-| **68** — Declare codes | Ticket → code production gate | SF |
+| **70** — Per-side caps & initiative **done** | Dual-leg schedule, asymmetric fuel, counter-push active leg, route GUI | SF |
+| **70b** — Campaign schedule simplicity **done** | Cadence 3, schedule-only GUI, display names, export align | SF + PS |
+| **70c** — Geographic route GUI **done** | Axis-left-to-right row, no pagination, border-B marker, cap 4/leg | SF |
+| **66** — War campaign map **done** | Smooth web map line + battle pins (`wars[]` route slice) | SF + PS |
+| **71** — Inter-battle raids **planned** | Naval/air/fort between battles | SF |
+| **67** — Raid war type **planned** | One-battle border settlement raid | SF |
+| **68** — War map export (full) **planned** | Occupation + chronicle `wars[]` payload | SF |
+| **44** — Map layer **planned** | Occupation tint on website (route in 66) | PS |
+| **69** — Declare codes **planned** | Ticket → code production gate | SF |
 
 ---
 
@@ -809,4 +923,4 @@ See git history and `War/` package for legacy files.
 - Reparations **%** and **days** defaults  
 - When to **recalculate** white peace auto-proposal flags after cursor / phase change  
 
-`provinces_between_battles`, `max_battles`, and `initiative_factor` are locked in step **64** (see config schema in [64.01](../../ProvinceSystem/Planning/batches/step-64/01-planning-lock.md)).
+`provinces_between_battles` (default **3**, step **70b**), `max_battles_per_leg`, and `initiative_factor` are locked in step **70** / **70b** (see config schema in [70.01](../../ProvinceSystem/Planning/batches/step-70/01-planning-lock.md) and [70b.01](../../ProvinceSystem/Planning/batches/step-70b/01-planning-lock.md); step **64** `max_battles` is a deprecated per-leg alias).

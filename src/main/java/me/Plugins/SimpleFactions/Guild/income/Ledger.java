@@ -172,6 +172,12 @@ public class Ledger {
                     amount -= InstallationConfigLoader.getDailyUpkeep(installation.getKind());
                 }
                 break;
+            case MILITARY_UPKEEP:
+                if (!guild.isBase()) {
+                    return 0;
+                }
+                amount = -f.getMilitary().getTotalUpkeep();
+                break;
             case UPGRADES_UPKEEP:
                 for(Upgrade u : guild.getUpgrades()) {
                     amount -= u.getTotalUpkeep();
@@ -250,6 +256,8 @@ public class Ledger {
                 // -------- NEGATIVE / COSTS --------
                 case TRADE_UPKEEP:
                 case UPGRADES_UPKEEP:
+                case INSTALLATIONS:
+                case MILITARY_UPKEEP:
                 case PENALTIES:
                 case GUILD_PAYMENTS:
                 case OVERLORD_TAX:

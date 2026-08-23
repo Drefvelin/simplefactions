@@ -56,6 +56,8 @@ public class War {
 	private int campaignBattlesFought;
 	private List<ScheduledCampaignBattle> campaignBattleSchedule = new ArrayList<>();
 	private int campaignScheduleIndex;
+	private List<ScheduledCampaignBattle> campaignCounterSchedule = new ArrayList<>();
+	private int campaignCounterScheduleIndex;
 	private Map<String, CampaignCoalition> fortControllers = new HashMap<>();
 	private Map<String, Integer> locationBattleCounts = new HashMap<>();
 	private BattleSchedulePhase battleSchedulePhase = BattleSchedulePhase.IDLE;
@@ -341,6 +343,26 @@ public class War {
 
 	public void setCampaignScheduleIndex(int campaignScheduleIndex) {
 		this.campaignScheduleIndex = Math.max(0, campaignScheduleIndex);
+	}
+
+	public List<ScheduledCampaignBattle> getCampaignCounterSchedule() {
+		return campaignCounterSchedule;
+	}
+
+	public void setCampaignCounterSchedule(List<ScheduledCampaignBattle> campaignCounterSchedule) {
+		if (campaignCounterSchedule == null || campaignCounterSchedule.isEmpty()) {
+			this.campaignCounterSchedule = new ArrayList<>();
+			return;
+		}
+		this.campaignCounterSchedule = new ArrayList<>(campaignCounterSchedule);
+	}
+
+	public int getCampaignCounterScheduleIndex() {
+		return campaignCounterScheduleIndex;
+	}
+
+	public void setCampaignCounterScheduleIndex(int campaignCounterScheduleIndex) {
+		this.campaignCounterScheduleIndex = Math.max(0, campaignCounterScheduleIndex);
 	}
 
 	public Map<String, CampaignCoalition> getFortControllers() {

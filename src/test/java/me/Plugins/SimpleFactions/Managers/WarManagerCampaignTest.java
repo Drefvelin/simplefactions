@@ -86,9 +86,12 @@ class WarManagerCampaignTest {
 			assertEquals(20, war.getCampaignStartProvinceId());
 			assertEquals(List.of(5, 10, 20, 30), war.getCampaignProvinces());
 			assertEquals(2, war.getCursorIndex());
-			int expectedFuel = (int) Math.ceil(war.getCampaignBattleSchedule().size() * Cache.warInitiativeFactor);
-			assertEquals(expectedFuel, war.getInitiativeAttacker());
-			assertEquals(expectedFuel, war.getInitiativeDefender());
+			int expectedAttackerFuel = (int) Math.ceil(
+					war.getCampaignBattleSchedule().size() * Cache.warInitiativeFactor);
+			int expectedDefenderFuel = (int) Math.ceil(
+					war.getCampaignCounterSchedule().size() * Cache.warInitiativeFactor);
+			assertEquals(expectedAttackerFuel, war.getInitiativeAttacker());
+			assertEquals(expectedDefenderFuel, war.getInitiativeDefender());
 		}
 	}
 

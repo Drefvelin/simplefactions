@@ -148,9 +148,12 @@ class WarCampaignServiceTest {
 			assertEquals(20, war.getCampaignStartProvinceId());
 			assertEquals(List.of(5, 10, 20, 30), war.getCampaignProvinces());
 			assertEquals(2, war.getCursorIndex());
-			int expectedFuel = (int) Math.ceil(war.getCampaignBattleSchedule().size() * Cache.warInitiativeFactor);
-			assertEquals(expectedFuel, war.getInitiativeAttacker());
-			assertEquals(expectedFuel, war.getInitiativeDefender());
+			int expectedAttackerFuel = (int) Math.ceil(
+					war.getCampaignBattleSchedule().size() * Cache.warInitiativeFactor);
+			int expectedDefenderFuel = (int) Math.ceil(
+					war.getCampaignCounterSchedule().size() * Cache.warInitiativeFactor);
+			assertEquals(expectedAttackerFuel, war.getInitiativeAttacker());
+			assertEquals(expectedDefenderFuel, war.getInitiativeDefender());
 			assertEquals(CampaignPhase.INVASION, war.getCampaignPhase());
 			assertEquals(ObjectiveHolder.DEFENDER, war.getObjectiveHeldBy());
 			assertTrue(war.getOccupiedByAttacker().isEmpty());
@@ -159,6 +162,46 @@ class WarCampaignServiceTest {
 			assertEquals(LocalDate.parse("2026-08-20"), war.getBattleDay());
 			assertTrue(war.getBattleVotes().isEmpty());
 			assertEquals(0, war.getPostponementsThisCycle());
+		}
+	}
+
+	@Test
+	void populateCampaign_buildsCounterScheduleLeftOfBorder() {
+		Province atkCapital = province(5, Terrain.PLAINS);
+		Province border = province(10, Terrain.PLAINS);
+		Province mid = province(20, Terrain.PLAINS);
+		Province objective = province(30, Terrain.PLAINS);
+		link(atkCapital, border);
+		link(border, mid);
+		link(mid, objective);
+		pm.start(Map.of(5, atkCapital, 10, border, 20, mid, 30, objective));
+
+		War war = new War(1, attacker, defender);
+		war.setGoal(WarGoalType.SUBJUGATE);
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			titleManager.when(() -> TitleManager.getProvinces(defender)).thenReturn(List.of(20, 30));
+			titleManager.when(() -> TitleManager.getByProvince(5)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(10)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(20)).thenReturn(defender);
+			titleManager.when(() -> TitleManager.getByProvince(30)).thenReturn(defender);
+
+			assertTrue(service.populateCampaign(war));
+
+			assertFalse(war.getCampaignCounterSchedule().isEmpty());
+			assertTrue(war.getCampaignCounterSchedule().stream()
+					.noneMatch(slot -> slot.provinceId() == 20));
+			assertTrue(war.getCampaignCounterSchedule().stream()
+					.anyMatch(slot -> slot.provinceId() == 5 && slot.required()));
+			assertTrue(war.getCampaignBattleSchedule().size() <= 4);
+			assertTrue(war.getCampaignCounterSchedule().size() <= 4);
+			assertEquals(0, war.getCampaignCounterScheduleIndex());
+			int expectedAttackerFuel = (int) Math.ceil(
+					war.getCampaignBattleSchedule().size() * Cache.warInitiativeFactor);
+			int expectedDefenderFuel = (int) Math.ceil(
+					war.getCampaignCounterSchedule().size() * Cache.warInitiativeFactor);
+			assertEquals(expectedAttackerFuel, war.getInitiativeAttacker());
+			assertEquals(expectedDefenderFuel, war.getInitiativeDefender());
 		}
 	}
 
@@ -318,14 +361,23 @@ class WarCampaignServiceTest {
 	void populateCampaign_schedulesNavalWhenPortBlocksSea() {
 		Province atkCapital = province(5, Terrain.PLAINS);
 		Province atkCoast = province(10, Terrain.PLAINS);
+		Province foreignLand = province(12, Terrain.PLAINS);
 		Province sea = province(11, Terrain.SEA);
 		Province defCoast = province(20, Terrain.PLAINS);
 		Province defCapital = province(30, Terrain.PLAINS);
 		link(atkCapital, atkCoast);
+		link(atkCoast, foreignLand);
+		link(foreignLand, defCoast);
 		link(atkCoast, sea);
 		link(sea, defCoast);
 		link(defCoast, defCapital);
-		pm.start(Map.of(5, atkCapital, 10, atkCoast, 11, sea, 20, defCoast, 30, defCapital));
+		pm.start(Map.of(
+				5, atkCapital,
+				10, atkCoast,
+				11, sea,
+				12, foreignLand,
+				20, defCoast,
+				30, defCapital));
 
 		InstallationHandler installationHandler = mock(InstallationHandler.class);
 		Installation port = new Installation(
@@ -344,40 +396,47 @@ class WarCampaignServiceTest {
 		war.setGoal(WarGoalType.SUBJUGATE);
 		when(defender.getCapital()).thenReturn(30);
 
+		Faction foreignFaction = mock(Faction.class);
+		when(foreignFaction.getId()).thenReturn("foreign");
+
 		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
 			titleManager.when(() -> TitleManager.getProvinces(defender)).thenReturn(List.of(20, 30));
 			titleManager.when(() -> TitleManager.getByProvince(5)).thenReturn(attacker);
 			titleManager.when(() -> TitleManager.getByProvince(10)).thenReturn(attacker);
 			titleManager.when(() -> TitleManager.getByProvince(11)).thenReturn(null);
+			titleManager.when(() -> TitleManager.getByProvince(12)).thenReturn(foreignFaction);
 			titleManager.when(() -> TitleManager.getByProvince(20)).thenReturn(defender);
 			titleManager.when(() -> TitleManager.getByProvince(30)).thenReturn(defender);
 
 			assertTrue(service.populateCampaign(war));
 
 			List<ScheduledCampaignBattle> schedule = war.getCampaignBattleSchedule();
-			assertTrue(schedule.stream().anyMatch(slot ->
-					slot.kind() == CampaignBattleKind.NAVAL
-							&& slot.provinceId() == 20
-							&& "port_a".equals(slot.portInstallationId())));
-			assertTrue(schedule.stream().anyMatch(slot ->
-					slot.kind() == CampaignBattleKind.NAVAL_INVASION
-							&& slot.provinceId() == 20));
+			assertFalse(schedule.isEmpty());
+			assertEquals(CampaignBattleKind.NAVAL, schedule.get(0).kind());
+			assertEquals(11, schedule.get(0).provinceId());
+			assertEquals("port_a", schedule.get(0).portInstallationId());
+			assertEquals(CampaignBattleKind.FIELD, schedule.get(1).kind());
+			assertEquals(20, schedule.get(1).provinceId());
+			assertTrue(schedule.stream().noneMatch(slot -> slot.kind() == CampaignBattleKind.NAVAL_INVASION));
 		}
 	}
 
 	@Test
-	void applyInitiativeFromSchedule_usesCeilFormula() {
+	void applyInitiativeFromLegs_asymmetricFuel() {
 		War war = new War(1, attacker, defender);
-		List<ScheduledCampaignBattle> schedule = List.of(
+		List<ScheduledCampaignBattle> invasion = List.of(
 				new ScheduledCampaignBattle(10, CampaignBattleKind.FIELD, false, null),
 				new ScheduledCampaignBattle(20, CampaignBattleKind.FIELD, false, null),
 				new ScheduledCampaignBattle(30, CampaignBattleKind.FIELD, true, null),
 				new ScheduledCampaignBattle(40, CampaignBattleKind.FIELD, false, null));
+		List<ScheduledCampaignBattle> counter = List.of(
+				new ScheduledCampaignBattle(8, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(5, CampaignBattleKind.FIELD, true, null));
 
-		WarCampaignService.applyInitiativeFromSchedule(war, schedule);
+		WarCampaignService.applyInitiativeFromLegs(war, invasion, counter);
 
 		assertEquals(6, war.getInitiativeAttacker());
-		assertEquals(6, war.getInitiativeDefender());
+		assertEquals(3, war.getInitiativeDefender());
 	}
 
 	@Test

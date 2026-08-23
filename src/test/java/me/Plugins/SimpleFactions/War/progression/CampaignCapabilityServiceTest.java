@@ -99,6 +99,17 @@ class CampaignCapabilityServiceTest {
 	}
 
 	@Test
+	void nextBattleProvince_counterPush_usesCounterScheduleWhenPresent() {
+		War war = baseWar();
+		war.setCampaignCounterSchedule(List.of(
+				new ScheduledCampaignBattle(10, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(5, CampaignBattleKind.FIELD, true, null)));
+		war.setInitiativeHolderCoalition(CampaignCoalition.DEFENDER);
+		war.setPushTarget(CampaignPushTarget.TOWARD_AGGRESSOR_CAPITAL);
+		assertEquals(10, CampaignCapabilityService.nextBattleProvince(war).getAsInt());
+	}
+
+	@Test
 	void nextBattleProvince_retake_returnsObjectiveProvince() {
 		War war = baseWar();
 		war.setCampaignBattlesFought(2);

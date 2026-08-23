@@ -143,14 +143,25 @@ public final class WarScheduleFeedbackFormatter {
 	}
 
 	private static void appendScheduleLines(War war, List<String> lines) {
-		if (!CampaignScheduleService.hasSchedule(war)) {
+		appendLegScheduleLines(war, lines, CampaignScheduleService.ScheduleLeg.INVASION, "Invasion schedule");
+		appendLegScheduleLines(war, lines, CampaignScheduleService.ScheduleLeg.COUNTER, "Counter schedule");
+	}
+
+	private static void appendLegScheduleLines(
+			War war,
+			List<String> lines,
+			CampaignScheduleService.ScheduleLeg leg,
+			String label) {
+		if (!CampaignScheduleService.hasScheduleForLeg(war, leg)) {
 			return;
 		}
-		List<ScheduledCampaignBattle> schedule = war.getCampaignBattleSchedule();
-		int currentIndex = war.getCampaignScheduleIndex();
+		lines.add("§7" + label + ":");
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleService.scheduleListForLeg(war, leg);
+		int currentIndex = CampaignScheduleService.scheduleIndexForLeg(war, leg);
+		boolean activeLeg = leg == CampaignScheduleService.activeLeg(war);
 		for (int index = 0; index < schedule.size(); index++) {
 			ScheduledCampaignBattle slot = schedule.get(index);
-			String prefix = index == currentIndex ? "§a> " : "§7";
+			String prefix = activeLeg && index == currentIndex ? "§a> " : "§7";
 			String fortId = slot.fortInstallationId() != null ? slot.fortInstallationId() : "-";
 			String portId = slot.portInstallationId() != null ? slot.portInstallationId() : "-";
 			lines.add(prefix
@@ -159,7 +170,7 @@ public final class WarScheduleFeedbackFormatter {
 					+ " §7· required §e" + slot.required()
 					+ " §7· fort §e" + fortId
 					+ " §7· port §e" + portId
-					+ (index == currentIndex ? " §7(current)" : ""));
+					+ (activeLeg && index == currentIndex ? " §7(current)" : ""));
 		}
 	}
 

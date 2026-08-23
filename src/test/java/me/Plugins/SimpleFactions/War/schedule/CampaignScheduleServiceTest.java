@@ -101,10 +101,11 @@ class CampaignScheduleServiceTest {
 		War war = warWithSchedule(field(20), field(30));
 		OperationalFort fort = new OperationalFort("fort_a", defender, 18, 100L);
 
-		CampaignScheduleService.insertSiegeAtCurrentIndex(war, fort);
+		CampaignScheduleService.insertSiegeAtCurrentIndex(war, fort, 20);
 
 		assertEquals(3, war.getCampaignBattleSchedule().size());
 		assertEquals(CampaignBattleKind.SIEGE, war.getCampaignBattleSchedule().get(0).kind());
+		assertEquals(20, war.getCampaignBattleSchedule().get(0).provinceId());
 		assertEquals("fort_a", war.getCampaignBattleSchedule().get(0).fortInstallationId());
 		assertEquals(20, war.getCampaignBattleSchedule().get(1).provinceId());
 	}
@@ -112,6 +113,7 @@ class CampaignScheduleServiceTest {
 	@Test
 	void ensureReSiegeInsert_addsSiegeWhenEnemyFortOnPath() {
 		War war = warWithSchedule(field(30));
+		war.setCampaignCounterSchedule(List.of(field(5)));
 		war.putFortController("fort_a", CampaignCoalition.AGGRESSOR);
 		war.setInitiativeHolderCoalition(CampaignCoalition.DEFENDER);
 		war.setPushTarget(CampaignPushTarget.TOWARD_AGGRESSOR_CAPITAL);
@@ -121,13 +123,15 @@ class CampaignScheduleServiceTest {
 
 		CampaignScheduleService.ensureReSiegeInsert(war, index);
 
-		assertEquals(CampaignBattleKind.SIEGE, war.getCampaignBattleSchedule().get(0).kind());
-		assertEquals(10, war.getCampaignBattleSchedule().get(0).provinceId());
+		assertEquals(1, war.getCampaignBattleSchedule().size());
+		assertEquals(CampaignBattleKind.SIEGE, war.getCampaignCounterSchedule().get(0).kind());
+		assertEquals(10, war.getCampaignCounterSchedule().get(0).provinceId());
 	}
 
 	@Test
 	void ensureReSiegeInsert_skipsWhenCurrentSlotAlreadySiegeForFort() {
-		War war = warWithSchedule(siege(10, "fort_a"), field(30));
+		War war = warWithSchedule(field(30));
+		war.setCampaignCounterSchedule(List.of(siege(10, "fort_a"), field(5)));
 		war.putFortController("fort_a", CampaignCoalition.AGGRESSOR);
 		war.setInitiativeHolderCoalition(CampaignCoalition.DEFENDER);
 		war.setPushTarget(CampaignPushTarget.TOWARD_AGGRESSOR_CAPITAL);
@@ -137,14 +141,86 @@ class CampaignScheduleServiceTest {
 
 		CampaignScheduleService.ensureReSiegeInsert(war, index);
 
-		assertEquals(2, war.getCampaignBattleSchedule().size());
-		assertEquals(CampaignBattleKind.SIEGE, war.getCampaignBattleSchedule().get(0).kind());
+		assertEquals(2, war.getCampaignCounterSchedule().size());
+		assertEquals(CampaignBattleKind.SIEGE, war.getCampaignCounterSchedule().get(0).kind());
+	}
+
+	@Test
+	void currentSlot_counterPush_usesCounterSchedule() {
+		War war = warWithSchedule(field(20), field(30));
+		war.setCampaignCounterSchedule(List.of(field(10), field(5)));
+		war.setInitiativeHolderCoalition(CampaignCoalition.DEFENDER);
+		war.setPushTarget(CampaignPushTarget.TOWARD_AGGRESSOR_CAPITAL);
+		war.setCampaignCounterScheduleIndex(0);
+
+		assertEquals(10, CampaignScheduleService.currentSlot(war).orElseThrow().provinceId());
+	}
+
+	@Test
+	void advanceIndex_counterPush_incrementsCounterIndexOnly() {
+		War war = warWithSchedule(field(20), field(30));
+		war.setCampaignCounterSchedule(List.of(field(10), field(5)));
+		war.setInitiativeHolderCoalition(CampaignCoalition.DEFENDER);
+		war.setPushTarget(CampaignPushTarget.TOWARD_AGGRESSOR_CAPITAL);
+
+		CampaignScheduleService.advanceIndex(war);
+
+		assertEquals(0, war.getCampaignScheduleIndex());
+		assertEquals(1, war.getCampaignCounterScheduleIndex());
+	}
+
+	@Test
+	void switchPushTarget_preservesBothIndices() {
+		War war = warWithSchedule(field(20), field(30));
+		war.setCampaignCounterSchedule(List.of(field(10), field(5)));
+
+		CampaignScheduleService.advanceIndex(war);
+		assertEquals(1, war.getCampaignScheduleIndex());
+		assertEquals(0, war.getCampaignCounterScheduleIndex());
+
+		war.setPushTarget(CampaignPushTarget.TOWARD_AGGRESSOR_CAPITAL);
+		war.setInitiativeHolderCoalition(CampaignCoalition.DEFENDER);
+		CampaignScheduleService.advanceIndex(war);
+		assertEquals(1, war.getCampaignScheduleIndex());
+		assertEquals(1, war.getCampaignCounterScheduleIndex());
+
+		war.setPushTarget(CampaignPushTarget.TOWARD_OBJECTIVE);
+		war.setInitiativeHolderCoalition(CampaignCoalition.AGGRESSOR);
+		assertEquals(30, CampaignScheduleService.currentSlot(war).orElseThrow().provinceId());
 	}
 
 	@Test
 	void hasSchedule_falseWhenEmpty() {
 		War war = new War(1, attacker, defender);
 		assertFalse(CampaignScheduleService.hasSchedule(war));
+	}
+
+	@Test
+	void slotForProvince_returnsUpcomingSlotFromScheduleIndex() {
+		War war = warWithSchedule(
+				new ScheduledCampaignBattle(795, CampaignBattleKind.NAVAL, false, null, "port"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.SIEGE, false, "fort"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.FIELD, true, null));
+		war.setCampaignProvinces(List.of(452, 795, 705));
+
+		assertEquals(CampaignBattleKind.NAVAL,
+				CampaignScheduleService.slotForProvince(war, 795).orElseThrow().kind());
+		assertEquals(CampaignBattleKind.SIEGE,
+				CampaignScheduleService.slotForProvince(war, 705).orElseThrow().kind());
+
+		CampaignScheduleService.advanceIndex(war);
+		assertEquals(CampaignBattleKind.SIEGE,
+				CampaignScheduleService.slotForProvince(war, 705).orElseThrow().kind());
+	}
+
+	@Test
+	void firstOnAxisScheduleProvince_returnsFirstScheduledAxisTile() {
+		War war = warWithSchedule(
+				new ScheduledCampaignBattle(795, CampaignBattleKind.NAVAL, false, null, "port"),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.SIEGE, false, "fort"));
+		war.setCampaignProvinces(List.of(452, 795, 705));
+
+		assertEquals(795, CampaignScheduleService.firstOnAxisScheduleProvince(war).orElseThrow());
 	}
 
 	@Test

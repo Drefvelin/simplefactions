@@ -64,8 +64,26 @@ class ConfigLoaderWarGoalsTest {
 		new ConfigLoader().loadConfig(file.toFile());
 
 		assertEquals(2.0, Cache.warInitiativeFactor);
-		assertEquals(5, Cache.warGoalMaxBattles.get(WarGoalType.SUBJUGATE));
+		assertEquals(4, Cache.warGoalMaxBattles.get(WarGoalType.SUBJUGATE));
 		assertEquals(3, Cache.warGoalMaxBattles.get(WarGoalType.DE_JURE_ANNEX));
+		assertEquals(4, Cache.warGoalMaxBattles.get(WarGoalType.TRANSFER_SUBJECT));
+	}
+
+	@Test
+	void loadConfig_prefersMaxBattlesPerLeg() throws IOException {
+		Path file = writeConfig("""
+				war:
+				  goals:
+				    SUBJUGATE:
+				      max_battles_per_leg: 6
+				      max_battles: 2
+				    TRANSFER_SUBJECT:
+				      max_battles_per_leg: 5
+				""" + INSTALLATIONS);
+
+		new ConfigLoader().loadConfig(file.toFile());
+
+		assertEquals(4, Cache.warGoalMaxBattles.get(WarGoalType.SUBJUGATE));
 		assertEquals(4, Cache.warGoalMaxBattles.get(WarGoalType.TRANSFER_SUBJECT));
 	}
 

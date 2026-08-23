@@ -21,6 +21,7 @@ import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Bank;
+import me.Plugins.SimpleFactions.Objects.BankPlacementValidator;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
@@ -275,6 +276,11 @@ public class CommandManager implements Listener, CommandExecutor{
 			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("setbank") && args.length == 1) {
 				if(FactionManager.getGuildByLeader(p.getName()) != null) {
 					Guild g = FactionManager.getGuildByLeader(p.getName());
+					String bankBlockReason = BankPlacementValidator.failureReasonForGuild(g, p.getLocation());
+					if(bankBlockReason != null) {
+						p.sendMessage(bankBlockReason);
+						return true;
+					}
 					if(g.getBank() != null) {
 						Bank bank = g.getBank();
 						bank.setChunk(p.getLocation().getChunk());
@@ -903,6 +909,11 @@ public class CommandManager implements Listener, CommandExecutor{
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setbank") && args.length == 1) {
 				if(FactionManager.getByLeader(p.getName()) != null) {
 					Faction f = FactionManager.getByMember(p.getName());
+					String bankBlockReason = BankPlacementValidator.failureReasonForFaction(f, p.getLocation());
+					if(bankBlockReason != null) {
+						p.sendMessage(bankBlockReason);
+						return true;
+					}
 					if(f.getBank() != null) {
 						Bank bank = f.getBank();
 						bank.setChunk(p.getLocation().getChunk());

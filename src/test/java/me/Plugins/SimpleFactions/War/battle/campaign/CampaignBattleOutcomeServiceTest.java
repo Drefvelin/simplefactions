@@ -129,6 +129,30 @@ class CampaignBattleOutcomeServiceTest {
 	}
 
 	@Test
+	void applyCampaignBattleOutcome_counterPush_advancesCounterIndexOnly() {
+		War war = baseWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.FIELD, false, null)));
+		war.setCampaignCounterSchedule(List.of(
+				new ScheduledCampaignBattle(10, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(5, CampaignBattleKind.FIELD, true, null)));
+		war.setCampaignScheduleIndex(0);
+		war.setCampaignCounterScheduleIndex(0);
+		war.setPushTarget(CampaignPushTarget.TOWARD_AGGRESSOR_CAPITAL);
+		war.setInitiativeHolderCoalition(CampaignCoalition.DEFENDER);
+		warManagerMock.when(() -> WarManager.getById(1)).thenReturn(war);
+
+		CampaignBattleOutcomeService.applyCampaignBattleOutcome(
+				war,
+				BelligerentRole.DEFENDER,
+				10);
+
+		assertEquals(0, war.getCampaignScheduleIndex());
+		assertEquals(1, war.getCampaignCounterScheduleIndex());
+		assertEquals(1, war.getCampaignBattlesFought());
+	}
+
+	@Test
 	void handleBattleEnded_attackerWin_opensWinnerChoiceWithoutMovingCursor() {
 		War war = baseWar();
 		warManagerMock.when(() -> WarManager.getById(1)).thenReturn(war);

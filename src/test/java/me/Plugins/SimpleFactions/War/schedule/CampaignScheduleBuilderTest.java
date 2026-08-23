@@ -97,9 +97,22 @@ class CampaignScheduleBuilderTest {
 				index,
 				PortSeaZocIndex.fromPorts(List.of()));
 
-		assertEquals(CampaignBattleKind.SIEGE, schedule.get(0).kind());
-		assertEquals(20, schedule.get(0).provinceId());
-		assertEquals("fort_a", schedule.get(0).fortInstallationId());
+		assertEquals(CampaignBattleKind.SIEGE, schedule.stream()
+				.filter(slot -> slot.kind() == CampaignBattleKind.SIEGE)
+				.findFirst()
+				.orElseThrow()
+				.kind());
+		assertEquals(20, schedule.stream()
+				.filter(slot -> slot.kind() == CampaignBattleKind.SIEGE)
+				.findFirst()
+				.orElseThrow()
+				.provinceId());
+		assertEquals("fort_a", schedule.stream()
+				.filter(slot -> slot.kind() == CampaignBattleKind.SIEGE)
+				.findFirst()
+				.orElseThrow()
+				.fortInstallationId());
+		assertTrue(schedule.stream().noneMatch(slot -> slot.provinceId() == 20 && slot.kind() == CampaignBattleKind.FIELD));
 		assertTrue(schedule.stream().anyMatch(slot -> slot.provinceId() == 30 && slot.required()));
 	}
 
@@ -131,11 +144,11 @@ class CampaignScheduleBuilderTest {
 				index,
 				PortSeaZocIndex.fromPorts(List.of()));
 
-		assertEquals(CampaignBattleKind.SIEGE, schedule.get(0).kind());
-		assertEquals(20, schedule.get(0).provinceId());
-		ScheduledCampaignBattle last = schedule.get(schedule.size() - 1);
-		assertEquals(25, last.provinceId());
-		assertTrue(last.required());
+		assertTrue(schedule.stream().anyMatch(slot ->
+				slot.kind() == CampaignBattleKind.SIEGE
+						&& slot.provinceId() == 20
+						&& "fort_a".equals(slot.fortInstallationId())));
+		assertTrue(schedule.stream().anyMatch(slot -> slot.provinceId() == 25 && slot.required()));
 	}
 
 	@Test
@@ -204,7 +217,7 @@ class CampaignScheduleBuilderTest {
 
 		assertTrue(schedule.stream().anyMatch(slot ->
 				slot.kind() == CampaignBattleKind.NAVAL
-						&& slot.provinceId() == 20
+						&& slot.provinceId() == 11
 						&& "port_a".equals(slot.portInstallationId())));
 	}
 
@@ -263,7 +276,7 @@ class CampaignScheduleBuilderTest {
 	}
 
 	@Test
-	void build_seaCrossing_insertsNavalInvasionOnDefenderCoast() {
+	void build_seaCrossing_withoutPort_placesBorderFieldOnly() {
 		Province atkCoast = province(10);
 		Province sea = seaProvince(11);
 		Province defCoast = province(20);
@@ -284,13 +297,13 @@ class CampaignScheduleBuilderTest {
 				FortZocIndex.fromForts(List.of()),
 				PortSeaZocIndex.fromPorts(List.of()));
 
-		assertTrue(schedule.stream().anyMatch(slot ->
-				slot.kind() == CampaignBattleKind.NAVAL_INVASION
-						&& slot.provinceId() == 20));
+		assertTrue(schedule.stream().noneMatch(slot -> slot.kind() == CampaignBattleKind.NAVAL_INVASION));
+		assertEquals(10, schedule.get(0).provinceId());
+		assertEquals(CampaignBattleKind.FIELD, schedule.get(0).kind());
 	}
 
 	@Test
-	void build_seaCrossing_skipsInvasionWhenExitCoastIsAttacker() {
+	void build_seaCrossing_skipsNavalWhenExitCoastIsAttacker() {
 		Province atkCoast = province(10);
 		Province sea = seaProvince(11);
 		Province atkBeachhead = province(12);
@@ -311,14 +324,13 @@ class CampaignScheduleBuilderTest {
 				FortZocIndex.fromForts(List.of()),
 				PortSeaZocIndex.fromPorts(List.of()));
 
-		assertTrue(schedule.stream().anyMatch(slot ->
-				slot.kind() == CampaignBattleKind.NAVAL_INVASION && slot.provinceId() == 20));
-		assertTrue(schedule.stream().noneMatch(slot ->
-				slot.kind() == CampaignBattleKind.NAVAL_INVASION && slot.provinceId() == 12));
+		assertTrue(schedule.stream().noneMatch(slot -> slot.kind() == CampaignBattleKind.NAVAL_INVASION));
+		assertTrue(schedule.stream().noneMatch(slot -> slot.kind() == CampaignBattleKind.NAVAL));
+		assertEquals(10, schedule.get(0).provinceId());
 	}
 
 	@Test
-	void build_seaCrossing_mergesInvasionOverFieldCadence() {
+	void build_seaCrossing_borderAtCoast_placesBorderFieldNotNavalInvasion() {
 		Cache.warProvincesBetweenBattles = 1;
 		Province atkCoast = province(10);
 		Province sea = seaProvince(11);
@@ -340,14 +352,9 @@ class CampaignScheduleBuilderTest {
 				FortZocIndex.fromForts(List.of()),
 				PortSeaZocIndex.fromPorts(List.of()));
 
-		long invasionAt20 = schedule.stream()
-				.filter(slot -> slot.provinceId() == 20 && slot.kind() == CampaignBattleKind.NAVAL_INVASION)
-				.count();
-		long fieldAt20 = schedule.stream()
-				.filter(slot -> slot.provinceId() == 20 && slot.kind() == CampaignBattleKind.FIELD)
-				.count();
-		assertEquals(1, invasionAt20);
-		assertEquals(0, fieldAt20);
+		assertTrue(schedule.stream().noneMatch(slot -> slot.kind() == CampaignBattleKind.NAVAL_INVASION));
+		assertTrue(schedule.stream().anyMatch(slot ->
+				slot.provinceId() == 20 && slot.kind() == CampaignBattleKind.FIELD));
 	}
 
 	@Test
@@ -386,7 +393,7 @@ class CampaignScheduleBuilderTest {
 	}
 
 	@Test
-	void build_seaCrossing_landingInFriendlyFortZoc_keepsInvasion() {
+	void build_seaCrossing_landingInFriendlyFortZoc_skipsSiege() {
 		Province atkCoast = province(10);
 		Province sea = seaProvince(11);
 		Province fortProvince = province(20);
@@ -413,10 +420,141 @@ class CampaignScheduleBuilderTest {
 				fortIndex,
 				PortSeaZocIndex.fromPorts(List.of()));
 
-		assertTrue(schedule.stream().anyMatch(slot ->
-				slot.kind() == CampaignBattleKind.NAVAL_INVASION
-						&& slot.provinceId() == 21));
 		assertTrue(schedule.stream().noneMatch(slot -> slot.kind() == CampaignBattleKind.SIEGE));
+		assertTrue(schedule.stream().noneMatch(slot -> slot.kind() == CampaignBattleKind.NAVAL_INVASION));
+		assertEquals(10, schedule.get(0).provinceId());
+	}
+
+	@Test
+	void build_offAxisFortZocOnBorderCapital_anchorsSiegeOnCapital() {
+		Province atk = province(5);
+		Province sea = seaProvince(795);
+		Province fortProvince = province(713);
+		Province capital = province(705);
+		link(atk, sea);
+		link(sea, capital);
+		link(fortProvince, capital);
+		pm.start(Map.of(5, atk, 795, sea, 713, fortProvince, 705, capital));
+		stubOwnership(5, attacker);
+		stubOwnership(new int[] {713, 705}, defender);
+
+		FortZocIndex fortIndex = FortZocIndex.fromForts(List.of(
+				new OperationalFort("Greenfort", defender, 713, 100L)));
+		War war = war();
+		war.putFortController("Greenfort", CampaignCoalition.DEFENDER);
+
+		List<Integer> axis = List.of(5, 795, 705);
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleBuilder.build(
+				war,
+				axis,
+				2,
+				2,
+				fortIndex,
+				PortSeaZocIndex.fromPorts(List.of()));
+
+		assertEquals(1, schedule.stream()
+				.filter(slot -> slot.kind() == CampaignBattleKind.SIEGE
+						&& "Greenfort".equals(slot.fortInstallationId()))
+				.count());
+		assertTrue(schedule.stream().anyMatch(slot ->
+				slot.kind() == CampaignBattleKind.SIEGE
+						&& slot.provinceId() == 713
+						&& "Greenfort".equals(slot.fortInstallationId())));
+		assertTrue(schedule.stream().anyMatch(slot ->
+				slot.provinceId() == 705 && slot.required()));
+		assertEquals(2, schedule.size());
+	}
+
+	@Test
+	void build_sameFortOnConsecutiveAxisSteps_schedulesOneSiege() {
+		Province atk = province(5);
+		Province zocA = province(20);
+		Province zocB = province(21);
+		Province objective = province(25);
+		link(atk, zocA);
+		link(zocA, zocB);
+		link(zocB, objective);
+		pm.start(Map.of(5, atk, 20, zocA, 21, zocB, 25, objective));
+		stubOwnership(5, attacker);
+		stubOwnership(new int[] {20, 21, 25}, defender);
+
+		FortZocIndex fortIndex = FortZocIndex.fromForts(List.of(
+				new OperationalFort("fort_a", defender, 20, 100L)));
+		War war = war();
+		war.putFortController("fort_a", CampaignCoalition.DEFENDER);
+
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleBuilder.build(
+				war,
+				List.of(5, 20, 21, 25),
+				1,
+				3,
+				fortIndex,
+				PortSeaZocIndex.fromPorts(List.of()));
+
+		assertEquals(1, schedule.stream()
+				.filter(slot -> slot.kind() == CampaignBattleKind.SIEGE)
+				.count());
+		assertEquals(20, schedule.stream()
+				.filter(slot -> slot.kind() == CampaignBattleKind.SIEGE)
+				.findFirst()
+				.orElseThrow()
+				.provinceId());
+	}
+
+	@Test
+	void build_brumeShaped_portAndFortZoc_anchorBattlesOnAxis() {
+		Cache.warPortSeaZocRadius = 2;
+		Cache.warProvincesBetweenBattles = 3;
+		Province atk = province(452);
+		Province sea = seaProvince(795);
+		Province border = province(709);
+		Province fortProvince = province(713);
+		Province portProvince = province(695);
+		Province capital = province(705);
+		link(atk, sea);
+		link(sea, border);
+		link(border, capital);
+		link(border, fortProvince);
+		link(fortProvince, capital);
+		link(portProvince, sea);
+		pm.start(Map.of(
+				452, atk,
+				795, sea,
+				709, border,
+				713, fortProvince,
+				695, portProvince,
+				705, capital));
+		stubOwnership(452, attacker);
+		stubOwnership(new int[] {713, 695, 709, 705}, defender);
+
+		PortSeaZocIndex portIndex = PortSeaZocIndex.fromPorts(List.of(
+				new OperationalPort("Lan_Harbour", defender, 695, 100L)));
+		FortZocIndex fortIndex = FortZocIndex.fromForts(List.of(
+				new OperationalFort("Greenfort", defender, 713, 200L)));
+		War war = war();
+		war.putFortController("Greenfort", CampaignCoalition.DEFENDER);
+
+		List<Integer> axis = List.of(452, 795, 709, 713, 705);
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleBuilder.build(
+				war,
+				axis,
+				2,
+				4,
+				fortIndex,
+				portIndex);
+
+		assertEquals(4, schedule.size());
+		assertEquals(CampaignBattleKind.NAVAL, schedule.get(0).kind());
+		assertEquals(795, schedule.get(0).provinceId());
+		assertEquals("Lan_Harbour", schedule.get(0).portInstallationId());
+		assertEquals(CampaignBattleKind.FIELD, schedule.get(1).kind());
+		assertEquals(709, schedule.get(1).provinceId());
+		assertEquals(CampaignBattleKind.SIEGE, schedule.get(2).kind());
+		assertEquals(713, schedule.get(2).provinceId());
+		assertEquals("Greenfort", schedule.get(2).fortInstallationId());
+		ScheduledCampaignBattle last = schedule.get(schedule.size() - 1);
+		assertEquals(705, last.provinceId());
+		assertTrue(last.required());
 	}
 
 	@Test
@@ -433,6 +571,252 @@ class CampaignScheduleBuilderTest {
 				PortSeaZocIndex.fromPorts(List.of()));
 
 		assertTrue(schedule.stream().noneMatch(slot -> slot.kind() == CampaignBattleKind.NAVAL_INVASION));
+	}
+
+	@Test
+	void buildCounter_cadence_marksCapitalRequired() {
+		List<Integer> axis = List.of(5, 10, 20, 30);
+		War war = war();
+
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleBuilder.buildCounter(
+				war,
+				axis,
+				2,
+				0,
+				FortZocIndex.fromForts(List.of()),
+				PortSeaZocIndex.fromPorts(List.of()));
+
+		assertTrue(schedule.stream().anyMatch(slot -> slot.provinceId() == 10 && !slot.required()));
+		assertTrue(schedule.stream().anyMatch(slot -> slot.provinceId() == 5 && slot.required()));
+		assertTrue(schedule.stream().noneMatch(slot -> slot.provinceId() == 20));
+	}
+
+	@Test
+	void buildCounter_emptyWhenBorderAtCapital() {
+		List<Integer> axis = List.of(5, 10, 20, 30);
+		War war = war();
+
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleBuilder.buildCounter(
+				war,
+				axis,
+				0,
+				0,
+				FortZocIndex.fromForts(List.of()),
+				PortSeaZocIndex.fromPorts(List.of()));
+
+		assertTrue(schedule.isEmpty());
+	}
+
+	@Test
+	void buildCounter_fortOnRoute_insertsSiege() {
+		setupMap(List.of(5, 10, 20, 30), 5, 20, 30);
+		FortZocIndex index = FortZocIndex.fromForts(List.of(
+				new OperationalFort("fort_a", attacker, 10, 100L)));
+		War war = war();
+		war.putFortController("fort_a", CampaignCoalition.AGGRESSOR);
+
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleBuilder.buildCounter(
+				war,
+				List.of(5, 10, 20, 30),
+				2,
+				0,
+				index,
+				PortSeaZocIndex.fromPorts(List.of()));
+
+		assertTrue(schedule.stream().anyMatch(slot ->
+				slot.kind() == CampaignBattleKind.SIEGE
+						&& slot.provinceId() == 10
+						&& "fort_a".equals(slot.fortInstallationId())));
+	}
+
+	@Test
+	void buildCounter_navalOnSeaRun() {
+		Cache.warPortSeaZocRadius = 2;
+		Province capital = province(5);
+		Province sea = seaProvince(11);
+		Province defCoast = province(20);
+		Province atkCoast = province(30);
+		link(capital, sea);
+		link(sea, defCoast);
+		link(defCoast, atkCoast);
+		pm.start(Map.of(5, capital, 11, sea, 20, defCoast, 30, atkCoast));
+		stubOwnership(5, attacker);
+		stubOwnership(new int[] {20, 30}, defender);
+
+		PortSeaZocIndex portIndex = PortSeaZocIndex.fromPorts(List.of(
+				new OperationalPort("port_a", attacker, 5, 100L)));
+		War war = war();
+
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleBuilder.buildCounter(
+				war,
+				List.of(5, 11, 20, 30),
+				3,
+				0,
+				FortZocIndex.fromForts(List.of()),
+				portIndex);
+
+		assertTrue(schedule.stream().anyMatch(slot ->
+				slot.kind() == CampaignBattleKind.NAVAL
+						&& slot.provinceId() == 11
+						&& "port_a".equals(slot.portInstallationId())));
+	}
+
+	@Test
+	void buildCounter_noBorderSlot() {
+		List<Integer> axis = List.of(5, 10, 20, 30);
+		War war = war();
+
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleBuilder.buildCounter(
+				war,
+				axis,
+				2,
+				0,
+				FortZocIndex.fromForts(List.of()),
+				PortSeaZocIndex.fromPorts(List.of()));
+
+		assertTrue(schedule.stream().noneMatch(slot -> slot.provinceId() == 20));
+	}
+
+	@Test
+	void buildCounter_brumeAxis_wildernessCadenceFields() {
+		Cache.warProvincesBetweenBattles = 3;
+		List<Integer> axis = List.of(452, 782, 758, 757, 672, 709, 713, 705);
+		setupMap(axis, 452, 709, 713, 705);
+		War war = war();
+
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleBuilder.buildCounter(
+				war,
+				axis,
+				5,
+				0,
+				FortZocIndex.fromForts(List.of()),
+				PortSeaZocIndex.fromPorts(List.of()));
+
+		assertFalse(schedule.isEmpty());
+		assertTrue(schedule.stream().anyMatch(slot ->
+				slot.kind() == CampaignBattleKind.FIELD
+						&& slot.provinceId() == 672
+						&& !slot.required()));
+		assertTrue(schedule.stream().anyMatch(slot ->
+				slot.kind() == CampaignBattleKind.FIELD
+						&& slot.provinceId() == 782
+						&& !slot.required()));
+		ScheduledCampaignBattle last = schedule.get(schedule.size() - 1);
+		assertEquals(CampaignBattleKind.FIELD, last.kind());
+		assertEquals(452, last.provinceId());
+		assertTrue(last.required());
+		assertTrue(schedule.stream().noneMatch(slot -> slot.provinceId() == 709));
+		assertTrue(indexOfProvince(schedule, 672) < indexOfProvince(schedule, 782));
+		assertTrue(indexOfProvince(schedule, 782) < indexOfProvince(schedule, 452));
+	}
+
+	private static int indexOfProvince(List<ScheduledCampaignBattle> schedule, int provinceId) {
+		for (int index = 0; index < schedule.size(); index++) {
+			if (schedule.get(index).provinceId() == provinceId) {
+				return index;
+			}
+		}
+		return -1;
+	}
+
+	@Test
+	void build_brumeAxis_invasion_cadenceAndSiege() {
+		Cache.warProvincesBetweenBattles = 3;
+		List<Integer> axis = List.of(452, 782, 758, 757, 672, 709, 713, 705);
+		setupMap(axis, 452, 709, 713, 705);
+		FortZocIndex fortIndex = FortZocIndex.fromForts(List.of(
+				new OperationalFort("Greenfort", defender, 713, 100L)));
+		War war = war();
+		war.putFortController("Greenfort", CampaignCoalition.DEFENDER);
+
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleBuilder.build(
+				war,
+				axis,
+				5,
+				7,
+				fortIndex,
+				PortSeaZocIndex.fromPorts(List.of()));
+
+		assertTrue(schedule.size() <= 4);
+		assertEquals(3, schedule.size());
+		assertEquals(CampaignBattleKind.FIELD, schedule.get(0).kind());
+		assertEquals(709, schedule.get(0).provinceId());
+		assertFalse(schedule.get(0).required());
+		assertEquals(CampaignBattleKind.SIEGE, schedule.get(1).kind());
+		assertEquals(713, schedule.get(1).provinceId());
+		assertEquals("Greenfort", schedule.get(1).fortInstallationId());
+		assertEquals(CampaignBattleKind.FIELD, schedule.get(2).kind());
+		assertEquals(705, schedule.get(2).provinceId());
+		assertTrue(schedule.get(2).required());
+		assertTrue(schedule.stream().noneMatch(slot -> slot.kind() == CampaignBattleKind.NAVAL_INVASION));
+		war.setObjectiveProvinceId(705);
+		assertTrue(CampaignScheduleValidator.isValidInvasionSchedule(war, axis, schedule));
+	}
+
+	@Test
+	void build_borderAtFortHome_placesSiegeNotBorderField() {
+		List<Integer> axis = List.of(452, 709, 713, 705);
+		setupMap(axis, 452, 709, 713, 705);
+		FortZocIndex fortIndex = FortZocIndex.fromForts(List.of(
+				new OperationalFort("Greenfort", defender, 713, 100L)));
+		War war = war();
+		war.putFortController("Greenfort", CampaignCoalition.DEFENDER);
+
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleBuilder.build(
+				war,
+				axis,
+				2,
+				3,
+				fortIndex,
+				PortSeaZocIndex.fromPorts(List.of()));
+
+		assertEquals(2, schedule.size());
+		assertEquals(CampaignBattleKind.SIEGE, schedule.get(0).kind());
+		assertEquals(713, schedule.get(0).provinceId());
+		assertEquals("Greenfort", schedule.get(0).fortInstallationId());
+		assertTrue(schedule.stream().noneMatch(slot ->
+				slot.provinceId() == 713 && slot.kind() == CampaignBattleKind.FIELD));
+		assertEquals(705, schedule.get(1).provinceId());
+		assertTrue(schedule.get(1).required());
+	}
+
+	@Test
+	void build_brumeAxis_dualFortOverlap_onlyGreenfortSiege() {
+		Cache.warProvincesBetweenBattles = 3;
+		List<Integer> axis = List.of(452, 782, 758, 757, 672, 709, 713, 705);
+		setupMap(axis, 452, 709, 713, 705);
+		Map<Integer, Province> map = new java.util.HashMap<>();
+		for (int id : axis) {
+			map.put(id, pm.get(id));
+		}
+		Province airfieldHome = province(704);
+		map.put(704, airfieldHome);
+		link(pm.get(705), airfieldHome);
+		pm.start(map);
+		stubOwnership(452, attacker);
+		stubOwnership(new int[] {709, 713, 705, 704}, defender);
+
+		FortZocIndex fortIndex = FortZocIndex.fromForts(List.of(
+				new OperationalFort("Greenfort", defender, 713, 1787472176192L),
+				new OperationalFort("Lan_Airfield", defender, 704, 1787472195192L)));
+		War war = war();
+		war.setObjectiveProvinceId(705);
+		war.putFortController("Greenfort", CampaignCoalition.DEFENDER);
+		war.putFortController("Lan_Airfield", CampaignCoalition.DEFENDER);
+
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleBuilder.build(
+				war,
+				axis,
+				5,
+				7,
+				fortIndex,
+				PortSeaZocIndex.fromPorts(List.of()));
+
+		assertEquals(3, schedule.size());
+		assertTrue(schedule.stream().noneMatch(slot -> "Lan_Airfield".equals(slot.fortInstallationId())));
+		assertTrue(schedule.stream().anyMatch(slot ->
+				slot.kind() == CampaignBattleKind.SIEGE && "Greenfort".equals(slot.fortInstallationId())));
+		assertTrue(CampaignScheduleValidator.isValidInvasionSchedule(war, axis, schedule));
 	}
 
 	private War war() {

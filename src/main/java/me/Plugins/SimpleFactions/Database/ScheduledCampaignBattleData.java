@@ -6,4 +6,5 @@ public class ScheduledCampaignBattleData {
 	public boolean required;
 	public String fortInstallationId;
 	public String portInstallationId;
+	public Integer chronologyProvinceId;
 }

@@ -1,26 +1,29 @@
 package me.Plugins.SimpleFactions.War.schedule;
 
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
-import java.util.OptionalInt;
-import java.util.Set;
+import java.util.logging.Logger;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
-import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
-import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.Side;
 import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.progression.CampaignCoalitionService;
+import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService.ScheduleLeg;
 import me.Plugins.SimpleFactions.enums.Terrain;
 
 public final class CampaignScheduleBuilder {
+	private static final Logger LOGGER = Logger.getLogger(CampaignScheduleBuilder.class.getName());
+
+	public record BuiltSchedules(
+			List<ScheduledCampaignBattle> invasion,
+			List<ScheduledCampaignBattle> counter) {
+	}
+
 	private CampaignScheduleBuilder() {
 	}
 
@@ -40,98 +43,269 @@ public final class CampaignScheduleBuilder {
 			int objectiveIndex,
 			FortZocIndex fortIndex,
 			PortSeaZocIndex portIndex) {
+		return buildAll(war, axis, borderStartIndex, objectiveIndex, resolveCapitalIndex(axis, war), fortIndex, portIndex)
+				.invasion();
+	}
+
+	public static List<ScheduledCampaignBattle> buildCounter(
+			War war,
+			List<Integer> axis,
+			int borderStartIndex,
+			int aggressorCapitalIndex,
+			FortZocIndex fortIndex,
+			PortSeaZocIndex portIndex) {
+		return buildAll(war, axis, borderStartIndex, resolveObjectiveIndex(axis, war), aggressorCapitalIndex, fortIndex, portIndex)
+				.counter();
+	}
+
+	public static BuiltSchedules buildAll(
+			War war,
+			List<Integer> axis,
+			int borderStartIndex,
+			int objectiveIndex,
+			int aggressorCapitalIndex,
+			FortZocIndex fortIndex,
+			PortSeaZocIndex portIndex) {
 		if (war == null || axis == null || axis.isEmpty() || fortIndex == null) {
-			return List.of();
+			return new BuiltSchedules(List.of(), List.of());
 		}
-		if (borderStartIndex < 0
-				|| borderStartIndex >= axis.size()
-				|| objectiveIndex < 0
-				|| objectiveIndex >= axis.size()) {
-			return List.of();
+		if (borderStartIndex < 0 || borderStartIndex >= axis.size()) {
+			return new BuiltSchedules(List.of(), List.of());
 		}
 
-		ProvinceManager provinceManager = SimpleFactions.getInstance().getProvinceManager();
-		List<ScheduledCampaignBattle> schedule = new ArrayList<>();
-		Set<String> scheduledFortIds = new HashSet<>();
-		Set<String> scheduledPortIds = new HashSet<>();
-		int cadence = Math.max(1, Cache.warProvincesBetweenBattles);
-		int step = Integer.compare(objectiveIndex, borderStartIndex);
-
-		appendSeaCrossingSlots(
-				war,
-				fortIndex,
-				portIndex,
-				provinceManager,
-				schedule,
-				scheduledFortIds,
-				scheduledPortIds,
+		int borderProvinceId = axis.get(borderStartIndex);
+		CampaignScheduleBuildContext ctx = new CampaignScheduleBuildContext(
 				axis,
+				borderProvinceId,
 				borderStartIndex,
-				objectiveIndex);
+				objectiveIndex,
+				fortIndex);
+		int cadence = Math.max(1, Cache.warProvincesBetweenBattles);
 
-		for (int i = borderStartIndex; ; i += step) {
-			appendAxisStep(
+		LogManager.section("Schedule build");
+		LogManager.line("axis=%s", axis);
+		LogManager.line(
+				"borderIndex=%d borderProvince=%d objectiveIndex=%d objectiveProvince=%d capitalIndex=%d cadence=%d",
+				borderStartIndex,
+				borderProvinceId,
+				objectiveIndex,
+				objectiveIndex >= 0 && objectiveIndex < axis.size() ? axis.get(objectiveIndex) : -1,
+				aggressorCapitalIndex,
+				cadence);
+
+		LogManager.section("Phase 1 border anchor");
+		OperationalFort borderFort = fortIndex.fortForProvince(borderProvinceId).orElse(null);
+		boolean borderIsFortHome = borderFort != null
+				&& borderFort.province() == borderProvinceId
+				&& FortControlService.isEnemyControlled(war, borderFort.id(), CampaignCoalition.AGGRESSOR);
+		if (borderIsFortHome) {
+			LogManager.line(
+					"Phase 1: border province %d is fort home %s; siege replaces BORDER field",
+					borderProvinceId,
+					borderFort.id());
+			CampaignBattlePlacer.placeBattle(
+					ctx,
 					war,
-					fortIndex,
-					provinceManager,
-					schedule,
-					scheduledFortIds,
+					ScheduleLeg.INVASION,
+					borderProvinceId,
+					BattleTrigger.FORT_ZOC,
+					CampaignCoalition.AGGRESSOR,
+					borderFort.id(),
+					null);
+		} else {
+			CampaignBattlePlacer.placeBattle(
+					ctx,
+					war,
+					ScheduleLeg.INVASION,
+					borderProvinceId,
+					BattleTrigger.BORDER,
+					CampaignCoalition.AGGRESSOR,
+					null,
+					null);
+			if (borderFort != null) {
+				CampaignBattlePlacer.placeBattle(
+						ctx,
+						war,
+						ScheduleLeg.INVASION,
+						borderProvinceId,
+						BattleTrigger.FORT_ZOC,
+						CampaignCoalition.AGGRESSOR,
+						borderFort.id(),
+						null);
+			}
+		}
+
+		// Phase 2: invasion land walk
+		if (objectiveIndex >= 0 && objectiveIndex < axis.size()) {
+			LogManager.section("Phase 2 invasion land walk");
+			walkLandLeg(
+					ctx,
+					war,
 					axis,
 					borderStartIndex,
-					cadence,
-					i);
-			if (i == objectiveIndex) {
+					objectiveIndex,
+					1,
+					ScheduleLeg.INVASION,
+					CampaignCoalition.AGGRESSOR,
+					borderStartIndex,
+					axis.get(objectiveIndex),
+					cadence);
+		}
+
+		// Phase 3: counter land walk
+		if (borderStartIndex > 0 && aggressorCapitalIndex >= 0 && aggressorCapitalIndex < borderStartIndex) {
+			LogManager.section("Phase 3 counter land walk");
+			walkLandLeg(
+					ctx,
+					war,
+					axis,
+					borderStartIndex - 1,
+					aggressorCapitalIndex,
+					-1,
+					ScheduleLeg.COUNTER,
+					CampaignCoalition.DEFENDER,
+					borderStartIndex - 1,
+					axis.get(aggressorCapitalIndex),
+					cadence);
+		} else if (aggressorCapitalIndex < 0) {
+			LOGGER.warning("Counter leg: aggressor capital not on campaign axis; schedule walks to axis start only.");
+		}
+
+		// Phase 4: sea scans (after both land walks)
+		if (objectiveIndex >= 0 && objectiveIndex < axis.size()) {
+			LogManager.section("Phase 4 invasion sea scan");
+			scanSeaLeg(
+					ctx,
+					war,
+					axis,
+					0,
+					objectiveIndex,
+					1,
+					ScheduleLeg.INVASION,
+					CampaignCoalition.AGGRESSOR,
+					portIndex);
+		}
+		if (borderStartIndex > 0 && aggressorCapitalIndex >= 0 && aggressorCapitalIndex < borderStartIndex) {
+			LogManager.section("Phase 4 counter sea scan");
+			scanSeaLeg(
+					ctx,
+					war,
+					axis,
+					borderStartIndex - 1,
+					aggressorCapitalIndex,
+					-1,
+					ScheduleLeg.COUNTER,
+					CampaignCoalition.DEFENDER,
+					portIndex);
+		}
+
+		return new BuiltSchedules(List.copyOf(ctx.invasion()), List.copyOf(ctx.counter()));
+	}
+
+	private static int resolveCapitalIndex(List<Integer> axis, War war) {
+		if (war == null || war.getAttackers() == null || war.getAttackers().getLeader() == null) {
+			return -1;
+		}
+		int capital = war.getAttackers().getLeader().getCapital();
+		return capital > 0 ? axis.indexOf(capital) : -1;
+	}
+
+	private static int resolveObjectiveIndex(List<Integer> axis, War war) {
+		if (war == null || war.getObjectiveProvinceId() == null) {
+			return -1;
+		}
+		return axis.indexOf(war.getObjectiveProvinceId());
+	}
+
+	private static void walkLandLeg(
+			CampaignScheduleBuildContext ctx,
+			War war,
+			List<Integer> axis,
+			int fromIndex,
+			int toIndex,
+			int step,
+			ScheduleLeg leg,
+			CampaignCoalition advancing,
+			int cadenceOriginIndex,
+			int terminalProvinceId,
+			int cadence) {
+		for (int i = fromIndex; ; i += step) {
+			int provinceId = axis.get(i);
+
+			if (leg == ScheduleLeg.INVASION && i == ctx.cursorIndex()) {
+				LogManager.line(
+						"walk leg=%s axisIndex=%d province=%d (border already handled in phase 1)",
+						leg,
+						i,
+						provinceId);
+			} else if (leg == ScheduleLeg.COUNTER && i == ctx.cursorIndex()) {
+				LogManager.line(
+						"walk leg=%s axisIndex=%d province=%d (skip border on counter)",
+						leg,
+						i,
+						provinceId);
+			} else {
+				boolean cadenceMatch = cadenceMatches(cadenceOriginIndex, i, cadence);
+				var zocFort = ctx.fortIndex().fortForProvince(provinceId).orElse(null);
+				LogManager.line(
+						"walk leg=%s axisIndex=%d province=%d cadenceMatch=%s zocFort=%s",
+						leg,
+						i,
+						provinceId,
+						cadenceMatch,
+						zocFort != null ? zocFort.id() : "-");
+				if (cadenceMatch) {
+					CampaignBattlePlacer.placeBattle(
+							ctx, war, leg, provinceId, BattleTrigger.CADENCE, advancing, null, null);
+				}
+				if (zocFort != null) {
+					CampaignBattlePlacer.placeBattle(
+							ctx,
+							war,
+							leg,
+							provinceId,
+							BattleTrigger.FORT_ZOC,
+							advancing,
+							zocFort.id(),
+							null);
+				}
+			}
+
+			if (i == toIndex) {
+				LogManager.line(
+						"walk leg=%s terminal axisIndex=%d province=%d OBJECTIVE",
+						leg,
+						i,
+						terminalProvinceId);
+				CampaignBattlePlacer.placeBattle(
+						ctx, war, leg, terminalProvinceId, BattleTrigger.OBJECTIVE, advancing, null, null);
 				break;
 			}
 		}
-
-		int objectiveProvince = axis.get(objectiveIndex);
-		ensureObjectiveSlot(schedule, objectiveProvince);
-		return List.copyOf(schedule);
 	}
 
-	private static void appendAxisStep(
+	private static boolean cadenceMatches(int cadenceOriginIndex, int axisIndex, int cadence) {
+		int offset = Math.abs(axisIndex - cadenceOriginIndex);
+		return offset % cadence == 0;
+	}
+
+	private static void scanSeaLeg(
+			CampaignScheduleBuildContext ctx,
 			War war,
-			FortZocIndex fortIndex,
-			ProvinceManager provinceManager,
-			List<ScheduledCampaignBattle> schedule,
-			Set<String> scheduledFortIds,
 			List<Integer> axis,
-			int borderStartIndex,
-			int cadence,
-			int axisIndex) {
-		int provinceId = axis.get(axisIndex);
-
-		fortIndex.fortForProvince(provinceId).ifPresent(fort -> {
-			addSiegeIfAbsent(war, schedule, scheduledFortIds, fort);
-			if (scheduledFortIds.contains(fort.id())) {
-				removeInvasionSlot(schedule, provinceId);
-			}
-		});
-
-		if ((axisIndex - borderStartIndex) % cadence == 0) {
-			addFieldIfAbsent(schedule, provinceId);
+			int rangeStart,
+			int rangeEnd,
+			int step,
+			ScheduleLeg leg,
+			CampaignCoalition advancing,
+			PortSeaZocIndex portIndex) {
+		if (portIndex == null) {
+			return;
 		}
-	}
-
-	private static void appendSeaCrossingSlots(
-			War war,
-			FortZocIndex fortIndex,
-			PortSeaZocIndex portIndex,
-			ProvinceManager provinceManager,
-			List<ScheduledCampaignBattle> schedule,
-			Set<String> scheduledFortIds,
-			Set<String> scheduledPortIds,
-			List<Integer> axis,
-			int borderStartIndex,
-			int objectiveIndex) {
-		int rangeStart = 0;
-		int rangeEnd = Math.max(borderStartIndex, objectiveIndex);
-		int step = 1;
-		Set<Integer> scheduledInvasionSeaStarts = new HashSet<>();
+		ProvinceManager provinceManager = SimpleFactions.getInstance().getProvinceManager();
 
 		for (int i = rangeStart; ; i += step) {
-			if (!isSeaRunStart(axis, i, provinceManager)) {
+			if (!isSeaRunStart(axis, i, step, provinceManager)) {
 				if (i == rangeEnd) {
 					break;
 				}
@@ -139,27 +313,25 @@ public final class CampaignScheduleBuilder {
 			}
 
 			List<Integer> seaRun = collectSeaRun(axis, i, rangeEnd, step, provinceManager);
-			if (portIndex != null) {
-				for (OperationalPort port : portIndex.portsCoveringSeaProvinces(seaRun)) {
-					if (port == null || port.id() == null || scheduledPortIds.contains(port.id())) {
-						continue;
-					}
-					if (!isEnemyPort(war, port)) {
-						continue;
-					}
-					schedule.add(new ScheduledCampaignBattle(
-							port.province(),
-							CampaignBattleKind.NAVAL,
-							false,
-							null,
-							port.id()));
-					scheduledPortIds.add(port.id());
+			for (OperationalPort port : portIndex.portsCoveringSeaProvinces(seaRun)) {
+				if (port == null || port.id() == null) {
+					continue;
 				}
-			}
-
-			if (scheduledInvasionSeaStarts.add(i)) {
-				resolveInvasionLanding(war, axis, i + seaRun.size(), rangeEnd, provinceManager)
-						.ifPresent(landing -> addInvasionSlot(schedule, landing));
+				if (!isEnemyPort(war, port, advancing)) {
+					continue;
+				}
+				if (seaRun.isEmpty()) {
+					continue;
+				}
+				CampaignBattlePlacer.placeBattle(
+						ctx,
+						war,
+						leg,
+						seaRun.get(0),
+						BattleTrigger.NAVAL,
+						advancing,
+						null,
+						port.id());
 			}
 
 			if (i == rangeEnd) {
@@ -168,132 +340,50 @@ public final class CampaignScheduleBuilder {
 		}
 	}
 
-	private static OptionalInt resolveInvasionLanding(
-			War war,
+	private static boolean isSeaRunStart(
 			List<Integer> axis,
-			int afterSeaIndex,
-			int rangeEnd,
+			int axisIndex,
+			int step,
 			ProvinceManager provinceManager) {
-		for (int i = afterSeaIndex; i <= rangeEnd; i++) {
-			int provinceId = axis.get(i);
-			Province province = provinceManager.get(provinceId);
-			if (province == null || !province.isValid()) {
-				continue;
-			}
-			if (province.getTerrain() == Terrain.SEA) {
-				break;
-			}
-			if (isDefenderOwned(war, provinceId)) {
-				return OptionalInt.of(provinceId);
-			}
+		if (axisIndex < 0 || axisIndex >= axis.size()) {
+			return false;
 		}
-		return OptionalInt.empty();
-	}
-
-	private static void addSiegeIfAbsent(
-			War war,
-			List<ScheduledCampaignBattle> schedule,
-			Set<String> scheduledFortIds,
-			OperationalFort fort) {
-		if (fort == null || fort.id() == null || scheduledFortIds.contains(fort.id())) {
-			return;
-		}
-		if (!FortControlService.isEnemyControlled(war, fort.id(), CampaignCoalition.AGGRESSOR)) {
-			return;
-		}
-		schedule.add(new ScheduledCampaignBattle(
-				fort.province(),
-				CampaignBattleKind.SIEGE,
-				false,
-				fort.id()));
-		scheduledFortIds.add(fort.id());
-	}
-
-	private static void removeInvasionSlot(List<ScheduledCampaignBattle> schedule, int provinceId) {
-		schedule.removeIf(slot -> slot.provinceId() == provinceId
-				&& slot.kind() == CampaignBattleKind.NAVAL_INVASION
-				&& !slot.required());
-	}
-
-	private static void addInvasionOrSiegeSlot(
-			War war,
-			FortZocIndex fortIndex,
-			List<ScheduledCampaignBattle> schedule,
-			Set<String> scheduledFortIds,
-			int landingProvinceId) {
-		if (fortIndex != null) {
-			Optional<OperationalFort> fort = fortIndex.fortForProvince(landingProvinceId);
-			if (fort.isPresent()) {
-				addSiegeIfAbsent(war, schedule, scheduledFortIds, fort.get());
-				if (scheduledFortIds.contains(fort.get().id())) {
-					removeInvasionSlot(schedule, landingProvinceId);
-					return;
-				}
-			}
-		}
-		addInvasionSlot(schedule, landingProvinceId);
-	}
-
-	private static void addInvasionSlot(List<ScheduledCampaignBattle> schedule, int provinceId) {
-		for (int index = 0; index < schedule.size(); index++) {
-			ScheduledCampaignBattle slot = schedule.get(index);
-			if (slot.provinceId() != provinceId) {
-				continue;
-			}
-			if (slot.kind() == CampaignBattleKind.NAVAL_INVASION) {
-				return;
-			}
-			if (slot.kind() == CampaignBattleKind.FIELD && !slot.required()) {
-				schedule.set(index, new ScheduledCampaignBattle(
-						provinceId,
-						CampaignBattleKind.NAVAL_INVASION,
-						false,
-						slot.fortInstallationId(),
-						slot.portInstallationId()));
-				return;
-			}
-		}
-		schedule.add(new ScheduledCampaignBattle(
-				provinceId,
-				CampaignBattleKind.NAVAL_INVASION,
-				false,
-				null,
-				null));
-	}
-
-	private static boolean isSeaRunStart(List<Integer> axis, int axisIndex, ProvinceManager provinceManager) {
 		Province province = provinceManager.get(axis.get(axisIndex));
 		if (province == null || province.getTerrain() != Terrain.SEA) {
 			return false;
 		}
-		if (axisIndex == 0) {
+		int adjacentIndex = axisIndex - Integer.signum(step);
+		if (adjacentIndex < 0 || adjacentIndex >= axis.size()) {
 			return true;
 		}
-		Province previous = provinceManager.get(axis.get(axisIndex - 1));
-		return previous == null || previous.getTerrain() != Terrain.SEA;
+		Province adjacent = provinceManager.get(axis.get(adjacentIndex));
+		return adjacent == null || adjacent.getTerrain() != Terrain.SEA;
 	}
 
 	private static List<Integer> collectSeaRun(
 			List<Integer> axis,
 			int startIndex,
-			int objectiveIndex,
+			int rangeEnd,
 			int step,
 			ProvinceManager provinceManager) {
 		List<Integer> seaRun = new ArrayList<>();
 		for (int i = startIndex; ; i += step) {
+			if (i < 0 || i >= axis.size()) {
+				break;
+			}
 			Province province = provinceManager.get(axis.get(i));
 			if (province == null || province.getTerrain() != Terrain.SEA) {
 				break;
 			}
 			seaRun.add(axis.get(i));
-			if (i == objectiveIndex) {
+			if (i == rangeEnd) {
 				break;
 			}
 		}
 		return seaRun;
 	}
 
-	private static boolean isEnemyPort(War war, OperationalPort port) {
+	private static boolean isEnemyPort(War war, OperationalPort port, CampaignCoalition advancing) {
 		if (war == null || port == null || port.owner() == null) {
 			return false;
 		}
@@ -302,60 +392,6 @@ public final class CampaignScheduleBuilder {
 			return false;
 		}
 		CampaignCoalition coalition = CampaignCoalitionService.coalitionOf(war, ownerSide);
-		return coalition != null && coalition != CampaignCoalition.AGGRESSOR;
-	}
-
-	private static boolean isDefenderOwned(War war, int provinceId) {
-		if (war == null) {
-			return false;
-		}
-		Faction owner = TitleManager.getByProvince(provinceId);
-		if (owner == null) {
-			return false;
-		}
-		Side ownerSide = war.getSide(owner);
-		if (ownerSide == null) {
-			return false;
-		}
-		return CampaignCoalitionService.coalitionOf(war, ownerSide) == CampaignCoalition.DEFENDER;
-	}
-
-	private static void addFieldIfAbsent(List<ScheduledCampaignBattle> schedule, int provinceId) {
-		for (ScheduledCampaignBattle slot : schedule) {
-			if (slot.provinceId() == provinceId && slot.kind() == CampaignBattleKind.FIELD) {
-				return;
-			}
-			if (slot.provinceId() == provinceId && slot.kind() == CampaignBattleKind.NAVAL_INVASION) {
-				return;
-			}
-		}
-		schedule.add(new ScheduledCampaignBattle(provinceId, CampaignBattleKind.FIELD, false, null));
-	}
-
-	private static void ensureObjectiveSlot(List<ScheduledCampaignBattle> schedule, int objectiveProvince) {
-		for (int index = 0; index < schedule.size(); index++) {
-			ScheduledCampaignBattle slot = schedule.get(index);
-			if (slot.provinceId() != objectiveProvince) {
-				continue;
-			}
-			if (slot.kind() == CampaignBattleKind.FIELD) {
-				if (!slot.required()) {
-					schedule.set(index, new ScheduledCampaignBattle(
-							slot.provinceId(),
-							CampaignBattleKind.FIELD,
-							true,
-							slot.fortInstallationId(),
-							slot.portInstallationId()));
-				}
-				return;
-			}
-			if (slot.kind() == CampaignBattleKind.SIEGE
-					|| slot.kind() == CampaignBattleKind.NAVAL
-					|| slot.kind() == CampaignBattleKind.NAVAL_INVASION) {
-				schedule.add(new ScheduledCampaignBattle(objectiveProvince, CampaignBattleKind.FIELD, true, null));
-				return;
-			}
-		}
-		schedule.add(new ScheduledCampaignBattle(objectiveProvince, CampaignBattleKind.FIELD, true, null));
+		return coalition != null && coalition != advancing;
 	}
 }

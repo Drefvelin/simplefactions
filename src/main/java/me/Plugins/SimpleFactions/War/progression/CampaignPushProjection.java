@@ -75,7 +75,7 @@ public final class CampaignPushProjection {
 			return OptionalInt.empty();
 		}
 
-		if (CampaignScheduleService.hasSchedule(war)) {
+		if (CampaignScheduleService.hasActiveSchedule(war)) {
 			return CampaignScheduleService.currentSlot(war)
 					.map(slot -> OptionalInt.of(slot.provinceId()))
 					.orElse(OptionalInt.empty());

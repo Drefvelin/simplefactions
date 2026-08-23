@@ -134,7 +134,7 @@ public class InventoryManager implements Listener{
 		}
 		WhitePeaceService.recalculateProposals(war);
 		WarManager.persist(war);
-		campaignView.campaignView(player, war, 0, true);
+		campaignView.campaignView(player, war, true);
 	}
 
 	public void openDeclareWarGoalPicker(Player player, Faction attacker, Faction defender) {

@@ -108,35 +108,127 @@ class ProvincePathfinderTest {
 	}
 
 	@Test
-	void neutralBlockedThenPenalized() {
+	void wildernessCrossesOnLandPass() {
 		Province c = province(3, Terrain.PLAINS, ATK);
-		Province h = province(8, Terrain.PLAINS, NEUTRAL);
+		Province wilderness = wilderness(8, Terrain.PLAINS);
 		Province d = province(4, Terrain.PLAINS, DEF);
 
-		link(c, h);
-		link(h, d);
-		load(c, h, d);
+		link(c, wilderness);
+		link(wilderness, d);
+		load(c, wilderness, d);
 
 		PathfinderResult pass1 = pathfinder.findRoute(3, 4, PathfinderPass.LAND_NO_NEUTRAL, territory);
-		assertFalse(pass1.isFound());
-
-		PathfinderResult pass3 = pathfinder.findRoute(3, 4, PathfinderPass.LAND_NEUTRAL_PENALTY, territory);
-		assertTrue(pass3.isFound());
-		assertTrue(pass3.getTotalCost() > ProvincePathfinder.terrainEnterCost(Terrain.PLAINS) * 2);
+		assertTrue(pass1.isFound());
+		assertEquals(List.of(3, 8, 4), pass1.getPath());
+		double expectedCost = ProvincePathfinder.terrainEnterCost(Terrain.PLAINS) * 2;
+		assertEquals(expectedCost, pass1.getTotalCost(), 0.001);
 	}
 
 	@Test
-	void findRouteWithFallbackUsesPassOrder() {
+	void foreignNationBlocksLandPass() {
 		Province c = province(3, Terrain.PLAINS, ATK);
-		Province h = province(8, Terrain.PLAINS, NEUTRAL);
+		Province foreign = province(8, Terrain.PLAINS, NEUTRAL);
 		Province d = province(4, Terrain.PLAINS, DEF);
-		link(c, h);
-		link(h, d);
-		load(c, h, d);
+
+		link(c, foreign);
+		link(foreign, d);
+		load(c, foreign, d);
+
+		PathfinderResult pass1 = pathfinder.findRoute(3, 4, PathfinderPass.LAND_NO_NEUTRAL, territory);
+		assertFalse(pass1.isFound());
+	}
+
+	@Test
+	void findRouteWithFallbackUsesWildernessOnLandPass() {
+		Province c = province(3, Terrain.PLAINS, ATK);
+		Province wilderness = wilderness(8, Terrain.PLAINS);
+		Province d = province(4, Terrain.PLAINS, DEF);
+		link(c, wilderness);
+		link(wilderness, d);
+		load(c, wilderness, d);
 
 		PathfinderResult result = pathfinder.findRouteWithFallback(3, 4, territory);
 		assertTrue(result.isFound());
-		assertEquals(PathfinderPass.LAND_NEUTRAL_PENALTY, result.getPassUsed());
+		assertEquals(PathfinderPass.LAND_NO_NEUTRAL, result.getPassUsed());
+	}
+
+	@Test
+	void wildernessPreferredOverSea() {
+		Province a = province(1, Terrain.PLAINS, ATK);
+		Province wilderness = wilderness(2, Terrain.PLAINS);
+		Province g = province(3, Terrain.PLAINS, DEF);
+		Province sea = wilderness(4, Terrain.SEA);
+
+		link(a, wilderness);
+		link(wilderness, g);
+		link(a, sea);
+		link(sea, g);
+		load(a, wilderness, g, sea);
+
+		PathfinderResult result = pathfinder.findRouteWithFallback(1, 3, territory);
+		assertTrue(result.isFound());
+		assertEquals(PathfinderPass.LAND_NO_NEUTRAL, result.getPassUsed());
+		assertEquals(List.of(1, 2, 3), result.getPath());
+	}
+
+	@Test
+	void borderStart_prefersShallowestEntryWhenInlandProvinceIsCheaperToObjective() {
+		Province capital = province(452, Terrain.PLAINS, ATK);
+		Province march = province(672, Terrain.PLAINS, ATK);
+		Province border = province(709, Terrain.PLAINS, DEF);
+		Province fort = province(713, Terrain.PLAINS, DEF);
+		Province objective = province(705, Terrain.PLAINS, DEF);
+
+		link(capital, march);
+		link(march, border);
+		link(march, fort);
+		link(border, fort);
+		link(fort, objective);
+		load(capital, march, border, fort, objective);
+
+		War war = warWithCapital(452);
+		PathfinderResult result = pathfinder.computeCampaignLine(war, 705);
+
+		assertTrue(result.isFound());
+		assertEquals(709, result.getStartProvinceId());
+		assertEquals(List.of(709, 713, 705), result.getPath());
+	}
+
+	@Test
+	void borderStartSkipsObjectiveSelfPathWhenOtherEntriesExist() {
+		Province atkBorder = province(672, Terrain.PLAINS, ATK);
+		Province border = province(709, Terrain.PLAINS, DEF);
+		Province fort = province(713, Terrain.PLAINS, DEF);
+		Province capital = province(705, Terrain.PLAINS, DEF);
+
+		link(atkBorder, border);
+		link(border, fort);
+		link(fort, capital);
+		load(atkBorder, border, fort, capital);
+
+		War war = warWithCapital(672);
+		PathfinderResult result = pathfinder.computeCampaignLine(war, 705);
+
+		assertTrue(result.isFound());
+		assertEquals(709, result.getStartProvinceId());
+		assertEquals(List.of(709, 713, 705), result.getPath());
+	}
+
+	@Test
+	void borderStartAllowsObjectiveSelfPathWhenOnlyEntry() {
+		Province atk = province(1, Terrain.PLAINS, ATK);
+		Province capital = province(705, Terrain.PLAINS, DEF);
+		Province sea = province(795, Terrain.SEA, NEUTRAL);
+
+		link(atk, sea);
+		link(sea, capital);
+		load(atk, sea, capital);
+
+		War war = war(ATK, DEF);
+		PathfinderResult result = pathfinder.computeCampaignLine(war, 705);
+
+		assertTrue(result.isFound());
+		assertEquals(705, result.getStartProvinceId());
 	}
 
 	@Test
@@ -184,6 +276,15 @@ class ProvincePathfinderTest {
 		assertEquals(List.of(3, 4), result.getPath());
 	}
 
+	private War warWithCapital(int capital) {
+		Faction attacker = mock(Faction.class);
+		when(attacker.getId()).thenReturn(ATK);
+		when(attacker.getCapital()).thenReturn(capital);
+		Faction defender = mock(Faction.class);
+		when(defender.getId()).thenReturn(DEF);
+		return new War(1, attacker, defender);
+	}
+
 	private War war(String attackerId, String defenderId) {
 		Faction attacker = mock(Faction.class);
 		when(attacker.getId()).thenReturn(attackerId);
@@ -194,6 +295,10 @@ class ProvincePathfinderTest {
 
 	private Province province(int id, Terrain terrain, String ownerId) {
 		ownerByProvince.put(id, ownerId);
+		return new Province(id, terrain.name(), 50);
+	}
+
+	private Province wilderness(int id, Terrain terrain) {
 		return new Province(id, terrain.name(), 50);
 	}
 

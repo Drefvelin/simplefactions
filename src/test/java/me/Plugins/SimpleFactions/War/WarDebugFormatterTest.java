@@ -154,6 +154,29 @@ class WarDebugFormatterTest {
 	}
 
 	@Test
+	void formatStatusLines_includesCounterSchedule() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+
+		War war = new War(3, attacker, defender);
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.FIELD, false, null)));
+		war.setCampaignCounterSchedule(List.of(
+				new ScheduledCampaignBattle(10, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(5, CampaignBattleKind.FIELD, true, null)));
+		war.setCampaignCounterScheduleIndex(1);
+
+		String json = WarDebugFormatter.formatStatusLines(war).get(0);
+
+		assertTrue(json.contains("\"campaignCounterScheduleIndex\":1"));
+		assertTrue(json.contains("\"campaignCounterSchedule\""));
+		assertTrue(json.contains("\"provinceId\":10"));
+		assertTrue(json.contains("\"provinceId\":5"));
+	}
+
+	@Test
 	void formatStatusLines_includesCampaignSchedule() {
 		Faction attacker = mock(Faction.class);
 		Faction defender = mock(Faction.class);

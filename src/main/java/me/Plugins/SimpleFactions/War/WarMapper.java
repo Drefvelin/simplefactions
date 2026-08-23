@@ -18,6 +18,7 @@ import me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData;
 import me.Plugins.SimpleFactions.Database.SideData;
 import me.Plugins.SimpleFactions.Database.WarData;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.War.campaign.WarCampaignService;
 import me.Plugins.SimpleFactions.War.commitment.WarCommitmentService;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
@@ -103,6 +104,8 @@ public final class WarMapper {
 		data.campaignBattlesFought = war.getCampaignBattlesFought();
 		data.campaignBattleSchedule = serializeSchedule(war.getCampaignBattleSchedule());
 		data.campaignScheduleIndex = war.getCampaignScheduleIndex();
+		data.campaignCounterSchedule = serializeSchedule(war.getCampaignCounterSchedule());
+		data.campaignCounterScheduleIndex = war.getCampaignCounterScheduleIndex();
 		data.fortControllers = serializeFortControllers(war.getFortControllers());
 		data.locationBattleCounts = war.getLocationBattleCounts() == null
 				? new HashMap<>()
@@ -165,9 +168,14 @@ public final class WarMapper {
 		war.setCampaignProvinces(data.campaignProvinces == null ? null : new ArrayList<>(data.campaignProvinces));
 		war.setCursorIndex(data.cursorIndex);
 		List<ScheduledCampaignBattle> campaignSchedule = deserializeSchedule(data.campaignBattleSchedule);
-		int defaultFuel = defaultInitiativeFuel(campaignSchedule);
-		war.setInitiativeAttacker(data.initiativeAttacker != null ? data.initiativeAttacker : defaultFuel);
-		war.setInitiativeDefender(data.initiativeDefender != null ? data.initiativeDefender : defaultFuel);
+		List<ScheduledCampaignBattle> counterSchedule = deserializeSchedule(data.campaignCounterSchedule);
+		boolean hasCounterScheduleField = data.campaignCounterSchedule != null;
+		int attackerDefault = defaultInitiativeFuel(campaignSchedule);
+		int defenderDefault = hasCounterScheduleField
+				? WarCampaignService.initiativeFuelForLegCount(counterSchedule.size())
+				: attackerDefault;
+		war.setInitiativeAttacker(data.initiativeAttacker != null ? data.initiativeAttacker : attackerDefault);
+		war.setInitiativeDefender(data.initiativeDefender != null ? data.initiativeDefender : defenderDefault);
 		war.setOccupiedByAttacker(data.occupiedByAttacker == null ? new ArrayList<>() : new ArrayList<>(data.occupiedByAttacker));
 		war.setOccupiedByDefender(data.occupiedByDefender == null ? new ArrayList<>() : new ArrayList<>(data.occupiedByDefender));
 		war.setLastBattleOccupied(data.lastBattleOccupied == null ? new ArrayList<>() : new ArrayList<>(data.lastBattleOccupied));
@@ -181,6 +189,9 @@ public final class WarMapper {
 		war.setCampaignBattlesFought(data.campaignBattlesFought != null ? data.campaignBattlesFought : 0);
 		war.setCampaignBattleSchedule(campaignSchedule);
 		war.setCampaignScheduleIndex(data.campaignScheduleIndex != null ? data.campaignScheduleIndex : 0);
+		war.setCampaignCounterSchedule(counterSchedule);
+		war.setCampaignCounterScheduleIndex(
+				data.campaignCounterScheduleIndex != null ? data.campaignCounterScheduleIndex : 0);
 		war.setFortControllers(deserializeFortControllers(data.fortControllers));
 		war.setLocationBattleCounts(data.locationBattleCounts);
 		BattleSchedulePhase schedulePhase = BattleSchedulePhase.fromJson(data.battleSchedulePhase);
@@ -273,6 +284,7 @@ public final class WarMapper {
 			data.required = slot.required();
 			data.fortInstallationId = slot.fortInstallationId();
 			data.portInstallationId = slot.portInstallationId();
+			data.chronologyProvinceId = slot.chronologyProvinceId();
 			serialized.add(data);
 		}
 		return serialized;
@@ -292,7 +304,8 @@ public final class WarMapper {
 					CampaignBattleKind.fromJson(data.kind),
 					data.required,
 					data.fortInstallationId,
-					data.portInstallationId));
+					data.portInstallationId,
+					data.chronologyProvinceId));
 		}
 		return deserialized;
 	}

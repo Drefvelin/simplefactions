@@ -140,7 +140,7 @@ public final class CampaignBattleLaunchService {
 						|| slot.kind() == CampaignBattleKind.NAVAL_INVASION)) {
 			battle.setNavalVariant(true);
 		}
-		BattleNamingService.applyCampaignName(battle, war, provinceId, type);
+		BattleNamingService.applyCampaignName(battle, war, provinceId, type, slot);
 		BattleManager.addBattle(battle);
 		CampaignBattleRosterService.enrollWarbands(war, battle);
 		if (!immediateStart) {

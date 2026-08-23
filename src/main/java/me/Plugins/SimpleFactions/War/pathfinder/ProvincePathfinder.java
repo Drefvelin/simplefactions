@@ -10,6 +10,7 @@ import java.util.PriorityQueue;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import me.Plugins.SimpleFactions.War.War;
 import me.Plugins.SimpleFactions.enums.Terrain;
 
@@ -40,7 +41,6 @@ public class ProvincePathfinder {
 		if (Cache.warPathfinderSeaPassEnabled) {
 			passes.add(PathfinderPass.SEA_NO_NEUTRAL);
 		}
-		passes.add(PathfinderPass.LAND_NEUTRAL_PENALTY);
 
 		for (PathfinderPass pass : passes) {
 			PathfinderResult result = findRoute(from, to, pass, territory);
@@ -61,18 +61,119 @@ public class ProvincePathfinder {
 				candidates = territory.findDefenderProvinces(pm);
 			}
 		}
+		LogManager.line(
+				"pathfinder invasion entry candidates=%s seaContactFallback=%s objective=%d",
+				candidates,
+				seaContactFallback,
+				objectiveProvinceId);
 
-		PathfinderResult best = PathfinderResult.notFound();
+		int attackerCapital = resolveAttackerCapital(war);
+
+		CampaignLineChoice best = CampaignLineChoice.notFound();
+		CampaignLineChoice objectiveSelfFallback = CampaignLineChoice.notFound();
 		for (int candidate : candidates) {
-			PathfinderResult result = findRouteWithFallback(candidate, objectiveProvinceId, territory);
-			if (!result.isFound()) {
+			PathfinderResult toObjective = findRouteWithFallback(candidate, objectiveProvinceId, territory);
+			if (!toObjective.isFound()) {
+				LogManager.line("pathfinder candidate=%d SKIP no route to objective", candidate);
 				continue;
 			}
-			if (isBetterCandidate(result, candidate, territory, seaContactFallback, best)) {
-				best = result;
+			double capitalReach = resolveCapitalReachCost(attackerCapital, candidate, territory);
+			LogManager.line(
+					"pathfinder candidate=%d capitalReach=%s objectiveCost=%s objectivePath=%s",
+					candidate,
+					formatCost(capitalReach),
+					formatCost(toObjective.getTotalCost()),
+					toObjective.getPath());
+			if (candidate == objectiveProvinceId) {
+				objectiveSelfFallback = new CampaignLineChoice(candidate, toObjective, capitalReach);
+				continue;
+			}
+			CampaignLineChoice choice = new CampaignLineChoice(candidate, toObjective, capitalReach);
+			if (isBetterCampaignLineChoice(choice, seaContactFallback, best, territory)) {
+				best = choice;
 			}
 		}
-		return best;
+		if (!best.isFound() && objectiveSelfFallback.isFound()) {
+			LogManager.line(
+					"pathfinder selected objective self-path borderStart=%d path=%s",
+					objectiveSelfFallback.startProvinceId(),
+					objectiveSelfFallback.toObjective().getPath());
+			return objectiveSelfFallback.toObjective();
+		}
+		if (best.isFound()) {
+			LogManager.line(
+					"pathfinder selected borderStart=%d capitalReach=%s objectiveCost=%s path=%s",
+					best.startProvinceId(),
+					formatCost(best.capitalReachCost()),
+					formatCost(best.toObjective().getTotalCost()),
+					best.toObjective().getPath());
+		} else {
+			LogManager.line("pathfinder no border route found");
+		}
+		return best.isFound() ? best.toObjective() : PathfinderResult.notFound();
+	}
+
+	private double resolveCapitalReachCost(int attackerCapital, int candidate, BelligerentTerritory territory) {
+		if (attackerCapital <= 0) {
+			return Double.POSITIVE_INFINITY;
+		}
+		PathfinderResult toBorder = findRouteWithFallback(attackerCapital, candidate, territory);
+		return toBorder.isFound() ? toBorder.getTotalCost() : Double.POSITIVE_INFINITY;
+	}
+
+	private boolean isBetterCampaignLineChoice(
+			CampaignLineChoice candidate,
+			boolean seaContactFallback,
+			CampaignLineChoice currentBest,
+			BelligerentTerritory territory) {
+		if (!currentBest.isFound()) {
+			return true;
+		}
+		boolean capitalGuided = !Double.isInfinite(candidate.capitalReachCost())
+				|| !Double.isInfinite(currentBest.capitalReachCost());
+		if (capitalGuided) {
+			if (candidate.capitalReachCost() < currentBest.capitalReachCost()) {
+				return true;
+			}
+			if (candidate.capitalReachCost() > currentBest.capitalReachCost()) {
+				return false;
+			}
+			double candidateObjectiveCost = candidate.toObjective().getTotalCost();
+			double bestObjectiveCost = currentBest.toObjective().getTotalCost();
+			if (candidateObjectiveCost > bestObjectiveCost) {
+				return true;
+			}
+			if (candidateObjectiveCost < bestObjectiveCost) {
+				return false;
+			}
+		}
+		return isBetterCandidate(
+				candidate.toObjective(),
+				candidate.startProvinceId(),
+				territory,
+				seaContactFallback,
+				currentBest.toObjective());
+	}
+
+	private int resolveAttackerCapital(War war) {
+		if (war == null || war.getAttackers() == null || war.getAttackers().getLeader() == null) {
+			return -1;
+		}
+		return war.getAttackers().getLeader().getCapital();
+	}
+
+	private static String formatCost(double cost) {
+		return Double.isInfinite(cost) ? "unreachable" : String.valueOf(cost);
+	}
+
+	private record CampaignLineChoice(int startProvinceId, PathfinderResult toObjective, double capitalReachCost) {
+		static CampaignLineChoice notFound() {
+			return new CampaignLineChoice(-1, PathfinderResult.notFound(), Double.POSITIVE_INFINITY);
+		}
+
+		boolean isFound() {
+			return toObjective.isFound();
+		}
 	}
 
 	private boolean isBetterCandidate(
@@ -191,12 +292,12 @@ public class ProvincePathfinder {
 		Terrain terrain = province.getTerrain();
 		switch (pass) {
 			case LAND_NO_NEUTRAL:
-				return terrain != Terrain.SEA && !territory.isNeutral(province.getId());
+				return terrain != Terrain.SEA && !territory.isForeignNation(province.getId());
 			case SEA_NO_NEUTRAL:
 				if (terrain == Terrain.SEA) {
 					return true;
 				}
-				return !territory.isNeutral(province.getId());
+				return !territory.isForeignNation(province.getId());
 			case LAND_NEUTRAL_PENALTY:
 				return terrain != Terrain.SEA;
 			default:
@@ -205,11 +306,7 @@ public class ProvincePathfinder {
 	}
 
 	private double enterCost(Province province, PathfinderPass pass, BelligerentTerritory territory) {
-		double cost = terrainEnterCost(province.getTerrain());
-		if (pass == PathfinderPass.LAND_NEUTRAL_PENALTY && territory.isNeutral(province.getId())) {
-			cost *= Cache.warPathfinderNeutralPenalty;
-		}
-		return cost;
+		return terrainEnterCost(province.getTerrain());
 	}
 
 	static double terrainEnterCost(Terrain terrain) {

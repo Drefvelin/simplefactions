@@ -1,7 +1,12 @@
-# SimpleFactions — dev server template (map-reference: dev, world: TFMC_Map)
+# SimpleFactions — map-reference: main (world: TFMC_Map)
 # world-name must match the loaded Bukkit overworld (server.properties level-name).
 
 world-name: TFMC_Map
+
+# When true, debug sessions are appended to plugins/SimpleFactions/log.txt
+logging: false
+# When true, log.txt is deleted on every plugin start/reload
+wipe-log: false
 
 max-prestige-from-wealth: 800 # shared between factions based on % of global wealth
 max-members: 64
@@ -18,7 +23,7 @@ de-jure-requirement: 75.0
 
 # Map platform (step 42) — requires TFMCWeb softdepend + api.base-url configured
 enable-map: true
-map-reference: dev
+map-reference: main
 settlement-large-population-threshold: 8
 port-sea-proximity-blocks: 20
 
@@ -29,15 +34,15 @@ war:
   port_sea_zoc_radius: 2
   goals:
     DE_JURE_ANNEX:
-      max_battles: 4
+      max_battles_per_leg: 4
     SUBJUGATE:
-      max_battles: 4
+      max_battles_per_leg: 4
     TRANSFER_SUBJECT:
-      max_battles: 4
+      max_battles_per_leg: 4
   declined_ally_stability_penalty: -30
   battle_cadence:
     first_battle_at_border: true
-    provinces_between_battles: 1
+    provinces_between_battles: 3
   occupation:
     include_enemy_neighbors: true
   pathfinder:

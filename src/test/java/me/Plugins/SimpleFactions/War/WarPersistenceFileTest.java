@@ -29,11 +29,13 @@ import me.Plugins.SimpleFactions.Database.WarData;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
+import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarStatus;
 import me.Plugins.SimpleFactions.War.enums.WarType;
+import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 
 class WarPersistenceFileTest {
 	private Path tempDir;
@@ -75,8 +77,12 @@ class WarPersistenceFileTest {
 		war.setCampaignStartProvinceId(17);
 		war.setCampaignProvinces(java.util.List.of(5, 17, 23, 42));
 		war.setCursorIndex(1);
-		war.setInitiativeAttacker(4);
-		war.setInitiativeDefender(2);
+		war.setInitiativeAttacker(6);
+		war.setInitiativeDefender(3);
+		war.setCampaignCounterSchedule(List.of(
+				new ScheduledCampaignBattle(5, CampaignBattleKind.FIELD, true, null),
+				new ScheduledCampaignBattle(8, CampaignBattleKind.FIELD, false, null)));
+		war.setCampaignCounterScheduleIndex(1);
 		war.setOccupiedByAttacker(new java.util.ArrayList<>(java.util.List.of(17)));
 		war.setCampaignPhase(CampaignPhase.INVASION);
 		war.setObjectiveHeldBy(ObjectiveHolder.DEFENDER);
@@ -112,8 +118,10 @@ class WarPersistenceFileTest {
 		assertEquals(Integer.valueOf(17), restoredData.campaignStartProvinceId);
 		assertEquals(java.util.List.of(5, 17, 23, 42), restoredData.campaignProvinces);
 		assertEquals(1, restoredData.cursorIndex);
-		assertEquals(Integer.valueOf(4), restoredData.initiativeAttacker);
-		assertEquals(Integer.valueOf(2), restoredData.initiativeDefender);
+		assertEquals(Integer.valueOf(6), restoredData.initiativeAttacker);
+		assertEquals(Integer.valueOf(3), restoredData.initiativeDefender);
+		assertEquals(2, restoredData.campaignCounterSchedule.size());
+		assertEquals(Integer.valueOf(1), restoredData.campaignCounterScheduleIndex);
 		assertEquals("invasion", restoredData.campaignPhase);
 		assertTrue(restoredData.whitePeaceProposedByDefender);
 		assertEquals(Integer.valueOf(3), restoredData.campaignBattlesFought);
@@ -136,8 +144,10 @@ class WarPersistenceFileTest {
 		assertEquals(Integer.valueOf(17), restored.getCampaignStartProvinceId());
 		assertEquals(java.util.List.of(5, 17, 23, 42), restored.getCampaignProvinces());
 		assertEquals(1, restored.getCursorIndex());
-		assertEquals(4, restored.getInitiativeAttacker());
-		assertEquals(2, restored.getInitiativeDefender());
+		assertEquals(6, restored.getInitiativeAttacker());
+		assertEquals(3, restored.getInitiativeDefender());
+		assertEquals(2, restored.getCampaignCounterSchedule().size());
+		assertEquals(1, restored.getCampaignCounterScheduleIndex());
 		assertEquals(CampaignPhase.INVASION, restored.getCampaignPhase());
 		assertEquals(ObjectiveHolder.DEFENDER, restored.getObjectiveHeldBy());
 		assertTrue(restored.isWhitePeaceProposedByDefender());

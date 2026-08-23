@@ -16,8 +16,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Database.WarData;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -36,6 +38,11 @@ import me.Plugins.SimpleFactions.War.progression.PostBattleChoicePhase;
 import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 
 class WarMapperTest {
+
+	@BeforeEach
+	void setUp() {
+		Cache.warInitiativeFactor = 1.5;
+	}
 
 	@Test
 	void toData_v2FieldsWhenGoalSetOnWar() {
@@ -340,6 +347,144 @@ class WarMapperTest {
 			War reloaded = WarMapper.fromData(roundTripped);
 			assertEquals(war.getCampaignBattleSchedule(), reloaded.getCampaignBattleSchedule());
 			assertEquals(war.getCampaignScheduleIndex(), reloaded.getCampaignScheduleIndex());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void roundTrip_chronologyProvinceId() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			War war = WarMapper.fromData(minimalWarData());
+			war.setCampaignBattleSchedule(List.of(new ScheduledCampaignBattle(
+					704,
+					CampaignBattleKind.SIEGE,
+					false,
+					"Lan_Airfield",
+					null,
+					713)));
+
+			WarData data = WarMapper.toData(war);
+			assertEquals(Integer.valueOf(713), data.campaignBattleSchedule.get(0).chronologyProvinceId);
+
+			War reloaded = WarMapper.fromData(data);
+			ScheduledCampaignBattle slot = reloaded.getCampaignBattleSchedule().get(0);
+			assertEquals(704, slot.provinceId());
+			assertEquals(713, slot.chronologyProvinceId());
+			assertEquals(713, slot.sortProvinceId());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void roundTrip_counterScheduleAndAsymmetricFuel() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			WarData data = minimalWarData();
+			data.campaignScheduleIndex = 1;
+			data.initiativeAttacker = 6;
+			data.initiativeDefender = 3;
+			data.campaignCounterScheduleIndex = 1;
+			me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData invasion = new me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData();
+			invasion.provinceId = 10;
+			invasion.kind = CampaignBattleKind.FIELD.toJson();
+			me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData counter = new me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData();
+			counter.provinceId = 5;
+			counter.kind = CampaignBattleKind.FIELD.toJson();
+			counter.required = true;
+			data.campaignBattleSchedule = List.of(invasion, invasion, invasion, invasion);
+			data.campaignCounterSchedule = List.of(counter, counter);
+
+			War war = WarMapper.fromData(data);
+			assertEquals(4, war.getCampaignBattleSchedule().size());
+			assertEquals(2, war.getCampaignCounterSchedule().size());
+			assertEquals(1, war.getCampaignScheduleIndex());
+			assertEquals(1, war.getCampaignCounterScheduleIndex());
+			assertEquals(6, war.getInitiativeAttacker());
+			assertEquals(3, war.getInitiativeDefender());
+
+			WarData roundTripped = WarMapper.toData(war);
+			assertEquals(2, roundTripped.campaignCounterSchedule.size());
+			assertEquals(Integer.valueOf(1), roundTripped.campaignCounterScheduleIndex);
+			assertEquals(Integer.valueOf(6), roundTripped.initiativeAttacker);
+			assertEquals(Integer.valueOf(3), roundTripped.initiativeDefender);
+
+			War reloaded = WarMapper.fromData(roundTripped);
+			assertEquals(war.getCampaignCounterSchedule(), reloaded.getCampaignCounterSchedule());
+			assertEquals(war.getCampaignCounterScheduleIndex(), reloaded.getCampaignCounterScheduleIndex());
+			assertEquals(war.getInitiativeAttacker(), reloaded.getInitiativeAttacker());
+			assertEquals(war.getInitiativeDefender(), reloaded.getInitiativeDefender());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void fromData_pre70Json_symmetricFuelDefaults() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			WarData data = minimalWarData();
+			me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData slot = new me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData();
+			slot.provinceId = 10;
+			slot.kind = CampaignBattleKind.FIELD.toJson();
+			data.campaignBattleSchedule = List.of(slot, slot, slot, slot);
+			data.campaignCounterSchedule = null;
+			data.initiativeAttacker = null;
+			data.initiativeDefender = null;
+
+			War war = WarMapper.fromData(data);
+
+			assertEquals(6, war.getInitiativeAttacker());
+			assertEquals(6, war.getInitiativeDefender());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void fromData_emptyCounterSchedule_defenderFuelZero() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			WarData data = minimalWarData();
+			me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData slot = new me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData();
+			slot.provinceId = 10;
+			slot.kind = CampaignBattleKind.FIELD.toJson();
+			data.campaignBattleSchedule = List.of(slot, slot, slot, slot);
+			data.campaignCounterSchedule = new java.util.ArrayList<>();
+			data.initiativeAttacker = null;
+			data.initiativeDefender = null;
+
+			War war = WarMapper.fromData(data);
+
+			assertEquals(6, war.getInitiativeAttacker());
+			assertEquals(0, war.getInitiativeDefender());
+			assertTrue(war.getCampaignCounterSchedule().isEmpty());
 		} finally {
 			FactionManager.factions.remove(attacker);
 			FactionManager.factions.remove(defender);

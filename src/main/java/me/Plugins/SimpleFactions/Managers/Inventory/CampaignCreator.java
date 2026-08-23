@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -13,8 +14,6 @@ import java.util.stream.Collectors;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.enchantments.Enchantment;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -23,12 +22,11 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.naming.BattleNamingService;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
-import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.pathfinder.TitleManagerProvinceOwnerLookup;
 import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
+import me.Plugins.SimpleFactions.War.progression.CampaignRouteEntry;
 import me.Plugins.SimpleFactions.War.progression.CampaignRouteRenderer;
 import me.Plugins.SimpleFactions.War.schedule.BattleHourTally;
 import me.Plugins.SimpleFactions.War.schedule.BattleQuorumService;
@@ -38,46 +36,52 @@ import me.Plugins.SimpleFactions.War.schedule.BattleWindowService;
 import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService;
 import me.Plugins.SimpleFactions.War.schedule.CampaignUiCopy;
 import me.Plugins.SimpleFactions.War.schedule.CampaignUiTimeFormatter;
+import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 import me.Plugins.TLibs.TLibs;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class CampaignCreator {
 	private final TitleManagerProvinceOwnerLookup owners = new TitleManagerProvinceOwnerLookup();
 
-	public ItemStack createRouteProvinceItem(War war, Faction viewer, int provinceId, int axisIndex) {
-		CampaignBattleKind slotKind = CampaignScheduleService.slotForProvince(war, provinceId)
-				.map(slot -> slot.kind())
-				.orElse(null);
-		Material material = resolveRouteMaterial(war, viewer, provinceId, slotKind);
+	public ItemStack createRouteEntryItem(War war, Faction viewer, CampaignRouteEntry entry) {
+		Optional<ScheduledCampaignBattle> slot = CampaignScheduleService.slotAt(
+				war,
+				entry.scheduleIndex(),
+				entry.scheduleLeg());
+		if (slot.isEmpty()) {
+			ItemStack fallback = new ItemStack(Material.BARRIER, 1);
+			ItemMeta fallbackMeta = fallback.getItemMeta();
+			fallbackMeta.setDisplayName(StringFormatter.formatHex(
+					CampaignUiCopy.VALUE + "Province " + entry.provinceId()));
+			fallback.setItemMeta(fallbackMeta);
+			return fallback;
+		}
+		ScheduledCampaignBattle battle = slot.get();
+		Material material = CampaignRouteRenderer.resolveRouteEntryMaterial(war, viewer, entry, battle, owners);
 		ItemStack item = new ItemStack(material, 1);
 		ItemMeta meta = item.getItemMeta();
-		String locationDisplay = BattleNamingService.resolveLocationDisplayName(provinceId);
-		String locationKey = BattleNamingService.resolveLocationKey(provinceId);
-		int ordinal = war.getLocationBattleCount(locationKey) + 1;
-		BattleType battleType = CampaignScheduleService.slotForProvince(war, provinceId)
-				.map(slot -> slot.battleType())
-				.orElse(BattleType.FIELD);
-		String displayName = BattleNamingService.buildDisplayName(battleType, locationDisplay, ordinal);
+		String displayName = resolveRouteDisplayName(war, entry, battle);
 		meta.setDisplayName(StringFormatter.formatHex(CampaignUiCopy.VALUE + displayName));
-		meta.setLore(CampaignRouteRenderer.buildRouteLore(war, provinceId, owners));
-		if (slotKind == CampaignBattleKind.SIEGE) {
-			meta.addEnchant(Enchantment.UNBREAKING, 1, true);
-			meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-		}
+		meta.setLore(CampaignRouteRenderer.buildRouteLore(war, entry, owners));
 		NamespacedKey provinceKey = new NamespacedKey(SimpleFactions.plugin, "campaign_province");
-		meta.getPersistentDataContainer().set(provinceKey, PersistentDataType.INTEGER, provinceId);
+		meta.getPersistentDataContainer().set(provinceKey, PersistentDataType.INTEGER, entry.provinceId());
+		if (entry.hasBattleSlot()) {
+			NamespacedKey scheduleKey = new NamespacedKey(SimpleFactions.plugin, "campaign_schedule_index");
+			meta.getPersistentDataContainer().set(scheduleKey, PersistentDataType.INTEGER, entry.scheduleIndex());
+			NamespacedKey legKey = new NamespacedKey(SimpleFactions.plugin, "campaign_schedule_leg");
+			meta.getPersistentDataContainer().set(legKey, PersistentDataType.STRING, entry.scheduleLeg().name());
+		}
 		item.setItemMeta(meta);
 		return item;
 	}
 
-	private Material resolveRouteMaterial(War war, Faction viewer, int provinceId, CampaignBattleKind slotKind) {
-		if (slotKind == CampaignBattleKind.NAVAL) {
-			return Material.TRIDENT;
-		}
-		if (slotKind == CampaignBattleKind.NAVAL_INVASION) {
-			return Material.IRON_SWORD;
-		}
-		return CampaignRouteRenderer.resolveMaterial(war, viewer, provinceId, owners);
+	private String resolveRouteDisplayName(War war, CampaignRouteEntry entry, ScheduledCampaignBattle slot) {
+		return BattleNamingService.resolveScheduledDisplayName(
+				war,
+				entry.scheduleLeg(),
+				entry.scheduleIndex(),
+				slot,
+				entry.provinceId());
 	}
 
 	public ItemStack createFirstBattleMarkerItem() {
@@ -346,18 +350,6 @@ public class CampaignCreator {
 		meta.setLore(List.of(StringFormatter.formatHex(CampaignUiCopy.LABEL + "End the war with no goal")));
 		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "campaign_loser_peace");
 		meta.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, war.getId());
-		item.setItemMeta(meta);
-		return item;
-	}
-
-	public ItemStack createPageButton(String label, int warId, int page) {
-		ItemStack item = new ItemStack(Material.ARROW, 1);
-		ItemMeta meta = item.getItemMeta();
-		meta.setDisplayName(StringFormatter.formatHex(CampaignUiCopy.VALUE + label));
-		NamespacedKey warKey = new NamespacedKey(SimpleFactions.plugin, "campaign_page_war");
-		NamespacedKey pageKey = new NamespacedKey(SimpleFactions.plugin, "campaign_page");
-		meta.getPersistentDataContainer().set(warKey, PersistentDataType.INTEGER, warId);
-		meta.getPersistentDataContainer().set(pageKey, PersistentDataType.INTEGER, page);
 		item.setItemMeta(meta);
 		return item;
 	}

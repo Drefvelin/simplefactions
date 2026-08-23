@@ -1,8 +1,10 @@
 package me.Plugins.SimpleFactions.War.progression;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 import org.bukkit.Material;
 
@@ -10,15 +12,80 @@ import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.Side;
 import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.pathfinder.BelligerentTerritory;
 import me.Plugins.SimpleFactions.War.pathfinder.ProvinceOwnerLookup;
 import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService;
+import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService.ScheduleLeg;
 import me.Plugins.SimpleFactions.War.schedule.CampaignUiCopy;
+import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public final class CampaignRouteRenderer {
 	private CampaignRouteRenderer() {}
+
+	public static List<CampaignRouteEntry> buildRouteEntries(War war) {
+		if (war == null) {
+			return List.of();
+		}
+		List<CampaignRouteEntry> entries = new ArrayList<>();
+		appendLegEntries(war, entries, ScheduleLeg.INVASION);
+		appendLegEntries(war, entries, ScheduleLeg.COUNTER);
+		entries.sort(routeEntryComparator());
+		return entries;
+	}
+
+	private static Comparator<CampaignRouteEntry> routeEntryComparator() {
+		return Comparator
+				.comparingInt((CampaignRouteEntry entry) ->
+						entry.axisIndex() < 0 ? Integer.MAX_VALUE : entry.axisIndex())
+				.thenComparingInt(entry -> entry.scheduleLeg() == ScheduleLeg.INVASION ? 0 : 1)
+				.thenComparingInt(CampaignRouteEntry::scheduleIndex);
+	}
+
+	public static boolean isBorderFirstBattleSlot(War war, CampaignRouteEntry entry) {
+		if (war == null || entry == null || !entry.hasBattleSlot()) {
+			return false;
+		}
+		int borderProvince = war.getCampaignStartProvinceId();
+		if (borderProvince <= 0 || entry.provinceId() != borderProvince) {
+			return false;
+		}
+		if (entry.scheduleLeg() != ScheduleLeg.INVASION) {
+			return false;
+		}
+		if (!CampaignScheduleService.hasScheduleForLeg(war, ScheduleLeg.INVASION)) {
+			return false;
+		}
+		List<ScheduledCampaignBattle> invasion = CampaignScheduleService.scheduleListForLeg(war, ScheduleLeg.INVASION);
+		for (int i = 0; i < invasion.size(); i++) {
+			if (invasion.get(i).provinceId() == borderProvince) {
+				return entry.scheduleIndex() == i;
+			}
+		}
+		return false;
+	}
+
+	private static void appendLegEntries(War war, List<CampaignRouteEntry> entries, ScheduleLeg leg) {
+		if (!CampaignScheduleService.hasScheduleForLeg(war, leg)) {
+			return;
+		}
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleService.scheduleListForLeg(war, leg);
+		for (int i = 0; i < schedule.size(); i++) {
+			ScheduledCampaignBattle slot = schedule.get(i);
+			int sortProvinceId = slot.sortProvinceId();
+			entries.add(new CampaignRouteEntry(slot.provinceId(), axisIndexFor(war, sortProvinceId), i, leg));
+		}
+	}
+
+	private static int axisIndexFor(War war, int provinceId) {
+		List<Integer> axis = war.getCampaignProvinces();
+		if (axis == null || axis.isEmpty()) {
+			return -1;
+		}
+		return axis.indexOf(provinceId);
+	}
 
 	public static List<Integer> actionProvinceIds(War war) {
 		return CampaignProgressionService.resolveNextBattleNodes(war);
@@ -29,11 +96,33 @@ public final class CampaignRouteRenderer {
 			Faction viewer,
 			int provinceId,
 			ProvinceOwnerLookup owners) {
-		List<Integer> actions = actionProvinceIds(war);
-		if (actions.size() == 1 && actions.get(0) == provinceId) {
-			return Material.GREEN_CONCRETE;
-		}
 		return resolveOwnershipMaterial(war, viewer, provinceId, owners);
+	}
+
+	public static Material resolveRouteEntryMaterial(
+			War war,
+			Faction viewer,
+			CampaignRouteEntry entry,
+			ScheduledCampaignBattle slot,
+			ProvinceOwnerLookup owners) {
+		if (slot != null) {
+			if (slot.kind() == CampaignBattleKind.NAVAL) {
+				return Material.TRIDENT;
+			}
+			if (slot.kind() == CampaignBattleKind.NAVAL_INVASION) {
+				return Material.IRON_SWORD;
+			}
+			if (entry.hasBattleSlot()
+					&& entry.scheduleLeg() == CampaignScheduleService.activeLeg(war)
+					&& entry.scheduleIndex() == CampaignScheduleService.getActiveScheduleIndex(war)) {
+				return Material.GREEN_CONCRETE;
+			}
+			if (entry.hasBattleSlot()
+					&& entry.scheduleIndex() < CampaignScheduleService.scheduleIndexForLeg(war, entry.scheduleLeg())) {
+				return Material.GRAY_CONCRETE;
+			}
+		}
+		return resolveOwnershipMaterial(war, viewer, entry.provinceId(), owners);
 	}
 
 	public static Material resolveOwnershipMaterial(
@@ -49,7 +138,7 @@ public final class CampaignRouteRenderer {
 		boolean viewerIsAttacker = viewerSide.equals(war.getAttackers());
 		boolean provinceOwnedByAttacker = territory.isAttackerSide(provinceId);
 		if (territory.isNeutral(provinceId)) {
-			return Material.RED_CONCRETE;
+			return Material.GRAY_CONCRETE;
 		}
 		if (viewerIsAttacker == provinceOwnedByAttacker) {
 			return Material.BLUE_CONCRETE;
@@ -62,37 +151,68 @@ public final class CampaignRouteRenderer {
 	}
 
 	public static List<String> buildRouteLore(War war, int provinceId, ProvinceOwnerLookup owners) {
+		return buildRouteLore(war, new CampaignRouteEntry(provinceId, -1, -1), owners);
+	}
+
+	public static List<String> buildRouteLore(War war, CampaignRouteEntry entry, ProvinceOwnerLookup owners) {
 		List<String> lore = new ArrayList<>();
-		if (war == null) {
+		if (war == null || entry == null) {
 			return lore;
 		}
+		int provinceId = entry.provinceId();
 
-		String objectiveLine = resolveObjectiveLine(war, provinceId);
+		String objectiveLine = resolveObjectiveLine(war, entry);
 		if (objectiveLine != null) {
 			lore.add(StringFormatter.formatHex(CampaignUiCopy.OBJECTIVE + objectiveLine));
 		}
 
-		appendBattleKindLine(lore, war, provinceId);
+		if (entry.hasBattleSlot()) {
+			CampaignScheduleService.slotAt(war, entry.scheduleIndex(), entry.scheduleLeg())
+					.ifPresent(slot -> appendBattleKindLine(lore, slot));
+		}
 
 		appendRealmLines(lore, war, provinceId, owners);
 
-		List<Integer> actions = actionProvinceIds(war);
-		if (actions.size() == 1 && actions.get(0) == provinceId) {
+		if (entry.hasBattleSlot() && isFoughtSlot(war, entry)) {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.MUTED + CampaignUiCopy.FOUGHT_LABEL));
+		} else if (entry.hasBattleSlot()
+				&& entry.scheduleLeg() == CampaignScheduleService.activeLeg(war)
+				&& entry.scheduleIndex() == CampaignScheduleService.getActiveScheduleIndex(war)) {
 			lore.add(StringFormatter.formatHex(CampaignUiCopy.NEXT_BATTLE + "Next battle"));
 		}
 		return lore;
 	}
 
-	private static void appendBattleKindLine(List<String> lore, War war, int provinceId) {
-		CampaignScheduleService.slotForProvince(war, provinceId).ifPresent(slot -> {
-			String label = CampaignUiCopy.formatBattleKind(slot.kind());
-			if (label != null) {
-				lore.add(StringFormatter.formatHex(CampaignUiCopy.BATTLE_KIND + label));
-			}
-		});
+	static boolean isFoughtSlot(War war, CampaignRouteEntry entry) {
+		return entry.hasBattleSlot()
+				&& entry.scheduleIndex() < CampaignScheduleService.scheduleIndexForLeg(war, entry.scheduleLeg());
 	}
 
-	private static String resolveObjectiveLine(War war, int provinceId) {
+	private static void appendBattleKindLine(List<String> lore, ScheduledCampaignBattle slot) {
+		String label = CampaignUiCopy.formatBattleKind(slot.kind());
+		if (label != null) {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.BATTLE_KIND + label));
+		}
+	}
+
+	private static String resolveObjectiveLine(War war, CampaignRouteEntry entry) {
+		if (entry.hasBattleSlot()) {
+			Optional<ScheduledCampaignBattle> slot = CampaignScheduleService.slotAt(
+					war,
+					entry.scheduleIndex(),
+					entry.scheduleLeg());
+			if (slot.isEmpty()) {
+				return null;
+			}
+			ScheduledCampaignBattle battle = slot.get();
+			if (battle.kind() != CampaignBattleKind.FIELD || !battle.required()) {
+				return null;
+			}
+		}
+		return resolveObjectiveLineForProvince(war, entry.provinceId());
+	}
+
+	private static String resolveObjectiveLineForProvince(War war, int provinceId) {
 		Integer attackerCapital = war.getAttackers().getLeader().getCapital();
 		if (attackerCapital != null && attackerCapital > 0 && attackerCapital == provinceId) {
 			return "Attacker Capital";

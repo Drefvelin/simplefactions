@@ -48,19 +48,35 @@ public class ConfigLoader {
 		Cache.warPortSeaZocRadius = config.getInt("war.port_sea_zoc_radius", 2);
 		Cache.warGoalMaxBattles = new EnumMap<>(WarGoalType.class);
 		for (WarGoalType goal : WarGoalType.values()) {
-			int maxBattles = config.getInt("war.goals." + goal.name() + ".max_battles", -1);
+			int maxBattles = config.getInt("war.goals." + goal.name() + ".max_battles_per_leg", -1);
+			if (maxBattles < 0) {
+				maxBattles = config.getInt("war.goals." + goal.toJson() + ".max_battles_per_leg", -1);
+			}
+			if (maxBattles < 0) {
+				maxBattles = config.getInt("war.goals." + goal.name() + ".max_battles", -1);
+			}
 			if (maxBattles < 0) {
 				maxBattles = config.getInt("war.goals." + goal.toJson() + ".max_battles", 4);
+			}
+			if (maxBattles > Cache.MAX_BATTLES_PER_LEG) {
+				if (Bukkit.getServer() != null) {
+					Bukkit.getLogger().warning("[SimpleFactions] war.goals." + goal.name()
+							+ " max_battles_per_leg=" + maxBattles + " exceeds cap "
+							+ Cache.MAX_BATTLES_PER_LEG + "; clamping.");
+				}
+				maxBattles = Cache.MAX_BATTLES_PER_LEG;
 			}
 			Cache.warGoalMaxBattles.put(goal, maxBattles);
 		}
 		Cache.warFirstBattleAtBorder = config.getBoolean("war.battle_cadence.first_battle_at_border", true);
-		Cache.warProvincesBetweenBattles = config.getInt("war.battle_cadence.provinces_between_battles", 1);
+		Cache.warProvincesBetweenBattles = config.getInt("war.battle_cadence.provinces_between_battles", 3);
 		Cache.warOccupationIncludeEnemyNeighbors = config.getBoolean("war.occupation.include_enemy_neighbors", true);
 		Cache.warDeclinedAllyStabilityPenalty = config.getInt("war.declined_ally_stability_penalty", -30);
 		Cache.warPathfinderNeutralPenalty = config.getDouble("war.pathfinder.neutral_penalty", 8.0);
 		Cache.warPathfinderSeaPassEnabled = config.getBoolean("war.pathfinder.sea_pass_enabled", true);
 		Cache.warPathfinderWaterCost = config.getDouble("war.pathfinder.water_cost", 0.0);
+		Cache.loggingEnabled = config.getBoolean("logging", false);
+		Cache.wipeLog = config.getBoolean("wipe-log", false);
 
 		Cache.warBattleWindowStartHour = config.getInt("war.battle_schedule.window_start_hour", 20);
 		Cache.warBattleWindowEndHour = config.getInt("war.battle_schedule.window_end_hour", 24);

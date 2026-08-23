@@ -126,9 +126,7 @@ public class CampaignBattleOutcomeService implements Listener {
 		CampaignBattleEndService.spendOffensiveFuel(war);
 		CampaignBattleEndService.clearHoldPeace(war);
 
-		ScheduledCampaignBattle foughtSlot = CampaignScheduleService.slotAt(
-				war,
-				war.getCampaignScheduleIndex()).orElse(null);
+		ScheduledCampaignBattle foughtSlot = CampaignScheduleService.slotAtActiveIndex(war).orElse(null);
 
 		boolean progressionApplied = false;
 		if (winnerRole != null && battleProvinceId != null) {
@@ -141,8 +139,8 @@ public class CampaignBattleOutcomeService implements Listener {
 			}
 
 			occupationService().applyBattleWin(war, battleProvinceId, winnerRole);
-			BattleNamingService.recordLocationBattle(war, battleProvinceId);
-			if (CampaignScheduleService.hasSchedule(war)) {
+			BattleNamingService.recordLocationBattle(war, battleProvinceId, foughtSlot);
+			if (CampaignScheduleService.hasActiveSchedule(war)) {
 				CampaignScheduleService.advanceIndex(war);
 			}
 			war.setCampaignBattlesFought(war.getCampaignBattlesFought() + 1);
