@@ -7,10 +7,10 @@ import java.util.logging.Logger;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Managers.WarManager;
-import me.Plugins.SimpleFactions.War.Side;
-import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.battle.engine.Battle;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleSide;
+import me.Plugins.SimpleFactions.War.core.Side;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.enums.LifeType;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;

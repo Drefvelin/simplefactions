@@ -17,6 +17,7 @@
         <tfmc.tlibs>D:/Dokumenter/My Plugins/TFMC/TLibs</tfmc.tlibs>
         <tfmc.denareconomy>D:/Dokumenter/My Plugins/TFMC/DenarEconomy</tfmc.denareconomy>
         <tfmc.vehicleframework>D:/Dokumenter/My Plugins/TFMC/VehicleFramework</tfmc.vehicleframework>
+        <tfmc.vfbuilders>D:/Dokumenter/My Plugins/VSCode Workspace/vfbuilders</tfmc.vfbuilders>
     </properties>
 
     <dependencies>
@@ -79,7 +80,14 @@
             <artifactId>VehicleFramework</artifactId>
             <version>1.0.0</version>
             <scope>system</scope>
-            <systemPath>${tfmc.vehicleframework}/vehicleframework-1.0.0.jar</systemPath>
+            <systemPath>${tfmc.vehicleframework}/vehicleframework-1.1.7.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>local</groupId>
+            <artifactId>VFBuilders</artifactId>
+            <version>1.0.0</version>
+            <scope>system</scope>
+            <systemPath>${tfmc.vfbuilders}/target/vfbuilders-1.0.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>commons-lang</groupId>

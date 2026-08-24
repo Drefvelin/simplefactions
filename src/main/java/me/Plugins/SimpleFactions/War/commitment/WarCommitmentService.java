@@ -13,11 +13,11 @@ import java.util.function.Predicate;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.Side;
-import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.WarCommitment;
+import me.Plugins.SimpleFactions.War.core.Side;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.core.WarCommitment;
 import me.Plugins.SimpleFactions.War.commitment.LevySnapshotCalculator.LevyRow;
-import me.Plugins.SimpleFactions.War.schedule.BattleSideMembers;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
 
 public final class WarCommitmentService {
 	private static final Map<Integer, List<WarCommitment>> commitmentsByWar = new HashMap<>();

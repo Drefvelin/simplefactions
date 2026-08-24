@@ -22,9 +22,9 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignWarbandSignupService;
-import me.Plugins.SimpleFactions.War.battle.engine.Battle;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleSide;
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleInventoryManager;
 import me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService;
 

@@ -23,8 +23,8 @@ import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
-import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.WarCommitment;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.core.WarCommitment;
 import me.Plugins.SimpleFactions.War.commitment.WarCommitmentService;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
@@ -72,7 +72,7 @@ class BattlePoolServiceTest {
 		Faction defender = fighter("def", Map.of("professional", 8, "militia", 6));
 		War war = baseWar(2, attacker, defender);
 		war.setCampaignPhase(CampaignPhase.COUNTER_PUSH);
-		war.setInitiativeHolder(me.Plugins.SimpleFactions.War.progression.BelligerentRole.DEFENDER);
+		war.setInitiativeHolder(me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole.DEFENDER);
 
 		try (MockedStatic<TitleManager> titles = mockStatic(TitleManager.class)) {
 			titles.when(() -> TitleManager.getByProvince(PROVINCE_ID)).thenReturn(attacker);

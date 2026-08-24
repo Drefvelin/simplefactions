@@ -18,12 +18,12 @@ import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Title;
-import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.WarDeclareHelper;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.core.WarDeclareHelper;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
-import me.Plugins.SimpleFactions.War.validation.WarDeclareRequest;
-import me.Plugins.SimpleFactions.War.validation.WarGoalValidator;
-import me.Plugins.SimpleFactions.War.validation.WarValidationResult;
+import me.Plugins.SimpleFactions.War.declare.WarDeclareRequest;
+import me.Plugins.SimpleFactions.War.declare.WarGoalValidator;
+import me.Plugins.SimpleFactions.War.declare.WarValidationResult;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 
 public class DeclareWarView {

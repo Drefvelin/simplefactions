@@ -3,6 +3,9 @@ package me.Plugins.SimpleFactions;
 import java.io.File;
 
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.server.PluginEnableEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import me.Plugins.SimpleFactions.Cache;
@@ -24,9 +27,11 @@ import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TierLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
+import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
 import me.Plugins.SimpleFactions.Loaders.WarGoalLoader;
 import me.Plugins.SimpleFactions.Managers.BankManager;
 import me.Plugins.SimpleFactions.Managers.CommandManager;
+import me.Plugins.SimpleFactions.Managers.LedgerCommandManager;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.PlayerManager;
@@ -39,15 +44,20 @@ import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.TabCompletion;
-import me.Plugins.SimpleFactions.War.schedule.BattleScheduleTickService;
-import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleTickService;
+import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleOutcomeService;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleCommandManager;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleTabCompletion;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplateService;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandMembershipListener;
+import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRegistry;
+import me.Plugins.SimpleFactions.vehicles.VehicleIntegrationListener;
+import me.Plugins.SimpleFactions.vehicles.VehicleRegistryPersistence;
+import me.Plugins.SimpleFactions.vehicles.VehicleUpkeepService;
+import me.Plugins.SimpleFactions.player.PlayerEconomyManager;
 
 public class SimpleFactions extends JavaPlugin{
 	public static FileConfiguration config;
@@ -73,6 +83,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final ProvinceManager provinceManager = new ProvinceManager();
 	private final CommandManager commands = new CommandManager();
 	private final InventoryManager inventoryManager = new InventoryManager();
+	private final LedgerCommandManager ledgerCommandManager = new LedgerCommandManager(inventoryManager);
 	private final BankManager bankManager = new BankManager();
 	private final Database db = new Database();
 	private final FactionManager factionManager = new FactionManager();
@@ -89,6 +100,14 @@ public class SimpleFactions extends JavaPlugin{
 	private final CampaignBattleOutcomeService campaignBattleOutcomeService = new CampaignBattleOutcomeService();
 	private ProvinceManager provinceSnapshot = new ProvinceManager();
 	private ProvinceGrid provinceGrid;
+	private final PlayerVehicleRegistry vehicleRegistry = new PlayerVehicleRegistry();
+	private VehicleRegistryPersistence vehicleRegistryPersistence;
+	private final VehicleIntegrationListener vehicleIntegrationListener = new VehicleIntegrationListener();
+	private boolean vehicleIntegrationRegistered = false;
+	private final PlayerEconomyManager playerEconomyManager = new PlayerEconomyManager();
+	private final VehicleUpkeepService vehicleUpkeepService = new VehicleUpkeepService(
+		vehicleRegistry,
+		playerEconomyManager);
 	
 	@Override
 	public void onEnable() {
@@ -99,6 +118,11 @@ public class SimpleFactions extends JavaPlugin{
 		createConfigs();
 		registerListeners();
 		loadConfigs();
+		vehicleRegistryPersistence = new VehicleRegistryPersistence(
+			new File(getDataFolder(), "Cache"),
+			vehicleRegistry);
+		vehicleRegistryPersistence.load();
+		registerVehicleIntegrationHooks();
 		if (Cache.mapEnabled && !getServer().getPluginManager().isPluginEnabled("TFMCWeb")) {
 			getLogger().severe(
 				"[SimpleFactions] enable-map is true but TFMCWeb is not loaded. "
@@ -110,6 +134,7 @@ public class SimpleFactions extends JavaPlugin{
 		getCommand(commands.cmd2).setExecutor(commands);
 		getCommand(commands.cmd1).setTabCompleter(new TabCompletion());
 		getCommand(commands.cmd2).setTabCompleter(new TabCompletion());
+		getCommand(ledgerCommandManager.cmd).setExecutor(ledgerCommandManager);
 		try {
 			provinceManager.start(
 				provinceLoader.loadProvinces(
@@ -168,9 +193,13 @@ public class SimpleFactions extends JavaPlugin{
 		for(War w : WarManager.get()){
 			db.saveWar(w);
 		}
+		if (vehicleRegistryPersistence != null) {
+			vehicleRegistryPersistence.save();
+		}
 	}
 	public void loadConfigs() {
 		configLoader.loadConfig(new File(getDataFolder(), "config.yml"));
+		VehiclesConfigLoader.load(new File(getDataFolder(), "vehicles.yml"));
 		me.Plugins.SimpleFactions.Managers.LogManager.configure(
 				Cache.loggingEnabled,
 				Cache.wipeLog,
@@ -242,6 +271,7 @@ public class SimpleFactions extends JavaPlugin{
 				"Guilds/branches.yml",
 				"Guilds/upgrades.yml",
 				"battle-templates.yml",
+				"vehicles.yml",
 				};
 		for(String s : files) {
 			File newConfigFile = new File(getDataFolder(), s);
@@ -278,6 +308,53 @@ public class SimpleFactions extends JavaPlugin{
 
 	public ProvincePresenceService getProvincePresenceService() {
 		return ProvincePresenceService.getInstance();
+	}
+
+	public static PlayerVehicleRegistry getVehicleRegistry() {
+		return plugin.vehicleRegistry;
+	}
+
+	public static PlayerEconomyManager getPlayerEconomyManager() {
+		return plugin.playerEconomyManager;
+	}
+
+	public VehicleUpkeepService getVehicleUpkeepService() {
+		return vehicleUpkeepService;
+	}
+
+	public void saveVehicleRegistry() {
+		if (vehicleRegistryPersistence != null) {
+			vehicleRegistryPersistence.save();
+		}
+	}
+
+	private void registerVehicleIntegrationHooks() {
+		getServer().getPluginManager().registerEvents(new Listener() {
+			@EventHandler
+			public void onPluginEnable(PluginEnableEvent event) {
+				if ("VFBuilders".equalsIgnoreCase(event.getPlugin().getName())
+						|| "VehicleFramework".equalsIgnoreCase(event.getPlugin().getName())) {
+					registerVehicleIntegration();
+				}
+			}
+		}, this);
+		registerVehicleIntegration();
+	}
+
+	private void registerVehicleIntegration() {
+		if (vehicleIntegrationRegistered) {
+			return;
+		}
+		if (!getServer().getPluginManager().isPluginEnabled("VehicleFramework")) {
+			return;
+		}
+		getServer().getPluginManager().registerEvents(vehicleIntegrationListener, this);
+		vehicleIntegrationRegistered = true;
+		if (getServer().getPluginManager().isPluginEnabled("VFBuilders")) {
+			getLogger().info("[SimpleFactions] VFBuilders vehicle integration enabled");
+		} else {
+			getLogger().info("[SimpleFactions] VehicleFramework vehicle integration enabled");
+		}
 	}
 
 	public BattleTemplateService getBattleTemplateService() {

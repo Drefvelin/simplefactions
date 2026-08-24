@@ -4,11 +4,11 @@ import java.util.UUID;
 
 import org.bukkit.entity.Player;
 
-import me.Plugins.SimpleFactions.War.battle.engine.Battle;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleSide;
-import me.Plugins.SimpleFactions.War.battle.engine.FieldWinService;
-import me.Plugins.SimpleFactions.War.battle.engine.SiegeWinService;
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
+import me.Plugins.SimpleFactions.War.battle.engine.win.FieldWinService;
+import me.Plugins.SimpleFactions.War.battle.engine.win.SiegeWinService;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleInventoryManager;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
@@ -19,7 +19,7 @@ public final class CampaignWarbandBattleService {
 	}
 
 	public static String validateMidBattleJoin(
-			me.Plugins.SimpleFactions.War.War war,
+			me.Plugins.SimpleFactions.War.core.War war,
 			Battle battle,
 			String sideId,
 			Warband warband,
@@ -36,8 +36,8 @@ public final class CampaignWarbandBattleService {
 		if (faction == null) {
 			return "You must be in a faction to join this campaign battle";
 		}
-		me.Plugins.SimpleFactions.War.Side playerSide = war.getSide(faction);
-		me.Plugins.SimpleFactions.War.Side battleSide = CampaignBattleJoinService.resolveWarSide(war, sideId);
+		me.Plugins.SimpleFactions.War.core.Side playerSide = war.getSide(faction);
+		me.Plugins.SimpleFactions.War.core.Side battleSide = CampaignBattleJoinService.resolveWarSide(war, sideId);
 		if (playerSide == null || battleSide == null || playerSide != battleSide) {
 			return "Your faction is not on this battle side";
 		}
@@ -151,7 +151,7 @@ public final class CampaignWarbandBattleService {
 	}
 
 	public static boolean isWarSideMainLeader(
-			me.Plugins.SimpleFactions.War.War war,
+			me.Plugins.SimpleFactions.War.core.War war,
 			Warband warband,
 			String playerName) {
 		if (war == null || warband == null || playerName == null || playerName.isBlank()) {
@@ -161,11 +161,11 @@ public final class CampaignWarbandBattleService {
 		if (sideId == null) {
 			return false;
 		}
-		me.Plugins.SimpleFactions.War.Side side = CampaignBattleJoinService.resolveWarSide(war, sideId);
+		me.Plugins.SimpleFactions.War.core.Side side = CampaignBattleJoinService.resolveWarSide(war, sideId);
 		if (side == null) {
 			return false;
 		}
-		for (me.Plugins.SimpleFactions.War.Participant par : side.getMainParticipants()) {
+		for (me.Plugins.SimpleFactions.War.core.Participant par : side.getMainParticipants()) {
 			if (par.getLeader() != null
 					&& playerName.equalsIgnoreCase(par.getLeader().getLeader())) {
 				return true;

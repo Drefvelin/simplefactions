@@ -5,7 +5,7 @@ version: 1.0
 author: Drefvelin
 
 depend: [DenarEconomy, TLibs]
-softdepend: [MMOItems, MythicLib, TFMCWeb, VehicleFramework]
+softdepend: [MMOItems, MythicLib, TFMCWeb, VehicleFramework, VFBuilders]
 
 commands:
   faction:
@@ -20,3 +20,6 @@ commands:
   battle:
       useage: /<command>
       description: Battle Command
+  ledger:
+      useage: /<command>
+      description: View your daily cashflow ledger

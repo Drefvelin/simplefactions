@@ -1,8 +1,8 @@
 package me.Plugins.SimpleFactions.Objects.Request;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
-import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
 
 public class AutoresolveRequest extends Request {
 	private static final long TIMEOUT_MS = 60_000L;

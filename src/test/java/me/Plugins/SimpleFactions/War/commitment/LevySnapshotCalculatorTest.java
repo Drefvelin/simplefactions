@@ -23,9 +23,9 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
-import me.Plugins.SimpleFactions.War.Participant;
-import me.Plugins.SimpleFactions.War.Side;
-import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.core.Participant;
+import me.Plugins.SimpleFactions.War.core.Side;
+import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 
 class LevySnapshotCalculatorTest {

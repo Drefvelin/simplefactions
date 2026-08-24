@@ -11,8 +11,8 @@ import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.Side;
-import me.Plugins.SimpleFactions.War.schedule.BattleSideMembers;
+import me.Plugins.SimpleFactions.War.core.Side;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 
 public final class LevySnapshotCalculator {

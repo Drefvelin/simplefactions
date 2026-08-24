@@ -10,17 +10,17 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.Participant;
-import me.Plugins.SimpleFactions.War.Side;
-import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.battle.naming.BattleNamingService;
+import me.Plugins.SimpleFactions.War.core.Participant;
+import me.Plugins.SimpleFactions.War.core.Side;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService;
 import me.Plugins.SimpleFactions.War.enums.WarType;
-import me.Plugins.SimpleFactions.War.progression.CampaignCoalitionService;
-import me.Plugins.SimpleFactions.War.progression.CampaignPushTarget;
-import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService;
-import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService.ScheduleLeg;
-import me.Plugins.SimpleFactions.War.schedule.CampaignUiCopy;
-import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
+import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService.ScheduleLeg;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignUiCopy;
+import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.settlement.Settlement;
 import me.Plugins.SimpleFactions.settlement.handler.SettlementHandler;
 

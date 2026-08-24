@@ -14,7 +14,7 @@ import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelocateRequest;
 import me.Plugins.SimpleFactions.Objects.Request.Request;
 import me.Plugins.SimpleFactions.Objects.Request.WarRequest;
-import me.Plugins.SimpleFactions.War.schedule.BattleAutoresolveService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleAutoresolveService;
 
 public class RequestManager {
 	private static HashMap<Player, Request> requests = new HashMap<>();

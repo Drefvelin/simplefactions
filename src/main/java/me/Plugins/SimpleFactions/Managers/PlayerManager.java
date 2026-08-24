@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.Managers;
 
+import java.util.UUID;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
@@ -24,6 +26,9 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.keys.Keys;
+import me.Plugins.SimpleFactions.player.PlayerEconomyManager;
+import me.Plugins.SimpleFactions.player.income.PlayerCashflow;
+import me.Plugins.SimpleFactions.player.income.PlayerLedger;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
 import net.tfminecraft.DenarEconomy.Enum.Accounts;
 import net.tfminecraft.DenarEconomy.Item.Coin;
@@ -149,18 +154,29 @@ public class PlayerManager implements Listener{
 
     @EventHandler
     public void earnMoney(PlayerEarnMoneyEvent e) {
+        String playerName = e.getPlayer();
         double paidTax = 0;
-        double amount = e.getAmount();
-        String p = e.getPlayer();
-        if(FactionManager.getByMember(p) != null) {
-			Faction f = FactionManager.getByMember(p);
+        double gross = e.getAmount();
+        if(FactionManager.getByMember(playerName) != null) {
+			Faction f = FactionManager.getByMember(playerName);
 			if(f.getTaxRate(TaxTarget.CITIZENS, null, true) > 0) {
 				if(f.getBank() != null) {
-					paidTax = f.getTaxRate(TaxTarget.CITIZENS, null, true)/100.0*amount;
-					f.giveTax(p, paidTax);
+					paidTax = f.getTaxRate(TaxTarget.CITIZENS, null, true)/100.0*gross;
+					f.giveTax(playerName, paidTax);
 				}
 			}
 		}
+        Player online = Bukkit.getPlayerExact(playerName);
+        UUID playerUuid = online != null
+            ? online.getUniqueId()
+            : Bukkit.getOfflinePlayer(playerName).getUniqueId();
+        PlayerLedger ledger = PlayerEconomyManager.get().getLedger(playerUuid);
+        if (gross > 0) {
+            ledger.add(PlayerCashflow.EARNINGS, gross);
+        }
+        if (paidTax > 0) {
+            ledger.add(PlayerCashflow.CITIZEN_TAX, -paidTax);
+        }
         e.setAmount(paidTax);
     }
 

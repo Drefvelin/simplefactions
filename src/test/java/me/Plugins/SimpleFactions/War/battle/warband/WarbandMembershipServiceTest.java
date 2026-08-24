@@ -15,7 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 
 class WarbandMembershipServiceTest {

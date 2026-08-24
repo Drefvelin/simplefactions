@@ -24,10 +24,10 @@ import org.mockito.MockedStatic;
 
 import me.Plugins.SimpleFactions.Database.BattleData;
 import me.Plugins.SimpleFactions.Database.WarbandData;
-import me.Plugins.SimpleFactions.War.battle.engine.Battle;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleFactory;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleSide;
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleFactory;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.enums.LifeType;
 import me.Plugins.SimpleFactions.War.battle.template.BattleLocation;

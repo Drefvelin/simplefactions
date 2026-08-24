@@ -2,10 +2,10 @@ package me.Plugins.SimpleFactions.War.battle.campaign;
 
 import java.util.Optional;
 
-import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
-import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService;
-import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
+import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
+import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 
 public final class CampaignBattleTypeResolver {
 	private CampaignBattleTypeResolver() {

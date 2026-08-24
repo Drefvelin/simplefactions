@@ -20,7 +20,7 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
-import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.enums.Terrain;

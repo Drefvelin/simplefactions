@@ -12,7 +12,7 @@ import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 
 public class InventoryUpdater {

@@ -22,10 +22,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
-import me.Plugins.SimpleFactions.War.battle.engine.Battle;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleFactory;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleJoinService;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleFactory;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleJoinService;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;

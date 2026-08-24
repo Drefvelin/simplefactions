@@ -9,15 +9,15 @@ import java.util.Set;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.Side;
-import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.WarCommitment;
+import me.Plugins.SimpleFactions.War.core.Side;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.core.WarCommitment;
 import me.Plugins.SimpleFactions.War.commitment.WarCommitmentService;
-import me.Plugins.SimpleFactions.War.progression.BelligerentRole;
-import me.Plugins.SimpleFactions.War.progression.CampaignCapabilityService;
-import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
-import me.Plugins.SimpleFactions.War.progression.CampaignCoalitionService;
-import me.Plugins.SimpleFactions.War.schedule.BattleSideMembers;
+import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCapabilityService;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
 
 public final class BattlePoolService {
 	public static final String MILITIA_REGIMENT_ID = "militia";

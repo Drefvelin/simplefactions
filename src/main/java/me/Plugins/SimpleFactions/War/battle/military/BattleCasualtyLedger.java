@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import me.Plugins.SimpleFactions.War.battle.engine.Battle;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleSide;
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 
 public final class BattleCasualtyLedger {

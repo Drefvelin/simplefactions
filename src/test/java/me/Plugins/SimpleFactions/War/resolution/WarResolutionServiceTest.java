@@ -19,17 +19,17 @@ import org.mockito.MockedStatic;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
-import me.Plugins.SimpleFactions.War.progression.CampaignCapabilityService;
-import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
-import me.Plugins.SimpleFactions.War.progression.CampaignPushTarget;
-import me.Plugins.SimpleFactions.War.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCapabilityService;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
 
 class WarResolutionServiceTest {
 	private Faction attacker;

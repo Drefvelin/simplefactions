@@ -42,6 +42,7 @@ import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.DailyGuildTransfers;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.player.PlayerEconomyManager;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.movement.Movement;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
@@ -221,6 +222,7 @@ public class FactionManager implements Listener{
 			}
 		}
 		if (timer >= 86400) {
+			PlayerEconomyManager.get().clearAllDaily();
 			for(Faction f : factions){
 				f.newDay();
 			}
@@ -280,6 +282,7 @@ public class FactionManager implements Listener{
 		}
 
 		buffer.clear();
+		SimpleFactions.getInstance().getVehicleUpkeepService().processDailyUpkeep();
 	}
 
 	

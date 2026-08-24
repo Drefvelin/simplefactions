@@ -40,6 +40,7 @@ import me.Plugins.SimpleFactions.Managers.Inventory.LoanPayment;
 import me.Plugins.SimpleFactions.Managers.Inventory.LoanView;
 import me.Plugins.SimpleFactions.Managers.Inventory.MilitaryView;
 import me.Plugins.SimpleFactions.Managers.Inventory.MovementView;
+import me.Plugins.SimpleFactions.Managers.Inventory.PlayerLedgerView;
 import me.Plugins.SimpleFactions.Managers.Inventory.RelationView;
 import me.Plugins.SimpleFactions.Managers.Inventory.TaxChange;
 import me.Plugins.SimpleFactions.Managers.Inventory.TaxView;
@@ -49,9 +50,9 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
-import me.Plugins.SimpleFactions.War.Participant;
-import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.progression.WhitePeaceService;
+import me.Plugins.SimpleFactions.War.core.Participant;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.campaign.progression.WhitePeaceService;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.installation.handler.ConstructResult;
 import me.Plugins.SimpleFactions.government.Government;
@@ -152,6 +153,7 @@ public class InventoryManager implements Listener{
 
 	//Guilds
 	GuildView guildView = new GuildView(this);
+	public PlayerLedgerView playerLedgerView = new PlayerLedgerView(this);
 	public void guildList(Player player) {
 		guildView.guildList(player);
 	}
@@ -514,12 +516,21 @@ public class InventoryManager implements Listener{
 				|| inv.getHolder() instanceof DeclareWarHolder) {
 			e.setCancelled(true);
 		}
+		if (inv.getHolder() instanceof SFInventoryHolder
+				&& ((SFInventoryHolder) inv.getHolder()).getType() == SFGUI.PLAYER_LEDGER_VIEW) {
+			e.setCancelled(true);
+		}
 	}
 
 	@EventHandler
 	public void clickButton(InventoryClickEvent e) {
 		Player p = (Player) e.getWhoClicked();
 		Inventory inv = e.getView().getTopInventory();
+		if (inv.getHolder() instanceof SFInventoryHolder
+				&& ((SFInventoryHolder) inv.getHolder()).getType() == SFGUI.PLAYER_LEDGER_VIEW) {
+			e.setCancelled(true);
+			return;
+		}
 		if (inv.getHolder() instanceof WarInventoryHolder
 				|| inv.getHolder() instanceof CampaignInventoryHolder
 				|| inv.getHolder() instanceof SFCombinedInventoryHolder

@@ -9,11 +9,11 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
-import me.Plugins.SimpleFactions.War.battle.engine.Battle;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleSide;
-import me.Plugins.SimpleFactions.War.battle.util.BattlePermissions;
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
+import me.Plugins.SimpleFactions.War.battle.ui.BattlePermissions;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 
 public class BattleTabCompletion implements TabCompleter{

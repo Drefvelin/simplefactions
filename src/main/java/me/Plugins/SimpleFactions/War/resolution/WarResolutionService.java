@@ -5,15 +5,15 @@ import java.util.OptionalInt;
 
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
-import me.Plugins.SimpleFactions.War.progression.CampaignCapabilityService;
-import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
-import me.Plugins.SimpleFactions.War.progression.CampaignPostBattleChoiceService;
-import me.Plugins.SimpleFactions.War.progression.CampaignPushTarget;
-import me.Plugins.SimpleFactions.War.progression.WhitePeaceService;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCapabilityService;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPostBattleChoiceService;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.progression.WhitePeaceService;
 
 public final class WarResolutionService {
 	private WarResolutionService() {}

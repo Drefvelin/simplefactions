@@ -11,10 +11,10 @@ import org.bukkit.Bukkit;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Managers.WarManager;
-import me.Plugins.SimpleFactions.War.Side;
-import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.battle.engine.Battle;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
+import me.Plugins.SimpleFactions.War.core.Side;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.military.BattlePoolService;
 import me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;

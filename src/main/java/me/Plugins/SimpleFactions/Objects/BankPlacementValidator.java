@@ -3,7 +3,7 @@ package me.Plugins.SimpleFactions.Objects;
 import org.bukkit.Location;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
-import me.Plugins.SimpleFactions.War.battle.engine.BattlePlacementValidator;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattlePlacementValidator;
 
 public final class BankPlacementValidator {
 	private static final String PROVINCE_RESOLVE_ERROR = "§a[SimpleFactions] §cError! could not resolve province";

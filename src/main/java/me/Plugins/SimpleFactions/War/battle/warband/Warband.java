@@ -16,8 +16,8 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.Side;
-import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.core.Side;
+import me.Plugins.SimpleFactions.War.core.War;
 
 public class Warband {
 	private String id;

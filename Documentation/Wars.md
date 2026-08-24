@@ -900,7 +900,7 @@ Current `main` branch war code is a **partial MVP** — GUI, sides, goals displa
 | `wargoals.yml` IDs + `canTarget()` | Goal resolution (new engine) |
 | `WarManager` registry pattern | Save-only-on-disable persistence |
 
-See git history and `War/` package for legacy files.
+See git history and `War/` package for legacy files. For Java package layout when editing war code, see [`AGENTS.md`](../AGENTS.md).
 
 ---
 

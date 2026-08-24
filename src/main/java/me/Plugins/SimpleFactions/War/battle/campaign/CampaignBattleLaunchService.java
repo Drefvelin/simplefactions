@@ -5,20 +5,20 @@ import java.time.Instant;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.battle.engine.Battle;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleFactory;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleFactory;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
-import me.Plugins.SimpleFactions.War.battle.naming.BattleNamingService;
+import me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
-import me.Plugins.SimpleFactions.War.progression.CampaignOffensiveForfeitService;
-import me.Plugins.SimpleFactions.War.schedule.BattleScheduleService;
-import me.Plugins.SimpleFactions.War.schedule.BattleSideMembers;
-import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService;
-import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignOffensiveForfeitService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
+import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
+import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.SimpleFactions;
 
 public final class CampaignBattleLaunchService {

@@ -27,8 +27,8 @@ import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Tiers.Title;
-import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.WarMapper;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.core.WarMapper;
 import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawGroup;
@@ -448,7 +448,7 @@ public class Database {
 		if (file.exists()) file.delete();
 	}
 
-	public void saveBattle(me.Plugins.SimpleFactions.War.battle.engine.Battle battle) {
+	public void saveBattle(me.Plugins.SimpleFactions.War.battle.engine.core.Battle battle) {
 		if (battle == null) {
 			return;
 		}
@@ -533,8 +533,8 @@ public class Database {
 		return warbands;
 	}
 
-	public java.util.List<me.Plugins.SimpleFactions.War.battle.engine.Battle> loadBattles() {
-		java.util.List<me.Plugins.SimpleFactions.War.battle.engine.Battle> loaded = new ArrayList<>();
+	public java.util.List<me.Plugins.SimpleFactions.War.battle.engine.core.Battle> loadBattles() {
+		java.util.List<me.Plugins.SimpleFactions.War.battle.engine.core.Battle> loaded = new ArrayList<>();
 		File folder = new File("plugins/SimpleFactions/Battles");
 		if (!folder.exists() || !folder.isDirectory()) {
 			return loaded;
@@ -550,7 +550,7 @@ public class Database {
 			try {
 				me.Plugins.SimpleFactions.Database.BattleData data =
 						JsonUtil.readJson(file, me.Plugins.SimpleFactions.Database.BattleData.class);
-				me.Plugins.SimpleFactions.War.battle.engine.Battle battle =
+				me.Plugins.SimpleFactions.War.battle.engine.core.Battle battle =
 						me.Plugins.SimpleFactions.War.battle.persistence.BattleMapper.fromData(data);
 				if (battle != null) {
 					loaded.add(battle);

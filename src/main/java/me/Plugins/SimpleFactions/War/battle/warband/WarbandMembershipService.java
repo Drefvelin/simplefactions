@@ -11,9 +11,9 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService.CampaignBattleContext;
-import me.Plugins.SimpleFactions.War.battle.engine.Battle;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleManager;
-import me.Plugins.SimpleFactions.War.battle.engine.BattleSide;
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
 
 public class WarbandMembershipService {
 	private static WarbandMembershipService instance;

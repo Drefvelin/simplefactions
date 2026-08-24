@@ -10,7 +10,7 @@ import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import me.Plugins.SimpleFactions.War.WarGoal;
+import me.Plugins.SimpleFactions.War.core.WarGoal;
 
 public class WarGoalLoader {
 	public static List<WarGoal> oList = new ArrayList<>();

@@ -17,14 +17,14 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
-import me.Plugins.SimpleFactions.War.progression.CampaignCoalition;
-import me.Plugins.SimpleFactions.War.progression.CampaignPushTarget;
-import me.Plugins.SimpleFactions.War.schedule.CampaignScheduleService.ScheduleLeg;
-import me.Plugins.SimpleFactions.War.schedule.ScheduledCampaignBattle;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService.ScheduleLeg;
+import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.settlement.Settlement;
 import me.Plugins.SimpleFactions.settlement.handler.SettlementHandler;
 

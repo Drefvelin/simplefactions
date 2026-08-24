@@ -18,7 +18,7 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.War;
+import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.enums.Terrain;
 
 class ProvincePathfinderTest {

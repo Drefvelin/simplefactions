@@ -13,19 +13,19 @@ import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Request.WarRequest;
 import me.Plugins.SimpleFactions.SimpleFactions;
-import me.Plugins.SimpleFactions.War.Side;
-import me.Plugins.SimpleFactions.War.War;
-import me.Plugins.SimpleFactions.War.WarCommitment;
-import me.Plugins.SimpleFactions.War.WarDeclareHelper;
+import me.Plugins.SimpleFactions.War.core.Side;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.core.WarCommitment;
+import me.Plugins.SimpleFactions.War.core.WarDeclareHelper;
 import me.Plugins.SimpleFactions.War.campaign.WarCampaignService;
 import me.Plugins.SimpleFactions.War.commitment.WarCommitmentService;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
-import me.Plugins.SimpleFactions.War.progression.CampaignDeclareValidator;
-import me.Plugins.SimpleFactions.War.validation.WarDeclareRequest;
-import me.Plugins.SimpleFactions.War.validation.WarGoalValidator;
-import me.Plugins.SimpleFactions.War.validation.WarValidationResult;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignDeclareValidator;
+import me.Plugins.SimpleFactions.War.declare.WarDeclareRequest;
+import me.Plugins.SimpleFactions.War.declare.WarGoalValidator;
+import me.Plugins.SimpleFactions.War.declare.WarValidationResult;
 
 public class WarManager {
 	private static List<War> wars = new ArrayList<>();
