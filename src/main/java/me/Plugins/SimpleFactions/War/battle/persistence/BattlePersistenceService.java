@@ -166,6 +166,14 @@ public final class BattlePersistenceService {
 		DATABASE.deleteBattleFile(battle.getId());
 	}
 
+	public static void deleteRaidBattle(Battle battle) {
+		if (battle == null) {
+			return;
+		}
+		BattleManager.deleteBattle(battle);
+		DATABASE.deleteBattleFile(battle.getId());
+	}
+
 	public static void purgeCampaignWarbandsForWar(int warId) {
 		purgeCampaignWarband(Warband.campaignSideWarbandId(warId, BattleTemplate.ATTACKER_SIDE));
 		purgeCampaignWarband(Warband.campaignSideWarbandId(warId, BattleTemplate.DEFENDER_SIDE));

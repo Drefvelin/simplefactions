@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,6 +16,7 @@ import java.util.UUID;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Database.CommitmentData;
+import me.Plugins.SimpleFactions.Database.CampaignRaidData;
 import me.Plugins.SimpleFactions.Database.ParticipantData;
 import me.Plugins.SimpleFactions.Database.ScheduledCampaignBattleData;
 import me.Plugins.SimpleFactions.Database.SideData;
@@ -35,6 +39,7 @@ import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionServi
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
 import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
 
 public final class WarMapper {
 	private WarMapper() {}
@@ -122,6 +127,17 @@ public final class WarMapper {
 		data.scheduledBattleHour = war.getScheduledBattleHour() > 0 ? war.getScheduledBattleHour() : null;
 		data.scheduledBattleProvinceId = war.getScheduledBattleProvinceId();
 		data.battleVotes = serializeBattleVotes(war.getBattleVotes());
+		data.battleInstallationPicks = serializeInstallationPicks(war.getBattleInstallationPicks());
+		if (war.getBattleInstallationPicksBattleDay() != null) {
+			data.battleInstallationPicksBattleDay = war.getBattleInstallationPicksBattleDay().toString();
+		}
+		if (!war.getCampaignRaidsUsed().isEmpty()) {
+			data.campaignRaidsUsed = new LinkedHashMap<>(war.getCampaignRaidsUsed());
+		}
+		if (war.getActiveCampaignRaid() != null) {
+			data.activeCampaignRaid = war.getActiveCampaignRaid().toData();
+		}
+		data.raidRepairLockUntil = serializeRepairLocks(war.getRaidRepairLockUntil());
 		data.autoresolveProposedByAttacker = war.isAutoresolveProposedByAttacker();
 		data.autoresolveProposedByDefender = war.isAutoresolveProposedByDefender();
 		data.postponementsThisCycle = war.getPostponementsThisCycle();
@@ -205,6 +221,15 @@ public final class WarMapper {
 		war.setScheduledBattleHour(data.scheduledBattleHour != null ? data.scheduledBattleHour : 0);
 		war.setScheduledBattleProvinceId(data.scheduledBattleProvinceId);
 		war.setBattleVotes(deserializeBattleVotes(data.battleVotes));
+		war.setBattleInstallationPicks(deserializeInstallationPicks(data.battleInstallationPicks));
+		if (data.battleInstallationPicksBattleDay != null && !data.battleInstallationPicksBattleDay.isBlank()) {
+			war.setBattleInstallationPicksBattleDay(LocalDate.parse(data.battleInstallationPicksBattleDay));
+		}
+		war.setCampaignRaidsUsed(data.campaignRaidsUsed);
+		if (data.activeCampaignRaid != null) {
+			war.setActiveCampaignRaid(CampaignRaid.fromData(data.activeCampaignRaid));
+		}
+		war.setRaidRepairLockUntil(deserializeRepairLocks(data.raidRepairLockUntil));
 		war.setAutoresolveProposedByAttacker(data.autoresolveProposedByAttacker);
 		war.setAutoresolveProposedByDefender(data.autoresolveProposedByDefender);
 		war.setPostponementsThisCycle(data.postponementsThisCycle != null ? data.postponementsThisCycle : 0);
@@ -433,6 +458,75 @@ public final class WarMapper {
 		} catch (IllegalArgumentException ignored) {
 			return BelligerentRole.ATTACKER;
 		}
+	}
+
+	private static Map<String, List<String>> serializeInstallationPicks(
+			Map<String, LinkedHashSet<String>> picks) {
+		Map<String, List<String>> serialized = new LinkedHashMap<>();
+		if (picks == null) {
+			return serialized;
+		}
+		for (Map.Entry<String, LinkedHashSet<String>> entry : picks.entrySet()) {
+			if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null
+					|| entry.getValue().isEmpty()) {
+				continue;
+			}
+			serialized.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+		}
+		return serialized;
+	}
+
+	private static Map<String, LinkedHashSet<String>> deserializeInstallationPicks(
+			Map<String, List<String>> picks) {
+		Map<String, LinkedHashSet<String>> deserialized = new LinkedHashMap<>();
+		if (picks == null) {
+			return deserialized;
+		}
+		for (Map.Entry<String, List<String>> entry : picks.entrySet()) {
+			if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null
+					|| entry.getValue().isEmpty()) {
+				continue;
+			}
+			LinkedHashSet<String> ids = new LinkedHashSet<>();
+			for (String installationId : entry.getValue()) {
+				if (installationId != null && !installationId.isBlank()) {
+					ids.add(installationId);
+				}
+			}
+			if (!ids.isEmpty()) {
+				deserialized.put(entry.getKey(), ids);
+			}
+		}
+		return deserialized;
+	}
+
+	private static Map<String, String> serializeRepairLocks(Map<String, Instant> locks) {
+		Map<String, String> serialized = new LinkedHashMap<>();
+		if (locks == null) {
+			return serialized;
+		}
+		for (Map.Entry<String, Instant> entry : locks.entrySet()) {
+			if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null) {
+				continue;
+			}
+			serialized.put(entry.getKey(), entry.getValue().toString());
+		}
+		return serialized;
+	}
+
+	private static Map<String, Instant> deserializeRepairLocks(Map<String, String> locks) {
+		Map<String, Instant> deserialized = new LinkedHashMap<>();
+		if (locks == null) {
+			return deserialized;
+		}
+		for (Map.Entry<String, String> entry : locks.entrySet()) {
+			if (entry.getKey() == null || entry.getKey().isBlank()
+					|| entry.getValue() == null || entry.getValue().isBlank()) {
+				continue;
+			}
+			deserialized.put(entry.getKey(), Instant.parse(entry.getValue()));
+		}
+		return deserialized;
 	}
 
 	private static Map<String, List<Integer>> serializeBattleVotes(Map<UUID, Set<Integer>> votes) {

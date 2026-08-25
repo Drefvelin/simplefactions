@@ -17,28 +17,28 @@ import me.Plugins.SimpleFactions.Cache;
 class BattleWindowServiceTest {
 	@BeforeEach
 	void setUp() {
-		Cache.warBattleWindowStartHour = 20;
+		Cache.warBattleWindowStartHour = 21;
 		Cache.warBattleWindowEndHour = 24;
 	}
 
 	@Test
 	void listValidHours_defaultWindow() {
-		assertEquals(List.of(20, 21, 22, 23, 24), BattleWindowService.listValidHours());
+		assertEquals(List.of(21, 22, 23, 24), BattleWindowService.listValidHours());
 	}
 
 	@Test
 	void isValidHour_acceptsWindowBounds() {
-		assertTrue(BattleWindowService.isValidHour(20));
+		assertTrue(BattleWindowService.isValidHour(21));
 		assertTrue(BattleWindowService.isValidHour(24));
-		assertFalse(BattleWindowService.isValidHour(19));
+		assertFalse(BattleWindowService.isValidHour(20));
 		assertFalse(BattleWindowService.isValidHour(25));
 	}
 
 	@Test
-	void computeScheduledBattleAt_hour20_usesBattleDayInScheduleZone() {
+	void computeScheduledBattleAt_hour21_usesBattleDayInScheduleZone() {
 		LocalDate battleDay = LocalDate.of(2026, 8, 21);
-		Instant instant = BattleWindowService.computeScheduledBattleAt(battleDay, 20);
-		assertEquals(battleDay.atTime(20, 0).atZone(BattleWindowService.SCHEDULE_ZONE).toInstant(), instant);
+		Instant instant = BattleWindowService.computeScheduledBattleAt(battleDay, 21);
+		assertEquals(battleDay.atTime(21, 0).atZone(BattleWindowService.SCHEDULE_ZONE).toInstant(), instant);
 	}
 
 	@Test
@@ -59,8 +59,8 @@ class BattleWindowServiceTest {
 
 	@Test
 	void computeScheduledBattleAt_rejectsInvalidHour() {
-		assertNull(BattleWindowService.computeScheduledBattleAt(LocalDate.of(2026, 8, 21), 19));
+		assertNull(BattleWindowService.computeScheduledBattleAt(LocalDate.of(2026, 8, 21), 20));
 		LocalDate missingDay = null;
-		assertNull(BattleWindowService.computeScheduledBattleAt(missingDay, 20));
+		assertNull(BattleWindowService.computeScheduledBattleAt(missingDay, 21));
 	}
 }

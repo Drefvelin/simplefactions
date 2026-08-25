@@ -74,6 +74,17 @@ public class Warband {
 		return warband;
 	}
 
+	public static Warband createRaidShell(String id, Side side, String campaignSideId) {
+		Warband warband = new Warband();
+		warband.id = id;
+		warband.name = "The " + side.getLeader().getName() + " Host";
+		warband.leaderId = pendingLeaderUuid(id);
+		warband.locked = true;
+		warband.faction = true;
+		warband.campaignSideId = campaignSideId;
+		return warband;
+	}
+
 	public static UUID pendingLeaderUuid(String warbandId) {
 		return UUID.nameUUIDFromBytes(("warband_pending:" + warbandId).getBytes(StandardCharsets.UTF_8));
 	}

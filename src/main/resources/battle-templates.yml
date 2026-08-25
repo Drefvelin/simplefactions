@@ -4,6 +4,13 @@ raid_template:
   friendly_fire: true
   keep_inventory: true
 
+	campaign_raid_template:
+  type: raid
+  defender_respawn_mode: infinite
+  friendly_fire: true
+  keep_inventory: true
+  campaign_raid: true
+
 field_default:
   type: field
   capture_points_enabled: true

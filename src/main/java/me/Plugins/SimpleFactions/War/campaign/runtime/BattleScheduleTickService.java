@@ -10,6 +10,8 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleLaunchService;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidFightScheduler;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidMusterScheduler;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.BattleScheduleCloseResult;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.CloseVoteOptions;
 
@@ -36,6 +38,8 @@ public final class BattleScheduleTickService {
 	public static int tick(Instant now) {
 		for (War war : WarManager.getActive()) {
 			CampaignBattleLaunchService.tryStartScheduledBattle(war, now);
+			CampaignRaidMusterScheduler.processOverdue(war, now);
+			CampaignRaidFightScheduler.processOverdue(war, now);
 		}
 
 		if (!shouldRunForHour(now)) {

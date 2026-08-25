@@ -19,6 +19,7 @@ import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCapabilityService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPostBattleChoiceService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignProgressionService;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
 import me.Plugins.SimpleFactions.War.campaign.vote.BattleQuorumService;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.BattleScheduleCloseResult;
 import me.Plugins.SimpleFactions.War.campaign.vote.BattleVoteService;
@@ -52,6 +53,22 @@ public final class BattleScheduleService {
 
 	public static boolean isBeforeVoteClose(War war, Instant now) {
 		return isOnBattleDay(war, now) && battleDayHour(now) < Cache.warVoteCloseHour;
+	}
+
+	public static boolean isRaidWindowOpen(War war, Instant now) {
+		if (!isOnBattleDay(war, now)) {
+			return false;
+		}
+		int hour = battleDayHour(now);
+		return hour >= Cache.warRaidWindowStartHour && hour <= Cache.warRaidWindowEndHour;
+	}
+
+	public static boolean isBattleWindowOpen(War war, Instant now) {
+		if (!isOnBattleDay(war, now)) {
+			return false;
+		}
+		int hour = battleDayHour(now);
+		return hour >= Cache.warBattleWindowStartHour && hour <= Cache.warBattleWindowEndHour;
 	}
 
 	public static boolean needsPostBattleChoice(War war) {
@@ -207,6 +224,8 @@ public final class BattleScheduleService {
 
 		CampaignProgressionService.applyPostponedBattle(war);
 		war.setBattleDay(war.getBattleDay().plusDays(1));
+		BattleInstallationPickService.clearForNewBattleDay(war);
+		CampaignRaidService.clearForNewBattleDay(war);
 		war.setBattleSchedulePhase(BattleSchedulePhase.VOTING);
 		clearScheduledTargets(war);
 		war.setPostponementsThisCycle(war.getPostponementsThisCycle() + 1);
@@ -218,6 +237,8 @@ public final class BattleScheduleService {
 			return;
 		}
 		war.setBattleDay(war.getBattleDay().plusDays(1));
+		BattleInstallationPickService.clearForNewBattleDay(war);
+		CampaignRaidService.clearForNewBattleDay(war);
 	}
 
 	public static Integer resolveBattleProvinceId(War war) {

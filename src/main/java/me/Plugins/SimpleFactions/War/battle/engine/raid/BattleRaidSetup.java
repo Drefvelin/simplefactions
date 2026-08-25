@@ -22,7 +22,9 @@ public final class BattleRaidSetup {
 		}
 		battle.setAllowedProvinceIds(java.util.Collections.emptySet());
 		battle.clearPoints();
-		seedTargetPoint(battle);
+		if (!battle.isCampaignRaid()) {
+			seedTargetPoint(battle);
+		}
 		applySideLives(battle);
 	}
 

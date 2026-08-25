@@ -13,25 +13,6 @@ import org.junit.jupiter.api.Test;
 import me.Plugins.SimpleFactions.Cache;
 
 class ConfigLoaderBattleMilitaryTest {
-	private static final String INSTALLATIONS = """
-			installations:
-			  fort:
-			    daily-upkeep: 50
-			    construction-time: 10
-			    slots:
-			      static_emplacement: 8
-			  port:
-			    daily-upkeep: 20
-			    construction-time: 10
-			    slots:
-			      ship: 10
-			  airport:
-			    daily-upkeep: 35
-			    construction-time: 10
-			    slots:
-			      aircraft: 10
-			""";
-
 	private Path tempDir;
 
 	@BeforeEach
@@ -53,11 +34,13 @@ class ConfigLoaderBattleMilitaryTest {
 		Path file = writeConfig("""
 				war:
 				  battle_schedule:
-				    window_start_hour: 20
-				    window_end_hour: 24
 				    vote_close_hour: 16
+				    raid_window_start_hour: 19
+				    raid_window_end_hour: 20
+				    window_start_hour: 21
+				    window_end_hour: 24
 				    defender_choice_deadline_hour: 12
-				""" + INSTALLATIONS);
+				""");
 
 		new ConfigLoader().loadConfig(file.toFile());
 
@@ -70,14 +53,16 @@ class ConfigLoaderBattleMilitaryTest {
 		Path file = writeConfig("""
 				war:
 				  battle_schedule:
-				    window_start_hour: 20
-				    window_end_hour: 24
 				    vote_close_hour: 16
+				    raid_window_start_hour: 19
+				    raid_window_end_hour: 20
+				    window_start_hour: 21
+				    window_end_hour: 24
 				    defender_choice_deadline_hour: 12
 				  battle_military:
 				    lives_per_regiment: 7
 				    min_side_lives: 3
-				""" + INSTALLATIONS);
+				""");
 
 		new ConfigLoader().loadConfig(file.toFile());
 

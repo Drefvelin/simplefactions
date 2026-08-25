@@ -51,9 +51,11 @@ war:
     # water_cost: 0  # 0 = derive from terrain-modifiers WATER via 1/carry
   battle_schedule:
     # All hours below are Europe/Paris (CET/CEST), not UTC.
-    window_start_hour: 20
-    window_end_hour: 24
     vote_close_hour: 16
+    raid_window_start_hour: 19
+    raid_window_end_hour: 20
+    window_start_hour: 21
+    window_end_hour: 24
     defender_choice_deadline_hour: 12
     one_battle_per_day: true
     first_battle_day_after_declare: true
@@ -65,6 +67,10 @@ war:
   battle_military:
     lives_per_regiment: 5
     min_side_lives: 1
+  campaign_raid:
+    muster_seconds: 60
+    duration_seconds: 600
+    repair_lock_hours: 48
 
 battle:
   province_poll_interval_ticks: 20
@@ -79,25 +85,7 @@ battle:
   campaign_template:
     field: field_default
     siege: siege_default
-    raid: raid_template
-
-# installation slots reserved for future VehicleFramework integration
-installations:
-  fort:
-    daily-upkeep: 50
-    construction-time: 10  # 432000 (5 days)
-    slots:
-      static_emplacement: 8
-  port:
-    daily-upkeep: 20
-    construction-time: 10  # 259200 (3 days)
-    slots:
-      ship: 10
-  airport:
-    daily-upkeep: 35
-    construction-time: 10  # 259200 (3 days)
-    slots:
-      aircraft: 10
+    raid: campaign_raid_template
 
 branch-upgrade-cost: 100.0
 branch-upgrade-exponent: 1.07

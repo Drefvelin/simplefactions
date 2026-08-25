@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.Database;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -42,6 +43,11 @@ public class WarData {
     public Integer scheduledBattleHour;
     public Integer scheduledBattleProvinceId;
     public Map<String, List<Integer>> battleVotes;
+    public Map<String, List<String>> battleInstallationPicks;
+    public String battleInstallationPicksBattleDay;
+    public Map<String, String> campaignRaidsUsed;
+    public CampaignRaidData activeCampaignRaid;
+    public Map<String, String> raidRepairLockUntil;
     public boolean autoresolveProposedByAttacker;
     public boolean autoresolveProposedByDefender;
     public Integer postponementsThisCycle;
@@ -67,6 +73,9 @@ public class WarData {
         occupiedByDefender = new ArrayList<>();
         lastBattleOccupied = new ArrayList<>();
         battleVotes = new HashMap<>();
+        battleInstallationPicks = new LinkedHashMap<>();
+        campaignRaidsUsed = new LinkedHashMap<>();
+        raidRepairLockUntil = new LinkedHashMap<>();
         locationBattleCounts = new HashMap<>();
         fortControllers = new HashMap<>();
         campaignBattleSchedule = new ArrayList<>();

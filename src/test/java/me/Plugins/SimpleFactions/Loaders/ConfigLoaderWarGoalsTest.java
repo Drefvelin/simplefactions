@@ -14,25 +14,6 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 
 class ConfigLoaderWarGoalsTest {
-	private static final String INSTALLATIONS = """
-			installations:
-			  fort:
-			    daily-upkeep: 50
-			    construction-time: 10
-			    slots:
-			      static_emplacement: 8
-			  port:
-			    daily-upkeep: 20
-			    construction-time: 10
-			    slots:
-			      ship: 10
-			  airport:
-			    daily-upkeep: 35
-			    construction-time: 10
-			    slots:
-			      aircraft: 10
-			""";
-
 	private Path tempDir;
 
 	@BeforeEach
@@ -59,7 +40,7 @@ class ConfigLoaderWarGoalsTest {
 				      max_battles: 5
 				    de_jure_annex:
 				      max_battles: 3
-				""" + INSTALLATIONS);
+				""");
 
 		new ConfigLoader().loadConfig(file.toFile());
 
@@ -79,7 +60,7 @@ class ConfigLoaderWarGoalsTest {
 				      max_battles: 2
 				    TRANSFER_SUBJECT:
 				      max_battles_per_leg: 5
-				""" + INSTALLATIONS);
+				""");
 
 		new ConfigLoader().loadConfig(file.toFile());
 

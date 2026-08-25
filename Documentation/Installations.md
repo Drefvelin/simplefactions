@@ -1,6 +1,6 @@
 # Installations
 
-> **Implementation status:** Steps 54–55 **and step 43 ZOC** **complete** (2026-08-19) — placement, map markers, construction queue, daily upkeep, faction GUI, fort zone-of-control hatch overlay on hover.
+> **Implementation status:** Steps 54–55 **and step 43 ZOC** **complete** (2026-08-19) — placement, map markers, construction queue, daily upkeep, faction GUI, fort zone-of-control hatch overlay on hover. **Step 76** (2026-08-24) — vehicle berth at installations via `/faction transfervehicle`. **Step 77** (2026-08-24) — personal vehicle limits at construction, fort `land_vehicles` berths, `vehicles.yml` v2 keys. **Step 78** (2026-08-24) — campaign installation picks, battle vehicle in-play, siege fort emplacements on schedule slot.
 
 Military **installations** are named structures a faction can build on owned land: forts, ports, and airports. Each **operational** installation appears on the political map via `installations[]` in `map_markers.json`. Under-construction installations are **not** exported. Settlements and installations are independent — a province may have both a city and a fort.
 
@@ -130,6 +130,158 @@ Leader message on non-payment destroy: `… has been destroyed §7(unable to pay
 
 ---
 
+## Vehicle berth
+
+Faction leaders can berth **personal** vehicles (tracked in `PlayerVehicleRegistry`) at operational installations. Berthed vehicles switch to `INSTALLATION` ownership mode, count against installation slot capacity, and use VF owner `player_<factionLeader>`.
+
+### Command
+
+`/faction transfervehicle <installationId>` — faction leader only. Tab-complete lists operational installation ids (same as deconstruct).
+
+On success the leader receives: `§aRight-click the vehicle to transfer it to <installation name>.` A session is stored until the leader right-clicks a vehicle or the session expires (`transfer-request-timeout-seconds`).
+
+### Flow
+
+```mermaid
+sequenceDiagram
+  participant Leader
+  participant SF as SimpleFactions
+  participant Owner
+
+  Leader->>SF: /faction transfervehicle installationId
+  SF->>Leader: Right-click the vehicle
+  Leader->>SF: right-click vehicle
+  alt self_owned
+    SF->>SF: canRegister then register
+  else other_owner
+    SF->>Owner: consent prompt
+    Owner->>SF: /faction accept
+    SF->>SF: canRegister re-validate then register
+  end
+```
+
+### Validation (`InstallationVehicleService.canRegister`)
+
+Checks run in order; first failure stops the transfer:
+
+| Check | Rule |
+|-------|------|
+| Registry | Vehicle must have a `PERSONAL` record in `PlayerVehicleRegistry` |
+| Category | Vehicle type must map to a `vehicles.yml` category supported by the installation kind |
+| Capacity | Sum of vehicle `size` at installation for that category must not exceed `slots.<category>` |
+| Radius | Vehicle horizontal XZ distance from installation center must be `<= radius` |
+| Province | Vehicle must be in the installation's province |
+
+**Category hosting** (which installation kind accepts which `vehicles.yml` category):
+
+| Category | Installation host |
+|----------|-------------------|
+| `static_emplacements`, `land_vehicles` | fort |
+| `ships` | port |
+| `aircraft` | airport |
+| `train` | none (personal only; `ignore-limit` on all train types) |
+
+Berth capacity **sums vehicle `size`** per category at the installation. Personal slot limits (below) count **vehicles**, not `size`.
+
+### Other-owner consent
+
+When the leader right-clicks another player's vehicle:
+
+1. Owner must be **online**
+2. Owner must be within `consent-proximity-blocks` of the **vehicle** (horizontal distance)
+3. Pre-consent `canRegister` must pass
+4. Owner receives consent prompt; leader receives confirmation that the request was sent
+5. Owner accepts with `/faction accept` (owner need **not** be a faction leader)
+6. Accept re-runs full `canRegister`; on success both players are notified
+
+Request timeout uses `transfer-request-timeout-seconds`. Expired requests send: `§cVehicle transfer request expired or was cancelled.`
+
+### VF owner sync
+
+On berth, VF `ownerData` is set to `player_<faction.getLeader()>`. On `VehicleSpawnEvent`, `InstallationVehicleOwnerSync` re-applies the current leader if the registry row is still `INSTALLATION` and the VF owner is stale (e.g. after a leadership change).
+
+VehicleFramework has no faction logic; SF registry (`INSTALLATION` + `installationId`) is the source of truth.
+
+### Chat messages
+
+| Situation | Message |
+|-----------|---------|
+| Command armed | `§aRight-click the vehicle to transfer it to <installation name>.` |
+| Out of radius | `§cVehicle must be within <radius> blocks of <name> (currently <distance>).` |
+| Wrong province | `§cVehicle must be in province <required> (currently <actual>).` |
+| No capacity | `§c<installation name> has no space for <category> (<used>/<capacity> used).` |
+| Unsupported category | `§cThis installation does not support <category> vehicles.` |
+| Not in registry | `§cThis vehicle is not registered for faction upkeep.` |
+| Already berthed | `§cThis vehicle is already berthed at an installation.` |
+| Consent prompt (owner) | `§e<leader> wants to berth your <type> at <installation>. It will become a faction vehicle. §7/faction accept` |
+| Owner offline | `§cThe vehicle owner must be online to transfer this vehicle.` |
+| Owner too far | `§cThe vehicle owner must be within <n> blocks of the vehicle.` |
+| Success | `§aVehicle berthed at <installation name>.` |
+| Consent timeout | `§cVehicle transfer request expired or was cancelled.` |
+| Not leader | `§cYou need to be a faction leader to transfer vehicles.` |
+| Unknown installation | `§cUnknown installation id.` |
+| No pending session | `§cYou are not transferring a vehicle. Use /faction transfervehicle <id>.` |
+
+### Out of scope
+
+- Installation GUI berth list / detail view
+- Un-berth (return to personal ownership)
+- Faction ledger charge for berthed vehicle upkeep (personal upkeep stops on berth only)
+
+---
+
+## Personal vehicle limits
+
+When a player starts building a vehicle (`BeginVehicleConstructionEvent`), SimpleFactions enforces personal limits from [`vehicles.yml`](../src/main/resources/vehicles.yml) via `VehicleSlotGuard.checkCanBuild`.
+
+| Rule | Detail |
+|------|--------|
+| Total cap | `personal-slot-limit` (shipped: 3); counts **vehicles**, not `size` |
+| Per-type cap | `default-per-person` (shipped: 1) with per-type `per-person` override (e.g. land: 3) |
+| Trains | `ignore-limit: true` skips the total cap; per-type cap still applies |
+| `size` | Used for **installation** berth capacity only (step 76); does not affect personal slot counting |
+
+**Check order:** known type in `vehicles.yml` → per-type cap → `ignore-limit` bypass → total cap (`personal-slot-limit: 0` = unlimited total).
+
+### Construction chat messages
+
+| Situation | Message |
+|-----------|---------|
+| Total cap | `§cYou have reached your personal vehicle limit (<n>).` |
+| Per-type cap | `§cYou already have the maximum number of <type> vehicles (<n>).` |
+| Unknown type | `§cThis vehicle type is not registered for faction upkeep.` |
+
+`<type>` is the vehicle type id from config (e.g. `cloudskimmer`, `horse_cart`). `<n>` is the limit that was exceeded.
+
+### Campaign battle vehicle eligibility (step 78)
+
+During **campaign battles** (`battle.warId != null`), berthable vehicles must be berthed at an installation **in play** for the player's faction:
+
+```text
+eligible iff NOT isBerthableType(vehicleTypeId)
+         OR (
+           registry.mode == INSTALLATION
+           AND installationId IN inPlaySet(playerFaction)
+         )
+```
+
+| In `inPlaySet` | Source |
+|----------------|--------|
+| Committed pick | Leader-selected **port** or **airport** for current `battleDay` |
+| Siege fort | Active schedule **`SIEGE`** slot `fortInstallationId` owned by that faction |
+
+- **Trains** and other **non-berthable** types: always eligible as personal vehicles (step 77).
+- Enforced by `BattleVehicleEligibilityService` on vehicle interact/spawn during campaign battles.
+- Full pick rules: [Wars.md installation picks](./Wars.md#installation-picks-step-78).
+
+### Campaign installation picks (step 78)
+
+Faction leaders commit **ports and airports** for each battle day from the campaign war GUI (**Installations** button, slot 33). Only installations in provinces your coalition still controls are pickable. **Forts** are not pickable; the active **siege** on the campaign schedule puts the owning faction's fort emplacements in play automatically.
+
+Picks lock at **vote close** on battle day. Empty pick means nothing from that faction's installations is in play. See [Wars.md](./Wars.md#installation-picks-step-78).
+
+---
+
 ## Dissolve
 
 1. Remove from `byId` and `byProvinceKind`.
@@ -183,41 +335,68 @@ Port and airport pins have no ZOC. Pending construction forts are excluded from 
 
 ## Config
 
+**`plugins/SimpleFactions/installations.yml`** (loaded after [`vehicles.yml`](../src/main/resources/vehicles.yml) at enable):
+
 ```yaml
-port-sea-proximity-blocks: 20   # construct validation: port must be within N blocks of sea/river
+consent-proximity-blocks: 20
+transfer-request-timeout-seconds: 60
 
-war:
-  port_sea_zoc_radius: 2        # shipped step 65 — campaign naval blocking range (sea-hop BFS)
-
-installations:
-  fort:
-    daily-upkeep: 50
-    construction-time: 10  # 432000 (5 days)
-    slots:
-      static_emplacement: 8
-  port:
-    daily-upkeep: 20
-    construction-time: 10  # 259200 (3 days)
-    slots:
-      ship: 10
-  airport:
-    daily-upkeep: 35
-    construction-time: 10  # 259200 (3 days)
-    slots:
-      aircraft: 10
+fort:
+  radius: 80
+  daily-upkeep: 50
+  construction-time: 10  # 432000 (5 days)
+  slots:
+    static_emplacements: 8
+    land_vehicles: 2
+port:
+  radius: 80
+  daily-upkeep: 20
+  construction-time: 10  # 259200 (3 days)
+  slots:
+    ships: 8
+airport:
+  radius: 80
+  daily-upkeep: 35
+  construction-time: 10  # 259200 (3 days)
+  slots:
+    aircraft: 10
 ```
 
 | Field | Kind | Dev value | Production (comment) |
 |-------|------|-----------|----------------------|
-| `daily-upkeep` | fort / port / airport | 50 / 20 / 35 denars per day | — |
+| `consent-proximity-blocks` | root | 20 | Owner must be within this many blocks of vehicle for consent |
+| `transfer-request-timeout-seconds` | root | 60 | Transfer session and consent request expiry |
+| `radius` | fort / port / airport | 80 | Horizontal berth distance from installation center |
+| `daily-upkeep` | fort / port / airport | 50 / 20 / 35 denars per day | - |
 | `construction-time` | fort | 10 seconds | 432000 (5 days) |
 | `construction-time` | port / airport | 10 seconds | 259200 (3 days) |
+| `slots.<category>` | per kind | see above | Capacity for vehicle category (sum of vehicle `size` when berthed) |
 
-Loaded at enable by `InstallationConfigLoader` (fail loud if missing). Access: `InstallationConfigLoader.getDailyUpkeep(kind)`, `getConstructionTimeSeconds(kind)`.
+`slots` keys must match a category id in `vehicles.yml` (e.g. `ships`, not `ship`). Slot values are integer capacity (sum of vehicle `size` for berthed vehicles at that installation).
 
-**Live servers:** merge `installations.*.daily-upkeep` and `construction-time` into `plugins/SimpleFactions/config.yml`, and add `icons: installations(black_dye.24)` for the hub tab icon.
+Loaded at enable by `InstallationConfigLoader` (fail loud if missing or unknown category). Access: `getDailyUpkeep(kind)`, `getConstructionTimeSeconds(kind)`, `getRadius(kind)`, `getConsentProximityBlocks()`, `getTransferRequestTimeoutSeconds()`, `getCategorySlotCapacity(kind, categoryId)`, `getCategorySlots(kind)`.
 
-`port-sea-proximity-blocks` is active (default 20). `installations.*.slots` are reserved for future VehicleFramework integration — unused in step 54/55.
+**`config.yml`** still holds `port-sea-proximity-blocks` and `war.port_sea_zoc_radius`; installation upkeep/construction/slots moved to `installations.yml`.
+
+**Live servers:** copy `installations.yml` from the jar default; remove the old `installations:` block from `config.yml`. Add `land_vehicles: 2` under `fort.slots` when merging an existing file. Vehicle categories live in `vehicles.yml` (see [`AGENTS.md`](../AGENTS.md) for package layout).
+
+### `vehicles.yml` personal-limit keys
+
+Loaded at enable by `VehiclesConfigLoader` (before `installations.yml`).
+
+| Key | Location | Rule |
+|-----|----------|------|
+| `personal-slot-limit` | root | Total personal cap; `0` = unlimited; counts vehicles not `size` |
+| `default-per-person` | root | Default per-type cap when type omits `per-person` |
+| `default-upkeep` | root | Optional fallback when type omits `upkeep` |
+| `upkeep` | per type | Required unless `default-upkeep` present |
+| `size` | per type | Installation berth units only |
+| `per-person` | per type | Overrides `default-per-person` |
+| `ignore-limit` | per type | When `true`, type does not count toward total personal cap |
+
+Access: `getPersonalSlotLimit()`, `getDefaultPerPerson()`, `getPerPersonLimit(typeId)`, `ignoresPersonalSlotLimit(typeId)`, `isKnownType(typeId)`.
+
+`port-sea-proximity-blocks` is active (default 20).
 
 ---
 
@@ -229,11 +408,29 @@ installation/
   InstallationKind.java
   InstallationKindConfig.java
   InstallationConstruction.java
+  InstallationBounds.java
   handler/
     InstallationHandler.java
     ConstructResult.java
+vehicles/
+  InstallationVehicleService.java
+  InstallationVehicleOwnerSync.java
+  VehicleTransferListener.java
+  VehicleTransferConsentService.java
+  VehicleSpawnListener.java
+  VehicleIntegrationListener.java
+  VehicleTransferSessionManager.java
+  VehicleTransferMessages.java
+  VehicleConstructionMessages.java
+  VehicleSlotGuard.java
+  CanBuildResult.java
+  VehicleCategoryRules.java
+  PlayerVehicleRegistry.java
+  VehicleTypeConfig.java
+  …
 Loaders/
   InstallationConfigLoader.java
+  VehiclesConfigLoader.java
 Managers/Inventory/
   InstallationView.java
   InstallationCreator.java
@@ -251,5 +448,11 @@ ProvinceSystem step 54: [Planning/batches/step-54](../../ProvinceSystem/Planning
 Step 55 (upkeep, construction queue, GUI): [Planning/batches/step-55](../../ProvinceSystem/Planning/batches/step-55/00-index.md) — **done**.
 
 Step 43 (fort ZOC hatch overlay): [Planning/batches/step-43](../../ProvinceSystem/Planning/batches/step-43/00-index.md) — **done**.
+
+Step 76 (installation vehicle berth): [Planning/batches/step-76](../../ProvinceSystem/Planning/batches/step-76/00-index.md) — **done**.
+
+Step 77 (personal vehicle limits, fort land berths): [Planning/batches/step-77](../../ProvinceSystem/Planning/batches/step-77/00-index.md) — **done**.
+
+Step 78 (campaign installation picks, vehicle in-play): [Planning/batches/step-78](../../ProvinceSystem/Planning/batches/step-78/00-index.md) — **done**.
 
 Automated wars (planning lock): [Wars.md](./Wars.md) · PS [step-44](../../ProvinceSystem/Planning/batches/step-44/00-index.md).

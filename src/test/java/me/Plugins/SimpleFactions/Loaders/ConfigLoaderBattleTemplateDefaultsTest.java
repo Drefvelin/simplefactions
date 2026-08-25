@@ -15,25 +15,6 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 
 class ConfigLoaderBattleTemplateDefaultsTest {
-	private static final String INSTALLATIONS = """
-			installations:
-			  fort:
-			    daily-upkeep: 50
-			    construction-time: 10
-			    slots:
-			      static_emplacement: 8
-			  port:
-			    daily-upkeep: 20
-			    construction-time: 10
-			    slots:
-			      ship: 10
-			  airport:
-			    daily-upkeep: 35
-			    construction-time: 10
-			    slots:
-			      aircraft: 10
-			""";
-
 	private Path tempDir;
 
 	@BeforeEach
@@ -66,7 +47,7 @@ class ConfigLoaderBattleTemplateDefaultsTest {
 				    field: custom_field
 				    siege: custom_siege
 				    raid: custom_raid
-				""" + INSTALLATIONS);
+				""");
 
 		new ConfigLoader().loadConfig(configFile.toFile());
 
@@ -86,7 +67,7 @@ class ConfigLoaderBattleTemplateDefaultsTest {
 				battle:
 				  province_poll_interval_ticks: 20
 				  province_leave_countdown_seconds: 0
-				""" + INSTALLATIONS);
+				""");
 
 		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadConfig(configFile.toFile()));
 	}

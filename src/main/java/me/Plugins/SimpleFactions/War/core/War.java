@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,6 +28,7 @@ import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
 import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class War {
@@ -66,6 +70,11 @@ public class War {
 	private int scheduledBattleHour;
 	private Integer scheduledBattleProvinceId;
 	private Map<UUID, Set<Integer>> battleVotes = new HashMap<>();
+	private Map<String, LinkedHashSet<String>> battleInstallationPicks = new LinkedHashMap<>();
+	private LocalDate battleInstallationPicksBattleDay;
+	private Map<String, String> campaignRaidsUsed = new LinkedHashMap<>();
+	private CampaignRaid activeCampaignRaid;
+	private Map<String, Instant> raidRepairLockUntil = new LinkedHashMap<>();
 	private boolean autoresolveProposedByAttacker;
 	private boolean autoresolveProposedByDefender;
 	private int postponementsThisCycle;
@@ -457,6 +466,81 @@ public class War {
 
 	public void setBattleVotes(Map<UUID, Set<Integer>> battleVotes) {
 		this.battleVotes = battleVotes != null ? battleVotes : new HashMap<>();
+	}
+
+	public Map<String, LinkedHashSet<String>> getBattleInstallationPicks() {
+		if (battleInstallationPicks == null) {
+			battleInstallationPicks = new LinkedHashMap<>();
+		}
+		return battleInstallationPicks;
+	}
+
+	public void setBattleInstallationPicks(Map<String, LinkedHashSet<String>> battleInstallationPicks) {
+		if (battleInstallationPicks == null || battleInstallationPicks.isEmpty()) {
+			this.battleInstallationPicks = new LinkedHashMap<>();
+			return;
+		}
+		Map<String, LinkedHashSet<String>> copy = new LinkedHashMap<>();
+		for (Map.Entry<String, LinkedHashSet<String>> entry : battleInstallationPicks.entrySet()) {
+			if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null) {
+				continue;
+			}
+			copy.put(entry.getKey(), new LinkedHashSet<>(entry.getValue()));
+		}
+		this.battleInstallationPicks = copy;
+	}
+
+	public LocalDate getBattleInstallationPicksBattleDay() {
+		return battleInstallationPicksBattleDay;
+	}
+
+	public void setBattleInstallationPicksBattleDay(LocalDate battleInstallationPicksBattleDay) {
+		this.battleInstallationPicksBattleDay = battleInstallationPicksBattleDay;
+	}
+
+	public Map<String, String> getCampaignRaidsUsed() {
+		if (campaignRaidsUsed == null) {
+			campaignRaidsUsed = new LinkedHashMap<>();
+		}
+		return campaignRaidsUsed;
+	}
+
+	public void setCampaignRaidsUsed(Map<String, String> campaignRaidsUsed) {
+		if (campaignRaidsUsed == null || campaignRaidsUsed.isEmpty()) {
+			this.campaignRaidsUsed = new LinkedHashMap<>();
+			return;
+		}
+		this.campaignRaidsUsed = new LinkedHashMap<>(campaignRaidsUsed);
+	}
+
+	public CampaignRaid getActiveCampaignRaid() {
+		return activeCampaignRaid;
+	}
+
+	public void setActiveCampaignRaid(CampaignRaid activeCampaignRaid) {
+		this.activeCampaignRaid = activeCampaignRaid;
+	}
+
+	public Map<String, Instant> getRaidRepairLockUntil() {
+		if (raidRepairLockUntil == null) {
+			raidRepairLockUntil = new LinkedHashMap<>();
+		}
+		return raidRepairLockUntil;
+	}
+
+	public void setRaidRepairLockUntil(Map<String, Instant> raidRepairLockUntil) {
+		if (raidRepairLockUntil == null || raidRepairLockUntil.isEmpty()) {
+			this.raidRepairLockUntil = new LinkedHashMap<>();
+			return;
+		}
+		Map<String, Instant> copy = new LinkedHashMap<>();
+		for (Map.Entry<String, Instant> entry : raidRepairLockUntil.entrySet()) {
+			if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null) {
+				continue;
+			}
+			copy.put(entry.getKey(), entry.getValue());
+		}
+		this.raidRepairLockUntil = copy;
 	}
 
 	public boolean isAutoresolveProposedByAttacker() {

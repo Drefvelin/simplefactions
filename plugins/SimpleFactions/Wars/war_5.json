@@ -55,8 +55,11 @@
   "fortControllers": {},
   "locationBattleCounts": {},
   "battleSchedulePhase": "voting",
-  "battleDay": "2026-08-25",
+  "battleDay": "2026-08-26",
   "battleVotes": {},
+  "battleInstallationPicks": {},
+  "campaignRaidsUsed": {},
+  "raidRepairLockUntil": {},
   "autoresolveProposedByAttacker": false,
   "autoresolveProposedByDefender": false,
   "postponementsThisCycle": 0,
@@ -67,7 +70,7 @@
   "postBattleChoiceResolved": true,
   "holdPeaceProposalActive": false,
   "forceQuorumNextClose": false,
-  "startedAt": "2026-08-24T11:28:34.629802Z",
+  "startedAt": "2026-08-25T11:01:35.051788500Z",
   "attackers": {
     "leader": "atk",
     "participants": [

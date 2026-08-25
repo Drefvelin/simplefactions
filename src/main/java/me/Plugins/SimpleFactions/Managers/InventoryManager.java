@@ -23,10 +23,13 @@ import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.loans.Loan;
 import me.Plugins.SimpleFactions.Managers.Holder.CampaignInventoryHolder;
+import me.Plugins.SimpleFactions.Managers.Holder.CampaignRaidLaunchHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.DeclareWarHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.SFCombinedInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
+import me.Plugins.SimpleFactions.Managers.Inventory.CampaignInstallationPickView;
+import me.Plugins.SimpleFactions.Managers.Inventory.CampaignRaidLaunchView;
 import me.Plugins.SimpleFactions.Managers.Inventory.CampaignView;
 import me.Plugins.SimpleFactions.Managers.Inventory.DeclareWarView;
 import me.Plugins.SimpleFactions.Managers.Inventory.ElectionView;
@@ -110,6 +113,8 @@ public class InventoryManager implements Listener{
 	///WAAAAR
 	public WarView warView = new WarView(this);
 	public CampaignView campaignView = new CampaignView(this);
+	public CampaignInstallationPickView campaignInstallationPickView = new CampaignInstallationPickView(this);
+	public CampaignRaidLaunchView campaignRaidLaunchView = new CampaignRaidLaunchView(this);
 	public DeclareWarView declareWarView = new DeclareWarView(this);
 
 	public void warList(Player player) {
@@ -512,6 +517,7 @@ public class InventoryManager implements Listener{
 		Inventory inv = e.getView().getTopInventory();
 		if (inv.getHolder() instanceof WarInventoryHolder
 				|| inv.getHolder() instanceof CampaignInventoryHolder
+				|| inv.getHolder() instanceof CampaignRaidLaunchHolder
 				|| inv.getHolder() instanceof SFCombinedInventoryHolder
 				|| inv.getHolder() instanceof DeclareWarHolder) {
 			e.setCancelled(true);
@@ -533,6 +539,7 @@ public class InventoryManager implements Listener{
 		}
 		if (inv.getHolder() instanceof WarInventoryHolder
 				|| inv.getHolder() instanceof CampaignInventoryHolder
+				|| inv.getHolder() instanceof CampaignRaidLaunchHolder
 				|| inv.getHolder() instanceof SFCombinedInventoryHolder
 				|| inv.getHolder() instanceof DeclareWarHolder) {
 			e.setCancelled(true);
@@ -771,7 +778,12 @@ public class InventoryManager implements Listener{
 			e.setCancelled(true);
 			if (campaignHolder.getType() == SFGUI.CAMPAIGN_VIEW) {
 				campaignView.click(e, inv, p);
+			} else if (campaignHolder.getType() == SFGUI.CAMPAIGN_INSTALLATION_PICK_VIEW) {
+				campaignInstallationPickView.click(e, inv, p);
 			}
+		} else if (inv.getHolder() instanceof CampaignRaidLaunchHolder) {
+			e.setCancelled(true);
+			campaignRaidLaunchView.click(e, inv, p);
 		} else if (inv.getHolder() instanceof SFCombinedInventoryHolder combinedHolder) {
 			e.setCancelled(true);
 			SFGUI combinedType = combinedHolder.getType();

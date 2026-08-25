@@ -22,6 +22,7 @@ import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.BankPlacementValidator;
+import me.Plugins.SimpleFactions.Objects.Request.VehicleTransferConsentRequest;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
@@ -542,6 +543,31 @@ public class CommandManager implements Listener, CommandExecutor{
 				inv.confirmView(p, f, "installation", id);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("transfervehicle")) {
+				Faction f = FactionManager.getByLeader(p.getName());
+				if(f == null) {
+					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleTransferMessages.notLeader());
+					return true;
+				}
+				if(args.length < 2) {
+					p.sendMessage("§cUsage: §e/faction transfervehicle <installation id>");
+					return true;
+				}
+				String id = args[1];
+				var installation = f.getInstallationHandler().getById(id);
+				if(installation == null) {
+					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleTransferMessages.unknownInstallation());
+					return true;
+				}
+				long timeoutMillis = me.Plugins.SimpleFactions.Loaders.InstallationConfigLoader
+						.getTransferRequestTimeoutSeconds() * 1000L;
+				SimpleFactions.getInstance().getVehicleTransferSessionManager().put(
+						p.getUniqueId(),
+						new me.Plugins.SimpleFactions.vehicles.VehicleTransferSession(
+								installation.getId(),
+								System.currentTimeMillis() + timeoutMillis));
+				p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleTransferMessages.commandArmed(installation));
+				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("unclaim") && args.length >= 1) {
 				Faction f = null;
 				if(args.length == 1) {
@@ -571,6 +597,11 @@ public class CommandManager implements Listener, CommandExecutor{
 				
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("accept") && args.length == 1) {
+				if(RequestManager.hasRequest(p)
+						&& RequestManager.getRequest(p) instanceof VehicleTransferConsentRequest) {
+					RequestManager.accept(p);
+					return true;
+				}
 				if(FactionManager.getByLeader(p.getName()) != null) {
 					if(!RequestManager.hasRequest(p)) {
 						p.sendMessage("§cYou have no requests to accept");

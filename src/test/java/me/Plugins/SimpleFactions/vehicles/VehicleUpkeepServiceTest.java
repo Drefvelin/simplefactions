@@ -31,8 +31,13 @@ class VehicleUpkeepServiceTest {
         Files.writeString(vehiclesYaml, """
             personal-slot-limit: 1
 
-            upkeep:
-              ironclad: 20
+            categories:
+              ships:
+                ironclad:
+                  upkeep: 20
+                  size: 1
+              static_emplacements: {}
+              aircraft: {}
             """);
         VehiclesConfigLoader.load(vehiclesYaml.toFile());
 

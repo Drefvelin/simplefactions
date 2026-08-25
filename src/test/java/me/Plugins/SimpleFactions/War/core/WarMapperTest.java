@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.War.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -11,6 +12,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +42,9 @@ import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
 import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidState;
+import me.Plugins.SimpleFactions.War.campaign.runtime.RaidKind;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 
 class WarMapperTest {
@@ -566,6 +572,108 @@ class WarMapperTest {
 			War war = WarMapper.fromData(data);
 
 			assertTrue(war.getFortControllers().isEmpty());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void roundTrip_battleInstallationPicks() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			War war = new War(42, attacker, defender);
+			war.setBattleDay(LocalDate.parse("2026-08-21"));
+			LinkedHashSet<String> atkPicks = new LinkedHashSet<>();
+			atkPicks.add("fort-1");
+			atkPicks.add("airport-2");
+			Map<String, LinkedHashSet<String>> picks = new LinkedHashMap<>();
+			picks.put("faction_a", atkPicks);
+			war.setBattleInstallationPicks(picks);
+			war.setBattleInstallationPicksBattleDay(LocalDate.parse("2026-08-21"));
+
+			WarData data = WarMapper.toData(war);
+			assertEquals(List.of("fort-1", "airport-2"), data.battleInstallationPicks.get("faction_a"));
+			assertEquals("2026-08-21", data.battleInstallationPicksBattleDay);
+
+			War restored = WarMapper.fromData(data);
+			assertEquals(Set.of("fort-1", "airport-2"), restored.getBattleInstallationPicks().get("faction_a"));
+			assertEquals(LocalDate.parse("2026-08-21"), restored.getBattleInstallationPicksBattleDay());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void roundTrip_campaignRaidFields() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			War war = new War(42, attacker, defender);
+			war.setBattleDay(LocalDate.parse("2026-08-21"));
+			war.getCampaignRaidsUsed().put(CampaignCoalition.AGGRESSOR.toJson(), "2026-08-21");
+			war.getRaidRepairLockUntil().put(
+					"port-def",
+					Instant.parse("2026-08-27T20:00:00+02:00"));
+
+			CampaignRaid raid = new CampaignRaid();
+			raid.setId("cr_42_2026-08-21");
+			raid.setWarId(42);
+			raid.setBattleDay(LocalDate.parse("2026-08-21"));
+			raid.setAttackerCoalition(CampaignCoalition.AGGRESSOR);
+			raid.setLauncherFactionId("faction_a");
+			raid.setSourceInstallationId("port-atk");
+			raid.setTargetInstallationId("port-def");
+			raid.setRaidKind(RaidKind.NAVAL);
+			raid.setState(CampaignRaidState.MUSTER);
+			raid.setMusterEndsAt(Instant.parse("2026-08-21T19:01:00+02:00"));
+			raid.getMusterParticipantIds().add("00000000-0000-0000-0000-0000000000aa");
+			war.setActiveCampaignRaid(raid);
+
+			WarData data = WarMapper.toData(war);
+			assertEquals("2026-08-21", data.campaignRaidsUsed.get("aggressor"));
+			assertNotNull(data.activeCampaignRaid);
+			assertEquals("cr_42_2026-08-21", data.activeCampaignRaid.id);
+			assertEquals("port-def", data.raidRepairLockUntil.keySet().iterator().next());
+
+			War restored = WarMapper.fromData(data);
+			assertEquals("2026-08-21", restored.getCampaignRaidsUsed().get("aggressor"));
+			assertNotNull(restored.getActiveCampaignRaid());
+			assertEquals(CampaignRaidState.MUSTER, restored.getActiveCampaignRaid().getState());
+			assertEquals(RaidKind.NAVAL, restored.getActiveCampaignRaid().getRaidKind());
+			assertTrue(restored.getActiveCampaignRaid().getMusterParticipantIds()
+					.contains("00000000-0000-0000-0000-0000000000aa"));
+			assertEquals(
+					Instant.parse("2026-08-27T20:00:00+02:00"),
+					restored.getRaidRepairLockUntil().get("port-def"));
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void fromData_omittedInstallationPicksDefaultsEmpty() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			War war = WarMapper.fromData(minimalWarData());
+			assertTrue(war.getBattleInstallationPicks().isEmpty());
+			assertNull(war.getBattleInstallationPicksBattleDay());
 		} finally {
 			FactionManager.factions.remove(attacker);
 			FactionManager.factions.remove(defender);

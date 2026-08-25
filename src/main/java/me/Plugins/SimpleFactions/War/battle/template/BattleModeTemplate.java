@@ -24,6 +24,7 @@ public class BattleModeTemplate {
 	private Integer defenderLives;
 	private Boolean capturePointsEnabled;
 	private CapturePointDefinition raidTarget;
+	private Boolean campaignRaid;
 
 	public static BattleModeTemplate fromSection(ConfigurationSection section) {
 		BattleModeTemplate mode = new BattleModeTemplate();
@@ -61,6 +62,9 @@ public class BattleModeTemplate {
 		}
 		if (section.contains("capture_points_enabled")) {
 			mode.capturePointsEnabled = section.getBoolean("capture_points_enabled");
+		}
+		if (section.contains("campaign_raid")) {
+			mode.campaignRaid = section.getBoolean("campaign_raid");
 		}
 		ConfigurationSection raidTargetSection = section.getConfigurationSection("raid_target");
 		if (raidTargetSection != null) {
@@ -209,5 +213,13 @@ public class BattleModeTemplate {
 
 	public void setCapturePointsEnabled(Boolean capturePointsEnabled) {
 		this.capturePointsEnabled = capturePointsEnabled;
+	}
+
+	public Boolean getCampaignRaid() {
+		return campaignRaid;
+	}
+
+	public void setCampaignRaid(Boolean campaignRaid) {
+		this.campaignRaid = campaignRaid;
 	}
 }

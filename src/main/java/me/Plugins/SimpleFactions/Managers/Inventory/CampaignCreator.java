@@ -14,11 +14,14 @@ import java.util.stream.Collectors;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.core.War;
@@ -30,18 +33,48 @@ import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteEntry;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteRenderer;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.BattleHourTally;
 import me.Plugins.SimpleFactions.War.campaign.vote.BattleQuorumService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationPickService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleLookups;
 import me.Plugins.SimpleFactions.War.campaign.vote.BattleVoteService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
+import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.campaign.ui.CampaignUiCopy;
 import me.Plugins.SimpleFactions.War.campaign.ui.CampaignUiTimeFormatter;
-import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidLaunchAvailability;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidLaunchAvailability.LaunchAvailability;
+import me.Plugins.SimpleFactions.installation.Installation;
+import me.Plugins.SimpleFactions.Managers.Inventory.IconGetter;
 import me.Plugins.TLibs.TLibs;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class CampaignCreator {
 	private final TitleManagerProvinceOwnerLookup owners = new TitleManagerProvinceOwnerLookup();
+	private final InstallationCreator installationCreator = new InstallationCreator();
+
+	public static NamespacedKey installationsEntryWarKey() {
+		return new NamespacedKey(SimpleFactions.plugin, "campaign_installations_entry_war");
+	}
+
+	public static NamespacedKey installationPickWarKey() {
+		return new NamespacedKey(SimpleFactions.plugin, "campaign_installation_pick_war");
+	}
+
+	public static NamespacedKey installationPickIdKey() {
+		return new NamespacedKey(SimpleFactions.plugin, "campaign_installation_pick_id");
+	}
+
+	public static NamespacedKey raidEntryWarKey() {
+		return new NamespacedKey(SimpleFactions.plugin, "campaign_raid_entry_war");
+	}
+
+	public static NamespacedKey raidLaunchWarKey() {
+		return new NamespacedKey(SimpleFactions.plugin, "campaign_raid_launch_war");
+	}
+
+	public static NamespacedKey raidLaunchInstallationIdKey() {
+		return new NamespacedKey(SimpleFactions.plugin, "campaign_raid_launch_installation_id");
+	}
 
 	public ItemStack createRouteEntryItem(War war, Faction viewer, CampaignRouteEntry entry) {
 		Optional<ScheduledCampaignBattle> slot = CampaignScheduleService.slotAt(
@@ -243,6 +276,55 @@ public class CampaignCreator {
 		return item;
 	}
 
+	public static List<String> buildEnemyInstallationIntelLines(
+			War war,
+			Faction viewerFaction,
+			Instant now) {
+		List<String> lines = new ArrayList<>();
+		if (war == null || viewerFaction == null || !war.isParticipating(viewerFaction)) {
+			return lines;
+		}
+		if (!BattleInstallationPickService.isLocked(war, now)) {
+			lines.add(StringFormatter.formatHex(
+					CampaignUiCopy.LABEL + "Enemy installation commits are hidden until vote close."));
+			return lines;
+		}
+		lines.add(StringFormatter.formatHex(CampaignUiCopy.STATUS_HIGHLIGHT + "Enemy committed installations:"));
+		Map<String, Set<String>> enemyPicks = BattleInstallationPickService.getVisibleEnemyPicks(
+				war, viewerFaction.getId(), now);
+		for (Map.Entry<String, Set<String>> entry : enemyPicks.entrySet()) {
+			Faction enemy = FactionManager.getByString(entry.getKey());
+			String factionName = enemy != null ? enemy.getName() : entry.getKey();
+			Set<String> picks = entry.getValue();
+			if (picks == null || picks.isEmpty()) {
+				lines.add(StringFormatter.formatHex(
+						CampaignUiCopy.LABEL + factionName + ": " + CampaignUiCopy.MUTED + "(none)"));
+				continue;
+			}
+			List<String> names = new ArrayList<>();
+			if (enemy != null) {
+				for (String installationId : picks) {
+					Installation installation = enemy.getInstallationHandler().getById(installationId);
+					names.add(installation != null ? installation.getName() : installationId);
+				}
+			} else {
+				names.addAll(picks);
+			}
+			lines.add(StringFormatter.formatHex(
+					CampaignUiCopy.LABEL + factionName + ": " + CampaignUiCopy.VALUE + String.join(", ", names)));
+		}
+		return lines;
+	}
+
+	public ItemStack createEnemyInstallationIntelItem(War war, Faction viewerFaction) {
+		ItemStack item = new ItemStack(Material.WRITABLE_BOOK, 1);
+		ItemMeta meta = item.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex(CampaignUiCopy.VALUE + "Enemy installation intel"));
+		meta.setLore(buildEnemyInstallationIntelLines(war, viewerFaction, Instant.now()));
+		item.setItemMeta(meta);
+		return item;
+	}
+
 	public ItemStack createVotingHelpItem() {
 		ItemStack item = new ItemStack(Material.WRITABLE_BOOK, 1);
 		ItemMeta meta = item.getItemMeta();
@@ -350,6 +432,155 @@ public class CampaignCreator {
 		meta.setLore(List.of(StringFormatter.formatHex(CampaignUiCopy.LABEL + "End the war with no goal")));
 		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "campaign_loser_peace");
 		meta.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, war.getId());
+		item.setItemMeta(meta);
+		return item;
+	}
+
+	public ItemStack createInstallationsEntryButton(War war, Faction viewerFaction) {
+		ItemStack item = IconGetter.getIconOrDefault("march", Material.GREEN_CONCRETE);
+		ItemMeta meta = item.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex("#706964Battle installations"));
+		int committed = viewerFaction != null
+				? BattleInstallationPickService.getPicks(war, viewerFaction.getId()).size()
+				: 0;
+		boolean locked = BattleInstallationPickService.isLocked(war, java.time.Instant.now());
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex(CampaignUiCopy.LABEL + "Click to commit installations"));
+		lore.add(StringFormatter.formatHex(
+				CampaignUiCopy.LABEL + "Committed: " + CampaignUiCopy.VALUE + committed));
+		if (locked) {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.LABEL + "Locked at vote close"));
+		} else {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.LABEL + "Leader only until vote close"));
+		}
+		meta.setLore(lore);
+		meta.getPersistentDataContainer().set(installationsEntryWarKey(), PersistentDataType.INTEGER, war.getId());
+		item.setItemMeta(meta);
+		return item;
+	}
+
+	public ItemStack createInstallationPickSummaryItem(War war, Faction faction, boolean locked) {
+		ItemStack item = new ItemStack(Material.GREEN_CONCRETE, 1);
+		ItemMeta meta = item.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex(CampaignUiCopy.VALUE + "Battle installation picks"));
+		int committed = faction != null
+				? BattleInstallationPickService.getPicks(war, faction.getId()).size()
+				: 0;
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex(
+				CampaignUiCopy.LABEL + "Committed: " + CampaignUiCopy.VALUE + committed));
+		if (locked) {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.LABEL + "Locked at vote close"));
+		} else {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.LABEL + "Click installations below to toggle"));
+		}
+		meta.setLore(lore);
+		item.setItemMeta(meta);
+		return item;
+	}
+
+	public ItemStack createInstallationPickToggleItem(
+			War war,
+			Installation installation,
+			boolean selected,
+			boolean locked) {
+		ItemStack item = installationCreator.createInstallationIcon(installation).clone();
+		ItemMeta meta = item.getItemMeta();
+		List<String> lore = meta.getLore() != null ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
+		if (selected) {
+			lore.add("§aCommitted for this battle");
+			meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+			meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+		}
+		if (locked) {
+			lore.add("§7Locked at vote close");
+		} else if (!selected) {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.SELECT + "Click to commit"));
+		} else {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.REMOVE + "Click to uncommit"));
+		}
+		meta.setLore(lore);
+		if (!locked && war != null) {
+			meta.getPersistentDataContainer().set(
+					installationPickWarKey(), PersistentDataType.INTEGER, war.getId());
+			meta.getPersistentDataContainer().set(
+					installationPickIdKey(), PersistentDataType.STRING, installation.getId());
+		}
+		item.setItemMeta(meta);
+		return item;
+	}
+
+	public ItemStack createStartRaidEntryButton(War war, Faction viewerFaction, Instant now) {
+		LaunchAvailability availability = CampaignRaidLaunchAvailability.describe(war, viewerFaction, now);
+		ItemStack item = availability.enabled()
+				? new ItemStack(Material.CROSSBOW, 1)
+				: new ItemStack(Material.GRAY_STAINED_GLASS_PANE, 1);
+		ItemMeta meta = item.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex(
+				availability.enabled()
+						? CampaignUiCopy.REMOVE + "Start raid"
+						: CampaignUiCopy.MUTED + "Start raid"));
+		meta.setLore(availability.loreLines());
+		if (availability.enabled()) {
+			meta.getPersistentDataContainer().set(raidEntryWarKey(), PersistentDataType.INTEGER, war.getId());
+		}
+		item.setItemMeta(meta);
+		return item;
+	}
+
+	public ItemStack createRaidLaunchSummaryItem(
+			War war,
+			Faction faction,
+			Installation selectedSource,
+			boolean emptyList,
+			Instant now) {
+		ItemStack item = new ItemStack(Material.WRITABLE_BOOK, 1);
+		ItemMeta meta = item.getItemMeta();
+		if (selectedSource == null) {
+			meta.setDisplayName(StringFormatter.formatHex(CampaignUiCopy.VALUE + "Pick raid source"));
+			List<String> lore = new ArrayList<>();
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.LABEL + "Choose your port or airport"));
+			if (emptyList) {
+				lore.add(StringFormatter.formatHex(CampaignUiCopy.WARNING + "No valid sources right now"));
+			}
+			meta.setLore(lore);
+		} else {
+			meta.setDisplayName(StringFormatter.formatHex(CampaignUiCopy.VALUE + "Pick raid target"));
+			List<String> lore = new ArrayList<>();
+			lore.add(StringFormatter.formatHex(
+					CampaignUiCopy.LABEL + "Source: " + CampaignUiCopy.VALUE + selectedSource.getName()));
+			if (emptyList) {
+				lore.add(StringFormatter.formatHex(CampaignUiCopy.WARNING + "No valid targets for this source"));
+			} else {
+				lore.add(StringFormatter.formatHex(CampaignUiCopy.LABEL + "Click an enemy installation below"));
+			}
+			meta.setLore(lore);
+		}
+		item.setItemMeta(meta);
+		return item;
+	}
+
+	public ItemStack createRaidLaunchInstallationItem(
+			War war,
+			Installation installation,
+			String ownerFactionName,
+			boolean sourcePage) {
+		ItemStack item = installationCreator.createInstallationIcon(installation).clone();
+		ItemMeta meta = item.getItemMeta();
+		List<String> lore = meta.getLore() != null ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
+		if (ownerFactionName != null && !ownerFactionName.isBlank()) {
+			lore.add(StringFormatter.formatHex(
+					CampaignUiCopy.LABEL + "Owner: " + CampaignUiCopy.VALUE + ownerFactionName));
+		}
+		if (sourcePage) {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.SELECT + "Click to pick targets"));
+		} else {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.REMOVE + "Click to launch raid"));
+		}
+		meta.setLore(lore);
+		meta.getPersistentDataContainer().set(raidLaunchWarKey(), PersistentDataType.INTEGER, war.getId());
+		meta.getPersistentDataContainer().set(
+				raidLaunchInstallationIdKey(), PersistentDataType.STRING, installation.getId());
 		item.setItemMeta(meta);
 		return item;
 	}

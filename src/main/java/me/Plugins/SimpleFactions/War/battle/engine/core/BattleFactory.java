@@ -120,6 +120,9 @@ public final class BattleFactory {
 			if (config.getDefenderLives() != null) {
 				battle.setDefenderLives(config.getDefenderLives());
 			}
+			if (Boolean.TRUE.equals(config.getCampaignRaid())) {
+				battle.setCampaignRaid(true);
+			}
 		} else if (type == BattleType.FIELD) {
 			battle.setNavalVariant(config.isNavalVariant());
 		}

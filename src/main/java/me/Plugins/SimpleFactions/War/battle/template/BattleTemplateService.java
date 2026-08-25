@@ -84,6 +84,7 @@ public final class BattleTemplateService {
 		copy.setDefenderLives(source.getDefenderLives());
 		copy.setRaidTarget(source.getRaidTarget());
 		copy.setCapturePointsEnabled(source.getCapturePointsEnabled());
+		copy.setCampaignRaid(source.getCampaignRaid());
 		return copy;
 	}
 }

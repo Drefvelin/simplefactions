@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
@@ -168,7 +169,8 @@ class CampaignBattleOutcomeServiceTest {
 						BattleType.FIELD,
 						1,
 						BattleTemplate.ATTACKER_SIDE,
-						Map.of()));
+						Map.of(),
+						Set.of()));
 
 		assertEquals(BattleSchedulePhase.VOTING, war.getBattleSchedulePhase());
 		assertEquals(2, war.getCursorIndex());
@@ -188,11 +190,34 @@ class CampaignBattleOutcomeServiceTest {
 		BattleManager.addBattle(battle);
 
 		CampaignBattleOutcomeService.handleBattleEnded(
-				new BattleEndedEvent(battle.getId(), BattleType.FIELD, 1, null, Map.of()));
+				new BattleEndedEvent(battle.getId(), BattleType.FIELD, 1, null, Map.of(), Set.of()));
 
 		assertEquals(BattleSchedulePhase.VOTING, war.getBattleSchedulePhase());
 		assertEquals(cursorBefore, war.getCursorIndex());
 		assertTrue(BattleManager.get().isEmpty());
+	}
+
+	@Test
+	void handleBattleEnded_skipsCampaignRaidBattles() {
+		War war = baseWar();
+		warManagerMock.when(() -> WarManager.getById(1)).thenReturn(war);
+
+		Battle battle = BattleFactory.createBlank(BattleType.RAID, "cr_battle_1_2026-08-21");
+		battle.setWarId(1);
+		battle.setCampaignRaid(true);
+		BattleManager.addBattle(battle);
+
+		CampaignBattleOutcomeService.handleBattleEnded(
+				new BattleEndedEvent(
+						battle.getId(),
+						BattleType.RAID,
+						1,
+						null,
+						Map.of(BattleTemplate.ATTACKER_SIDE, 2),
+						Set.of()));
+
+		assertEquals(1, BattleManager.get().size());
+		assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
 	}
 
 	@Test
@@ -206,7 +231,8 @@ class CampaignBattleOutcomeServiceTest {
 						BattleType.FIELD,
 						null,
 						BattleTemplate.ATTACKER_SIDE,
-						Map.of()));
+						Map.of(),
+						Set.of()));
 
 		assertEquals(1, BattleManager.get().size());
 	}
@@ -240,7 +266,8 @@ class CampaignBattleOutcomeServiceTest {
 							BattleType.FIELD,
 							1,
 							null,
-							Map.of(BattleTemplate.ATTACKER_SIDE, 2)));
+							Map.of(BattleTemplate.ATTACKER_SIDE, 2),
+							Set.of()));
 		}
 
 		assertEquals(List.of("casualties", "vote"), steps);
@@ -300,7 +327,8 @@ class CampaignBattleOutcomeServiceTest {
 						BattleType.FIELD,
 						1,
 						BattleTemplate.DEFENDER_SIDE,
-						Map.of()));
+						Map.of(),
+						Set.of()));
 
 		assertEquals(BattleSchedulePhase.VOTING, war.getBattleSchedulePhase());
 		assertEquals(2, war.getCursorIndex());

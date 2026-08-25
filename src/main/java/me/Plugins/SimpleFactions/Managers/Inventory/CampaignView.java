@@ -33,6 +33,9 @@ import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPostBattleChoi
 import me.Plugins.SimpleFactions.War.campaign.progression.WhitePeaceService;
 import me.Plugins.SimpleFactions.War.resolution.WarResolutionService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleAutoresolveService;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidMessages;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.LaunchResult;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.BattleHourTally;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleLookups;
 import me.Plugins.SimpleFactions.War.campaign.vote.BattleVoteService;
@@ -45,6 +48,9 @@ public class CampaignView {
 	private static final int ROUTE_SLOT_COUNT = 9;
 	private static final int ROUTE_START_SLOT = 10;
 	private static final int VOTING_HELP_SLOT = 27;
+	private static final int INSTALLATIONS_ENTRY_SLOT = 33;
+	private static final int ENEMY_INSTALLATION_INTEL_SLOT = 34;
+	private static final int START_RAID_ENTRY_SLOT = 35;
 
 	public InventoryManager inv;
 	public CampaignCreator creator = new CampaignCreator();
@@ -125,6 +131,20 @@ public class CampaignView {
 		populatePostBattleChoiceButtons(inventory, war, player);
 
 		populateAutoresolveButtons(inventory, war, player);
+
+		if (war.isParticipating(viewerFaction)) {
+			inventory.setItem(INSTALLATIONS_ENTRY_SLOT, creator.createInstallationsEntryButton(war, viewerFaction));
+			inventory.setItem(
+					ENEMY_INSTALLATION_INTEL_SLOT,
+					creator.createEnemyInstallationIntelItem(war, viewerFaction));
+			inventory.setItem(
+					START_RAID_ENTRY_SLOT,
+					creator.createStartRaidEntryButton(war, viewerFaction, Instant.now()));
+		} else {
+			inventory.setItem(INSTALLATIONS_ENTRY_SLOT, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
+			inventory.setItem(ENEMY_INSTALLATION_INTEL_SLOT, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
+			inventory.setItem(START_RAID_ENTRY_SLOT, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
+		}
 
 		inventory.setItem(53, inv.createBackButton(SFGUI.WAR_VIEW));
 		if (open) {
@@ -230,6 +250,53 @@ public class CampaignView {
 				PersistentDataType.INTEGER);
 		if (voteWarId != null && voteHour != null && voteWarId == war.getId()) {
 			handleHourToggleClick(player, war, voteHour);
+			return;
+		}
+
+		Integer installationsEntryWarId = meta.getPersistentDataContainer().get(
+				CampaignCreator.installationsEntryWarKey(),
+				PersistentDataType.INTEGER);
+		if (installationsEntryWarId != null && installationsEntryWarId == war.getId()) {
+			Faction viewerFaction = FactionManager.getByLeader(player.getName());
+			if (viewerFaction == null) {
+				viewerFaction = FactionManager.getByMember(player.getName());
+			}
+			if (viewerFaction == null || !war.isParticipating(viewerFaction)) {
+				player.sendMessage("§cYou are not a belligerent in this war.");
+				return;
+			}
+			inv.campaignInstallationPickView.open(player, war, viewerFaction);
+			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			return;
+		}
+
+		Integer raidEntryWarId = meta.getPersistentDataContainer().get(
+				CampaignCreator.raidEntryWarKey(),
+				PersistentDataType.INTEGER);
+		if (raidEntryWarId != null && raidEntryWarId == war.getId()) {
+			Faction viewerFaction = FactionManager.getByLeader(player.getName());
+			if (viewerFaction == null) {
+				viewerFaction = FactionManager.getByMember(player.getName());
+			}
+			if (viewerFaction == null || !war.isParticipating(viewerFaction)) {
+				player.sendMessage(CampaignRaidMessages.NOT_PARTICIPANT);
+				return;
+			}
+			if (!viewerFaction.isLeader(player.getName())) {
+				player.sendMessage(CampaignRaidMessages.NOT_LEADER);
+				return;
+			}
+			Instant now = Instant.now();
+			LaunchResult launch = CampaignRaidService.canLaunch(war, viewerFaction, now);
+			if (launch != LaunchResult.STARTED) {
+				String message = CampaignRaidMessages.messageForLaunchResult(launch);
+				if (message != null) {
+					player.sendMessage(message);
+				}
+				return;
+			}
+			inv.campaignRaidLaunchView.openSourcePage(player, war, viewerFaction);
+			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			return;
 		}
 

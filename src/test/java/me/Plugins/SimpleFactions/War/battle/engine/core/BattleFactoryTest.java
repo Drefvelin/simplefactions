@@ -227,18 +227,20 @@ class BattleFactoryTest {
 
 	@Test
 	void applyCampaignDefault_appliesConfiguredTemplate() {
-		Cache.battleCampaignTemplateRaid = "raid_template";
+		Cache.battleCampaignTemplateRaid = "campaign_raid_template";
 		YamlConfiguration config = new YamlConfiguration();
 		config.set("type", "raid");
 		config.set("defender_respawn_mode", "infinite");
-		BattleTemplateLoader.putForTests(new BattleTemplate("raid_template", config));
+		config.set("campaign_raid", true);
+		BattleTemplateLoader.putForTests(new BattleTemplate("campaign_raid_template", config));
 
 		withMockBossBar(() -> {
 			Battle battle = BattleFactory.createBlank(BattleType.RAID, "campaign_raid");
 			BattleFactory.applyCampaignDefault(battle);
-			assertEquals("raid_template", battle.getTemplateName());
+			assertEquals("campaign_raid_template", battle.getTemplateName());
 			assertNull(battle.getRaidTarget());
 			assertTrue(battle.getPoints().isEmpty());
+			assertTrue(battle.isCampaignRaid());
 		});
 	}
 

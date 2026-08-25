@@ -45,6 +45,14 @@ public class TabCompletion implements TabCompleter{
 	}
 
 	private List<String> completeDeconstructIds(Player p, String[] args) {
+		return completeInstallationIds(p, args, true);
+	}
+
+	private List<String> completeTransferVehicleIds(Player p, String[] args) {
+		return completeInstallationIds(p, args, false);
+	}
+
+	private List<String> completeInstallationIds(Player p, String[] args, boolean includePendingConstruction) {
 		List<String> completions = new ArrayList<>();
 		Faction f = FactionManager.getByLeader(p.getName());
 		if (f == null) {
@@ -53,7 +61,7 @@ public class TabCompletion implements TabCompleter{
 		for (Installation installation : f.getInstallationHandler().getAll()) {
 			completions.add(installation.getId());
 		}
-		if (f.getInstallationHandler().getPendingConstruction() != null) {
+		if (includePendingConstruction && f.getInstallationHandler().getPendingConstruction() != null) {
 			completions.add(f.getInstallationHandler().getPendingConstruction().getId());
 		}
 		if (args.length >= 2) {
@@ -111,6 +119,15 @@ public class TabCompletion implements TabCompleter{
 				return completeDeconstructIds(p, args);
 			}
 		}
+		else if(cmd.getName().equalsIgnoreCase("faction")
+				&& args.length >= 1
+				&& args.length <= 2
+				&& args[0].equalsIgnoreCase("transfervehicle")) {
+			if(sender instanceof Player) {
+				Player p = (Player) sender;
+				return completeTransferVehicleIds(p, args);
+			}
+		}
 		else if(cmd.getName().equalsIgnoreCase("faction") && args.length >= 0 && args.length < 2 ) {
 			if(sender instanceof Player){
 				Player p = (Player) sender;
@@ -126,6 +143,7 @@ public class TabCompletion implements TabCompleter{
 					completions.add("claim");
 					completions.add("construct");
 					completions.add("deconstruct");
+					completions.add("transfervehicle");
 					completions.add("unclaim");
 					completions.add("withdraw");
 					completions.add("setbank");

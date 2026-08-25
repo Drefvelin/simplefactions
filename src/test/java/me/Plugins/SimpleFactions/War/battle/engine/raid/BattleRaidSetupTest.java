@@ -27,6 +27,18 @@ import me.Plugins.SimpleFactions.War.battle.template.CapturePointDefinition;
 
 class BattleRaidSetupTest {
 	@Test
+	void onStart_campaignRaidSkipsCapturePoint() {
+		withMockBossBar(() -> {
+			Battle battle = BattleFactory.createBlank(BattleType.RAID, "campaign_raid_test");
+			battle.setCampaignRaid(true);
+			battle.setRaidTarget(new CapturePointDefinition("target", new BattleLocation("world", 10, 64, 10, 0, 0)));
+			battle.start();
+
+			assertTrue(battle.getPoints().isEmpty());
+		});
+	}
+
+	@Test
 	void onStart_seedsTargetPointAndClearsBounds() {
 		withMockWorldAndBossBar(() -> {
 			Battle battle = BattleFactory.createBlank(BattleType.RAID, "test_raid");

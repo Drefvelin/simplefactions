@@ -10,7 +10,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
-import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
 import net.tfminecraft.VFBuilders.core.Blueprint;
 import net.tfminecraft.VFBuilders.events.BeginVehicleConstructionEvent;
 import net.tfminecraft.VFBuilders.events.VehicleConstructEvent;
@@ -29,10 +28,16 @@ public final class VehicleIntegrationListener implements Listener {
         }
 
         PlayerVehicleRegistry registry = SimpleFactions.getVehicleRegistry();
-        if (!VehicleSlotGuard.isPersonalSlotAvailable(constructor.getUniqueId(), registry)) {
+        Blueprint blueprint = event.getBlueprint();
+        String vehicleTypeId = blueprint == null ? null : resolveVehicleTypeId(blueprint);
+        CanBuildResult result = VehicleSlotGuard.checkCanBuild(
+                constructor.getUniqueId(), vehicleTypeId, registry);
+        if (result != CanBuildResult.OK) {
             event.setCancelled(true);
-            int limit = VehiclesConfigLoader.getPersonalSlotLimit();
-            constructor.sendMessage("§cYou already have a personal vehicle (limit: " + limit + ").");
+            String message = VehicleConstructionMessages.forResult(result, vehicleTypeId);
+            if (message != null) {
+                constructor.sendMessage(message);
+            }
         }
     }
 

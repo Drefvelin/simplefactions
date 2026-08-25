@@ -59,6 +59,7 @@ public class Battle {
 	private boolean sequentialCapture;
 	private boolean capturePointsEnabled;
 	private int contestHoldRemainingSeconds;
+	private boolean campaignRaid;
 	public List<CapturePoint> getPoints() {
 		return points;
 	}
@@ -410,6 +411,14 @@ public class Battle {
 		this.navalSpawn = navalSpawn;
 	}
 
+	public boolean isCampaignRaid() {
+		return campaignRaid;
+	}
+
+	public void setCampaignRaid(boolean campaignRaid) {
+		this.campaignRaid = campaignRaid;
+	}
+
 	public void clearSides() {
 		for (BattleSide side : sides) {
 			side.removeBossBar();
@@ -429,6 +438,7 @@ public class Battle {
 		raidTarget = null;
 		navalVariant = false;
 		navalSpawn = null;
+		campaignRaid = false;
 	}
 
 	public void resetBaseSettings() {

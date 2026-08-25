@@ -3,10 +3,13 @@ package me.Plugins.SimpleFactions.War.battle.events;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+import me.Plugins.SimpleFactions.War.battle.enums.BattleEndReason;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 
 public class BattleEndedEvent extends Event {
@@ -17,13 +20,34 @@ public class BattleEndedEvent extends Event {
 	private final Integer warId;
 	private final String winningSideId;
 	private final Map<String, Integer> sideCasualties;
+	private final Set<UUID> participantIds;
+	private final BattleEndReason endReason;
 
 	public BattleEndedEvent(
 			String battleId,
 			BattleType battleType,
 			Integer warId,
 			String winningSideId,
-			Map<String, Integer> sideCasualties) {
+			Map<String, Integer> sideCasualties,
+			Set<UUID> participantIds) {
+		this(
+				battleId,
+				battleType,
+				warId,
+				winningSideId,
+				sideCasualties,
+				participantIds,
+				inferEndReason(winningSideId));
+	}
+
+	public BattleEndedEvent(
+			String battleId,
+			BattleType battleType,
+			Integer warId,
+			String winningSideId,
+			Map<String, Integer> sideCasualties,
+			Set<UUID> participantIds,
+			BattleEndReason endReason) {
 		this.battleId = battleId;
 		this.battleType = battleType;
 		this.warId = warId;
@@ -33,6 +57,19 @@ public class BattleEndedEvent extends Event {
 		} else {
 			this.sideCasualties = Collections.unmodifiableMap(new HashMap<>(sideCasualties));
 		}
+		if (participantIds == null || participantIds.isEmpty()) {
+			this.participantIds = Set.of();
+		} else {
+			this.participantIds = Set.copyOf(participantIds);
+		}
+		this.endReason = endReason != null ? endReason : inferEndReason(winningSideId);
+	}
+
+	private static BattleEndReason inferEndReason(String winningSideId) {
+		if (winningSideId == null || winningSideId.isBlank()) {
+			return BattleEndReason.TIMER;
+		}
+		return BattleEndReason.SIDE_WIN;
 	}
 
 	public String getBattleId() {
@@ -53,6 +90,14 @@ public class BattleEndedEvent extends Event {
 
 	public Map<String, Integer> getSideCasualties() {
 		return sideCasualties;
+	}
+
+	public Set<UUID> getParticipantIds() {
+		return participantIds;
+	}
+
+	public BattleEndReason getEndReason() {
+		return endReason;
 	}
 
 	public boolean hasWinner() {

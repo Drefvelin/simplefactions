@@ -78,8 +78,10 @@ public class ConfigLoader {
 		Cache.loggingEnabled = config.getBoolean("logging", false);
 		Cache.wipeLog = config.getBoolean("wipe-log", false);
 
-		Cache.warBattleWindowStartHour = config.getInt("war.battle_schedule.window_start_hour", 20);
+		Cache.warBattleWindowStartHour = config.getInt("war.battle_schedule.window_start_hour", 21);
 		Cache.warBattleWindowEndHour = config.getInt("war.battle_schedule.window_end_hour", 24);
+		Cache.warRaidWindowStartHour = config.getInt("war.battle_schedule.raid_window_start_hour", 19);
+		Cache.warRaidWindowEndHour = config.getInt("war.battle_schedule.raid_window_end_hour", 20);
 		Cache.warVoteCloseHour = config.getInt("war.battle_schedule.vote_close_hour", 16);
 		Cache.warDefenderChoiceDeadlineHour = config.getInt("war.battle_schedule.defender_choice_deadline_hour", 12);
 		Cache.warOneBattlePerDay = config.getBoolean("war.battle_schedule.one_battle_per_day", true);
@@ -97,6 +99,10 @@ public class ConfigLoader {
 
 		Cache.warBattleLivesPerRegiment = config.getInt("war.battle_military.lives_per_regiment", 5);
 		Cache.warBattleMinSideLives = config.getInt("war.battle_military.min_side_lives", 1);
+		Cache.campaignRaidMusterSeconds = config.getInt("war.campaign_raid.muster_seconds", 60);
+		Cache.campaignRaidDurationSeconds = config.getInt("war.campaign_raid.duration_seconds", 600);
+		Cache.campaignRaidRepairLockHours = config.getInt("war.campaign_raid.repair_lock_hours", 48);
+		validateCampaignRaidConfig();
 
 		Cache.battleProvincePollIntervalTicks = config.getInt("battle.province_poll_interval_ticks", 20);
 		Cache.battleProvinceLeaveCountdownSeconds = config.getInt("battle.province_leave_countdown_seconds", 10);
@@ -151,25 +157,28 @@ public class ConfigLoader {
                 }
             }
         }
-
-		if (!config.isConfigurationSection("installations")) {
-			throw new IllegalStateException("config.yml missing installations section");
-		}
-		InstallationConfigLoader.load(config.getConfigurationSection("installations"));
 	}
 
 	private static void validateBattleScheduleConfig(FileConfiguration config) {
 		// Hours in war.battle_schedule are Europe/Paris (CET/CEST), not UTC.
 		int defenderDeadline = Cache.warDefenderChoiceDeadlineHour;
 		int voteClose = Cache.warVoteCloseHour;
+		int raidStart = Cache.warRaidWindowStartHour;
+		int raidEnd = Cache.warRaidWindowEndHour;
 		int windowStart = Cache.warBattleWindowStartHour;
 		int windowEnd = Cache.warBattleWindowEndHour;
 
 		if (defenderDeadline < 0 || defenderDeadline >= voteClose) {
 			failBattleSchedule("war.battle_schedule.defender_choice_deadline_hour must be >= 0 and < vote_close_hour");
 		}
-		if (voteClose >= windowStart) {
-			failBattleSchedule("war.battle_schedule.vote_close_hour must be < window_start_hour");
+		if (voteClose >= raidStart) {
+			failBattleSchedule("war.battle_schedule.vote_close_hour must be < raid_window_start_hour");
+		}
+		if (raidStart > raidEnd) {
+			failBattleSchedule("war.battle_schedule requires raid_window_start_hour <= raid_window_end_hour");
+		}
+		if (raidEnd >= windowStart) {
+			failBattleSchedule("war.battle_schedule.raid_window_end_hour must be < window_start_hour");
 		}
 		if (windowStart > windowEnd || windowEnd > 24) {
 			failBattleSchedule("war.battle_schedule requires window_start_hour <= window_end_hour <= 24");
@@ -187,6 +196,18 @@ public class ConfigLoader {
 			Bukkit.getLogger().severe("[SimpleFactions] " + message);
 		}
 		throw new IllegalStateException(message);
+	}
+
+	private static void validateCampaignRaidConfig() {
+		if (Cache.campaignRaidMusterSeconds < 1) {
+			failBattleSchedule("war.campaign_raid.muster_seconds must be >= 1");
+		}
+		if (Cache.campaignRaidDurationSeconds < 1) {
+			failBattleSchedule("war.campaign_raid.duration_seconds must be >= 1");
+		}
+		if (Cache.campaignRaidRepairLockHours < 1) {
+			failBattleSchedule("war.campaign_raid.repair_lock_hours must be >= 1");
+		}
 	}
 
 	private static void validateBattlePresenceConfig() {

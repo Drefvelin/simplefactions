@@ -62,6 +62,9 @@ public class CampaignBattleOutcomeService implements Listener {
 
 		BelligerentRole winnerRole = mapWinningSide(event.getWinningSideId());
 		Battle battle = BattleManager.getByString(event.getBattleId());
+		if (battle != null && battle.isCampaignRaid()) {
+			return;
+		}
 		Integer battleProvinceId = battle != null && battle.getProvinceId() != null
 				? battle.getProvinceId()
 				: war.getScheduledBattleProvinceId();

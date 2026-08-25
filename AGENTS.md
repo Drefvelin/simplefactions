@@ -49,6 +49,8 @@ me.Plugins.SimpleFactions/
 │       ├── campaign/     # Launch scheduled campaign battles; BattleNamingService (75.04)
 │       ├── warband/, military/, template/, persistence/, ui/
 │       └── …
+├── installation/         # Installations, bounds, handler
+├── vehicles/             # Registry, berth, transfer, construction guard, category rules, VF integration
 └── SimpleFactions.java   # Bootstrap, listener registration
 ```
 
@@ -82,6 +84,29 @@ Use this table before creating a file.
 | Faction ledger / war declare GUI | `Managers/Inventory` | War package UI for non-war commands |
 | General file logging | `Managers/LogManager` | War-specific log managers |
 | REST/export shape | Keep stable; change mappers + PS docs together | Renaming JSON fields casually |
+| Installation berth / transfer / consent | `vehicles/` | `Managers` or `installation/handler` |
+| Personal slot / construction limits | `vehicles/VehicleSlotGuard.java`, `vehicles/VehicleConstructionMessages.java` | Inline checks in listeners |
+| Vehicle config keys (`per-person`, `ignore-limit`) | `Loaders/VehiclesConfigLoader.java`, `vehicles/VehicleTypeConfig.java` | Hard-coded limits in services |
+| Berthable category helper (battle prep) | `vehicles/VehicleCategoryRules.java` | Battle engine importing installation loaders |
+| VF construction listener | `vehicles/VehicleIntegrationListener.java` | `installation/handler` |
+| Installation radius / bounds helpers | `installation/InstallationBounds.java` + `Loaders/InstallationConfigLoader` | Hard-coded radius in services |
+| VF event listeners (berth only) | `vehicles/VehicleTransferListener`, `vehicles/VehicleSpawnListener` | VehicleFramework imports in `installation/` |
+| Installation pick persistence / toggle | `War/campaign/runtime/BattleInstallationPickService` | Mixing with vote tally |
+| Pick eligibility (kind + control) | `War/campaign/runtime/BattleInstallationPickEligibility` | GUI-only checks |
+| In-play union (picks + siege fort) | `War/campaign/runtime/BattleInstallationInPlayService` | Duplicating OR in vehicle service |
+| Siege fort from active schedule slot | `War/campaign/runtime/BattleSiegeFortService` | Schedule builder |
+| Campaign raid launch GUI | `Managers/Inventory/CampaignRaidLaunchView` | Eligibility or muster logic in view |
+| Campaign raid join / muster | `War/campaign/raid/CampaignRaidJoinService`, `CampaignRaidMusterScheduler` | `/raid` command or warband logic in join service |
+| Campaign raid warbands | `War/campaign/raid/CampaignRaidWarbandService`, `CampaignRaidWarbandListener` | Battle runtime in warband service (71.07) |
+| Campaign raid `/raid` command | `War/campaign/raid/RaidCommandManager` | Join validation in command class |
+| Campaign raid fight start | `War/campaign/raid/CampaignRaidLaunchService`, `CampaignRaidBattleService`, `CampaignRaidFightScheduler` | Battle runtime in launch service |
+| Campaign raid battle end | `War/campaign/raid/CampaignRaidBattleEndService` | Campaign battle outcome side effects |
+| Campaign warband signup lock | `War/battle/campaign/CampaignWarbandSignupService.isSignupOpen` | Raid launch or `/raid join` logic in signup service |
+| Campaign raid source/target eligibility | `War/campaign/raid/CampaignRaidEligibilityService` | Raid launch GUI or `CampaignRaidService` |
+| Raid target listing (legacy; prefer eligibility) | `War/campaign/runtime/RaidTargetService` | New campaign raid flows |
+| Campaign raid state / quota / mutex | `War/campaign/raid/CampaignRaidService` | GUI or battle launch in same class |
+| Campaign battle vehicle eligibility | `vehicles/BattleVehicleEligibilityService` | Battle engine core |
+| Campaign installation pick GUI | `Managers/Inventory/CampaignInstallationPickView` | Pick logic in view |
 
 ---
 
@@ -143,6 +168,7 @@ When moving classes: IDE refactor/move, update main + test + Database imports, g
 
 ```bash
 cd simplefactions && mvn test -Dtest="me.Plugins.SimpleFactions.War.**"   # war changes
+cd simplefactions && mvn test -Dtest="me.Plugins.SimpleFactions.vehicles.**"  # vehicle berth changes
 cd simplefactions && mvn test                                              # broad changes
 ```
 
@@ -157,5 +183,8 @@ For schedule/pathfinder work, confirm tests include:
 ## Related docs
 
 - [Wars.md](Documentation/Wars.md) - gameplay spec
+- [Installations.md](Documentation/Installations.md) - installations, berth flow (step 76), personal limits (step 77)
+- [step-77 vehicle config v2](../ProvinceSystem/Planning/batches/step-77/00-index.md) - personal limits, land berths (done 2026-08-24)
+- [step-78 installation picks](../ProvinceSystem/Planning/batches/step-78/00-index.md) - picks, raid windows, vehicle in-play (done 2026-08-24)
 - [step-75 package lock](../ProvinceSystem/Planning/batches/step-75/01-planning-lock.md) - migration map (step 75 repackage complete 2026-08-24)
 - [war-build-order.md](../ProvinceSystem/Planning/war-build-order.md) - feature sequence

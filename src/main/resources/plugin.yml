@@ -20,6 +20,9 @@ commands:
   battle:
       useage: /<command>
       description: Battle Command
+  raid:
+      useage: /<command>
+      description: Campaign raid command
   ledger:
       useage: /<command>
       description: View your daily cashflow ledger

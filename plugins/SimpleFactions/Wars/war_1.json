@@ -38,6 +38,9 @@
   "scheduledBattleHour": 21,
   "scheduledBattleProvinceId": 20,
   "battleVotes": {},
+  "battleInstallationPicks": {},
+  "campaignRaidsUsed": {},
+  "raidRepairLockUntil": {},
   "autoresolveProposedByAttacker": false,
   "autoresolveProposedByDefender": false,
   "postponementsThisCycle": 0,
@@ -48,7 +51,7 @@
   "postBattleChoiceResolved": true,
   "holdPeaceProposalActive": false,
   "forceQuorumNextClose": false,
-  "startedAt": "2026-08-24T11:28:38.029556600Z",
+  "startedAt": "2026-08-25T11:01:40.405364200Z",
   "attackers": {
     "leader": "atk",
     "participants": [

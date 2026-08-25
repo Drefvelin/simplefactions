@@ -52,7 +52,7 @@ public class BattleManager implements Listener{
 
 	public static Battle getByWarId(int warId) {
 		for (Battle b : battles) {
-			if (b.getWarId() != null && b.getWarId() == warId) {
+			if (b.getWarId() != null && b.getWarId() == warId && !b.isCampaignRaid()) {
 				return b;
 			}
 		}

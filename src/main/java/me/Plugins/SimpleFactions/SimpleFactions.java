@@ -27,6 +27,7 @@ import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TierLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
+import me.Plugins.SimpleFactions.Loaders.InstallationConfigLoader;
 import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
 import me.Plugins.SimpleFactions.Loaders.WarGoalLoader;
 import me.Plugins.SimpleFactions.Managers.BankManager;
@@ -50,12 +51,24 @@ import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleOutcomeServic
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleCommandManager;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleTabCompletion;
+import me.Plugins.SimpleFactions.War.campaign.raid.RaidCommandManager;
+import me.Plugins.SimpleFactions.War.campaign.raid.RaidTabCompletion;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
-import me.Plugins.SimpleFactions.War.battle.template.BattleTemplateService;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandMembershipListener;
+import me.Plugins.SimpleFactions.War.battle.template.BattleTemplateService;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBattleEndService;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidWarbandListener;
+import me.Plugins.SimpleFactions.vehicles.BattleVehicleEligibilityListener;
+import me.Plugins.SimpleFactions.vehicles.InstallationVehicleOwnerSync;
+import me.Plugins.SimpleFactions.vehicles.InstallationVehicleService;
 import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRegistry;
 import me.Plugins.SimpleFactions.vehicles.VehicleIntegrationListener;
 import me.Plugins.SimpleFactions.vehicles.VehicleRegistryPersistence;
+import me.Plugins.SimpleFactions.vehicles.VehicleSpawnListener;
+import me.Plugins.SimpleFactions.vehicles.VehicleTransferConsentService;
+import me.Plugins.SimpleFactions.vehicles.VehicleTransferListener;
+import me.Plugins.SimpleFactions.vehicles.VehicleTransferSession;
+import me.Plugins.SimpleFactions.vehicles.VehicleTransferSessionManager;
 import me.Plugins.SimpleFactions.vehicles.VehicleUpkeepService;
 import me.Plugins.SimpleFactions.player.PlayerEconomyManager;
 
@@ -96,13 +109,36 @@ public class SimpleFactions extends JavaPlugin{
 	private final BattleManager battleManager = new BattleManager();
 	private final WarbandManager warbandManager = new WarbandManager();
 	private final BattleCommandManager battleCommandManager = new BattleCommandManager();
+	private final RaidCommandManager raidCommandManager = new RaidCommandManager();
 	private final WarbandMembershipListener warbandMembershipListener = new WarbandMembershipListener();
+	private final CampaignRaidWarbandListener campaignRaidWarbandListener = new CampaignRaidWarbandListener();
+	private final CampaignRaidBattleEndService campaignRaidBattleEndService = new CampaignRaidBattleEndService();
 	private final CampaignBattleOutcomeService campaignBattleOutcomeService = new CampaignBattleOutcomeService();
 	private ProvinceManager provinceSnapshot = new ProvinceManager();
 	private ProvinceGrid provinceGrid;
 	private final PlayerVehicleRegistry vehicleRegistry = new PlayerVehicleRegistry();
 	private VehicleRegistryPersistence vehicleRegistryPersistence;
+	private final InstallationVehicleOwnerSync installationVehicleOwnerSync =
+			new InstallationVehicleOwnerSync(vehicleRegistry);
+	private final InstallationVehicleService installationVehicleService =
+			new InstallationVehicleService(vehicleRegistry, installationVehicleOwnerSync);
+	private final VehicleTransferSessionManager vehicleTransferSessionManager =
+			new VehicleTransferSessionManager();
+	private final VehicleTransferConsentService vehicleTransferConsentService =
+			new VehicleTransferConsentService(
+					installationVehicleService,
+					vehicleRegistry,
+					vehicleTransferSessionManager);
 	private final VehicleIntegrationListener vehicleIntegrationListener = new VehicleIntegrationListener();
+	private final VehicleTransferListener vehicleTransferListener = new VehicleTransferListener(
+			vehicleTransferSessionManager,
+			vehicleRegistry,
+			installationVehicleService,
+			vehicleTransferConsentService);
+	private final VehicleSpawnListener vehicleSpawnListener =
+			new VehicleSpawnListener(installationVehicleOwnerSync);
+	private final BattleVehicleEligibilityListener battleVehicleEligibilityListener =
+			new BattleVehicleEligibilityListener(vehicleRegistry);
 	private boolean vehicleIntegrationRegistered = false;
 	private final PlayerEconomyManager playerEconomyManager = new PlayerEconomyManager();
 	private final VehicleUpkeepService vehicleUpkeepService = new VehicleUpkeepService(
@@ -170,6 +206,9 @@ public class SimpleFactions extends JavaPlugin{
 		BattleTabCompletion battleTabCompletion = new BattleTabCompletion();
 		getCommand(battleCommandManager.cmd1).setTabCompleter(battleTabCompletion);
 		getCommand(battleCommandManager.cmd2).setTabCompleter(battleTabCompletion);
+		RaidTabCompletion raidTabCompletion = new RaidTabCompletion();
+		getCommand(raidCommandManager.cmd).setExecutor(raidCommandManager);
+		getCommand(raidCommandManager.cmd).setTabCompleter(raidTabCompletion);
 		RequestManager.start();
 		WarManager.start();
 		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.loadAll();
@@ -200,6 +239,7 @@ public class SimpleFactions extends JavaPlugin{
 	public void loadConfigs() {
 		configLoader.loadConfig(new File(getDataFolder(), "config.yml"));
 		VehiclesConfigLoader.load(new File(getDataFolder(), "vehicles.yml"));
+		InstallationConfigLoader.load(new File(getDataFolder(), "installations.yml"));
 		me.Plugins.SimpleFactions.Managers.LogManager.configure(
 				Cache.loggingEnabled,
 				Cache.wipeLog,
@@ -233,6 +273,8 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(battleManager, this);
 		getServer().getPluginManager().registerEvents(warbandManager, this);
 		getServer().getPluginManager().registerEvents(warbandMembershipListener, this);
+		getServer().getPluginManager().registerEvents(campaignRaidWarbandListener, this);
+		getServer().getPluginManager().registerEvents(campaignRaidBattleEndService, this);
 		getServer().getPluginManager().registerEvents(campaignBattleOutcomeService, this);
 	}
 	public void createFolders() {
@@ -272,6 +314,7 @@ public class SimpleFactions extends JavaPlugin{
 				"Guilds/upgrades.yml",
 				"battle-templates.yml",
 				"vehicles.yml",
+				"installations.yml",
 				};
 		for(String s : files) {
 			File newConfigFile = new File(getDataFolder(), s);
@@ -314,6 +357,14 @@ public class SimpleFactions extends JavaPlugin{
 		return plugin.vehicleRegistry;
 	}
 
+	public VehicleTransferSessionManager getVehicleTransferSessionManager() {
+		return vehicleTransferSessionManager;
+	}
+
+	public VehicleTransferConsentService getVehicleTransferConsentService() {
+		return vehicleTransferConsentService;
+	}
+
 	public static PlayerEconomyManager getPlayerEconomyManager() {
 		return plugin.playerEconomyManager;
 	}
@@ -349,6 +400,9 @@ public class SimpleFactions extends JavaPlugin{
 			return;
 		}
 		getServer().getPluginManager().registerEvents(vehicleIntegrationListener, this);
+		getServer().getPluginManager().registerEvents(vehicleTransferListener, this);
+		getServer().getPluginManager().registerEvents(vehicleSpawnListener, this);
+		getServer().getPluginManager().registerEvents(battleVehicleEligibilityListener, this);
 		vehicleIntegrationRegistered = true;
 		if (getServer().getPluginManager().isPluginEnabled("VFBuilders")) {
 			getLogger().info("[SimpleFactions] VFBuilders vehicle integration enabled");

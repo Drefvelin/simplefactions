@@ -1,27 +1,34 @@
 package me.Plugins.SimpleFactions.War.battle.campaign;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 
-import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService.CampaignBattleContext;
 import me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode;
-import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
-import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
-import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
-import me.Plugins.SimpleFactions.War.battle.engine.win.FieldWinService;
-import me.Plugins.SimpleFactions.War.battle.engine.win.SiegeWinService;
-import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
-import me.Plugins.SimpleFactions.War.battle.ui.BattleInventoryManager;
-import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 import me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService;
+import me.Plugins.SimpleFactions.War.battle.warband.Warband;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidWarbandService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
+import me.Plugins.SimpleFactions.War.core.War;
 
 public final class CampaignWarbandSignupService {
+	public static final String SIGNUP_BLOCKED_DURING_RAID =
+			"§cCampaign warband signup opens after the raid window (20:00).";
+
 	private CampaignWarbandSignupService() {
+	}
+
+	public static boolean isSignupOpen(War war, Instant now) {
+		if (war == null || now == null || !BattleScheduleService.isOnBattleDay(war, now)) {
+			return true;
+		}
+		int hour = BattleWindowService.scheduleHour(now);
+		return hour < Cache.warRaidWindowStartHour || hour >= Cache.warRaidWindowEndHour;
 	}
 
 	public static String signup(Player player, Warband warband, Faction playerFaction) {
@@ -41,6 +48,16 @@ public final class CampaignWarbandSignupService {
 			Warband warband,
 			Faction playerFaction,
 			Player onlinePlayer) {
+		return signupMember(playerId, playerName, warband, playerFaction, onlinePlayer, Instant.now());
+	}
+
+	static String signupMember(
+			UUID playerId,
+			String playerName,
+			Warband warband,
+			Faction playerFaction,
+			Player onlinePlayer,
+			Instant now) {
 		if (playerId == null || playerName == null || warband == null) {
 			return "Invalid warband signup";
 		}
@@ -49,6 +66,11 @@ public final class CampaignWarbandSignupService {
 		}
 
 		CampaignBattleContext ctx = CampaignBattleJoinService.findCampaignBattleForWarband(warband);
+		if (!CampaignRaidWarbandService.isRaidWarband(warband)
+				&& ctx != null
+				&& !isSignupOpen(ctx.war(), now)) {
+			return SIGNUP_BLOCKED_DURING_RAID;
+		}
 		if (ctx != null) {
 			String joinError = CampaignBattleJoinService.validateWarbandMemberJoin(
 					ctx.war(), ctx.battle(), ctx.sideId(), warband, playerName, playerId);

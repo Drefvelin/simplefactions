@@ -1,6 +1,6 @@
 # Wars — automated campaign system (planning lock)
 
-> **Implementation status:** **Step 56 foundation shipped** (2026-08-19). **Step 57 pathfinder & campaign shipped** (2026-08-20). **Step 58 initiative & occupation shipped** (2026-08-20). **Step 59 battle scheduling shipped** (2026-08-20). **Step 60.09 campaign battle launch shipped** (2026-08-20). **Step 61 military & casualties shipped** (2026-08-21): war commitment snapshot, battle pool, collective lives, casualty ledger/apply. **Step 61b battle dev mode shipped** (2026-08-21): capture min 1, devmode phantoms, campaign join cap. **Step 61c campaign UX shipped** (2026-08-21): rules-only templates, formatted `warschedule` output, explicit warband signup, JSON battle/warband persistence (61c.09). **Step 63 war end closure shipped** (2026-08-22). **Step 64 campaign battle schedule & fort sieges shipped** (2026-08-23): schedule, fort control, trim/initiative, resolver/launch, GUI battle kinds, battle zone removal (lock: [64.01](../../ProvinceSystem/Planning/batches/step-64/01-planning-lock.md)). **Step 65 naval & invasions shipped** (2026-08-23): port sea ZOC naval slots, naval invasion, siege override on amphibious landing, campaign GUI naval kinds, `navalVariant` launch, war-aware fort ZOC export (lock: [65.01](../../ProvinceSystem/Planning/batches/step-65/01-planning-lock.md)). **Step 70 per-side battle caps & initiative shipped** (2026-08-23): dual-leg schedules (`campaignBattleSchedule` + `campaignCounterSchedule`), per-leg `max_battles_per_leg` trim, asymmetric `initiativeAttacker` / `initiativeDefender`, counter-push active schedule, dual-leg route GUI (lock: [70.01](../../ProvinceSystem/Planning/batches/step-70/01-planning-lock.md)). **Step 70d chronological leg schedules shipped** (2026-08-23): `placeBattle` axis-order insertion, FB invasion leg, naval prepend before landing, no new `NAVAL_INVASION` emission (lock: [70d.02](../../ProvinceSystem/Planning/batches/step-70d/02-planning-lock-fb.md)). Still planned: inter-battle raids (**71**), raid war type (**67**), map export (**68**), declare codes (**69**).
+> **Implementation status:** **Step 56 foundation shipped** (2026-08-19). **Step 57 pathfinder & campaign shipped** (2026-08-20). **Step 58 initiative & occupation shipped** (2026-08-20). **Step 59 battle scheduling shipped** (2026-08-20). **Step 60.09 campaign battle launch shipped** (2026-08-20). **Step 61 military & casualties shipped** (2026-08-21): war commitment snapshot, battle pool, collective lives, casualty ledger/apply. **Step 61b battle dev mode shipped** (2026-08-21): capture min 1, devmode phantoms, campaign join cap. **Step 61c campaign UX shipped** (2026-08-21): rules-only templates, formatted `warschedule` output, explicit warband signup, JSON battle/warband persistence (61c.09). **Step 63 war end closure shipped** (2026-08-22). **Step 64 campaign battle schedule & fort sieges shipped** (2026-08-23): schedule, fort control, trim/initiative, resolver/launch, GUI battle kinds, battle zone removal (lock: [64.01](../../ProvinceSystem/Planning/batches/step-64/01-planning-lock.md)). **Step 65 naval & invasions shipped** (2026-08-23): port sea ZOC naval slots, naval invasion, siege override on amphibious landing, campaign GUI naval kinds, `navalVariant` launch, war-aware fort ZOC export (lock: [65.01](../../ProvinceSystem/Planning/batches/step-65/01-planning-lock.md)). **Step 70 per-side battle caps & initiative shipped** (2026-08-23): dual-leg schedules (`campaignBattleSchedule` + `campaignCounterSchedule`), per-leg `max_battles_per_leg` trim, asymmetric `initiativeAttacker` / `initiativeDefender`, counter-push active schedule, dual-leg route GUI (lock: [70.01](../../ProvinceSystem/Planning/batches/step-70/01-planning-lock.md)). **Step 70d chronological leg schedules shipped** (2026-08-23): `placeBattle` axis-order insertion, FB invasion leg, naval prepend before landing, no new `NAVAL_INVASION` emission (lock: [70d.02](../../ProvinceSystem/Planning/batches/step-70d/02-planning-lock-fb.md)). **Step 78 installation picks & raid windows shipped** (2026-08-24): leader port/airport picks, lock at vote close, raid/battle CET windows, vehicle in-play, `RaidTargetService` API for step 71 (lock: [78.01](../../ProvinceSystem/Planning/batches/step-78/01-planning-lock.md)). Still planned: inter-battle raid **launch** (**71**), raid war type (**67**), map export (**68**), declare codes (**69**).
 >
 > **ProvinceSystem:** [step-44](../../ProvinceSystem/Planning/batches/step-44/00-index.md) (map occupation overlay) · [map-export-schema.json](../../ProvinceSystem/Planning/assets/map-export-schema.json)
 
@@ -79,16 +79,17 @@ Generic **conquest** is **not** a goal. The goal defines the political outcome.
 
 ### Inter-battle raids (not a war type)
 
-Between scheduled **campaign** battles, belligerents may run **tactical raids**:
+Between scheduled **campaign** battles, belligerents may run **tactical raids** during the [raid window](#battle-day-timeline-step-78) on battle day:
 
 | Kind | Target | Effect |
 |------|--------|--------|
-| Naval raid | Enemy **port** | Quick battle; damage gear / navy |
-| Air raid | **Airfield** | Bombing; weaken installations |
+| Naval raid | Enemy **port** (committed post-lock) | Quick battle; damage gear / navy |
+| Air raid | Enemy **airport** (committed post-lock) | Bombing; weaken installations |
 | Fort raid | **Fort** | Soften before siege |
 
 - Do **not** hold ground; not separate war types.
 - Raid **war type** does **not** add permanent occupation tint (optional chronicle marker only).
+- **Shipped (78.07):** `RaidTargetService` filters naval/air targets to enemy **committed** ports/airports. **Launch UI:** step **71**. Fort raid targets are **not** chosen via installation picks; step **71** wires fort raid targeting separately.
 
 ---
 
@@ -223,7 +224,7 @@ When **capital itself** is the war target, capital province is the objective.
 
 ### Battle cadence
 
-- **One campaign battle per day** (config) inside **battle window** (default **20:00–24:00 CET**, hourly slots; see step 59).
+- **One campaign battle per day** (config) inside **battle window** (default **21:00-24:00** Europe/Paris; see [Battle day timeline](#battle-day-timeline-step-78)).
 - Exact hour chosen by [voting](#battle-scheduling--voting).
 - **First invasion battle** is always at **`campaign_provinces[cursor_index]`** (border **B** at declare), regardless of schedule slot order when indices align.
 - **Two battle lists** are built at declare (see [Campaign battle schedule](#campaign-battle-schedule-locked-step-64-70)), each trimmed to per-goal **`max_battles_per_leg`**, then fought via the **active** leg index for the current `pushTarget`.
@@ -513,8 +514,8 @@ Siege slots use `fort:{installationId}` as the location key. Two scheduled field
 | Enemy white peace proposed | **Accept peace** (slot 48) when eligible |
 | White peace proposed | Other war leader **Accept white peace** button |
 | Both auto-propose | Automatic white peace |
-
-Fort / objective / capital: lore tags; scheduled battle kind (**Field Battle** / **Siege** / naval kinds) on route provinces for **both** legs; siege provinces show enchant glint.
+| Faction leader (belligerent) | **Installations** pick entry (slot **33**); post-lock enemy intel book (slot **34**) |
+| Fort / objective / capital | Lore tags; scheduled battle kind (**Field Battle** / **Siege** / naval kinds) on route provinces for **both** legs; siege provinces show enchant glint |
 
 Admin **`/warstatus`** and **`warschedule`** output include invasion and counter schedule indices and slot lists.
 
@@ -547,20 +548,23 @@ Each **won campaign battle** adds explicit province(s) to the occupier's zone (*
 
 ## Battle scheduling & voting
 
-> **Shipped:** steps [59.02-59.06](../../ProvinceSystem/Planning/batches/step-59/00-index.md) (2026-08-20). Locked in [59.01 planning lock](../../ProvinceSystem/Planning/batches/step-59/01-planning-lock.md).
+> **Shipped:** steps [59.02-59.06](../../ProvinceSystem/Planning/batches/step-59/00-index.md) (2026-08-20); raid window and installation lock [78.02](../../ProvinceSystem/Planning/batches/step-78/02-battle-raid-schedule.md) (2026-08-24). Locked in [59.01 planning lock](../../ProvinceSystem/Planning/batches/step-59/01-planning-lock.md) and [78.01 planning lock](../../ProvinceSystem/Planning/batches/step-78/01-planning-lock.md).
 
-All clock times **Zulu (UTC)**, configurable under `war.battle_schedule`:
+All clock times under `war.battle_schedule` use **Europe/Paris** hours in shipped `config.yml` (CET/CEST intent):
 
 | Key | Default | Role |
 |-----|---------|------|
-| `window_start_hour` / `window_end_hour` | 20 / 24 | Fightable hours on battle day |
-| `vote_close_hour` | 16 | Hour vote tally on battle day |
 | `defender_choice_deadline_hour` | 12 | Hold / counter-push / white peace deadline on battle day; no choice → auto **Hold** |
+| `vote_close_hour` | 16 | Hour vote tally on battle day; **installation picks lock** at same instant |
+| `raid_window_start_hour` / `raid_window_end_hour` | 19 / 20 | Inter-battle raid window (launch UI step **71**) |
+| `window_start_hour` / `window_end_hour` | 21 / 24 | Fightable hours on battle day |
 
-- **Vote open:** when a next battle is pending (declare or after prior battle end); battle province not required.
-- **Vote close:** `vote_close_hour` on battle day → pick hour, postpone, or autoresolve.
+**Validation:** `vote_close_hour` < `raid_window_start_hour` <= `raid_window_end_hour` < `window_start_hour` <= `window_end_hour` <= 24.
+
+- **Vote open:** when a next battle is pending (declare or after prior battle end); battle province not required. Installation picks editable in parallel.
+- **Vote close:** `vote_close_hour` on battle day → pick hour, postpone, or autoresolve; installation picks frozen.
 - **First battle day:** calendar day **after** declare (voting may start at declare).
-- Valid slots: one per full hour in the window (e.g. 20, 21, 22, 23, 24).
+- Valid battle slots: one per full hour in the battle window (e.g. 21, 22, 23, 24).
 - **Eligible voters:** **online** members of participating factions (main + subjects + called allies on that side).
 - Each player selects **all hours they can attend** (multi-select).
 
@@ -602,6 +606,42 @@ Config under `war.battle_voting`:
 | `pushTarget` | `toward_objective`, `toward_aggressor_capital`, `retake_objective` |
 | `defenderChoiceResolved` | Legacy alias of `postBattleChoiceResolved` (v2 saves) |
 | `forceQuorumNextClose` | Dev-only: next admin/tick close bypasses quorum ([DEV-SHORTCUTS.md](../../ProvinceSystem/Planning/DEV-SHORTCUTS.md)) |
+| `battleInstallationPicks` | Faction id → installation ids committed for current battle day (step **78**) |
+| `battleInstallationPicksBattleDay` | UTC date the pick set applies to; must match `battleDay` when locked |
+
+### Battle day timeline (step 78)
+
+On each **battle day**, phases run in this order (defaults from `war.battle_schedule` in `config.yml`):
+
+| Phase | Default (Europe/Paris) | Config key |
+|-------|------------------------|------------|
+| Vote + installation picks open | — | From declare / prior battle end |
+| Defender choice deadline | 12:00 | `defender_choice_deadline_hour` |
+| **Vote close + installation lock** | 16:00 | `vote_close_hour` |
+| **Raid window** | 19:00-20:00 | `raid_window_start_hour`, `raid_window_end_hour` |
+| **Campaign battle window** | 21:00-24:00 | `window_start_hour`, `window_end_hour` |
+
+Raids run **before** the main campaign battle on the same battle day.
+
+### Installation picks (step 78)
+
+**Planning lock:** [78.01](../../ProvinceSystem/Planning/batches/step-78/01-planning-lock.md)
+
+Faction leaders commit installations for the current battle day from the campaign GUI (**Installations** button, slot **33**). See [Installations.md](./Installations.md#campaign-installation-picks-step-78) for vehicle berth interaction.
+
+| Rule | Detail |
+|------|--------|
+| Who picks | **Faction leader** only; each coalition faction picks **independently** |
+| Pickable kinds | **`port` and `airport` only** |
+| Territory | Province must be under your coalition's **control** (not enemy-occupied; occupation bulge + de jure ownership) |
+| Forts | **Not pickable**; active **siege** schedule slot puts the owning faction's fort emplacements in play without a pick |
+| Lock | Same instant as vote close (`vote_close_hour`) |
+| Empty pick | Nothing in play for that faction (no berthable vehicle pool; not naval/air raid target via committed set) |
+| Pre-lock enemy view | **Hidden** |
+| Post-lock enemy view | Enemy intel book (slot **34**) shows per-faction committed lists |
+| Reset | Cleared when `battleDay` advances |
+
+**Vehicle in-play:** berthable vehicles at a **committed** port/airport **or** the active siege `fortInstallationId` for the owning faction. Trains and other non-berthable types follow step 77 rules. See [Installations.md](./Installations.md#campaign-battle-vehicle-eligibility-step-78).
 
 ### Runtime (59.06)
 
@@ -793,9 +833,12 @@ Full rules: [Port sea ZOC](#port-sea-zoc-shipped-step-65) under campaign battle 
 
 `war.port_sea_zoc_radius` (default **2**): sea-hop BFS from the port's adjacent ocean tiles. Distinct from `port-sea-proximity-blocks` (construction validation only). See [Installations.md](./Installations.md#config).
 
-### Installation pick per battle
+### Installation picks per battle (shipped step 78)
 
-**Deferred** (not in step 65 scope). Schedule slots carry `portInstallationId` for the **blocking** port only. Full attacker/defender port / airport / fort pick UI may ship later. Airports used in attack can be bombed in inter-battle air raids (step **71**).
+Leaders commit **ports and airports** each battle day via the campaign GUI; picks lock at vote close. Schedule slots still carry `portInstallationId` / `fortInstallationId` for **blocking** ports and **siege** battles respectively; those are separate from the pick UI.
+
+- **Naval/air inter-battle raids** (step **71** launch): target enemy **committed** ports/airports during the raid window (`RaidTargetService`).
+- **Fort raids:** valid gameplay; targets wired in step **71**, not via installation picks.
 
 Fort ZOC on campaign line → **siege** when line passes through ZOC and fort is enemy-controlled. War-time fort controller may differ from installation owner; see [Campaign battle schedule](#campaign-battle-schedule-locked-step-64). Capital inside fort ZOC → siege then objective field battle.
 
@@ -881,7 +924,8 @@ Full step list and dependencies: [ProvinceSystem/Planning/war-build-order.md](..
 | **70b** — Campaign schedule simplicity **done** | Cadence 3, schedule-only GUI, display names, export align | SF + PS |
 | **70c** — Geographic route GUI **done** | Axis-left-to-right row, no pagination, border-B marker, cap 4/leg | SF |
 | **66** — War campaign map **done** | Smooth web map line + battle pins (`wars[]` route slice) | SF + PS |
-| **71** — Inter-battle raids **planned** | Naval/air/fort between battles | SF |
+| **78** — Installation picks & raid windows **done** | Leader picks, lock at vote close, raid/battle windows, vehicle in-play, raid target filter API | SF |
+| **71** — Inter-battle raids **planned** | Naval/air/fort raid **launch** between battles | SF |
 | **67** — Raid war type **planned** | One-battle border settlement raid | SF |
 | **68** — War map export (full) **planned** | Occupation + chronicle `wars[]` payload | SF |
 | **44** — Map layer **planned** | Occupation tint on website (route in 66) | PS |

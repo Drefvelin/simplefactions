@@ -14,25 +14,6 @@ import org.junit.jupiter.api.Test;
 import me.Plugins.SimpleFactions.Cache;
 
 class ConfigLoaderBattlePresenceTest {
-	private static final String INSTALLATIONS = """
-			installations:
-			  fort:
-			    daily-upkeep: 50
-			    construction-time: 10
-			    slots:
-			      static_emplacement: 8
-			  port:
-			    daily-upkeep: 20
-			    construction-time: 10
-			    slots:
-			      ship: 10
-			  airport:
-			    daily-upkeep: 35
-			    construction-time: 10
-			    slots:
-			      aircraft: 10
-			""";
-
 	private Path tempDir;
 
 	@BeforeEach
@@ -56,7 +37,7 @@ class ConfigLoaderBattlePresenceTest {
 		Path file = writeConfig("""
 				battle:
 				  province_poll_interval_ticks: 20
-				""" + INSTALLATIONS);
+				""");
 
 		new ConfigLoader().loadConfig(file.toFile());
 
@@ -68,7 +49,7 @@ class ConfigLoaderBattlePresenceTest {
 		Path file = writeConfig("""
 				battle:
 				  province_poll_interval_ticks: 0
-				""" + INSTALLATIONS);
+				""");
 
 		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadConfig(file.toFile()));
 	}
@@ -78,7 +59,7 @@ class ConfigLoaderBattlePresenceTest {
 		Path file = writeConfig("""
 				battle:
 				  province_poll_interval_ticks: 20
-				""" + INSTALLATIONS);
+				""");
 
 		new ConfigLoader().loadConfig(file.toFile());
 
@@ -91,7 +72,7 @@ class ConfigLoaderBattlePresenceTest {
 				battle:
 				  province_poll_interval_ticks: 20
 				  capture_min_players: 2
-				""" + INSTALLATIONS);
+				""");
 
 		new ConfigLoader().loadConfig(file.toFile());
 
@@ -104,7 +85,7 @@ class ConfigLoaderBattlePresenceTest {
 				battle:
 				  province_poll_interval_ticks: 20
 				  capture_min_players: 0
-				""" + INSTALLATIONS);
+				""");
 
 		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadConfig(file.toFile()));
 	}
@@ -114,7 +95,7 @@ class ConfigLoaderBattlePresenceTest {
 		Path file = writeConfig("""
 				battle:
 				  province_poll_interval_ticks: 20
-				""" + INSTALLATIONS);
+				""");
 
 		new ConfigLoader().loadConfig(file.toFile());
 
@@ -128,7 +109,7 @@ class ConfigLoaderBattlePresenceTest {
 				  province_poll_interval_ticks: 20
 				  devmode:
 				    phantom_count: 5
-				""" + INSTALLATIONS);
+				""");
 
 		new ConfigLoader().loadConfig(file.toFile());
 
@@ -142,7 +123,7 @@ class ConfigLoaderBattlePresenceTest {
 				  province_poll_interval_ticks: 20
 				  devmode:
 				    phantom_count: -1
-				""" + INSTALLATIONS);
+				""");
 
 		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadConfig(file.toFile()));
 	}

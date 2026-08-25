@@ -13,6 +13,7 @@ import me.Plugins.SimpleFactions.Objects.Request.MovementJoinRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelocateRequest;
 import me.Plugins.SimpleFactions.Objects.Request.Request;
+import me.Plugins.SimpleFactions.Objects.Request.VehicleTransferConsentRequest;
 import me.Plugins.SimpleFactions.Objects.Request.WarRequest;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleAutoresolveService;
 
@@ -24,7 +25,18 @@ public class RequestManager {
 			@Override
 	        public void run() {
 				for(Map.Entry<Player, Request> entry : requests.entrySet()) {
-					if(entry.getValue().timedOut()) requests.remove(entry.getKey());
+					Request request = entry.getValue();
+					if (!request.timedOut()) {
+						continue;
+					}
+					if (request instanceof VehicleTransferConsentRequest consentRequest) {
+						SimpleFactions plugin = SimpleFactions.getInstance();
+						if (plugin != null) {
+							plugin.getVehicleTransferConsentService()
+									.notifyExpired(consentRequest, entry.getKey());
+						}
+					}
+					requests.remove(entry.getKey());
 				}
 	        }
 	    }.runTaskTimer(SimpleFactions.plugin, 0L, 20L);
@@ -65,6 +77,11 @@ public class RequestManager {
 			FactionManager.acceptElevationRequest(p);
 		} else if(req instanceof MovementJoinRequest) {
 			FactionManager.acceptMovementJoinRequest(p);
+		} else if(req instanceof VehicleTransferConsentRequest) {
+			SimpleFactions plugin = SimpleFactions.getInstance();
+			if (plugin != null) {
+				plugin.getVehicleTransferConsentService().acceptRequest(p);
+			}
 		}
 		requests.remove(p);
 	}

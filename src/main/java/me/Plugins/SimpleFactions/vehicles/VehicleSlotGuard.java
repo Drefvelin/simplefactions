@@ -7,14 +7,36 @@ import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
 public final class VehicleSlotGuard {
     private VehicleSlotGuard() {}
 
-    public static boolean isPersonalSlotAvailable(UUID playerUuid, PlayerVehicleRegistry registry) {
+    public static CanBuildResult checkCanBuild(
+            UUID playerUuid, String vehicleTypeId, PlayerVehicleRegistry registry) {
         if (playerUuid == null || registry == null) {
-            return false;
+            return CanBuildResult.UNKNOWN_TYPE;
         }
-        int limit = VehiclesConfigLoader.getPersonalSlotLimit();
-        if (limit <= 0) {
-            return true;
+        if (vehicleTypeId == null || vehicleTypeId.isEmpty()) {
+            return CanBuildResult.UNKNOWN_TYPE;
         }
-        return registry.countPersonal(playerUuid) < limit;
+        if (!VehiclesConfigLoader.isKnownType(vehicleTypeId)) {
+            return CanBuildResult.UNKNOWN_TYPE;
+        }
+
+        if (registry.countPersonalOfType(playerUuid, vehicleTypeId)
+                >= VehiclesConfigLoader.getPerPersonLimit(vehicleTypeId)) {
+            return CanBuildResult.PER_TYPE_LIMIT;
+        }
+
+        if (VehiclesConfigLoader.ignoresPersonalSlotLimit(vehicleTypeId)) {
+            return CanBuildResult.OK;
+        }
+
+        int totalLimit = VehiclesConfigLoader.getPersonalSlotLimit();
+        if (totalLimit <= 0) {
+            return CanBuildResult.OK;
+        }
+
+        if (registry.countPersonalExcludingIgnoreLimit(playerUuid) >= totalLimit) {
+            return CanBuildResult.TOTAL_LIMIT;
+        }
+
+        return CanBuildResult.OK;
     }
 }

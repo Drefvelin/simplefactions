@@ -17,6 +17,8 @@ import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.core.WarCommitment;
 import me.Plugins.SimpleFactions.War.core.WarDeclareHelper;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationPickService;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
 import me.Plugins.SimpleFactions.War.campaign.WarCampaignService;
 import me.Plugins.SimpleFactions.War.commitment.WarCommitmentService;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
@@ -200,6 +202,8 @@ public class WarManager {
 			return;
 		}
 		w.end(reason);
+		BattleInstallationPickService.clearForNewBattleDay(w);
+		CampaignRaidService.clearForNewBattleDay(w);
 		clearCommitments(w.getId());
 		for (War war : wars) {
 			if (war.getId() == w.getId()) {

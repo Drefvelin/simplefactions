@@ -1,5 +1,6 @@
 package me.Plugins.SimpleFactions.War.battle.ui;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -26,6 +27,7 @@ import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService.CampaignBattleContext;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignWarbandSignupService;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 import me.Plugins.SimpleFactions.War.battle.military.BattleLivesService;
@@ -419,6 +421,9 @@ public class BattleInventoryManager {
 					int maxRoster = CampaignBattleJoinService.previewSidePoolLives(
 							ctx.war(), ctx.battle(), ctx.sideId());
 					lore.add("§7Soldiers: §e" + roster + "§7/§e" + maxRoster);
+				}
+				if (!CampaignWarbandSignupService.isSignupOpen(ctx.war(), Instant.now())) {
+					lore.add("§cSignup closed until 20:00");
 				}
 			}
 		}

@@ -62,8 +62,10 @@ class BattleScheduleServiceTest {
 		BattleManager.resetForTests();
 		WarbandManager.resetForTests();
 		Cache.battleCampaignTemplateField = "";
-		Cache.warBattleWindowStartHour = 20;
+		Cache.warBattleWindowStartHour = 21;
 		Cache.warBattleWindowEndHour = 24;
+		Cache.warRaidWindowStartHour = 19;
+		Cache.warRaidWindowEndHour = 20;
 		Cache.warVoteCloseHour = 16;
 		Cache.warDefenderChoiceDeadlineHour = 12;
 		Cache.warBattleVotingMinPlayers = 4;
@@ -127,12 +129,65 @@ class BattleScheduleServiceTest {
 	}
 
 	@Test
+	void postpone_clearsInstallationPicks() {
+		War war = votingWar();
+		war.getBattleInstallationPicks().put("atk", new java.util.LinkedHashSet<>(Set.of("fort-1")));
+		war.setBattleInstallationPicksBattleDay(BATTLE_DAY);
+
+		BattleScheduleService.postpone(war);
+
+		assertEquals(BATTLE_DAY.plusDays(1), war.getBattleDay());
+		assertTrue(war.getBattleInstallationPicks().isEmpty());
+		assertNull(war.getBattleInstallationPicksBattleDay());
+	}
+
+	@Test
 	void isBeforeVoteClose_trueBeforeConfiguredHourOnBattleDay() {
 		War war = votingWar();
 		assertTrue(BattleScheduleService.isBeforeVoteClose(
 				war, voteCloseInstant().minusSeconds(60)));
 		assertFalse(BattleScheduleService.isBeforeVoteClose(
 				war, voteCloseInstant()));
+	}
+
+	@Test
+	void isRaidWindowOpen_trueDuringRaidHoursOnBattleDay() {
+		War war = votingWar();
+		assertFalse(BattleScheduleService.isRaidWindowOpen(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 18)));
+		assertTrue(BattleScheduleService.isRaidWindowOpen(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 19)));
+		assertTrue(BattleScheduleService.isRaidWindowOpen(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 20)));
+		assertFalse(BattleScheduleService.isRaidWindowOpen(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 21)));
+	}
+
+	@Test
+	void isRaidWindowOpen_falseOffBattleDay() {
+		War war = votingWar();
+		war.setBattleDay(BATTLE_DAY.plusDays(1));
+		assertFalse(BattleScheduleService.isRaidWindowOpen(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 19)));
+	}
+
+	@Test
+	void isBattleWindowOpen_trueDuringBattleHoursOnBattleDay() {
+		War war = votingWar();
+		assertFalse(BattleScheduleService.isBattleWindowOpen(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 20)));
+		assertTrue(BattleScheduleService.isBattleWindowOpen(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 21)));
+		assertTrue(BattleScheduleService.isBattleWindowOpen(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 23)));
+	}
+
+	@Test
+	void isBattleWindowOpen_falseOffBattleDay() {
+		War war = votingWar();
+		war.setBattleDay(BATTLE_DAY.plusDays(1));
+		assertFalse(BattleScheduleService.isBattleWindowOpen(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 21)));
 	}
 
 	@Test

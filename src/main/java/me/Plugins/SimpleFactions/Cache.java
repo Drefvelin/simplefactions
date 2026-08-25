@@ -56,6 +56,8 @@ public class Cache {
 
 	public static int warBattleWindowStartHour;
 	public static int warBattleWindowEndHour;
+	public static int warRaidWindowStartHour;
+	public static int warRaidWindowEndHour;
 	public static int warVoteCloseHour;
 	public static int warDefenderChoiceDeadlineHour;
 	public static boolean warOneBattlePerDay;
@@ -67,6 +69,10 @@ public class Cache {
 	public static boolean warBattleVotingDevMinPlayersEnabled;
 	public static int warBattleLivesPerRegiment;
 	public static int warBattleMinSideLives;
+
+	public static int campaignRaidMusterSeconds;
+	public static int campaignRaidDurationSeconds;
+	public static int campaignRaidRepairLockHours;
 
 	public static int battleProvincePollIntervalTicks;
 	public static int battleProvinceLeaveCountdownSeconds;
