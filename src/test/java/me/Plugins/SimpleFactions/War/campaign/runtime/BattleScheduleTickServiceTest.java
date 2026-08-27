@@ -10,6 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -19,6 +20,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
+import org.bukkit.plugin.PluginManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -28,6 +31,7 @@ import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleLaunchService;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
@@ -51,6 +55,7 @@ class BattleScheduleTickServiceTest {
 
 	@BeforeEach
 	void setUp() {
+		CampaignClock.resetForTests();
 		BattleScheduleTickService.resetHourGateForTests();
 		BattleManager.resetForTests();
 		WarbandManager.resetForTests();
@@ -73,6 +78,41 @@ class BattleScheduleTickServiceTest {
 		when(defender.getMembers()).thenReturn(List.of("Carol", "Dave"));
 		mockMilitary(attacker);
 		mockMilitary(defender);
+	}
+
+	@AfterEach
+	void tearDown() {
+		CampaignClock.resetForTests();
+		BattleScheduleTickService.resetHourGateForTests();
+		WarManager.get().clear();
+	}
+
+	@Test
+	void onClockOffsetChanged_resetsHourGate() {
+		Instant hourStart = Instant.parse("2026-08-21T12:00:00Z");
+		assertTrue(BattleScheduleTickService.shouldRunForHour(hourStart));
+		assertFalse(BattleScheduleTickService.shouldRunForHour(hourStart));
+		BattleScheduleTickService.onClockOffsetChanged();
+		assertTrue(BattleScheduleTickService.shouldRunForHour(hourStart));
+	}
+
+	@Test
+	void tick_withSpoofedClock_closesVoteAtCloseHour() {
+		War war = votingWar();
+		addCrossSideVotes(war, 21);
+
+		Instant voteClose = voteCloseInstant();
+		CampaignClock.add(Duration.between(Instant.now(), voteClose));
+		BattleScheduleTickService.onClockOffsetChanged();
+
+		withMockBossBar(() -> {
+			WarManager.addWar(war);
+			BattleScheduleTickService.tick(CampaignClock.now());
+			assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
+			assertEquals(
+					BattleWindowService.computeScheduledBattleAt(BATTLE_DAY, 21),
+					war.getScheduledBattleAt());
+		});
 	}
 
 	@Test
@@ -119,29 +159,38 @@ class BattleScheduleTickServiceTest {
 
 	@Test
 	void tick_startsScheduledBattleWhenDue() {
+		War war = scheduledWar();
+
+		try (MockedStatic<me.Plugins.SimpleFactions.War.campaign.progression.CampaignOffensiveForfeitService> forfeit =
+				mockStatic(me.Plugins.SimpleFactions.War.campaign.progression.CampaignOffensiveForfeitService.class);
+				MockedStatic<me.Plugins.SimpleFactions.War.battle.engine.win.FieldWinService> fieldWin =
+						mockStatic(me.Plugins.SimpleFactions.War.battle.engine.win.FieldWinService.class)) {
+			forfeit.when(() -> me.Plugins.SimpleFactions.War.campaign.progression.CampaignOffensiveForfeitService
+					.applyIfBattleOffensiveCannotAttack(any(), any(Integer.class))).thenReturn(false);
+			fieldWin.when(() -> me.Plugins.SimpleFactions.War.battle.engine.win.FieldWinService.checkFieldWin(any()))
+					.then(inv -> null);
+			withMockBossBar(() -> {
+				SimpleFactions plugin = mock(SimpleFactions.class);
+				when(plugin.getLogger()).thenReturn(java.util.logging.Logger.getLogger("test"));
+				SimpleFactions.plugin = plugin;
+				WarManager.get().add(war);
+				CampaignBattleLaunchService.prepareScheduledBattle(war);
+				BattleScheduleTickService.tick(war.getScheduledBattleAt());
+				assertTrue(BattleManager.getByWarId(war.getId()).hasStarted());
+			});
+		}
+	}
+
+	private War scheduledWar() {
 		War war = votingWar();
+		war.setInitiativeHolderCoalition(CampaignCoalition.AGGRESSOR);
+		war.setPostBattleChoicePhase(PostBattleChoicePhase.NONE);
+		war.setPostBattleChoiceResolved(true);
 		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
 		war.setScheduledBattleHour(21);
 		war.setScheduledBattleAt(BattleWindowService.computeScheduledBattleAt(BATTLE_DAY, 21));
 		war.setScheduledBattleProvinceId(20);
-
-		try (MockedStatic<me.Plugins.SimpleFactions.War.campaign.progression.CampaignOffensiveForfeitService> forfeit =
-				mockStatic(me.Plugins.SimpleFactions.War.campaign.progression.CampaignOffensiveForfeitService.class);
-				MockedStatic<me.Plugins.SimpleFactions.War.battle.military.BattlePoolService> pool =
-						mockStatic(me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.class)) {
-			forfeit.when(() -> me.Plugins.SimpleFactions.War.campaign.progression.CampaignOffensiveForfeitService
-					.applyIfBattleOffensiveCannotAttack(any(), any(Integer.class))).thenReturn(false);
-			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
-					any(), any(Integer.class), any())).thenReturn(5);
-			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
-					any(), any(Integer.class), any(), any())).thenReturn(5);
-			withMockBossBar(() -> {
-				WarManager.addWar(war);
-				CampaignBattleLaunchService.prepareScheduledBattle(war);
-				BattleScheduleTickService.tick(BattleWindowService.computeScheduledBattleAt(BATTLE_DAY, 21));
-				assertTrue(BattleManager.getByWarId(war.getId()).hasStarted());
-			});
-		}
+		return war;
 	}
 
 	private void withMocksForChoiceResolution(War war, Runnable runnable) {
@@ -161,7 +210,9 @@ class BattleScheduleTickServiceTest {
 
 	private void withMockBossBar(Runnable action) {
 		BossBar bossBar = mock(BossBar.class);
+		PluginManager pluginManager = mock(PluginManager.class);
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
 			bukkit.when(() -> Bukkit.createBossBar(anyString(), any(BarColor.class), any(BarStyle.class)))
 					.thenReturn(bossBar);
 			bukkit.when(() -> Bukkit.createBossBar(anyString(), any(BarColor.class), any(BarStyle.class), any()))

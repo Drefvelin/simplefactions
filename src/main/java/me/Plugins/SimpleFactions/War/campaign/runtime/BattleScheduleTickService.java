@@ -9,6 +9,8 @@ import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleLaunchService;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleRosterService;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleSignupReminderService;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidFightScheduler;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidMusterScheduler;
@@ -25,9 +27,15 @@ public final class BattleScheduleTickService {
 		new BukkitRunnable() {
 			@Override
 			public void run() {
-				tick(Instant.now());
+				tick(CampaignClock.now());
 			}
 		}.runTaskTimer(SimpleFactions.plugin, 0L, 1200L);
+	}
+
+	public static void onClockOffsetChanged() {
+		resetHourGateForTests();
+		CampaignRaidMusterScheduler.cancelAllScheduled();
+		CampaignRaidFightScheduler.cancelAllScheduled();
 	}
 
 	static void resetHourGateForTests() {
@@ -37,6 +45,8 @@ public final class BattleScheduleTickService {
 
 	public static int tick(Instant now) {
 		for (War war : WarManager.getActive()) {
+			CampaignBattleSignupReminderService.processReminders(war, now);
+			CampaignBattleRosterService.tryEnrollWhenSignupOpens(war, now);
 			CampaignBattleLaunchService.tryStartScheduledBattle(war, now);
 			CampaignRaidMusterScheduler.processOverdue(war, now);
 			CampaignRaidFightScheduler.processOverdue(war, now);

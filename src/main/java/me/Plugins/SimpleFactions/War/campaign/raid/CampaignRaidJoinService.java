@@ -5,11 +5,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.JoinResult;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
+import me.Plugins.SimpleFactions.War.battle.warband.WarbandVehicleRules;
 import me.Plugins.SimpleFactions.War.core.War;
 
 public final class CampaignRaidJoinService {
@@ -21,11 +26,25 @@ public final class CampaignRaidJoinService {
 		}
 		for (War war : WarManager.getActive()) {
 			CampaignRaid raid = CampaignRaidService.getActive(war);
-			if (raid != null && raidId.equalsIgnoreCase(raid.getId())) {
+			if (raid != null && matchesRaidJoinId(raid, raidId)) {
 				return war;
 			}
 		}
 		return null;
+	}
+
+	public static boolean matchesRaidJoinId(CampaignRaid raid, String raidId) {
+		if (raid == null || raidId == null || raidId.isBlank()) {
+			return false;
+		}
+		if (raidId.equalsIgnoreCase(raid.getId())) {
+			return true;
+		}
+		if (raid.getDisplayName() != null
+				&& raidId.equalsIgnoreCase(BattleNamingService.slugifyDisplayName(raid.getDisplayName()))) {
+			return true;
+		}
+		return false;
 	}
 
 	public static List<String> listJoinableRaidIds(Faction faction) {
@@ -64,7 +83,7 @@ public final class CampaignRaidJoinService {
 			return JoinResult.REJECTED_NOT_PARTICIPANT;
 		}
 		CampaignRaid raid = CampaignRaidService.getActive(war);
-		if (raid == null || !raidId.equalsIgnoreCase(raid.getId())) {
+		if (raid == null || !matchesRaidJoinId(raid, raidId)) {
 			return JoinResult.REJECTED_RAID_NOT_FOUND;
 		}
 		if (raid.getState() != CampaignRaidState.MUSTER) {
@@ -76,6 +95,10 @@ public final class CampaignRaidJoinService {
 		}
 		if (WarbandManager.getByMemberId(playerId) != null) {
 			return JoinResult.REJECTED_IN_WARBAND;
+		}
+		Player player = Bukkit.getPlayer(playerId);
+		if (player != null && player.isOnline() && WarbandVehicleRules.joinBlockedReason(player) != null) {
+			return JoinResult.REJECTED_MOUNTED_ON_VEHICLE;
 		}
 		String playerKey = playerId.toString();
 		if (raid.getMusterParticipantIds().contains(playerKey)) {

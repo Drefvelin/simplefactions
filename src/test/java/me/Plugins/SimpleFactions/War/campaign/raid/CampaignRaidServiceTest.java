@@ -29,6 +29,7 @@ import me.Plugins.SimpleFactions.War.campaign.runtime.RaidKind;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
+import me.Plugins.SimpleFactions.War.core.WarDevMode;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
@@ -108,7 +109,8 @@ class CampaignRaidServiceTest {
 		CampaignRaid raid = CampaignRaidService.getActive(war);
 		assertNotNull(raid);
 		assertEquals(CampaignRaidState.MUSTER, raid.getState());
-		assertEquals("cr_1_2026-08-21", raid.getId());
+		assertEquals("def_port_raid", raid.getId());
+		assertEquals("Def Port Raid", raid.getDisplayName());
 		assertEquals(CampaignCoalition.AGGRESSOR, raid.getAttackerCoalition());
 		assertEquals(RaidKind.NAVAL, raid.getRaidKind());
 		assertEquals(raidWindow.plusSeconds(60), raid.getMusterEndsAt());
@@ -195,6 +197,52 @@ class CampaignRaidServiceTest {
 
 		assertNull(CampaignRaidService.getActive(war));
 		assertTrue(war.getCampaignRaidsUsed().isEmpty());
+	}
+
+	@Test
+	void resetRaidQuota_clearsOneSideOnly() {
+		war.getCampaignRaidsUsed().put(CampaignCoalition.AGGRESSOR.toJson(), BATTLE_DAY.toString());
+		war.getCampaignRaidsUsed().put(CampaignCoalition.DEFENDER.toJson(), BATTLE_DAY.toString());
+
+		assertEquals(1, CampaignRaidService.resetRaidQuota(war, CampaignCoalition.AGGRESSOR));
+
+		assertFalse(CampaignRaidService.isSideQuotaUsed(war, CampaignCoalition.AGGRESSOR));
+		assertTrue(CampaignRaidService.isSideQuotaUsed(war, CampaignCoalition.DEFENDER));
+	}
+
+	@Test
+	void resetRaidQuota_clearsBothSides() {
+		war.getCampaignRaidsUsed().put(CampaignCoalition.AGGRESSOR.toJson(), BATTLE_DAY.toString());
+		war.getCampaignRaidsUsed().put(CampaignCoalition.DEFENDER.toJson(), BATTLE_DAY.toString());
+
+		assertEquals(2, CampaignRaidService.resetRaidQuota(war, null));
+
+		assertFalse(CampaignRaidService.isSideQuotaUsed(war, CampaignCoalition.AGGRESSOR));
+		assertFalse(CampaignRaidService.isSideQuotaUsed(war, CampaignCoalition.DEFENDER));
+	}
+
+	@Test
+	void canLaunch_okWhenQuotaSpentAndWarDevmodeEnabled() {
+		war.getCampaignRaidsUsed().put(CampaignCoalition.AGGRESSOR.toJson(), BATTLE_DAY.toString());
+		assertTrue(CampaignRaidService.isSideQuotaUsed(war, CampaignCoalition.AGGRESSOR));
+
+		WarDevMode.setEnabled(true);
+		try {
+			assertEquals(LaunchResult.STARTED, CampaignRaidService.canLaunch(war, attacker, raidWindow));
+		} finally {
+			WarDevMode.resetForTests();
+		}
+	}
+
+	@Test
+	void canLaunch_okOutsideWindowWhenWarDevmodeEnabled() {
+		WarDevMode.setEnabled(true);
+		try {
+			Instant beforeWindow = BattleWindowService.atScheduleHour(BATTLE_DAY, 18);
+			assertEquals(LaunchResult.STARTED, CampaignRaidService.canLaunch(war, attacker, beforeWindow));
+		} finally {
+			WarDevMode.resetForTests();
+		}
 	}
 
 	@Test

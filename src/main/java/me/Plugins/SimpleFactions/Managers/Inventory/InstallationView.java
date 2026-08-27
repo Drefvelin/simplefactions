@@ -3,7 +3,9 @@ package me.Plugins.SimpleFactions.Managers.Inventory;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -23,6 +25,9 @@ import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationConstruction;
 import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
 import me.Plugins.SimpleFactions.keys.Keys;
+import me.Plugins.SimpleFactions.vehicles.InstallationVehicleUnberthService;
+import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRecord;
+import net.tfminecraft.VehicleFramework.VehicleFramework;
 
 public class InstallationView {
     public InventoryManager inv;
@@ -93,23 +98,36 @@ public class InstallationView {
                         .getServer()
                         .createInventory(
                                 new SFInventoryHolder(f.getId(), SFGUI.INSTALLATION_DETAIL_VIEW),
-                                27,
+                                54,
                                 "§7Installation Details");
 
+        boolean leader = f.getLeader().equalsIgnoreCase(player.getName());
         if (isPending) {
-            inventory.setItem(15, creator.createConstructionDetailItem(pending));
+            inventory.setItem(49, creator.createConstructionDetailItem(pending));
         } else {
-            inventory.setItem(15, creator.createDetailItem(installation));
+            inventory.setItem(49, creator.createDetailItem(installation));
+            List<PlayerVehicleRecord> berthed =
+                    SimpleFactions.getVehicleRegistry().getByInstallationId(installation.getId());
+            berthed.sort(Comparator.comparing(PlayerVehicleRecord::getVehicleTypeId));
+            for (int index = 0; index < berthed.size() && index < 45; index++) {
+                PlayerVehicleRecord record = berthed.get(index);
+                Optional<Location> location =
+                        VehicleFramework.getVehicleManager()
+                                .getOfflineLocation(record.getVehicleUuid());
+                inventory.setItem(
+                        index,
+                        creator.createBerthedVehicleIcon(record, location, leader));
+            }
         }
 
-        if (f.getLeader().equalsIgnoreCase(player.getName())) {
+        if (leader) {
             inventory.setItem(
                     11, creator.createDeconstructButton(installationId, isPending));
         } else {
             inventory.setItem(11, new ItemStack(Material.AIR, 1));
         }
 
-        inventory.setItem(26, inv.createBackButton(SFGUI.INSTALLATION_DETAIL_VIEW));
+        inventory.setItem(53, inv.createBackButton(SFGUI.INSTALLATION_DETAIL_VIEW));
         player.openInventory(inventory);
     }
 
@@ -141,7 +159,12 @@ public class InstallationView {
         }
 
         if (holder.getType() == SFGUI.INSTALLATION_DETAIL_VIEW) {
-            if (event.getSlot() != 11) {
+            int slot = event.getSlot();
+            if (slot >= 0 && slot <= 44) {
+                handleBerthedVehicleClick(event, inventory, player, f);
+                return;
+            }
+            if (slot != 11) {
                 return;
             }
             ItemStack item = event.getCurrentItem();
@@ -157,6 +180,47 @@ public class InstallationView {
             inv.confirming.put(player, f);
             inv.installationConfirmFromCommand.put(player, false);
             inv.confirmView(player, f, "installation", id);
+            player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+        }
+    }
+
+    private void handleBerthedVehicleClick(
+            InventoryClickEvent event, Inventory inventory, Player player, Faction faction) {
+        if (!faction.getLeader().equalsIgnoreCase(player.getName())) {
+            return;
+        }
+        ItemStack item = event.getCurrentItem();
+        if (item == null || !item.hasItemMeta()) {
+            return;
+        }
+        ItemMeta meta = item.getItemMeta();
+        if (!meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
+            return;
+        }
+        String vehicleUuid =
+                meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+        ItemStack detailItem = inventory.getItem(49);
+        if (detailItem == null || !detailItem.hasItemMeta()) {
+            return;
+        }
+        ItemMeta detailMeta = detailItem.getItemMeta();
+        if (!detailMeta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
+            return;
+        }
+        String installationId =
+                detailMeta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+        Installation installation = faction.getInstallationHandler().getById(installationId);
+        if (installation == null) {
+            return;
+        }
+
+        InstallationVehicleUnberthService service =
+                SimpleFactions.getInstance().getInstallationVehicleUnberthService();
+        InstallationVehicleUnberthService.UnberthResult result =
+                service.unberth(faction, player.getName(), installation, vehicleUuid);
+        player.sendMessage(InstallationVehicleUnberthService.messageFor(result));
+        if (result == InstallationVehicleUnberthService.UnberthResult.OK) {
+            installationDetailView(player, faction, installationId);
             player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
         }
     }

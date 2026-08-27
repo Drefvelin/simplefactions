@@ -1,7 +1,10 @@
 # SimpleFactions
+
 The name stems from its original concept of a simple nation system, but it has since grown far beyond that.
 
 This plugin adds factions (nations) to the game that can interact with each other through a complex diplomacy and economy system.
+
+**Full docs:** [docs/README.md](docs/README.md) - wars, installations, settlements, map export, vehicles, and dev config.
 
 You will not be able to run this as a standalone program, as it depends on other plugins and the Spigot server environment.
 
@@ -23,6 +26,8 @@ This project also demonstrates cross-language integration through **ProvinceSyst
   ([Faction.java](src/main/java/me/Plugins/SimpleFactions/Objects/Faction.java))
 - Faction relationships  
   ([RelationManager.java](src/main/java/me/Plugins/SimpleFactions/Managers/RelationManager.java))
+- **Automated campaign wars**, installations (forts/ports/airports), settlements, and map export to tfminecraft.net  
+  ([docs/wars.md](docs/wars.md), [docs/installations.md](docs/installations.md), [docs/map-export.md](docs/map-export.md))
 - Titles (Kingdom, Duchy, etc.) connected with the REST server and the TitleManager  
   ([ProvinceSystem](https://github.com/Drefvelin/ProvinceSystem),  
   [TitleManager.java](src/main/java/me/Plugins/SimpleFactions/Managers/TitleManager.java))

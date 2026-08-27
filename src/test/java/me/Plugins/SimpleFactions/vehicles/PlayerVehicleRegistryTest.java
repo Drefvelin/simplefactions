@@ -1,6 +1,7 @@
 package me.Plugins.SimpleFactions.vehicles;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -37,107 +38,7 @@ class PlayerVehicleRegistryTest {
     }
 
     @Test
-    void countPersonal_countsOnlyPersonalRowsForPlayer() {
-        UUID player = UUID.randomUUID();
-
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-1", "ironclad", OwnershipMode.PERSONAL, null));
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-2", "ironclad", OwnershipMode.PERSONAL, null));
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-3", "ironclad", OwnershipMode.INSTALLATION, "fort-1"));
-
-        assertEquals(2, registry.countPersonal(player));
-    }
-
-    @Test
-    void countPersonalOfType_countsOnlyMatchingPersonalRows() throws IOException {
-        Path tempConfigDir = Files.createTempDirectory("sf-registry-of-type-");
-        try {
-            Path vehiclesYaml = tempConfigDir.resolve("vehicles.yml");
-            Files.writeString(vehiclesYaml, """
-                personal-slot-limit: 1
-
-                categories:
-                  ships:
-                    ironclad:
-                      upkeep: 20
-                      size: 1
-                    cruiser:
-                      upkeep: 40
-                      size: 2
-                  static_emplacements: {}
-                  aircraft: {}
-                """);
-            VehiclesConfigLoader.load(vehiclesYaml.toFile());
-
-            UUID player = UUID.randomUUID();
-            UUID otherPlayer = UUID.randomUUID();
-            registry.register(new PlayerVehicleRecord(
-                player, "vehicle-1", "ironclad", OwnershipMode.PERSONAL, null));
-            registry.register(new PlayerVehicleRecord(
-                player, "vehicle-2", "cruiser", OwnershipMode.PERSONAL, null));
-            registry.register(new PlayerVehicleRecord(
-                player, "vehicle-3", "ironclad", OwnershipMode.INSTALLATION, "port-1"));
-            registry.register(new PlayerVehicleRecord(
-                otherPlayer, "vehicle-4", "ironclad", OwnershipMode.PERSONAL, null));
-
-            assertEquals(1, registry.countPersonalOfType(player, "ironclad"));
-            assertEquals(1, registry.countPersonalOfType(player, "cruiser"));
-            assertEquals(1, registry.countPersonalOfType(player, "Ironclad"));
-            assertEquals(0, registry.countPersonalOfType(player, "unknown"));
-            assertEquals(0, registry.countPersonalOfType(player, null));
-        } finally {
-            Files.walk(tempConfigDir)
-                .sorted(java.util.Comparator.reverseOrder())
-                .forEach(path -> path.toFile().delete());
-        }
-    }
-
-    @Test
-    void countPersonalExcludingIgnoreLimit_excludesIgnoreLimitTypes() throws IOException {
-        Path tempConfigDir = Files.createTempDirectory("sf-registry-exclude-ignore-");
-        try {
-            Path vehiclesYaml = tempConfigDir.resolve("vehicles.yml");
-            Files.writeString(vehiclesYaml, """
-                personal-slot-limit: 3
-                default-upkeep: 4
-
-                categories:
-                  ships:
-                    ironclad:
-                      upkeep: 20
-                      size: 1
-                  train:
-                    coal_car:
-                      upkeep: 1
-                      size: 1
-                      ignore-limit: true
-                  static_emplacements: {}
-                  aircraft: {}
-                """);
-            VehiclesConfigLoader.load(vehiclesYaml.toFile());
-
-            UUID player = UUID.randomUUID();
-            registry.register(new PlayerVehicleRecord(
-                player, "ship-1", "ironclad", OwnershipMode.PERSONAL, null));
-            registry.register(new PlayerVehicleRecord(
-                player, "train-1", "coal_car", OwnershipMode.PERSONAL, null));
-            registry.register(new PlayerVehicleRecord(
-                player, "train-2", "coal_car", OwnershipMode.PERSONAL, null));
-            registry.register(new PlayerVehicleRecord(
-                player, "ship-2", "ironclad", OwnershipMode.INSTALLATION, "port-1"));
-
-            assertEquals(1, registry.countPersonalExcludingIgnoreLimit(player));
-        } finally {
-            Files.walk(tempConfigDir)
-                .sorted(java.util.Comparator.reverseOrder())
-                .forEach(path -> path.toFile().delete());
-        }
-    }
-
-    @Test
-    void saveAndLoad_roundTripPreservesRecords() {
+    void saveAndLoad_skipsPersonalRows() {
         UUID player = UUID.randomUUID();
         registry.register(new PlayerVehicleRecord(
             player, "vehicle-1", "ironclad", OwnershipMode.PERSONAL, null));
@@ -151,8 +52,7 @@ class PlayerVehicleRegistryTest {
             new VehicleRegistryPersistence(tempDir.toFile(), loaded);
         loadedPersistence.load();
 
-        assertEquals(1, loaded.countPersonal(player));
-        assertTrue(loaded.getByVehicleUuid("vehicle-1").isPresent());
+        assertTrue(loaded.getByVehicleUuid("vehicle-1").isEmpty());
         assertTrue(loaded.getByVehicleUuid("vehicle-2").isPresent());
         assertEquals(OwnershipMode.INSTALLATION,
             loaded.getByVehicleUuid("vehicle-2").get().getMode());
@@ -164,12 +64,13 @@ class PlayerVehicleRegistryTest {
     void register_replacesDuplicateVehicleUuid() {
         UUID player = UUID.randomUUID();
         registry.register(new PlayerVehicleRecord(
-            player, "vehicle-1", "ironclad", OwnershipMode.PERSONAL, null));
+            player, "vehicle-1", "ironclad", OwnershipMode.INSTALLATION, "port-1"));
         registry.register(new PlayerVehicleRecord(
-            UUID.randomUUID(), "vehicle-1", "cruiser", OwnershipMode.PERSONAL, null));
+            UUID.randomUUID(), "vehicle-1", "cruiser", OwnershipMode.INSTALLATION, "port-2"));
 
         assertEquals(1, registry.getAll().size());
         assertEquals("cruiser", registry.getByVehicleUuid("vehicle-1").get().getVehicleTypeId());
+        assertEquals("port-2", registry.getByVehicleUuid("vehicle-1").get().getInstallationId());
     }
 
     @Test
@@ -191,6 +92,8 @@ class PlayerVehicleRegistryTest {
         assertEquals(1, registry.getByInstallationId("port-1").size());
         assertEquals("vehicle-1", registry.getByInstallationId("port-1").get(0).getVehicleUuid());
         assertEquals(0, registry.getByInstallationId(null).size());
+        assertTrue(registry.isBerthed("vehicle-1"));
+        assertFalse(registry.isBerthed("vehicle-3"));
     }
 
     @Test

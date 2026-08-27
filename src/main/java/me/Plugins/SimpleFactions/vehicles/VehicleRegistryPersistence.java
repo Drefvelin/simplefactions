@@ -39,7 +39,7 @@ public final class VehicleRegistryPersistence {
             List<PlayerVehicleRecord> records = new ArrayList<>();
             for (VehicleRecordData row : data) {
                 PlayerVehicleRecord record = row.toRecord();
-                if (record != null) {
+                if (record != null && record.getMode() == OwnershipMode.INSTALLATION) {
                     records.add(record);
                 }
             }
@@ -73,7 +73,7 @@ public final class VehicleRegistryPersistence {
 
         static VehicleRecordData from(PlayerVehicleRecord record) {
             VehicleRecordData data = new VehicleRecordData();
-            data.playerUuid = record.getPlayerUuid().toString();
+            data.playerUuid = record.getPlayerUuid() == null ? null : record.getPlayerUuid().toString();
             data.vehicleUuid = record.getVehicleUuid();
             data.vehicleTypeId = record.getVehicleTypeId();
             data.mode = record.getMode().name();

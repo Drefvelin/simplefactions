@@ -21,7 +21,8 @@ public final class VoteResults {
 		REMOVED,
 		REJECTED_OFFLINE,
 		REJECTED_NOT_PARTICIPANT,
-		REJECTED_INVALID_HOUR
+		REJECTED_INVALID_HOUR,
+		REJECTED_VOTE_CLOSED
 	}
 
 	public enum BattleScheduleCloseResult {

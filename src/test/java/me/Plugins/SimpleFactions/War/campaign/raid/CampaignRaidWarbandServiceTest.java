@@ -105,23 +105,30 @@ class CampaignRaidWarbandServiceTest {
 	}
 
 	@Test
+	void beginMuster_createsAttackerWarbandOnly() {
+		assertNotNull(CampaignRaidWarbandService.getAttackerWarband(raid));
+		assertNull(CampaignRaidWarbandService.getDefenderWarband(raid));
+		assertEquals(1, WarbandManager.get().size());
+	}
+
+	@Test
 	void createRaidWarbands_producesCorrectIdsAndIsIdempotent() {
-		assertEquals("campaign_raid_1_2026-08-21_atk", CampaignRaidWarbandService.attackerWarbandId(raid));
-		assertEquals("campaign_raid_1_2026-08-21_def", CampaignRaidWarbandService.defenderWarbandId(raid));
+		assertEquals("def_port_raid_attacker", CampaignRaidWarbandService.attackerWarbandId(raid));
+		assertEquals("def_port_raid_defender", CampaignRaidWarbandService.defenderWarbandId(raid));
 
 		Warband atk = CampaignRaidWarbandService.getAttackerWarband(raid);
-		Warband def = CampaignRaidWarbandService.getDefenderWarband(raid);
 		assertNotNull(atk);
-		assertNotNull(def);
 		assertTrue(CampaignRaidWarbandService.isRaidWarband(atk));
 		assertTrue(atk.isPendingLeader());
 		assertTrue(atk.isLocked());
 		assertTrue(atk.isFaction());
 		assertEquals(BattleTemplate.ATTACKER_SIDE, atk.getCampaignSideId());
-		assertEquals(BattleTemplate.DEFENDER_SIDE, def.getCampaignSideId());
 		assertEquals("The Attacker Host", atk.getName());
 
 		CampaignRaidWarbandService.createRaidWarbands(war, raid);
+		Warband def = CampaignRaidWarbandService.getDefenderWarband(raid);
+		assertNotNull(def);
+		assertEquals(BattleTemplate.DEFENDER_SIDE, def.getCampaignSideId());
 		assertEquals(2, WarbandManager.get().size());
 	}
 
@@ -183,6 +190,7 @@ class CampaignRaidWarbandServiceTest {
 
 	@Test
 	void destroyRaidWarbands_removesBothFromManager() {
+		CampaignRaidWarbandService.createRaidWarbands(war, raid);
 		assertEquals(2, WarbandManager.get().size());
 
 		CampaignRaidWarbandService.destroyRaidWarbands(war, raid);

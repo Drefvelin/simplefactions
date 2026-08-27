@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
@@ -51,6 +53,7 @@ class CampaignRaidMusterSchedulerTest {
 
 	@BeforeEach
 	void setUp() {
+		CampaignClock.reset();
 		Cache.warVoteCloseHour = 16;
 		Cache.warRaidWindowStartHour = 19;
 		Cache.warRaidWindowEndHour = 20;
@@ -108,6 +111,7 @@ class CampaignRaidMusterSchedulerTest {
 
 	@AfterEach
 	void tearDown() {
+		CampaignClock.reset();
 		FactionManager.factions.remove(attacker);
 		FactionManager.factions.remove(defender);
 		WarManager.get().clear();
@@ -116,6 +120,65 @@ class CampaignRaidMusterSchedulerTest {
 		BattleManager.resetForTests();
 		WarbandManager.resetForTests();
 		BattleTemplateLoader.resetForTests();
+	}
+
+	@Test
+	void onMusterStarted_whenSpoofed_doesNotSchedule() {
+		CampaignClock.add(Duration.ofHours(1));
+		CampaignRaidMusterScheduler.onMusterStarted(war, raidWindow);
+
+		Instant musterEnd = raidWindow.plusSeconds(60);
+		World world = mock(World.class);
+		when(world.getName()).thenReturn("world");
+		when(world.getHighestBlockYAt(100, 100)).thenReturn(64);
+		when(world.getHighestBlockYAt(200, 200)).thenReturn(64);
+		BossBar bossBar = mock(BossBar.class);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getWorld("world")).thenReturn(world);
+			bukkit.when(() -> Bukkit.createBossBar(
+					org.mockito.ArgumentMatchers.anyString(),
+					org.mockito.ArgumentMatchers.any(BarColor.class),
+					org.mockito.ArgumentMatchers.any(BarStyle.class))).thenReturn(bossBar);
+			bukkit.when(() -> Bukkit.createBossBar(
+					org.mockito.ArgumentMatchers.anyString(),
+					org.mockito.ArgumentMatchers.any(BarColor.class),
+					org.mockito.ArgumentMatchers.any(BarStyle.class),
+					org.mockito.ArgumentMatchers.any())).thenReturn(bossBar);
+
+			assertTrue(CampaignRaidMusterScheduler.processOverdue(war, musterEnd));
+		}
+
+		assertEquals(CampaignRaidState.FIGHTING, CampaignRaidService.getActive(war).getState());
+	}
+
+	@Test
+	void processOverdue_withSpoofedClock_noDoubleFire() {
+		CampaignClock.add(Duration.ofHours(1));
+		CampaignRaidMusterScheduler.onMusterStarted(war, raidWindow);
+
+		Instant musterEnd = raidWindow.plusSeconds(60);
+		World world = mock(World.class);
+		when(world.getName()).thenReturn("world");
+		when(world.getHighestBlockYAt(100, 100)).thenReturn(64);
+		when(world.getHighestBlockYAt(200, 200)).thenReturn(64);
+		BossBar bossBar = mock(BossBar.class);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getWorld("world")).thenReturn(world);
+			bukkit.when(() -> Bukkit.createBossBar(
+					org.mockito.ArgumentMatchers.anyString(),
+					org.mockito.ArgumentMatchers.any(BarColor.class),
+					org.mockito.ArgumentMatchers.any(BarStyle.class))).thenReturn(bossBar);
+			bukkit.when(() -> Bukkit.createBossBar(
+					org.mockito.ArgumentMatchers.anyString(),
+					org.mockito.ArgumentMatchers.any(BarColor.class),
+					org.mockito.ArgumentMatchers.any(BarStyle.class),
+					org.mockito.ArgumentMatchers.any())).thenReturn(bossBar);
+
+			assertTrue(CampaignRaidMusterScheduler.processOverdue(war, musterEnd));
+			assertFalse(CampaignRaidMusterScheduler.processOverdue(war, musterEnd));
+		}
+
+		assertEquals(CampaignRaidState.FIGHTING, CampaignRaidService.getActive(war).getState());
 	}
 
 	@Test
@@ -148,6 +211,7 @@ class CampaignRaidMusterSchedulerTest {
 		assertEquals(CampaignRaidState.FIGHTING, raid.getState());
 		assertTrue(CampaignRaidService.isSideQuotaUsed(war, CampaignCoalition.AGGRESSOR));
 		assertTrue(raid.getMusterParticipantIds().isEmpty());
+		assertFalse(CampaignRaidMusterScheduler.processOverdue(war, musterEnd));
 	}
 
 	@Test

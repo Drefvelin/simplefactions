@@ -2,7 +2,7 @@
 
 Instructions for AI agents and contributors adding or changing code in **SimpleFactions** (`simplefactions/`).
 
-Planning batches for large work live under `ProvinceSystem/Planning/batches/`. War feature order: `ProvinceSystem/Planning/war-build-order.md`.
+Product docs: [docs/README.md](docs/README.md) · shipped vs planned: [docs/roadmap.md](docs/roadmap.md)
 
 ---
 
@@ -18,7 +18,7 @@ SimpleFactions favors **domain packages** and **orchestrator managers**, not one
 | Config / flags | `Cache` static fields | Loaded from `config.yml` |
 | Feature domains | Lowercase subfolders | `government/session`, `Guild`, `Map/Provinces` |
 
-**War** was built in many batches; step **75** reorganized war packages (complete 2026-08-24). Follow [step-75 lock](../ProvinceSystem/Planning/batches/step-75/01-planning-lock.md) for the migration map.
+**War** uses domain subpackages under `War/` (see layout below). Follow [docs/wars.md](docs/wars.md) for gameplay rules when editing war code.
 
 ---
 
@@ -70,6 +70,7 @@ Use this table before creating a file.
 | Vote tally, quorum, postpone | `War/campaign/vote` | New 5-line `*Result.java` (nest in `VoteResults`) |
 | Fort/port ZOC operational DTOs | nested in `FortZocIndex` / `PortSeaZocIndex` | Standalone `OperationalFort.java` files |
 | Staff `/warschedule` output | `War/campaign/admin` | Chat formatters in engine |
+| `/war` command (list, admin subcommands) | `War/core/WarCommandManager` | `Managers/CommandManager` for war logic |
 | GUI lore / schedule debug lines | `War/campaign/ui` | `Managers` unless it is pure inventory layout |
 | Path B, axis, dijkstra | `War/pathfinder` | Schedule package |
 | Occupation, white peace, push/hold | `War/campaign/progression` | Flat `War/` root |
@@ -102,10 +103,15 @@ Use this table before creating a file.
 | Campaign raid fight start | `War/campaign/raid/CampaignRaidLaunchService`, `CampaignRaidBattleService`, `CampaignRaidFightScheduler` | Battle runtime in launch service |
 | Campaign raid battle end | `War/campaign/raid/CampaignRaidBattleEndService` | Campaign battle outcome side effects |
 | Campaign warband signup lock | `War/battle/campaign/CampaignWarbandSignupService.isSignupOpen` | Raid launch or `/raid join` logic in signup service |
+| Installation vulnerability gating | `installation/InstallationVulnerabilityService`, `InstallationProtectionListener` | Raid state or repair embargo logic in vulnerability service |
+| Installation repair embargo | `installation/InstallationRepairEmbargoService` | Fight-start lock writes (already in `CampaignRaidLaunchService`) |
+| Vehicle berth embargo | `vehicles/VehicleInstallationLockService` | Place/break embargo or VF `RepairManager` internals |
+| Campaign raid intruder province penalty | `War/campaign/raid/CampaignRaidIntruderService`, `CampaignRaidIntruderListener`, `CampaignRaidIntruderTickService` | Raid eligibility or warband signup logic |
 | Campaign raid source/target eligibility | `War/campaign/raid/CampaignRaidEligibilityService` | Raid launch GUI or `CampaignRaidService` |
 | Raid target listing (legacy; prefer eligibility) | `War/campaign/runtime/RaidTargetService` | New campaign raid flows |
 | Campaign raid state / quota / mutex | `War/campaign/raid/CampaignRaidService` | GUI or battle launch in same class |
 | Campaign battle vehicle eligibility | `vehicles/BattleVehicleEligibilityService` | Battle engine core |
+| Battle province block protection | `War/battle/engine/core/BattleProvinceBlockProtectionService`, `BattleProvinceBlockProtectionListener` | Installation protection or raid logic |
 | Campaign installation pick GUI | `Managers/Inventory/CampaignInstallationPickView` | Pick logic in view |
 
 ---
@@ -132,9 +138,9 @@ Do **not** create:
 
 ## War development rules
 
-1. **Schedule changes:** only `CampaignBattlePlacer.placeBattle` (or documented builder phase) mutates leg lists. Read [70d lock](../ProvinceSystem/Planning/batches/step-70d/02-planning-lock-fb.md) before editing insertion.
+1. **Schedule changes:** only `CampaignBattlePlacer.placeBattle` (or documented builder phase) mutates leg lists. Read [docs/wars.md](docs/wars.md) campaign schedule sections before editing insertion.
 2. **Tests:** any war change should run `mvn test -Dtest="me.Plugins.SimpleFactions.War.**"`.
-3. **Brume acceptance:** invasion `709 FIELD → 713 SIEGE → 705 required`; do not regress when touching schedule/pathfinder.
+3. **Brume acceptance:** invasion `709 FIELD → 713 SIEGE → 705 required`; do not regress when touching schedule/pathfinder. Off-axis fort ZOC on a non-objective border replaces that field (`713 SIEGE` chrono `704` → `705 required`, no airfield field).
 4. **Persistence:** if you add a field to `ScheduledCampaignBattle` or `War`, update `Database/*Data`, `WarMapper`, and tests in the same change.
 5. **Player-facing text:** no em dash (`—`); use `-` or `:`. See workspace rule `no-em-dash.mdc`.
 6. **Config:** new toggles go in `config.yml` + `Cache`, not hard-coded in services.
@@ -182,9 +188,13 @@ For schedule/pathfinder work, confirm tests include:
 
 ## Related docs
 
-- [Wars.md](Documentation/Wars.md) - gameplay spec
-- [Installations.md](Documentation/Installations.md) - installations, berth flow (step 76), personal limits (step 77)
-- [step-77 vehicle config v2](../ProvinceSystem/Planning/batches/step-77/00-index.md) - personal limits, land berths (done 2026-08-24)
-- [step-78 installation picks](../ProvinceSystem/Planning/batches/step-78/00-index.md) - picks, raid windows, vehicle in-play (done 2026-08-24)
-- [step-75 package lock](../ProvinceSystem/Planning/batches/step-75/01-planning-lock.md) - migration map (step 75 repackage complete 2026-08-24)
-- [war-build-order.md](../ProvinceSystem/Planning/war-build-order.md) - feature sequence
+- [docs/wars.md](docs/wars.md) - gameplay spec
+- [docs/installations.md](docs/installations.md) - installations, berth flow, personal limits
+- [docs/vehicles.md](docs/vehicles.md) - berths, slots, VF integration
+- [docs/campaign-raids.md](docs/campaign-raids.md) - inter-battle raids
+- [docs/map-export.md](docs/map-export.md) - map upload and `wars[]` export
+- [docs/dev-config.md](docs/dev-config.md) - dev-only config and bypasses
+- [docs/planning/campaign-time-dev/](docs/planning/campaign-time-dev/00-index.md) - campaign clock dev batches
+- [docs/planning/campaign-retreat/](docs/planning/campaign-retreat/00-index.md) - strategic retreat batches
+- [docs/planning/battle-retreat/](docs/planning/battle-retreat/00-index.md) - mid-fight battle retreat batches
+- [docs/roadmap.md](docs/roadmap.md) - shipped vs planned features

@@ -8,6 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.OptionalInt;
@@ -15,16 +18,21 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 
 class BattleVoteServiceTest {
+	private static final LocalDate BATTLE_DAY = LocalDate.of(2026, 8, 21);
 	private Faction attacker;
 	private Faction defender;
 	private War war;
@@ -33,6 +41,8 @@ class BattleVoteServiceTest {
 
 	@BeforeEach
 	void setUp() {
+		CampaignClock.reset();
+		Cache.warVoteCloseHour = 16;
 		Cache.warBattleWindowStartHour = 20;
 		Cache.warBattleWindowEndHour = 24;
 
@@ -47,6 +57,39 @@ class BattleVoteServiceTest {
 
 		attackerVoter = UUID.randomUUID();
 		defenderVoter = UUID.randomUUID();
+	}
+
+	@AfterEach
+	void tearDown() {
+		CampaignClock.reset();
+	}
+
+	@Test
+	void toggleVote_allowsBeforeVoteClose() {
+		votingWar();
+		Instant beforeClose = BattleWindowService.atScheduleHour(BATTLE_DAY, 12);
+		CampaignClock.add(Duration.between(Instant.now(), beforeClose));
+
+		assertEquals(
+				BattleVoteToggleResult.ADDED,
+				BattleVoteService.toggleVote(war, attackerVoter, 21, attacker, true));
+	}
+
+	@Test
+	void toggleVote_rejectsAfterVoteClose() {
+		War votingWar = votingWar();
+		Instant atClose = BattleWindowService.atScheduleHour(BATTLE_DAY, 16);
+		CampaignClock.add(Duration.between(Instant.now(), atClose));
+
+		assertEquals(
+				BattleVoteToggleResult.REJECTED_VOTE_CLOSED,
+				BattleVoteService.toggleVote(votingWar, attackerVoter, 21, attacker, true));
+	}
+
+	private War votingWar() {
+		war.setBattleDay(BATTLE_DAY);
+		war.setBattleSchedulePhase(BattleSchedulePhase.VOTING);
+		return war;
 	}
 
 	@Test

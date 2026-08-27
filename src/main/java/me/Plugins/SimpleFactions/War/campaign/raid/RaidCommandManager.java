@@ -9,6 +9,7 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.JoinResult;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.core.War;
 
 public class RaidCommandManager implements CommandExecutor {
@@ -20,11 +21,11 @@ public class RaidCommandManager implements CommandExecutor {
 			return true;
 		}
 		if (args.length < 1) {
-			player.sendMessage("§a[Raid]§c Usage: /raid join <raidId>");
+			player.sendMessage("§a[Raid]§c Usage: /raid join <raid>");
 			return true;
 		}
 		if (!args[0].equalsIgnoreCase("join") || args.length != 2) {
-			player.sendMessage("§a[Raid]§c Usage: /raid join <raidId>");
+			player.sendMessage("§a[Raid]§c Usage: /raid join <raid>");
 			return true;
 		}
 
@@ -44,7 +45,7 @@ public class RaidCommandManager implements CommandExecutor {
 		}
 
 		JoinResult result = CampaignRaidJoinService.join(
-				war, player.getUniqueId(), player.getName(), faction, args[1], java.time.Instant.now());
+				war, player.getUniqueId(), player.getName(), faction, args[1], CampaignClock.now());
 		if (result != JoinResult.OK) {
 			String message = CampaignRaidMessages.messageForJoinResult(result);
 			if (message != null) {

@@ -8,6 +8,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -23,7 +25,7 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.War;
-import me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode;
+import me.Plugins.SimpleFactions.War.core.WarDevMode;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleFactory;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
@@ -32,8 +34,10 @@ import me.Plugins.SimpleFactions.War.battle.military.BattlePoolService;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
 
 class WarbandCampaignSignupTest {
+	private static final LocalDate BATTLE_DAY = LocalDate.of(2026, 8, 21);
 	private static final int PROVINCE_ID = 20;
 
 	private Faction attacker;
@@ -43,10 +47,10 @@ class WarbandCampaignSignupTest {
 	void setUp() {
 		BattleManager.resetForTests();
 		WarbandManager.resetForTests();
-		BattleDevMode.resetForTests();
+		WarDevMode.resetForTests();
 		Cache.warBattleLivesPerRegiment = 5;
 		Cache.warBattleMinSideLives = 1;
-		Cache.battleDevmodePhantomCount = 10;
+		Cache.warDevmodePhantomCount = 10;
 
 		attacker = mock(Faction.class);
 		defender = mock(Faction.class);
@@ -85,7 +89,8 @@ class WarbandCampaignSignupTest {
 			pool.when(() -> BattlePoolService.totalCommittedRegiments(eq(war), eq(PROVINCE_ID), eq(war.getAttackers())))
 					.thenReturn(5);
 
-			assertNull(CampaignWarbandSignupService.signupMember(aliceId, "Alice", shell, attacker));
+			assertNull(CampaignWarbandSignupService.signupMember(
+					aliceId, "Alice", shell, attacker, null, signupInstant()));
 			assertEquals(aliceId, shell.getLeaderId());
 			assertTrue(shell.hasMember(aliceId));
 		}
@@ -109,8 +114,10 @@ class WarbandCampaignSignupTest {
 			pool.when(() -> BattlePoolService.totalCommittedRegiments(eq(war), eq(PROVINCE_ID), eq(war.getAttackers())))
 					.thenReturn(5);
 
-			assertNull(CampaignWarbandSignupService.signupMember(aliceId, "Alice", shell, attacker));
-			assertNull(CampaignWarbandSignupService.signupMember(bobId, "Bob", shell, attacker));
+			assertNull(CampaignWarbandSignupService.signupMember(
+					aliceId, "Alice", shell, attacker, null, signupInstant()));
+			assertNull(CampaignWarbandSignupService.signupMember(
+					bobId, "Bob", shell, attacker, null, signupInstant()));
 			assertEquals(aliceId, shell.getLeaderId());
 		}
 	}
@@ -133,15 +140,17 @@ class WarbandCampaignSignupTest {
 			pool.when(() -> BattlePoolService.totalCommittedRegiments(eq(war), eq(PROVINCE_ID), eq(war.getAttackers())))
 					.thenReturn(5);
 
-			assertNull(CampaignWarbandSignupService.signupMember(bobId, "Bob", shell, attacker));
-			assertNull(CampaignWarbandSignupService.signupMember(aliceId, "Alice", shell, attacker));
+			assertNull(CampaignWarbandSignupService.signupMember(
+					bobId, "Bob", shell, attacker, null, signupInstant()));
+			assertNull(CampaignWarbandSignupService.signupMember(
+					aliceId, "Alice", shell, attacker, null, signupInstant()));
 			assertEquals(aliceId, shell.getLeaderId());
 		}
 	}
 
 	@Test
 	void devmode_phantomsAfterFirstSignupOnly() {
-		BattleDevMode.setEnabled(true);
+		WarDevMode.setEnabled(true);
 		War war = campaignWar();
 		Warband shell = createShellOnBattle(war);
 		UUID aliceId = UUID.randomUUID();
@@ -158,7 +167,8 @@ class WarbandCampaignSignupTest {
 			pool.when(() -> BattlePoolService.totalCommittedRegiments(eq(war), eq(PROVINCE_ID), eq(war.getAttackers())))
 					.thenReturn(50);
 
-			assertNull(CampaignWarbandSignupService.signupMember(aliceId, "Alice", shell, attacker));
+			assertNull(CampaignWarbandSignupService.signupMember(
+					aliceId, "Alice", shell, attacker, null, signupInstant()));
 			assertTrue(shell.getDummyMemberCount() > 0);
 		}
 	}
@@ -174,7 +184,12 @@ class WarbandCampaignSignupTest {
 	private War campaignWar() {
 		War war = new War(1, attacker, defender);
 		war.setScheduledBattleProvinceId(PROVINCE_ID);
+		war.setBattleDay(BATTLE_DAY);
 		return war;
+	}
+
+	private Instant signupInstant() {
+		return BattleWindowService.atScheduleHour(BATTLE_DAY, 20);
 	}
 
 	private Warband createShellOnBattle(War war) {

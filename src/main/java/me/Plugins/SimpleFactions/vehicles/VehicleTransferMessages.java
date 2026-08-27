@@ -14,20 +14,21 @@ public final class VehicleTransferMessages {
             CanRegisterResult result,
             Installation installation,
             ActiveVehicle vehicle,
-            PlayerVehicleRecord record) {
+            String vehicleTypeId) {
         if (result == null || installation == null) {
             return null;
         }
 
         return switch (result) {
             case OK -> berthSuccess(installation);
-            case NOT_IN_REGISTRY -> "§cThis vehicle is not registered for faction upkeep.";
+            case NOT_IN_REGISTRY -> "§cThis vehicle must be owned by a player before it can be berthed.";
             case ALREADY_BERTHED -> "§cThis vehicle is already berthed at an installation.";
             case UNKNOWN_TYPE -> "§cThis vehicle is not registered for faction upkeep.";
-            case UNSUPPORTED_CATEGORY -> unsupportedCategory(installation, record);
-            case NO_CAPACITY -> noCapacity(installation, record);
+            case UNSUPPORTED_CATEGORY -> unsupportedCategory(installation, vehicleTypeId);
+            case NO_CAPACITY -> noCapacity(installation, vehicleTypeId);
             case OUT_OF_RADIUS -> outOfRadius(installation, vehicle);
             case WRONG_PROVINCE -> wrongProvince(installation, vehicle);
+            case REPAIR_LOCKED -> VehicleInstallationLockService.BERTH_BLOCKED;
         };
     }
 
@@ -72,13 +73,13 @@ public final class VehicleTransferMessages {
         return "§aSent vehicle transfer request to " + ownerName + ".";
     }
 
-    private static String unsupportedCategory(Installation installation, PlayerVehicleRecord record) {
-        String category = VehiclesConfigLoader.getCategoryId(record.getVehicleTypeId()).orElse("vehicle");
+    private static String unsupportedCategory(Installation installation, String vehicleTypeId) {
+        String category = VehiclesConfigLoader.getCategoryId(vehicleTypeId).orElse("vehicle");
         return "§cThis installation does not support " + category + " vehicles.";
     }
 
-    private static String noCapacity(Installation installation, PlayerVehicleRecord record) {
-        String category = VehiclesConfigLoader.getCategoryId(record.getVehicleTypeId()).orElse("vehicle");
+    private static String noCapacity(Installation installation, String vehicleTypeId) {
+        String category = VehiclesConfigLoader.getCategoryId(vehicleTypeId).orElse("vehicle");
         int capacity = InstallationConfigLoader.getCategorySlotCapacity(
                 installation.getKind(),
                 category);

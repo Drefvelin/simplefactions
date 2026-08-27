@@ -15,10 +15,7 @@ import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
-import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.core.War;
-import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
@@ -128,13 +125,21 @@ public class TabCompletion implements TabCompleter{
 				return completeTransferVehicleIds(p, args);
 			}
 		}
+		else if(cmd.getName().equalsIgnoreCase("faction")
+				&& args.length >= 1
+				&& args.length <= 2
+				&& args[0].equalsIgnoreCase("findvehicles")) {
+			if(sender instanceof Player) {
+				Player p = (Player) sender;
+				return completeTransferVehicleIds(p, args);
+			}
+		}
 		else if(cmd.getName().equalsIgnoreCase("faction") && args.length >= 0 && args.length < 2 ) {
 			if(sender instanceof Player){
 				Player p = (Player) sender;
 				List<String> completions = new ArrayList<>();
 				completions.add("list");
 				if(FactionManager.getByMember(p.getName()) != null) completions.add("menu");
-				completions.add("warlist");
 				completions.add("create");
 				completions.add("accept");
 				completions.add("join");
@@ -144,6 +149,7 @@ public class TabCompletion implements TabCompleter{
 					completions.add("construct");
 					completions.add("deconstruct");
 					completions.add("transfervehicle");
+					completions.add("findvehicles");
 					completions.add("unclaim");
 					completions.add("withdraw");
 					completions.add("setbank");
@@ -169,10 +175,7 @@ public class TabCompletion implements TabCompleter{
 					completions.add("queueallnations");
 					completions.add("fullregen");
 					completions.add("reloadtitles");
-					completions.add("endwar");
-					completions.add("warstatus");
-					completions.add("warpath");
-					completions.add("warschedule");
+					completions.add("reloadconfigs");
 					completions.add("destroytitle");
 					completions.add("granttitle");
 					completions.add("transfersubject");
@@ -440,75 +443,6 @@ public class TabCompletion implements TabCompleter{
 					List<String> completions = new ArrayList<String>();
 					completions.add("<amount>");
 					
-					return completions;
-				}
-			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2
-					&& (args[0].equalsIgnoreCase("endwar")
-							|| args[0].equalsIgnoreCase("warstatus")
-							|| args[0].equalsIgnoreCase("warpath")
-							|| args[0].equalsIgnoreCase("warschedule"))) {
-				if(sender instanceof Player){
-					List<String> completions = new ArrayList<>();
-					for (War war : WarManager.getActive()) {
-						completions.add(String.valueOf(war.getId()));
-					}
-					return completions;
-				}
-			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("warschedule")) {
-				if(Permissions.isAdmin(sender)) {
-					List<String> completions = new ArrayList<>();
-					completions.add("opencvote");
-					completions.add("closevote");
-					completions.add("skipday");
-					completions.add("castvote");
-					completions.add("forcequorum");
-					completions.add("setscheduled");
-					completions.add("battlecreate");
-					completions.add("battledelete");
-					completions.add("battlestart");
-					completions.add("winbattle");
-					completions.add("battlechoice");
-					completions.add("defenderchoice");
-					return completions;
-				}
-			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 4
-					&& args[0].equalsIgnoreCase("warschedule")
-					&& Permissions.isAdmin(sender)) {
-				if ("winbattle".equalsIgnoreCase(args[2])) {
-					List<String> completions = new ArrayList<>();
-					completions.add("attacker");
-					completions.add("defender");
-					return completions;
-				}
-				if ("battlechoice".equalsIgnoreCase(args[2])
-						|| "defenderchoice".equalsIgnoreCase(args[2])
-						|| "pushchoice".equalsIgnoreCase(args[2])
-						|| "holdchoice".equalsIgnoreCase(args[2])) {
-					List<String> completions = new ArrayList<>();
-					completions.add("push");
-					completions.add("hold");
-					completions.add("attack");
-					completions.add("accept");
-					return completions;
-				}
-			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 4
-					&& args[0].equalsIgnoreCase("warschedule")
-					&& args[2].equalsIgnoreCase("castvote")) {
-				if(Permissions.isAdmin(sender)) {
-					List<String> completions = new ArrayList<>();
-					for (int hour : BattleWindowService.listValidHours()) {
-						completions.add(String.valueOf(hour));
-					}
-					return completions;
-				}
-			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 5
-					&& args[0].equalsIgnoreCase("warschedule")
-					&& args[2].equalsIgnoreCase("castvote")) {
-				if(Permissions.isAdmin(sender)) {
-					List<String> completions = new ArrayList<>();
-					completions.add("attacker");
-					completions.add("defender");
-					completions.add("both");
 					return completions;
 				}
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("destroytitle")){

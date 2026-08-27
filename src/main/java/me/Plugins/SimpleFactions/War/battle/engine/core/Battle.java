@@ -1,5 +1,6 @@
 package me.Plugins.SimpleFactions.War.battle.engine.core;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -29,6 +30,7 @@ import me.Plugins.SimpleFactions.War.battle.engine.win.SiegeWinService;
 import me.Plugins.SimpleFactions.War.battle.template.CapturePointDefinition;
 import me.Plugins.SimpleFactions.War.battle.template.ContestArea;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleInventoryManager;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBossBarService;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 
 public class Battle {
@@ -40,6 +42,7 @@ public class Battle {
 	private boolean keepInventory;
 	private boolean teleport;
 	private boolean started;
+	private Instant startedAt;
 	private boolean locked;
 	private int lives;
 	private LifeType lt;
@@ -199,6 +202,14 @@ public class Battle {
 	public void setStarted(boolean started) {
 		this.started = started;
 	}
+
+	public Instant getStartedAt() {
+		return startedAt;
+	}
+
+	public void setStartedAt(Instant startedAt) {
+		this.startedAt = startedAt;
+	}
 	
 	public void setFriendlyFire(boolean b) {
 		this.friendlyFire = b;
@@ -215,6 +226,7 @@ public class Battle {
 			}
 		}
 		this.started = true;
+		this.startedAt = Instant.now();
 		if (battleType == BattleType.RAID) {
 			BattleRaidSetup.onStart(this);
 		} else {
@@ -263,6 +275,9 @@ public class Battle {
 		RaidAttackerEliminationService.clearBattleState(this);
 		BattleCasualtyLedger.clear(this);
 		pm.end(getAllParticipants());
+		if (campaignRaid) {
+			CampaignRaidBossBarService.clear(this);
+		}
 		for(BattleSide s : sides) {
 			s.removeBossBar();
 		}
@@ -304,8 +319,12 @@ public class Battle {
 	
 	public void tick() {
 		if(!started) return;
-		for(BattleSide s : sides) {
-			s.updateBossBar(getAllParticipants());
+		if (campaignRaid) {
+			CampaignRaidBossBarService.tickCampaignRaid(this);
+		} else {
+			for(BattleSide s : sides) {
+				s.updateBossBar(getAllParticipants());
+			}
 		}
 		tickPoints();
 		if (battleType == BattleType.FIELD) {

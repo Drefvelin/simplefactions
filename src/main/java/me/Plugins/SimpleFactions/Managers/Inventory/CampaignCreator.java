@@ -34,11 +34,14 @@ import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteRenderer;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.BattleHourTally;
 import me.Plugins.SimpleFactions.War.campaign.vote.BattleQuorumService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationPickService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleLookups;
 import me.Plugins.SimpleFactions.War.campaign.vote.BattleVoteService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignScheduleCountdown;
 import me.Plugins.SimpleFactions.War.campaign.ui.CampaignUiCopy;
 import me.Plugins.SimpleFactions.War.campaign.ui.CampaignUiTimeFormatter;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidLaunchAvailability;
@@ -220,6 +223,8 @@ public class CampaignCreator {
 				lines.add(StringFormatter.formatHex(
 						CampaignUiCopy.LABEL + "Fight At: "
 								+ CampaignUiCopy.VALUE + CampaignUiTimeFormatter.formatInstant(fightAt)));
+				CampaignScheduleCountdown.formatNextMilestone(war, CampaignClock.now())
+						.ifPresent(text -> lines.add(StringFormatter.formatHex(CampaignUiCopy.MUTED + text)));
 			}
 			if (war.getScheduledBattleProvinceId() != null) {
 				lines.add(StringFormatter.formatHex(
@@ -320,7 +325,7 @@ public class CampaignCreator {
 		ItemStack item = new ItemStack(Material.WRITABLE_BOOK, 1);
 		ItemMeta meta = item.getItemMeta();
 		meta.setDisplayName(StringFormatter.formatHex(CampaignUiCopy.VALUE + "Enemy installation intel"));
-		meta.setLore(buildEnemyInstallationIntelLines(war, viewerFaction, Instant.now()));
+		meta.setLore(buildEnemyInstallationIntelLines(war, viewerFaction, CampaignClock.now()));
 		item.setItemMeta(meta);
 		return item;
 	}
@@ -360,6 +365,20 @@ public class CampaignCreator {
 		NamespacedKey sideKey = new NamespacedKey(SimpleFactions.plugin, "campaign_autoresolve_side");
 		meta.getPersistentDataContainer().set(warKey, PersistentDataType.INTEGER, war.getId());
 		meta.getPersistentDataContainer().set(sideKey, PersistentDataType.STRING, side.name());
+		item.setItemMeta(meta);
+		return item;
+	}
+
+	public ItemStack createRetreatButton(War war) {
+		ItemStack item = new ItemStack(Material.ORANGE_BANNER, 1);
+		ItemMeta meta = item.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex(CampaignUiCopy.WARNING + "Retreat"));
+		meta.setLore(List.of(
+				StringFormatter.formatHex(CampaignUiCopy.LABEL + "Concede the active battle slot"),
+				StringFormatter.formatHex(CampaignUiCopy.LABEL + "Enemy advances without a fight"),
+				StringFormatter.formatHex(CampaignUiCopy.LABEL + "No initiative cost")));
+		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "campaign_retreat");
+		meta.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, war.getId());
 		item.setItemMeta(meta);
 		return item;
 	}
@@ -443,7 +462,7 @@ public class CampaignCreator {
 		int committed = viewerFaction != null
 				? BattleInstallationPickService.getPicks(war, viewerFaction.getId()).size()
 				: 0;
-		boolean locked = BattleInstallationPickService.isLocked(war, java.time.Instant.now());
+		boolean locked = BattleInstallationPickService.isLocked(war, CampaignClock.now());
 		List<String> lore = new ArrayList<>();
 		lore.add(StringFormatter.formatHex(CampaignUiCopy.LABEL + "Click to commit installations"));
 		lore.add(StringFormatter.formatHex(

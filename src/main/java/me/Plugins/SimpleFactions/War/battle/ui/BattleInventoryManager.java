@@ -28,6 +28,7 @@ import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService.CampaignBattleContext;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignWarbandSignupService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 import me.Plugins.SimpleFactions.War.battle.military.BattleLivesService;
@@ -86,16 +87,29 @@ public class BattleInventoryManager {
 
 	public void warbandList(Player player) {
 		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, WARBAND_LIST_TITLE);
-		populateWarbandList(i);
+		populateWarbandList(i, player);
 		player.openInventory(i);
 	}
 
 	public void populateWarbandList(Inventory i) {
+		populateWarbandList(i, null);
+	}
+
+	public void populateWarbandList(Inventory i, Player viewer) {
 		for (int slot = 0; slot < i.getSize(); slot++) {
 			i.setItem(slot, null);
 		}
-		for (int y = 0; y < WarbandManager.get().size() && y < i.getSize(); y++) {
-			i.setItem(y, createWarbandItem(WarbandManager.get().get(y)));
+		int slot = 0;
+		for (Warband warband : WarbandManager.get()) {
+			if (slot >= i.getSize()) {
+				break;
+			}
+			if (me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidWarbandService
+					.isRaidWarbandHiddenFromPlayer(warband, viewer)) {
+				continue;
+			}
+			i.setItem(slot, createWarbandItem(warband));
+			slot++;
 		}
 	}
 	public void updateView(Player player, Battle b, Inventory i) {
@@ -150,7 +164,11 @@ public class BattleInventoryManager {
 		if (b.getWarId() == null && !b.hasStarted()) {
 			i.setItem(22, createDeleteBattleButton(b));
 		} else if (b.getWarId() != null && !b.hasStarted()) {
-			i.setItem(22, createCampaignBattleResetHintItem(b));
+			if (b.isCampaignRaid()) {
+				i.setItem(22, createCampaignRaidResetHintItem(b));
+			} else {
+				i.setItem(22, createCampaignBattleResetHintItem(b));
+			}
 		} else {
 			i.setItem(22, null);
 		}
@@ -174,9 +192,22 @@ public class BattleInventoryManager {
 		List<String> lore = new ArrayList<>();
 		lore.add("§7Cannot delete from here");
 		if (b.getWarId() != null) {
-			lore.add("§7Use §e/faction warschedule " + b.getWarId() + " battledelete");
+			lore.add("§7Use §e/war admin schedule " + b.getWarId() + " battledelete");
 			lore.add("§7to reset battle setup and warbands");
 		}
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createCampaignRaidResetHintItem(Battle b) {
+		ItemStack i = new ItemStack(Material.BARRIER, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName("§cCampaign raid");
+		List<String> lore = new ArrayList<>();
+		lore.add("§7Cannot delete from here");
+		lore.add("§7Raids end when the timer expires");
+		lore.add("§7or via war admin teardown");
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;
@@ -422,7 +453,7 @@ public class BattleInventoryManager {
 							ctx.war(), ctx.battle(), ctx.sideId());
 					lore.add("§7Soldiers: §e" + roster + "§7/§e" + maxRoster);
 				}
-				if (!CampaignWarbandSignupService.isSignupOpen(ctx.war(), Instant.now())) {
+				if (!CampaignWarbandSignupService.isSignupOpen(ctx.war(), CampaignClock.now())) {
 					lore.add("§cSignup closed until 20:00");
 				}
 			}
@@ -764,6 +795,7 @@ public class BattleInventoryManager {
 		} else {
 			lore.add("§7x" + Math.round(corner.getX()) + ", y" + Math.round(corner.getY()) + ", z" + Math.round(corner.getZ()));
 		}
+		lore.add("§7Click to set at your location");
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;

@@ -8,6 +8,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 
 public final class CampaignUiTimeFormatter {
 	private static final ZoneId CET_ZONE = ZoneId.of("Europe/Paris");
@@ -19,7 +20,7 @@ public final class CampaignUiTimeFormatter {
 	public static String formatUtcHour(LocalDate battleDay, int scheduleHour) {
 		Instant instant = BattleWindowService.atScheduleHour(battleDay, scheduleHour);
 		if (instant == null) {
-			LocalDate day = battleDay != null ? battleDay : BattleWindowService.scheduleDate(Instant.now());
+			LocalDate day = battleDay != null ? battleDay : BattleWindowService.scheduleDate(CampaignClock.now());
 			instant = BattleWindowService.atScheduleHour(day, Math.min(scheduleHour, 23));
 		}
 		return formatInstant(instant);

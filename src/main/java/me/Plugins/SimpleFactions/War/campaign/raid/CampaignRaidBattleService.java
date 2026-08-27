@@ -9,14 +9,13 @@ import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Cache;
-import me.Plugins.SimpleFactions.Managers.FactionManager;
-import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleFactory;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleJoinService;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
+import me.Plugins.SimpleFactions.War.battle.events.BattleEndedEvent;
 import me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
@@ -24,24 +23,71 @@ import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.installation.Installation;
+import me.Plugins.SimpleFactions.installation.InstallationLookup;
 import me.Plugins.SimpleFactions.installation.InstallationSpawnService;
 
 public final class CampaignRaidBattleService {
 	private CampaignRaidBattleService() {}
 
 	public static String raidBattleId(CampaignRaid raid) {
-		if (raid == null || raid.getBattleDay() == null) {
+		if (raid == null || raid.getId() == null || raid.getId().isBlank()) {
 			return null;
 		}
-		return "cr_battle_" + raid.getWarId() + "_" + raid.getBattleDay();
+		return raid.getId();
+	}
+
+	public static boolean isCampaignRaidBattle(War war, Battle battle) {
+		if (battle == null) {
+			return false;
+		}
+		if (battle.isCampaignRaid()) {
+			return true;
+		}
+		if (war == null || battle.getBattleType() != BattleType.RAID) {
+			return false;
+		}
+		CampaignRaid raid = CampaignRaidService.getActive(war);
+		return matchesRaidBattle(raid, battle.getId());
+	}
+
+	public static boolean matchesRaidBattle(CampaignRaid raid, String battleId) {
+		if (raid == null || battleId == null || battleId.isBlank()) {
+			return false;
+		}
+		if (battleId.equalsIgnoreCase(raid.getId())) {
+			return true;
+		}
+		return raid.getBattleId() != null && battleId.equalsIgnoreCase(raid.getBattleId());
+	}
+
+	public static void markAsCampaignRaidIfActive(War war, Battle battle) {
+		if (!isCampaignRaidBattle(war, battle)) {
+			return;
+		}
+		battle.setCampaignRaid(true);
+		CampaignRaid raid = CampaignRaidService.getActive(war);
+		if (raid != null && (raid.getBattleId() == null || raid.getBattleId().isBlank())) {
+			raid.setBattleId(battle.getId());
+		}
+	}
+
+	public static boolean isCampaignRaidEvent(War war, BattleEndedEvent event) {
+		if (event != null && event.isCampaignRaid()) {
+			return true;
+		}
+		if (war == null || event == null) {
+			return false;
+		}
+		Battle battle = BattleManager.getByString(event.getBattleId());
+		return isCampaignRaidBattle(war, battle);
 	}
 
 	public static Battle createAndStart(War war, CampaignRaid raid, Instant now) {
 		if (war == null || raid == null || now == null) {
 			return null;
 		}
-		Installation source = resolveInstallation(raid.getSourceInstallationId());
-		Installation target = resolveInstallation(raid.getTargetInstallationId());
+		Installation source = InstallationLookup.findById(raid.getSourceInstallationId());
+		Installation target = InstallationLookup.findById(raid.getTargetInstallationId());
 		if (source == null || target == null) {
 			return null;
 		}
@@ -54,6 +100,7 @@ public final class CampaignRaidBattleService {
 		String battleId = raidBattleId(raid);
 		Battle existing = BattleManager.getByString(battleId);
 		if (existing != null && existing.hasStarted()) {
+			CampaignRaidBossBarService.onFightStarted(existing, raid);
 			return existing;
 		}
 
@@ -63,12 +110,15 @@ public final class CampaignRaidBattleService {
 		battle.setProvinceId(target.getProvince());
 		battle.setLocked(false);
 		battle.setTeleport(false);
-		battle.setDisplayName("Campaign raid at " + target.getName());
+		battle.setDisplayName(raid.getDisplayName() != null && !raid.getDisplayName().isBlank()
+				? raid.getDisplayName()
+				: "Campaign raid at " + target.getName());
 		if (existing == null) {
 			BattleFactory.applyTemplate(battle, Cache.battleCampaignTemplateRaid);
 			BattleManager.addBattle(battle);
 		}
 
+		CampaignRaidWarbandService.createRaidWarbands(war, raid);
 		Warband attackerWarband = CampaignRaidWarbandService.getAttackerWarband(raid);
 		Warband defenderWarband = CampaignRaidWarbandService.getDefenderWarband(raid);
 		if (attackerWarband == null || defenderWarband == null) {
@@ -91,6 +141,7 @@ public final class CampaignRaidBattleService {
 		teleportAttackerWarband(attackerWarband, sourceCenter);
 		alertDefenders(war, raid, target);
 		raid.setBattleId(battleId);
+		CampaignRaidBossBarService.onFightStarted(battle, raid);
 		BattlePersistenceService.persistBattle(battle);
 		return battle;
 	}
@@ -167,21 +218,5 @@ public final class CampaignRaidBattleService {
 				player.playSound(player, Sound.ITEM_GOAT_HORN_SOUND_2, SoundCategory.MASTER, 10f, 0.6f);
 			}
 		}
-	}
-
-	private static Installation resolveInstallation(String installationId) {
-		if (installationId == null || installationId.isBlank()) {
-			return null;
-		}
-		for (Faction faction : FactionManager.factions) {
-			if (faction == null || faction.getInstallationHandler() == null) {
-				continue;
-			}
-			Installation installation = faction.getInstallationHandler().getById(installationId);
-			if (installation != null) {
-				return installation;
-			}
-		}
-		return null;
 	}
 }

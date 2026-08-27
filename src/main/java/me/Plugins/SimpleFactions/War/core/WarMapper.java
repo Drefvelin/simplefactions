@@ -112,6 +112,9 @@ public final class WarMapper {
 		data.campaignCounterSchedule = serializeSchedule(war.getCampaignCounterSchedule());
 		data.campaignCounterScheduleIndex = war.getCampaignCounterScheduleIndex();
 		data.fortControllers = serializeFortControllers(war.getFortControllers());
+		if (!war.getConcededScheduleSlots().isEmpty()) {
+			data.concededScheduleSlots = new ArrayList<>(war.getConcededScheduleSlots());
+		}
 		data.locationBattleCounts = war.getLocationBattleCounts() == null
 				? new HashMap<>()
 				: new HashMap<>(war.getLocationBattleCounts());
@@ -126,6 +129,9 @@ public final class WarMapper {
 		}
 		data.scheduledBattleHour = war.getScheduledBattleHour() > 0 ? war.getScheduledBattleHour() : null;
 		data.scheduledBattleProvinceId = war.getScheduledBattleProvinceId();
+		if (!war.getSignupRemindersSent().isEmpty()) {
+			data.signupRemindersSent = new ArrayList<>(war.getSignupRemindersSent());
+		}
 		data.battleVotes = serializeBattleVotes(war.getBattleVotes());
 		data.battleInstallationPicks = serializeInstallationPicks(war.getBattleInstallationPicks());
 		if (war.getBattleInstallationPicksBattleDay() != null) {
@@ -209,6 +215,7 @@ public final class WarMapper {
 		war.setCampaignCounterScheduleIndex(
 				data.campaignCounterScheduleIndex != null ? data.campaignCounterScheduleIndex : 0);
 		war.setFortControllers(deserializeFortControllers(data.fortControllers));
+		war.setConcededScheduleSlots(data.concededScheduleSlots);
 		war.setLocationBattleCounts(data.locationBattleCounts);
 		BattleSchedulePhase schedulePhase = BattleSchedulePhase.fromJson(data.battleSchedulePhase);
 		war.setBattleSchedulePhase(schedulePhase != null ? schedulePhase : BattleSchedulePhase.IDLE);
@@ -220,6 +227,9 @@ public final class WarMapper {
 		}
 		war.setScheduledBattleHour(data.scheduledBattleHour != null ? data.scheduledBattleHour : 0);
 		war.setScheduledBattleProvinceId(data.scheduledBattleProvinceId);
+		war.setSignupRemindersSent(data.signupRemindersSent == null
+				? new LinkedHashSet<>()
+				: new LinkedHashSet<>(data.signupRemindersSent));
 		war.setBattleVotes(deserializeBattleVotes(data.battleVotes));
 		war.setBattleInstallationPicks(deserializeInstallationPicks(data.battleInstallationPicks));
 		if (data.battleInstallationPicksBattleDay != null && !data.battleInstallationPicksBattleDay.isBlank()) {

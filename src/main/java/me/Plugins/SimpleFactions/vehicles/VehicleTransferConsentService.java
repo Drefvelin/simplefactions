@@ -13,7 +13,6 @@ import net.tfminecraft.VehicleFramework.Vehicles.ActiveVehicle;
 
 public final class VehicleTransferConsentService {
     private final InstallationVehicleService installationVehicleService;
-    private final PlayerVehicleRegistry registry;
     private final VehicleTransferSessionManager sessionManager;
 
     public VehicleTransferConsentService(
@@ -21,7 +20,6 @@ public final class VehicleTransferConsentService {
             PlayerVehicleRegistry registry,
             VehicleTransferSessionManager sessionManager) {
         this.installationVehicleService = installationVehicleService;
-        this.registry = registry;
         this.sessionManager = sessionManager;
     }
 
@@ -30,10 +28,9 @@ public final class VehicleTransferConsentService {
             Player owner,
             Faction faction,
             Installation installation,
-            ActiveVehicle vehicle,
-            PlayerVehicleRecord record) {
+            ActiveVehicle vehicle) {
         if (leader == null || owner == null || faction == null
-                || installation == null || vehicle == null || record == null) {
+                || installation == null || vehicle == null) {
             return;
         }
 
@@ -45,13 +42,13 @@ public final class VehicleTransferConsentService {
                         installation.getId(),
                         installation.getName(),
                         vehicle.getUUID(),
-                        record.getVehicleTypeId(),
+                        vehicle.getId(),
                         owner.getUniqueId(),
                         leader.getUniqueId()));
 
         owner.sendMessage(VehicleTransferMessages.consentPrompt(
                 leader.getName(),
-                record.getVehicleTypeId(),
+                vehicle.getId(),
                 installation.getName()));
         leader.sendMessage(VehicleTransferMessages.consentSent(owner.getName()));
     }
@@ -79,19 +76,16 @@ public final class VehicleTransferConsentService {
         }
 
         InstallationVehicleService.VehicleBerthTarget vehicle = resolveBerthTarget(req.getVehicleUuid());
-        PlayerVehicleRecord record = registry.getByVehicleUuid(req.getVehicleUuid()).orElse(null);
         ActiveVehicle activeVehicle = resolveVehicle(req.getVehicleUuid());
 
-        CanRegisterResult result = installationVehicleService.canRegister(
-                installation,
-                vehicle,
-                record);
+        CanRegisterResult result = installationVehicleService.canRegister(installation, vehicle);
         if (result != CanRegisterResult.OK) {
+            String typeId = activeVehicle != null ? activeVehicle.getId() : req.getVehicleTypeId();
             String message = VehicleTransferMessages.forResult(
                     result,
                     installation,
                     activeVehicle,
-                    record);
+                    typeId);
             if (message != null) {
                 owner.sendMessage(message);
             }
@@ -99,7 +93,8 @@ public final class VehicleTransferConsentService {
             return;
         }
 
-        installationVehicleService.register(installation, vehicle, record, faction);
+        installationVehicleService.register(
+                installation, vehicle, faction, req.getOwnerUuid());
         sessionManager.clear(req.getProposerLeaderUuid());
 
         String success = VehicleTransferMessages.berthSuccess(installation);
@@ -127,6 +122,11 @@ public final class VehicleTransferConsentService {
             @Override
             public String getVehicleUuid() {
                 return vehicle.getUUID();
+            }
+
+            @Override
+            public String getVehicleTypeId() {
+                return vehicle.getId();
             }
 
             @Override

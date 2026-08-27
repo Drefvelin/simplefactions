@@ -18,6 +18,8 @@ import me.Plugins.SimpleFactions.War.pathfinder.BelligerentTerritory;
 import me.Plugins.SimpleFactions.War.pathfinder.ProvinceOwnerLookup;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService.ScheduleLeg;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignScheduleCountdown;
 import me.Plugins.SimpleFactions.War.campaign.ui.CampaignUiCopy;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -48,10 +50,6 @@ public final class CampaignRouteRenderer {
 		if (war == null || entry == null || !entry.hasBattleSlot()) {
 			return false;
 		}
-		int borderProvince = war.getCampaignStartProvinceId();
-		if (borderProvince <= 0 || entry.provinceId() != borderProvince) {
-			return false;
-		}
 		if (entry.scheduleLeg() != ScheduleLeg.INVASION) {
 			return false;
 		}
@@ -59,12 +57,21 @@ public final class CampaignRouteRenderer {
 			return false;
 		}
 		List<ScheduledCampaignBattle> invasion = CampaignScheduleService.scheduleListForLeg(war, ScheduleLeg.INVASION);
-		for (int i = 0; i < invasion.size(); i++) {
-			if (invasion.get(i).provinceId() == borderProvince) {
-				return entry.scheduleIndex() == i;
+		int firstLandIndex = firstLandInvasionIndex(invasion);
+		return firstLandIndex >= 0 && entry.scheduleIndex() == firstLandIndex;
+	}
+
+	private static int firstLandInvasionIndex(List<ScheduledCampaignBattle> invasion) {
+		if (invasion == null) {
+			return -1;
+		}
+		for (int index = 0; index < invasion.size(); index++) {
+			CampaignBattleKind kind = invasion.get(index).kind();
+			if (kind != CampaignBattleKind.NAVAL && kind != CampaignBattleKind.NAVAL_INVASION) {
+				return index;
 			}
 		}
-		return false;
+		return -1;
 	}
 
 	private static void appendLegEntries(War war, List<CampaignRouteEntry> entries, ScheduleLeg leg) {
@@ -173,12 +180,17 @@ public final class CampaignRouteRenderer {
 
 		appendRealmLines(lore, war, provinceId, owners);
 
-		if (entry.hasBattleSlot() && isFoughtSlot(war, entry)) {
+		if (entry.hasBattleSlot()
+				&& CampaignRetreatService.isSlotConceded(war, entry.scheduleLeg(), entry.scheduleIndex())) {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.MUTED + CampaignUiCopy.RETREATED_LABEL));
+		} else if (entry.hasBattleSlot() && isFoughtSlot(war, entry)) {
 			lore.add(StringFormatter.formatHex(CampaignUiCopy.MUTED + CampaignUiCopy.FOUGHT_LABEL));
 		} else if (entry.hasBattleSlot()
 				&& entry.scheduleLeg() == CampaignScheduleService.activeLeg(war)
 				&& entry.scheduleIndex() == CampaignScheduleService.getActiveScheduleIndex(war)) {
 			lore.add(StringFormatter.formatHex(CampaignUiCopy.NEXT_BATTLE + "Next battle"));
+			CampaignScheduleCountdown.formatNextMilestone(war, CampaignClock.now())
+					.ifPresent(text -> lore.add(StringFormatter.formatHex(CampaignUiCopy.MUTED + text)));
 		}
 		return lore;
 	}

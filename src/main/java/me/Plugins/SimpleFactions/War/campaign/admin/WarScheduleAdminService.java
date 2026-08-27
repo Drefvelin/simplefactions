@@ -13,13 +13,15 @@ import java.util.List;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.War.core.War;
 
+import me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleLaunchService;
 
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleOutcomeService;
 
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleRosterService;
 
-import me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleLaunchService;
+import me.Plugins.SimpleFactions.War.core.WarDevMode;
 
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 
@@ -53,7 +55,7 @@ public final class WarScheduleAdminService {
 
 	public static List<String> devModeReminderLines() {
 
-		if (BattleDevMode.isEnabled()) {
+		if (WarDevMode.isEnabled()) {
 
 			return List.of();
 
@@ -61,7 +63,7 @@ public final class WarScheduleAdminService {
 
 		return List.of(
 
-				"§7Battle devmode: §cdisabled§7. Use §e/battle devmode on §7for solo staging (capture min, roster fill).");
+				"§7War devmode: §cdisabled§7. Use §e/war admin devmode on §7for solo staging (capture min, roster fill).");
 
 	}
 
@@ -349,7 +351,7 @@ public final class WarScheduleAdminService {
 
 		if (existing != null) {
 
-			CampaignBattleRosterService.ensureEnrolled(war, existing);
+			CampaignBattleRosterService.ensureEnrolledForced(war, existing);
 
 			seedCampaignSidePhantomsIfEnabled(war, existing);
 
@@ -509,7 +511,7 @@ public final class WarScheduleAdminService {
 			return validation;
 		}
 		if (choice == null || choice.isBlank()) {
-			return WarScheduleAdminResult.error("Usage: warschedule <id> battlechoice push|hold|attack|accept");
+			return WarScheduleAdminResult.error("Usage: /war admin schedule <id> choice push|hold|attack|accept");
 		}
 		boolean applied = switch (choice.toLowerCase()) {
 			case "push" -> CampaignChoiceService.applyPush(war);
@@ -536,7 +538,7 @@ public final class WarScheduleAdminService {
 	/** @deprecated use {@link #battleChoice(War, String)} */
 	public static WarScheduleAdminResult defenderChoice(War war, String choice) {
 		if (choice == null || choice.isBlank()) {
-			return WarScheduleAdminResult.error("Usage: warschedule <id> battlechoice push|hold|attack|accept");
+			return WarScheduleAdminResult.error("Usage: /war admin schedule <id> choice push|hold|attack|accept");
 		}
 		return switch (choice.toLowerCase()) {
 			case "hold" -> battleChoice(war, "hold");
@@ -562,7 +564,7 @@ public final class WarScheduleAdminService {
 			return WarScheduleAdminResult.error("Could not create campaign battle.");
 		}
 
-		CampaignBattleRosterService.ensureEnrolled(war, battle);
+		CampaignBattleRosterService.ensureEnrolledForced(war, battle);
 
 		seedCampaignSidePhantomsIfEnabled(war, battle);
 
@@ -632,8 +634,7 @@ public final class WarScheduleAdminService {
 	private static void seedCampaignSidePhantomsIfEnabled(War war, Battle battle, String battleSideId) {
 
 		Warband warband = WarbandManager.getByString(
-
-				Warband.campaignSideWarbandId(war.getId(), battleSideId));
+				BattleNamingService.campaignWarbandId(battle.getDisplayName(), battleSideId));
 
 		if (warband == null) {
 
@@ -641,7 +642,7 @@ public final class WarScheduleAdminService {
 
 		}
 
-		BattleDevMode.seedCampaignSideIfEnabled(warband, war, battle, battleSideId);
+		WarDevMode.seedCampaignSideIfEnabled(warband, war, battle, battleSideId);
 
 	}
 

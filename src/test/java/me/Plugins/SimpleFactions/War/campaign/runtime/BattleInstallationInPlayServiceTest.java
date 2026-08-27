@@ -17,6 +17,9 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidState;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
@@ -69,6 +72,35 @@ class BattleInstallationInPlayServiceTest {
 		mockFort(defender, "fort-1");
 
 		assertFalse(BattleInstallationInPlayService.isInPlay(war, "def", "fort-1"));
+	}
+
+	@Test
+	void isInPlay_trueForCampaignRaidSourceAndTarget() {
+		War war = baseWar();
+		CampaignRaid raid = new CampaignRaid();
+		raid.setAttackerCoalition(CampaignCoalition.AGGRESSOR);
+		raid.setState(CampaignRaidState.FIGHTING);
+		raid.setSourceInstallationId("airport-atk");
+		raid.setTargetInstallationId("airport-def");
+		war.setActiveCampaignRaid(raid);
+
+		assertTrue(BattleInstallationInPlayService.isInPlay(war, "atk", "airport-atk"));
+		assertTrue(BattleInstallationInPlayService.isInPlay(war, "def", "airport-def"));
+		assertFalse(BattleInstallationInPlayService.isInPlay(war, "atk", "airport-def"));
+		assertFalse(BattleInstallationInPlayService.isInPlay(war, "def", "airport-atk"));
+	}
+
+	@Test
+	void isInPlay_ignoresCampaignRaidInstallationsDuringMuster() {
+		War war = baseWar();
+		CampaignRaid raid = new CampaignRaid();
+		raid.setAttackerCoalition(CampaignCoalition.AGGRESSOR);
+		raid.setState(CampaignRaidState.MUSTER);
+		raid.setSourceInstallationId("airport-atk");
+		raid.setTargetInstallationId("airport-def");
+		war.setActiveCampaignRaid(raid);
+
+		assertFalse(BattleInstallationInPlayService.isInPlay(war, "atk", "airport-atk"));
 	}
 
 	private War baseWar() {

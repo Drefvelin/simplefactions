@@ -161,6 +161,9 @@ public class WarbandMembershipService {
 		if (battle == null || !battle.hasStarted()) {
 			return;
 		}
+		if (battle.isCampaignRaid()) {
+			return;
+		}
 		BattleSide side = battle.getSideByMemberId(player.getUniqueId());
 		if (side == null) {
 			return;

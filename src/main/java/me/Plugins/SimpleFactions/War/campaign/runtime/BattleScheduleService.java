@@ -18,6 +18,7 @@ import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCapabilityService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPostBattleChoiceService;
+import me.Plugins.SimpleFactions.War.core.WarDevMode;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignProgressionService;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
 import me.Plugins.SimpleFactions.War.campaign.vote.BattleQuorumService;
@@ -56,6 +57,9 @@ public final class BattleScheduleService {
 	}
 
 	public static boolean isRaidWindowOpen(War war, Instant now) {
+		if (WarDevMode.isEnabled() && war != null && war.isActive()) {
+			return true;
+		}
 		if (!isOnBattleDay(war, now)) {
 			return false;
 		}
@@ -100,6 +104,7 @@ public final class BattleScheduleService {
 		if (war == null) {
 			return;
 		}
+		war.clearSignupRemindersSent();
 		war.setBattleSchedulePhase(BattleSchedulePhase.VOTING);
 		clearScheduledTargets(war);
 		war.setDefenderChoiceResolved(false);
@@ -224,6 +229,7 @@ public final class BattleScheduleService {
 
 		CampaignProgressionService.applyPostponedBattle(war);
 		war.setBattleDay(war.getBattleDay().plusDays(1));
+		war.clearSignupRemindersSent();
 		BattleInstallationPickService.clearForNewBattleDay(war);
 		CampaignRaidService.clearForNewBattleDay(war);
 		war.setBattleSchedulePhase(BattleSchedulePhase.VOTING);
@@ -255,6 +261,7 @@ public final class BattleScheduleService {
 		if (war == null || scheduledAt == null) {
 			return false;
 		}
+		war.clearSignupRemindersSent();
 		LocalDate battleDay = war.getBattleDay();
 		Integer scheduleHour = BattleWindowService.resolveScheduleHour(battleDay, scheduledAt);
 		if (scheduleHour == null || !BattleWindowService.isValidHour(scheduleHour)) {
@@ -278,6 +285,7 @@ public final class BattleScheduleService {
 		if (war == null) {
 			return false;
 		}
+		war.clearSignupRemindersSent();
 		war.setScheduledBattleProvinceId(provinceId);
 		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
 		return CampaignBattleLaunchService.prepareScheduledBattle(war) != null;

@@ -1,7 +1,9 @@
 package me.Plugins.SimpleFactions.Loaders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -20,7 +22,7 @@ class ConfigLoaderBattlePresenceTest {
 	void setUp() throws IOException {
 		tempDir = Files.createTempDirectory("sf-config-presence-");
 		Cache.battleCaptureMinPlayers = 0;
-		Cache.battleDevmodePhantomCount = 0;
+		Cache.warDevmodePhantomCount = 0;
 	}
 
 	@AfterEach
@@ -42,6 +44,7 @@ class ConfigLoaderBattlePresenceTest {
 		new ConfigLoader().loadConfig(file.toFile());
 
 		assertEquals(20, Cache.battleProvincePollIntervalTicks);
+		assertFalse(Cache.battleProvinceBlockProtectionEnabled);
 	}
 
 	@Test
@@ -99,33 +102,48 @@ class ConfigLoaderBattlePresenceTest {
 
 		new ConfigLoader().loadConfig(file.toFile());
 
-		assertEquals(10, Cache.battleDevmodePhantomCount);
+		assertEquals(10, Cache.warDevmodePhantomCount);
 	}
 
 	@Test
 	void loadConfig_customDevmodePhantomCount() throws IOException {
 		Path file = writeConfig("""
-				battle:
-				  province_poll_interval_ticks: 20
+				war:
 				  devmode:
 				    phantom_count: 5
+				battle:
+				  province_poll_interval_ticks: 20
 				""");
 
 		new ConfigLoader().loadConfig(file.toFile());
 
-		assertEquals(5, Cache.battleDevmodePhantomCount);
+		assertEquals(5, Cache.warDevmodePhantomCount);
 	}
 
 	@Test
 	void loadConfig_invalidDevmodePhantomCountThrows() throws IOException {
 		Path file = writeConfig("""
-				battle:
-				  province_poll_interval_ticks: 20
+				war:
 				  devmode:
 				    phantom_count: -1
+				battle:
+				  province_poll_interval_ticks: 20
 				""");
 
 		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadConfig(file.toFile()));
+	}
+
+	@Test
+	void loadConfig_provinceBlockProtectionEnabled() throws IOException {
+		Path file = writeConfig("""
+				battle:
+				  province_poll_interval_ticks: 20
+				  province_block_protection_enabled: true
+				""");
+
+		new ConfigLoader().loadConfig(file.toFile());
+
+		assertTrue(Cache.battleProvinceBlockProtectionEnabled);
 	}
 
 	private Path writeConfig(String yaml) throws IOException {

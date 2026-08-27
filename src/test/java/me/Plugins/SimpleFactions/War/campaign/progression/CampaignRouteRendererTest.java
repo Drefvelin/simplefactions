@@ -7,6 +7,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.bukkit.Material;
@@ -19,8 +21,11 @@ import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
+import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.War.pathfinder.TitleManagerProvinceOwnerLookup;
@@ -336,6 +341,25 @@ class CampaignRouteRendererTest {
 	}
 
 	@Test
+	void isBorderFirstBattleSlot_offAxisSiegeAtBorderChronology() {
+		War war = baseWar();
+		war.setCampaignProvinces(List.of(10, 704, 705));
+		war.setCampaignStartProvinceId(704);
+		war.setObjectiveProvinceId(705);
+		war.setCursorIndex(1);
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(713, CampaignBattleKind.SIEGE, false, "Greenfort", null, 704),
+				new ScheduledCampaignBattle(705, CampaignBattleKind.FIELD, true, null)));
+
+		List<CampaignRouteEntry> entries = CampaignRouteRenderer.buildRouteEntries(war);
+		assertEquals(2, entries.size());
+		assertEquals(713, entries.get(0).provinceId());
+		assertEquals(0, entries.get(0).scheduleIndex());
+		assertTrue(CampaignRouteRenderer.isBorderFirstBattleSlot(war, entries.get(0)));
+		assertFalse(CampaignRouteRenderer.isBorderFirstBattleSlot(war, entries.get(1)));
+	}
+
+	@Test
 	void buildRouteEntries_maxEightSlots_sortsGeographically() {
 		War war = baseWar();
 		war.setCampaignProvinces(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
@@ -379,6 +403,30 @@ class CampaignRouteRendererTest {
 	}
 
 	@Test
+	void buildRouteLore_scheduledActiveSlot_showsStartsInCountdown() {
+		LocalDate battleDay = LocalDate.of(2026, 8, 21);
+		Instant now = BattleWindowService.atScheduleHour(battleDay, 18);
+		Instant scheduledAt = now.plusSeconds(92 * 60L);
+
+		War war = baseWar();
+		war.setBattleDay(battleDay);
+		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
+		war.setScheduledBattleAt(scheduledAt);
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.FIELD, false, null)));
+		war.setCampaignScheduleIndex(0);
+
+		try (MockedStatic<CampaignClock> clock = mockStatic(CampaignClock.class)) {
+			clock.when(CampaignClock::now).thenReturn(now);
+			List<String> lore = CampaignRouteRenderer.buildRouteLore(
+					war,
+					new CampaignRouteEntry(20, 2, 0),
+					owners);
+			assertTrue(lore.stream().anyMatch(line -> line.contains("Starts in")));
+		}
+	}
+
+	@Test
 	void resolveOwnershipMaterial_neutralProvince_usesGrayConcrete() {
 		War war = baseWar();
 		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
@@ -404,6 +452,24 @@ class CampaignRouteRendererTest {
 		List<CampaignRouteEntry> entries = CampaignRouteRenderer.buildRouteEntries(war);
 		assertEquals(2, entries.size());
 		entries.forEach(entry -> assertTrue(entry.hasBattleSlot()));
+	}
+
+	@Test
+	void buildRouteLore_retreatedSlot_showsRetreatedNotFought() {
+		War war = baseWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.FIELD, false, null),
+				new ScheduledCampaignBattle(30, CampaignBattleKind.FIELD, true, null)));
+		war.setCampaignScheduleIndex(1);
+		war.addConcededScheduleSlot("invasion:0");
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			stubOwnership(titleManager);
+			List<String> lore = CampaignRouteRenderer.buildRouteLore(
+					war, new CampaignRouteEntry(20, 2, 0), owners);
+			assertTrue(lore.stream().anyMatch(line -> line.contains(CampaignUiCopy.RETREATED_LABEL)));
+			assertFalse(lore.stream().anyMatch(line -> line.contains(CampaignUiCopy.FOUGHT_LABEL)));
+		}
 	}
 
 	@Test

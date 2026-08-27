@@ -72,7 +72,9 @@ public class BattleSide {
 				lifeBar.addPlayer(p);
 			}
 		}
-		lifeBar.setProgress(Double.valueOf(getLives())/Double.valueOf(maxLives));
+		int divisor = Math.max(1, maxLives);
+		double progress = Math.min(1.0, Math.max(0.0, (double) getLives() / (double) divisor));
+		lifeBar.setProgress(progress);
 		lifeBar.setTitle("§f"+id+": §e"+getLives());
 	}
 	public void removeBossBar() {

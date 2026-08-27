@@ -19,6 +19,12 @@ public final class RaidWinService {
 		if (battle == null || !battle.hasStarted() || battle.getBattleType() != BattleType.RAID) {
 			return;
 		}
+		if (battle.isCampaignRaid()) {
+			if (RaidAttackerEliminationService.isAttackerSideEliminated(battle)) {
+				BattleEndSupport.endBattle(battle, BattleTemplate.DEFENDER_SIDE);
+			}
+			return;
+		}
 
 		BattleSide attacker = battle.getSideById(BattleTemplate.ATTACKER_SIDE);
 		BattleSide defender = battle.getSideById(BattleTemplate.DEFENDER_SIDE);

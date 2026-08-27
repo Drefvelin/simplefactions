@@ -1,5 +1,6 @@
 package me.Plugins.SimpleFactions.War.campaign.vote;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,6 +8,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
 
 public final class BattleVoterEligibility {
@@ -20,6 +22,11 @@ public final class BattleVoterEligibility {
 				&& war.getBattleSchedulePhase() == BattleSchedulePhase.VOTING
 				&& faction != null
 				&& war.getSide(faction) != null;
+	}
+
+	public static boolean canToggleVote(War war, Faction faction, Instant now) {
+		return isEligibleVoter(war, faction)
+				&& !BattleScheduleService.isVoteCloseDue(war, now);
 	}
 
 	public static boolean canProposeAutoresolve(War war, BelligerentRole side) {

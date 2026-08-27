@@ -20,6 +20,62 @@ import me.Plugins.SimpleFactions.settlement.Settlement;
 
 class BattleNamingServiceTest {
 	@Test
+	void slugifyDisplayName_normalizesText() {
+		assertEquals("battle_of_lanbury", BattleNamingService.slugifyDisplayName("Battle of Lanbury"));
+		assertEquals("second_harbor_raid", BattleNamingService.slugifyDisplayName("Second Harbor Raid"));
+		assertEquals("st_mary_s_harbor", BattleNamingService.slugifyDisplayName("St. Mary's Harbor"));
+		assertEquals("wilderness", BattleNamingService.slugifyDisplayName("   "));
+	}
+
+	@Test
+	void slugifyDisplayName_stripsColorCodes() {
+		assertEquals("battle_of_lanbury", BattleNamingService.slugifyDisplayName("§aBattle of Lanbury"));
+		assertEquals("battle_of_lanbury", BattleNamingService.slugifyDisplayName("&#a3a184Battle of Lanbury"));
+		assertEquals("second_harbor_raid", BattleNamingService.slugifyDisplayName("§l§eSecond Harbor Raid"));
+		assertEquals("harbor_raid", BattleNamingService.slugifyDisplayName("&#a3a184§lHarbor Raid"));
+	}
+
+	@Test
+	void campaignWarbandId_stripsColorCodesFromDisplayName() {
+		assertEquals(
+				"battle_of_lanbury_attacker",
+				BattleNamingService.campaignWarbandId("§aBattle of Lanbury", "attacker"));
+		assertEquals(
+				"second_harbor_raid_defender",
+				BattleNamingService.campaignWarbandId("&#a3a184§lSecond Harbor Raid", "defender"));
+	}
+
+	@Test
+	void slugifyDisplayName_capsLength() {
+		String longName = "A".repeat(80);
+		assertEquals(48, BattleNamingService.slugifyDisplayName(longName).length());
+	}
+
+	@Test
+	void campaignWarbandId_usesDisplaySlugAndSide() {
+		assertEquals(
+				"battle_of_lanbury_attacker",
+				BattleNamingService.campaignWarbandId("Battle of Lanbury", "attacker"));
+		assertEquals(
+				"battle_of_lanbury_defender",
+				BattleNamingService.campaignWarbandId("Battle of Lanbury", "defender"));
+	}
+
+	@Test
+	void buildRaidDisplayName_usesInstallationOrdinal() {
+		War war = new War(1, mock(Faction.class), mock(Faction.class));
+		me.Plugins.SimpleFactions.installation.Installation target =
+				mock(me.Plugins.SimpleFactions.installation.Installation.class);
+		when(target.getId()).thenReturn("harbor-1");
+		when(target.getName()).thenReturn("Harbor");
+
+		assertEquals("Harbor Raid", BattleNamingService.buildRaidDisplayName(war, target));
+
+		war.recordLocationBattle(BattleNamingService.raidLocationKey(target));
+		assertEquals("Second Harbor Raid", BattleNamingService.buildRaidDisplayName(war, target));
+	}
+
+	@Test
 	void buildDisplayName_fieldOrdinals() {
 		assertEquals("Battle of Lanbury", BattleNamingService.buildDisplayName(
 				BattleType.FIELD, "Lanbury", 1));
@@ -32,7 +88,7 @@ class BattleNamingServiceTest {
 		record Case(BattleType type, String location, int ordinal, String expected) {}
 		Case[] cases = {
 				new Case(BattleType.SIEGE, "Fort Redoubt", 1, "Siege of Fort Redoubt"),
-				new Case(BattleType.RAID, "Lanbury", 2, "Lanbury Raid"),
+				new Case(BattleType.RAID, "Lanbury", 2, "Second Lanbury Raid"),
 				new Case(BattleType.FIELD, BattleNamingService.WILDERNESS, 1, "Battle of Wilderness"),
 		};
 		for (Case c : cases) {

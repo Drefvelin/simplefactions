@@ -100,14 +100,20 @@ public final class CampaignScheduleBuilder {
 
 		LogManager.section("Phase 1 border anchor");
 		OperationalFort borderFort = fortIndex.fortForProvince(borderProvinceId).orElse(null);
-		boolean borderIsFortHome = borderFort != null
-				&& borderFort.province() == borderProvinceId
+		boolean enemyBorderFort = borderFort != null
 				&& FortControlService.isEnemyControlled(war, borderFort.id(), CampaignCoalition.AGGRESSOR);
-		if (borderIsFortHome) {
+		boolean borderIsFortHome = enemyBorderFort && borderFort.province() == borderProvinceId;
+		boolean fortHomeOffAxis = enemyBorderFort && axis.indexOf(borderFort.province()) < 0;
+		boolean borderIsObjective = objectiveIndex >= 0
+				&& objectiveIndex < axis.size()
+				&& axis.get(objectiveIndex) == borderProvinceId;
+		if ((borderIsFortHome || fortHomeOffAxis) && !borderIsObjective) {
 			LogManager.line(
-					"Phase 1: border province %d is fort home %s; siege replaces BORDER field",
+					"Phase 1: border province %d covered by fort %s home=%d offAxis=%s; siege replaces BORDER field",
 					borderProvinceId,
-					borderFort.id());
+					borderFort.id(),
+					borderFort.province(),
+					fortHomeOffAxis);
 			CampaignBattlePlacer.placeBattle(
 					ctx,
 					war,
@@ -127,7 +133,7 @@ public final class CampaignScheduleBuilder {
 					CampaignCoalition.AGGRESSOR,
 					null,
 					null);
-			if (borderFort != null) {
+			if (enemyBorderFort) {
 				CampaignBattlePlacer.placeBattle(
 						ctx,
 						war,

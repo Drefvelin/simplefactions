@@ -2,8 +2,10 @@ package me.Plugins.SimpleFactions;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
@@ -71,13 +73,19 @@ public class Cache {
 	public static int warBattleMinSideLives;
 
 	public static int campaignRaidMusterSeconds;
+	public static List<Integer> campaignRaidMusterReminderSecondsBefore = new ArrayList<>();
 	public static int campaignRaidDurationSeconds;
 	public static int campaignRaidRepairLockHours;
+	public static int campaignRaidIntruderDamageIntervalTicks;
+	public static int campaignRaidIntruderDamageAmount;
 
 	public static int battleProvincePollIntervalTicks;
 	public static int battleProvinceLeaveCountdownSeconds;
+	public static boolean battleProvinceBlockProtectionEnabled;
 	public static int battleCaptureMinPlayers;
-	public static int battleDevmodePhantomCount;
+	public static int battleRetreatMinElapsedSeconds;
+	public static List<Integer> battleSignupReminderSecondsBefore = new ArrayList<>();
+	public static int warDevmodePhantomCount;
 	public static int battleSiegeContestDurationSeconds;
 	public static DefenderRespawnMode battleRaidDefenderRespawnModeDefault;
 	public static String battleCampaignTemplateField;

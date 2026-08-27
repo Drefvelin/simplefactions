@@ -2,7 +2,10 @@ package me.Plugins.SimpleFactions.Loaders;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
+import java.util.List;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -75,8 +78,8 @@ public class ConfigLoader {
 		Cache.warPathfinderNeutralPenalty = config.getDouble("war.pathfinder.neutral_penalty", 8.0);
 		Cache.warPathfinderSeaPassEnabled = config.getBoolean("war.pathfinder.sea_pass_enabled", true);
 		Cache.warPathfinderWaterCost = config.getDouble("war.pathfinder.water_cost", 0.0);
-		Cache.loggingEnabled = config.getBoolean("logging", false);
-		Cache.wipeLog = config.getBoolean("wipe-log", false);
+		Cache.loggingEnabled = config.getBoolean("logging", true);
+		Cache.wipeLog = config.getBoolean("wipe-log", true);
 
 		Cache.warBattleWindowStartHour = config.getInt("war.battle_schedule.window_start_hour", 21);
 		Cache.warBattleWindowEndHour = config.getInt("war.battle_schedule.window_end_hour", 24);
@@ -95,19 +98,34 @@ public class ConfigLoader {
 		} else {
 			Cache.warBattleVotingDevMinPlayers = Cache.warBattleVotingMinPlayers;
 		}
+		Cache.warDevmodePhantomCount = config.getInt("war.devmode.phantom_count", 10);
 		validateBattleScheduleConfig(config);
 
 		Cache.warBattleLivesPerRegiment = config.getInt("war.battle_military.lives_per_regiment", 5);
 		Cache.warBattleMinSideLives = config.getInt("war.battle_military.min_side_lives", 1);
 		Cache.campaignRaidMusterSeconds = config.getInt("war.campaign_raid.muster_seconds", 60);
+		Cache.campaignRaidMusterReminderSecondsBefore = loadReminderOffsets(
+				config,
+				"war.campaign_raid.muster_reminder_seconds_before",
+				List.of(45, 30, 15, 10));
 		Cache.campaignRaidDurationSeconds = config.getInt("war.campaign_raid.duration_seconds", 600);
 		Cache.campaignRaidRepairLockHours = config.getInt("war.campaign_raid.repair_lock_hours", 48);
+		Cache.campaignRaidIntruderDamageIntervalTicks =
+				config.getInt("war.campaign_raid.intruder_damage_interval_ticks", 10);
+		Cache.campaignRaidIntruderDamageAmount =
+				config.getInt("war.campaign_raid.intruder_damage_amount", 4);
 		validateCampaignRaidConfig();
 
 		Cache.battleProvincePollIntervalTicks = config.getInt("battle.province_poll_interval_ticks", 20);
 		Cache.battleProvinceLeaveCountdownSeconds = config.getInt("battle.province_leave_countdown_seconds", 10);
+		Cache.battleProvinceBlockProtectionEnabled =
+				config.getBoolean("battle.province_block_protection_enabled", false);
 		Cache.battleCaptureMinPlayers = config.getInt("battle.capture_min_players", 1);
-		Cache.battleDevmodePhantomCount = config.getInt("battle.devmode.phantom_count", 10);
+		Cache.battleRetreatMinElapsedSeconds = config.getInt("battle.retreat_min_elapsed_seconds", 1200);
+		Cache.battleSignupReminderSecondsBefore = loadReminderOffsets(
+				config,
+				"battle.signup_reminder_seconds_before",
+				List.of(1800, 600, 300, 60));
 		Cache.battleSiegeContestDurationSeconds = config.getInt("battle.siege.contest_duration_seconds", 180);
 		Cache.battleRaidDefenderRespawnModeDefault = DefenderRespawnMode.fromJson(
 				config.getString("battle.raid.defender_respawn_mode_default", "INFINITE"));
@@ -208,6 +226,17 @@ public class ConfigLoader {
 		if (Cache.campaignRaidRepairLockHours < 1) {
 			failBattleSchedule("war.campaign_raid.repair_lock_hours must be >= 1");
 		}
+		if (Cache.campaignRaidIntruderDamageIntervalTicks < 1) {
+			failBattleSchedule("war.campaign_raid.intruder_damage_interval_ticks must be >= 1");
+		}
+		if (Cache.campaignRaidIntruderDamageAmount < 1) {
+			failBattleSchedule("war.campaign_raid.intruder_damage_amount must be >= 1");
+		}
+		for (int offset : Cache.campaignRaidMusterReminderSecondsBefore) {
+			if (offset < 1) {
+				failBattleSchedule("war.campaign_raid.muster_reminder_seconds_before values must be >= 1");
+			}
+		}
 	}
 
 	private static void validateBattlePresenceConfig() {
@@ -217,8 +246,8 @@ public class ConfigLoader {
 		if (Cache.battleCaptureMinPlayers < 1) {
 			failBattleSchedule("battle.capture_min_players must be >= 1");
 		}
-		if (Cache.battleDevmodePhantomCount < 0) {
-			failBattleSchedule("battle.devmode.phantom_count must be >= 0");
+		if (Cache.warDevmodePhantomCount < 0) {
+			failBattleSchedule("war.devmode.phantom_count must be >= 0");
 		}
 	}
 
@@ -232,5 +261,29 @@ public class ConfigLoader {
 		if (Cache.battleRaidDefenderRespawnModeDefault == null) {
 			failBattleSchedule("battle.raid.defender_respawn_mode_default must be INFINITE or LIVES");
 		}
+		for (int offset : Cache.battleSignupReminderSecondsBefore) {
+			if (offset < 1) {
+				failBattleSchedule("battle.signup_reminder_seconds_before values must be >= 1");
+			}
+		}
+	}
+
+	private static List<Integer> loadReminderOffsets(
+			org.bukkit.configuration.file.FileConfiguration config,
+			String path,
+			List<Integer> defaults) {
+		List<Integer> offsets = new ArrayList<>();
+		List<?> raw = config.getList(path);
+		if (raw == null) {
+			offsets.addAll(defaults);
+		} else {
+			for (Object entry : raw) {
+				if (entry instanceof Number number) {
+					offsets.add(number.intValue());
+				}
+			}
+		}
+		offsets.sort(Collections.reverseOrder());
+		return offsets;
 	}
 }

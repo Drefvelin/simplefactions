@@ -27,19 +27,13 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.SimpleFactions.installation.handler.ConstructResult;
 import me.Plugins.SimpleFactions.settlement.handler.CapitalResult;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Permissions;
-import me.Plugins.SimpleFactions.War.core.War;
-import me.Plugins.SimpleFactions.War.core.WarCommandHelper;
-import me.Plugins.SimpleFactions.War.core.WarDebugFormatter;
-import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
-import me.Plugins.SimpleFactions.War.campaign.admin.WarScheduleAdminResult;
-import me.Plugins.SimpleFactions.War.campaign.admin.WarScheduleAdminService;
-import me.Plugins.SimpleFactions.War.campaign.admin.WarScheduleFeedbackFormatter;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -559,6 +553,12 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleTransferMessages.unknownInstallation());
 					return true;
 				}
+				if(!Permissions.isAdmin(p)
+						&& me.Plugins.SimpleFactions.vehicles.VehicleInstallationLockService.isVehicleLocked(
+								installation.getId(), Instant.now())) {
+					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleInstallationLockService.BERTH_BLOCKED);
+					return true;
+				}
 				long timeoutMillis = me.Plugins.SimpleFactions.Loaders.InstallationConfigLoader
 						.getTransferRequestTimeoutSeconds() * 1000L;
 				SimpleFactions.getInstance().getVehicleTransferSessionManager().put(
@@ -567,6 +567,27 @@ public class CommandManager implements Listener, CommandExecutor{
 								installation.getId(),
 								System.currentTimeMillis() + timeoutMillis));
 				p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleTransferMessages.commandArmed(installation));
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("findvehicles")) {
+				Faction f = FactionManager.getByLeader(p.getName());
+				if(f == null) {
+					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleFindMessages.notLeader());
+					return true;
+				}
+				if(args.length < 2) {
+					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleFindMessages.usage());
+					return true;
+				}
+				var handler = f.getInstallationHandler();
+				Installation installation =
+						me.Plugins.SimpleFactions.vehicles.VehicleFindMessages.resolveInstallation(
+								handler, args[1]);
+				if(installation == null) {
+					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleFindMessages.unknownInstallation());
+					return true;
+				}
+				me.Plugins.SimpleFactions.vehicles.VehicleFindMessages.sendInstallationVehicles(
+						p, installation);
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("unclaim") && args.length >= 1) {
 				Faction f = null;
@@ -688,10 +709,6 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				InventoryManager i = new InventoryManager();
 				i.factionView(p, f);
-				return true;
-			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("warlist") && args.length == 1) {
-				InventoryManager i = new InventoryManager();
-				i.warList(p);
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("kick") && args.length == 2) {
 				Faction f = FactionManager.getByMember(p.getName());
@@ -1306,168 +1323,13 @@ public class CommandManager implements Listener, CommandExecutor{
 				SimpleFactions.reloadTitles();
 				p.sendMessage("§eReloaded titles!");
 				return true;
-			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("endwar") && args.length == 2) {
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("reloadconfigs") && args.length == 1) {
 				if(!Permissions.isAdmin(sender)) {
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
 					return true;
 				}
-				var warId = WarCommandHelper.parseWarId(args[1]);
-				if (warId.isEmpty()) {
-					p.sendMessage("§cWar id must be a number");
-					return true;
-				}
-				War w = WarManager.getById(warId.get());
-				if(w == null){
-					p.sendMessage("§cNo war by that id");
-					return true;
-				}
-				WarManager.endWar(w);
-				p.sendMessage("§aEnded war "+w.getName());
-				return true;
-			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("warstatus") && args.length == 2) {
-				if(!Permissions.isAdmin(sender)) {
-					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
-					return true;
-				}
-				var warId = WarCommandHelper.parseWarId(args[1]);
-				if (warId.isEmpty()) {
-					p.sendMessage("§cWar id must be a number");
-					return true;
-				}
-				War w = WarManager.getById(warId.get());
-				if(w == null){
-					p.sendMessage("§cNo war by that id");
-					return true;
-				}
-				for (String line : WarDebugFormatter.formatStatusLines(w)) {
-					p.sendMessage(line);
-				}
-				return true;
-			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("warpath") && args.length == 2) {
-				if(!Permissions.isAdmin(sender)) {
-					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
-					return true;
-				}
-				var warId = WarCommandHelper.parseWarId(args[1]);
-				if (warId.isEmpty()) {
-					p.sendMessage("§cWar id must be a number");
-					return true;
-				}
-				War w = WarManager.getById(warId.get());
-				if(w == null){
-					p.sendMessage("§cNo war by that id");
-					return true;
-				}
-				if (!w.isActive()) {
-					p.sendMessage("§cWar is not active");
-					return true;
-				}
-				if (!WarManager.regenerateCampaign(w)) {
-					p.sendMessage("§cCould not regenerate campaign route");
-					return true;
-				}
-				List<Integer> axis = w.getCampaignProvinces();
-				Integer cursorProvince = null;
-				if (axis != null && w.getCursorIndex() >= 0 && w.getCursorIndex() < axis.size()) {
-					cursorProvince = axis.get(w.getCursorIndex());
-				}
-				String phase = w.getCampaignPhase() != null ? w.getCampaignPhase().toJson() : "invasion";
-				p.sendMessage("§aRegenerated campaign for war " + w.getId()
-						+ ": objective " + w.getObjectiveProvinceId()
-						+ ", start " + w.getCampaignStartProvinceId()
-						+ ", path length " + (axis == null ? 0 : axis.size())
-						+ ", cursor " + w.getCursorIndex()
-						+ (cursorProvince != null ? " (province " + cursorProvince + ")" : "")
-						+ ", phase " + phase
-						+ ", initiative " + w.getInitiativeAttacker() + "/" + w.getInitiativeDefender()
-						+ ". Progression and occupation reset.");
-				for (String line : WarDebugFormatter.formatStatusLines(w)) {
-					p.sendMessage(line);
-				}
-				return true;
-			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("warschedule") && args.length >= 3) {
-				if(!Permissions.isAdmin(sender)) {
-					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
-					return true;
-				}
-				var warId = WarCommandHelper.parseWarId(args[1]);
-				if (warId.isEmpty()) {
-					p.sendMessage("§cWar id must be a number");
-					return true;
-				}
-				War w = WarManager.getById(warId.get());
-				if(w == null){
-					p.sendMessage("§cNo war by that id");
-					return true;
-				}
-				String subcommand = args[2].toLowerCase();
-				WarScheduleAdminResult result = switch (subcommand) {
-					case "opencvote" -> WarScheduleAdminService.openVote(w);
-					case "closevote" -> WarScheduleAdminService.closeVote(w, Instant.now());
-					case "skipday" -> WarScheduleAdminService.skipDay(w);
-					case "castvote" -> {
-						if (args.length < 4) {
-							yield WarScheduleAdminResult.error("Usage: warschedule <id> castvote <hour> [attacker|defender|both]");
-						}
-						int hour;
-						try {
-							hour = Integer.parseInt(args[3]);
-						} catch (NumberFormatException e) {
-							yield WarScheduleAdminResult.error("Hour must be a number.");
-						}
-						String side = args.length >= 5 ? args[4] : "both";
-						yield WarScheduleAdminService.castVote(w, hour, side);
-					}
-					case "forcequorum" -> WarScheduleAdminService.forceQuorum(w);
-					case "setscheduled" -> {
-						if (args.length < 4) {
-							yield WarScheduleAdminResult.error("Usage: warschedule <id> setscheduled <iso-instant>");
-						}
-						yield WarScheduleAdminService.setScheduled(w, args[3]);
-					}
-					case "battlecreate" -> WarScheduleAdminService.battleCreate(w);
-					case "battledelete" -> WarScheduleAdminService.battleDelete(w);
-					case "battlestart" -> WarScheduleAdminService.battleStart(w);
-					case "winbattle" -> {
-						if (args.length < 4) {
-							yield WarScheduleAdminResult.error("Usage: warschedule <id> winbattle attacker|defender");
-						}
-						BelligerentRole winner = parseBelligerentRoleArg(args[3]);
-						if (winner == null) {
-							yield WarScheduleAdminResult.error("Winner must be attacker or defender.");
-						}
-						yield WarScheduleAdminService.winBattle(w, winner);
-					}
-					case "battlechoice", "defenderchoice", "pushchoice", "holdchoice" -> {
-						if (args.length < 4) {
-							yield WarScheduleAdminResult.error(
-									"Usage: warschedule <id> battlechoice push|hold|attack|accept");
-						}
-						yield WarScheduleAdminService.battleChoice(w, args[3]);
-					}
-					default -> WarScheduleAdminResult.error(
-							"Unknown subcommand. Use: opencvote, closevote, skipday, castvote, forcequorum, setscheduled, battlecreate, battledelete, battlestart, winbattle, battlechoice");
-				};
-				if (result.success()) {
-					WarManager.persist(w);
-					p.sendMessage("§a" + result.message());
-					Integer castHour = null;
-					if ("castvote".equals(subcommand) && args.length >= 4) {
-						try {
-							castHour = Integer.parseInt(args[3]);
-						} catch (NumberFormatException ignored) {
-							// castvote branch already validated hour
-						}
-					}
-					for (String line : WarScheduleFeedbackFormatter.format(subcommand, w, castHour)) {
-						p.sendMessage(line);
-					}
-				} else {
-					p.sendMessage("§c" + result.message());
-				}
-				for (String line : WarScheduleAdminService.devModeReminderLines()) {
-					p.sendMessage(line);
-				}
+				SimpleFactions.reloadConfigs();
+				p.sendMessage("§eReloaded configs!");
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("destroytitle") && args.length == 2) {
 				if(!Permissions.isAdmin(sender)) {
@@ -1623,16 +1485,4 @@ public class CommandManager implements Listener, CommandExecutor{
 		return FactionManager.getTitleOwner(title);
 	}
 
-	private static BelligerentRole parseBelligerentRoleArg(String value) {
-		if (value == null || value.isBlank()) {
-			return null;
-		}
-		if (value.equalsIgnoreCase("attacker")) {
-			return BelligerentRole.ATTACKER;
-		}
-		if (value.equalsIgnoreCase("defender")) {
-			return BelligerentRole.DEFENDER;
-		}
-		return null;
-	}
 }

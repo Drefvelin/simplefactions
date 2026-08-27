@@ -21,7 +21,7 @@ class LogManagerTest {
 		LogManager.line("hello");
 		LogManager.flush();
 
-		Path logFile = tempDir.resolve("log.txt");
+		Path logFile = tempDir.resolve("logs").resolve("log.txt");
 		assertTrue(Files.exists(logFile));
 		String content = Files.readString(logFile);
 		assertTrue(content.contains("test-session"));
@@ -35,7 +35,7 @@ class LogManagerTest {
 		LogManager.line("hello");
 		LogManager.flush();
 
-		assertEquals(false, Files.exists(tempDir.resolve("log.txt")));
+		assertEquals(false, Files.exists(tempDir.resolve("logs").resolve("log.txt")));
 	}
 
 	@Test
@@ -43,13 +43,14 @@ class LogManagerTest {
 		LogManager.configure(true, false, tempDir.toFile());
 		LogManager.append("one-off");
 
-		String content = Files.readString(tempDir.resolve("log.txt"));
+		String content = Files.readString(tempDir.resolve("logs").resolve("log.txt"));
 		assertTrue(content.contains("one-off"));
 	}
 
 	@Test
 	void configure_wipeLog_deletesExistingFile() throws Exception {
-		Path logFile = tempDir.resolve("log.txt");
+		Path logFile = tempDir.resolve("logs").resolve("log.txt");
+		Files.createDirectories(logFile.getParent());
 		Files.writeString(logFile, "old content");
 		LogManager.configure(false, true, tempDir.toFile());
 

@@ -8,6 +8,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleEndSupport;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
@@ -21,6 +22,16 @@ public final class CampaignRaidFightScheduler {
 
 	static void resetForTests() {
 		scheduledWarTasks.clear();
+	}
+
+	public static void cancelAllScheduled() {
+		for (Integer warId : scheduledWarTasks.keySet().toArray(Integer[]::new)) {
+			cancelScheduled(warId);
+		}
+	}
+
+	public static void cancelForWar(int warId) {
+		cancelScheduled(warId);
 	}
 
 	public static void onFightStarted(War war, Instant now) {
@@ -37,7 +48,7 @@ public final class CampaignRaidFightScheduler {
 			onFightEnd(war, now);
 			return;
 		}
-		if (!canScheduleTasks()) {
+		if (!canScheduleTasks() || CampaignClock.isSpoofed()) {
 			return;
 		}
 		int warId = war.getId();
@@ -47,7 +58,7 @@ public final class CampaignRaidFightScheduler {
 				scheduledWarTasks.remove(warId);
 				War current = WarManager.getById(warId);
 				if (current != null) {
-					onFightEnd(current, Instant.now());
+					onFightEnd(current, CampaignClock.now());
 				}
 			}
 		}.runTaskLater(SimpleFactions.plugin, delayTicks).getTaskId();
@@ -78,6 +89,7 @@ public final class CampaignRaidFightScheduler {
 		if (raid == null || raid.getState() != CampaignRaidState.FIGHTING) {
 			return;
 		}
+		CampaignRaidIntruderService.clearForRaid(raid);
 		String battleId = raid.getBattleId();
 		if (battleId == null || battleId.isBlank()) {
 			return;

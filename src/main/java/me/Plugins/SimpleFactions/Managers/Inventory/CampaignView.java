@@ -30,18 +30,22 @@ import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteEntry;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteRenderer;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignChoiceService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPostBattleChoiceService;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRetreatService;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRetreatService.RetreatResult;
 import me.Plugins.SimpleFactions.War.campaign.progression.WhitePeaceService;
 import me.Plugins.SimpleFactions.War.resolution.WarResolutionService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleAutoresolveService;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidMessages;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.LaunchResult;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignViewRefreshService;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.BattleHourTally;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleLookups;
 import me.Plugins.SimpleFactions.War.campaign.vote.BattleVoteService;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.BattleVoteToggleResult;
 import me.Plugins.SimpleFactions.War.campaign.vote.BattleVoterEligibility;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 
 public class CampaignView {
@@ -51,6 +55,7 @@ public class CampaignView {
 	private static final int INSTALLATIONS_ENTRY_SLOT = 33;
 	private static final int ENEMY_INSTALLATION_INTEL_SLOT = 34;
 	private static final int START_RAID_ENTRY_SLOT = 35;
+	private static final int RETREAT_SLOT = 46;
 
 	public InventoryManager inv;
 	public CampaignCreator creator = new CampaignCreator();
@@ -59,33 +64,67 @@ public class CampaignView {
 		this.inv = inv;
 	}
 
+	public static boolean isViewingCampaign(Player player, int warId) {
+		if (player == null) {
+			return false;
+		}
+		Inventory top = player.getOpenInventory().getTopInventory();
+		if (!(top.getHolder() instanceof CampaignInventoryHolder holder)) {
+			return false;
+		}
+		return holder.getType() == SFGUI.CAMPAIGN_VIEW && holder.getWarId() == warId;
+	}
+
 	public void campaignView(Player player, War war, boolean open) {
 		if (war == null || !war.isActive() || war.getWarType() == WarType.RAID) {
-			player.sendMessage("§cThis war has no campaign view.");
+			if (open) {
+				player.sendMessage("§cThis war has no campaign view.");
+			}
 			return;
 		}
 		List<Integer> axis = war.getCampaignProvinces();
 		if (axis == null || axis.isEmpty()) {
-			player.sendMessage("§cThis war has no campaign route.");
+			if (open) {
+				player.sendMessage("§cThis war has no campaign route.");
+			}
 			return;
 		}
-		List<CampaignRouteEntry> routeEntries = CampaignRouteRenderer.buildRouteEntries(war);
 
 		Faction viewerFaction = FactionManager.getByLeader(player.getName());
 		if (viewerFaction == null) {
 			viewerFaction = FactionManager.getByMember(player.getName());
 		}
 		if (viewerFaction == null) {
-			player.sendMessage("§cYou are not in a faction.");
+			if (open) {
+				player.sendMessage("§cYou are not in a faction.");
+			}
 			return;
 		}
 
-		Inventory inventory = SimpleFactions.plugin.getServer().createInventory(
-				new CampaignInventoryHolder(war.getId(), SFGUI.CAMPAIGN_VIEW),
-				54,
-				war.getName() + " §7Campaign");
+		Inventory inventory;
+		if (!open && isViewingCampaign(player, war.getId())) {
+			inventory = player.getOpenInventory().getTopInventory();
+		} else if (open) {
+			inventory = SimpleFactions.plugin.getServer().createInventory(
+					new CampaignInventoryHolder(war.getId(), SFGUI.CAMPAIGN_VIEW),
+					54,
+					war.getName() + " §7Campaign");
+		} else {
+			return;
+		}
 
-		for (int slot : Arrays.asList(0, 1, 2, 6, 7, 8, 45, 46, 52)) {
+		populateCampaignInventory(inventory, player, war, viewerFaction);
+
+		if (open) {
+			player.openInventory(inventory);
+			CampaignViewRefreshService.register(player, war.getId());
+		}
+	}
+
+	private void populateCampaignInventory(Inventory inventory, Player player, War war, Faction viewerFaction) {
+		List<CampaignRouteEntry> routeEntries = CampaignRouteRenderer.buildRouteEntries(war);
+
+		for (int slot : Arrays.asList(0, 1, 2, 6, 7, 8, 45, 52)) {
 			inventory.setItem(slot, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 		}
 
@@ -116,6 +155,12 @@ public class CampaignView {
 			inventory.setItem(firstBattleMarkerSlot, creator.createFirstBattleMarkerItem());
 		}
 
+		if (canRetreat(player, war)) {
+			inventory.setItem(RETREAT_SLOT, creator.createRetreatButton(war));
+		} else {
+			inventory.setItem(RETREAT_SLOT, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
+		}
+
 		if (canSurrender(player, war)) {
 			inventory.setItem(47, creator.createSurrenderButton(war));
 		} else {
@@ -129,7 +174,6 @@ public class CampaignView {
 		}
 
 		populatePostBattleChoiceButtons(inventory, war, player);
-
 		populateAutoresolveButtons(inventory, war, player);
 
 		if (war.isParticipating(viewerFaction)) {
@@ -139,7 +183,7 @@ public class CampaignView {
 					creator.createEnemyInstallationIntelItem(war, viewerFaction));
 			inventory.setItem(
 					START_RAID_ENTRY_SLOT,
-					creator.createStartRaidEntryButton(war, viewerFaction, Instant.now()));
+					creator.createStartRaidEntryButton(war, viewerFaction, CampaignClock.now()));
 		} else {
 			inventory.setItem(INSTALLATIONS_ENTRY_SLOT, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 			inventory.setItem(ENEMY_INSTALLATION_INTEL_SLOT, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
@@ -147,14 +191,12 @@ public class CampaignView {
 		}
 
 		inventory.setItem(53, inv.createBackButton(SFGUI.WAR_VIEW));
-		if (open) {
-			player.openInventory(inventory);
-		}
 	}
 
 	private void populateHourToggles(Inventory inventory, War war, Faction viewerFaction, UUID viewerUuid) {
 		inventory.setItem(VOTING_HELP_SLOT, creator.createVotingHelpItem());
-		boolean eligible = BattleVoterEligibility.isEligibleVoter(war, viewerFaction);
+		boolean clickable = BattleVoterEligibility.canToggleVote(
+				war, viewerFaction, CampaignClock.now());
 		Set<Integer> selections = BattleVoteService.getPlayerSelections(war, viewerUuid);
 		var uuidToFaction = BattleScheduleLookups.uuidToFactionForWar(war);
 		var hourTally = BattleVoteService.buildHourTally(war, uuidToFaction);
@@ -168,7 +210,7 @@ public class CampaignView {
 			BattleHourTally tally = hourTally.getOrDefault(entry.hour(), new BattleHourTally(0, 0));
 			inventory.setItem(
 					entry.slot(),
-					creator.createHourToggleItem(war, entry.hour(), selected, eligible, tally));
+					creator.createHourToggleItem(war, entry.hour(), selected, clickable, tally));
 		}
 	}
 
@@ -197,7 +239,7 @@ public class CampaignView {
 	private void populateAutoresolveButtons(Inventory inventory, War war, Player player) {
 		inventory.setItem(51, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 		if (war.getBattleSchedulePhase() != BattleSchedulePhase.VOTING
-				|| !BattleAutoresolveService.canProposeAutoresolveNow(war, Instant.now())) {
+				|| !BattleAutoresolveService.canProposeAutoresolveNow(war, CampaignClock.now())) {
 			inventory.setItem(49, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 			inventory.setItem(50, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 			return;
@@ -231,6 +273,7 @@ public class CampaignView {
 
 		int slot = e.getSlot();
 		if (slot == 53) {
+			CampaignViewRefreshService.unregister(player);
 			inv.warView(null, player, war, true);
 			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			return;
@@ -286,7 +329,7 @@ public class CampaignView {
 				player.sendMessage(CampaignRaidMessages.NOT_LEADER);
 				return;
 			}
-			Instant now = Instant.now();
+			Instant now = CampaignClock.now();
 			LaunchResult launch = CampaignRaidService.canLaunch(war, viewerFaction, now);
 			if (launch != LaunchResult.STARTED) {
 				String message = CampaignRaidMessages.messageForLaunchResult(launch);
@@ -310,6 +353,25 @@ public class CampaignView {
 				&& autoresolveSide != null
 				&& autoresolveWarId == war.getId()) {
 			handleAutoresolveClick(player, war, BelligerentRole.valueOf(autoresolveSide));
+			return;
+		}
+
+		Integer retreatWarId = meta.getPersistentDataContainer().get(
+				new NamespacedKey(SimpleFactions.plugin, "campaign_retreat"),
+				PersistentDataType.INTEGER);
+		if (retreatWarId != null && retreatWarId == war.getId()) {
+			if (!canRetreat(player, war)) {
+				player.sendMessage("§cYou cannot retreat right now.");
+				return;
+			}
+			Faction leader = FactionManager.getByLeader(player.getName());
+			if (leader == null) {
+				return;
+			}
+			inv.confirming.put(player, leader);
+			inv.campaignConfirmWar.put(player, war.getId());
+			inv.confirmView(player, leader, "campaign_retreat", String.valueOf(war.getId()));
+			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			return;
 		}
 
@@ -437,7 +499,7 @@ public class CampaignView {
 
 	private void handleHourToggleClick(Player player, War war, int hour) {
 		Faction faction = FactionManager.getByMember(player.getName());
-		if (faction == null || !BattleVoterEligibility.isEligibleVoter(war, faction)) {
+		if (faction == null || !BattleVoterEligibility.canToggleVote(war, faction, CampaignClock.now())) {
 			player.sendMessage("§cYou cannot vote for battle hours right now.");
 			return;
 		}
@@ -450,12 +512,13 @@ public class CampaignView {
 			case REJECTED_INVALID_HOUR -> player.sendMessage("§cThat hour is not in the battle window.");
 			case REJECTED_NOT_PARTICIPANT -> player.sendMessage("§cYou are not eligible to vote in this war.");
 			case REJECTED_OFFLINE -> player.sendMessage("§cYou must be online to vote.");
+			case REJECTED_VOTE_CLOSED -> player.sendMessage("§cVoting is closed for this battle day.");
 		}
 
 		if (result == BattleVoteToggleResult.ADDED || result == BattleVoteToggleResult.REMOVED) {
 			WarManager.persist(war);
 			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-			campaignView(player, war, true);
+			campaignView(player, war, !isViewingCampaign(player, war.getId()));
 		}
 	}
 
@@ -467,14 +530,14 @@ public class CampaignView {
 			case ATTACKER -> isAttackerLeader(player, war);
 			case DEFENDER -> isDefenderLeader(player, war);
 		};
-		if (!allowed || !BattleAutoresolveService.canProposeAutoresolveNow(war, Instant.now())) {
+		if (!allowed || !BattleAutoresolveService.canProposeAutoresolveNow(war, CampaignClock.now())) {
 			player.sendMessage("§cYou cannot propose autoresolve right now.");
 			return;
 		}
 		switch (BattleAutoresolveService.sendProposeRequest(player, war, side)) {
 			case SENT -> {
 				player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-				campaignView(player, war, true);
+				campaignView(player, war, !isViewingCampaign(player, war.getId()));
 			}
 			case OPPOSING_LEADER_OFFLINE -> player.sendMessage("§cThe opposing war leader is not online.");
 			case NOT_ALLOWED -> player.sendMessage("§cYou cannot propose autoresolve right now.");
@@ -550,6 +613,25 @@ public class CampaignView {
 				player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 				return;
 			}
+			case "campaign_retreat" -> {
+				if (!canRetreat(player, war)) {
+					player.sendMessage("§cYou cannot retreat right now.");
+					return;
+				}
+				var retreatResult = CampaignRetreatService.concedeActiveSlot(
+						war, leader, CampaignClock.now());
+				if (retreatResult.result() != RetreatResult.SUCCESS) {
+					player.sendMessage(retreatRejectionMessage(retreatResult.result()));
+					return;
+				}
+				if (retreatResult.autoEndReason().isPresent()) {
+					player.sendMessage("§aSlot conceded. War ended.");
+					inv.warList(player);
+					player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+					return;
+				}
+				player.sendMessage("§aActive slot retreated.");
+			}
 			case "campaign_surrender" -> {
 				if (!canSurrender(player, war) || !WarResolutionService.surrender(war, leader)) {
 					player.sendMessage("§cCould not surrender.");
@@ -576,6 +658,14 @@ public class CampaignView {
 		}
 		player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 		campaignView(player, war, true);
+	}
+
+	public boolean canRetreat(Player player, War war) {
+		Faction leader = FactionManager.getByLeader(player.getName());
+		if (leader == null) {
+			return false;
+		}
+		return CampaignRetreatService.canRetreat(war, leader, CampaignClock.now());
 	}
 
 	public boolean canSurrender(Player player, War war) {
@@ -606,5 +696,15 @@ public class CampaignView {
 	public boolean isAttackerLeader(Player player, War war) {
 		Faction leader = FactionManager.getByLeader(player.getName());
 		return leader != null && leader.getId().equalsIgnoreCase(war.getAttackerLeaderId());
+	}
+
+	private static String retreatRejectionMessage(RetreatResult result) {
+		return switch (result) {
+			case REJECTED_VOTE_CLOSED -> "§cRetreat is closed for this battle day.";
+			case REJECTED_NOT_LEADER -> "§cOnly the pushed coalition war leader can retreat.";
+			case REJECTED_POST_BATTLE_CHOICE -> "§cResolve the post-battle choice first.";
+			case REJECTED_NO_ACTIVE_SLOT -> "§cNo active battle slot to concede.";
+			case REJECTED_NOT_ELIGIBLE, SUCCESS -> "§cYou cannot retreat right now.";
+		};
 	}
 }

@@ -7,6 +7,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.bukkit.Bukkit;
@@ -29,8 +31,11 @@ import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
 
 class CampaignBattleRosterServiceTest {
+	private static final LocalDate BATTLE_DAY = LocalDate.of(2026, 8, 21);
+
 	private Faction attacker;
 	private Faction defender;
 	private Participant attackerPar;
@@ -79,13 +84,80 @@ class CampaignBattleRosterServiceTest {
 
 			CampaignBattleRosterService.enrollWarbands(war, battle);
 
-			Warband shell = WarbandManager.getByString(Warband.campaignSideWarbandId(1, BattleTemplate.ATTACKER_SIDE));
+			Warband shell = WarbandManager.getByString(
+					BattleNamingService.campaignWarbandId(battle.getDisplayName(), BattleTemplate.ATTACKER_SIDE));
 			assertTrue(shell != null);
 			assertEquals(0, shell.getMemberCount());
 			assertTrue(shell.isPendingLeader());
 			assertEquals(1, battle.getSideById(BattleTemplate.ATTACKER_SIDE).getBands().size());
 			assertEquals(1, battle.getSideById(BattleTemplate.DEFENDER_SIDE).getBands().size());
 			assertEquals(2, WarbandManager.get().size());
+		}
+	}
+
+	@Test
+	void ensureEnrolled_deferredUntilSignupOpens() {
+		War war = new War(1, attacker, defender);
+		war.setScheduledBattleProvinceId(20);
+		war.setBattleDay(BATTLE_DAY);
+		Instant beforeSignup = BattleWindowService.atScheduleHour(BATTLE_DAY, 10);
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
+				MockedStatic<me.Plugins.SimpleFactions.Managers.WarManager> wars =
+						mockStatic(me.Plugins.SimpleFactions.Managers.WarManager.class);
+				MockedStatic<me.Plugins.SimpleFactions.Managers.FactionManager> factions =
+						mockStatic(me.Plugins.SimpleFactions.Managers.FactionManager.class);
+				MockedStatic<me.Plugins.SimpleFactions.War.battle.military.BattlePoolService> pool =
+						mockStatic(me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.class)) {
+			mockBossBar(bukkit);
+			Battle battle = createBattle(1);
+			wars.when(() -> me.Plugins.SimpleFactions.Managers.WarManager.getById(1)).thenReturn(war);
+			factions.when(() -> me.Plugins.SimpleFactions.Managers.FactionManager.getByString("atk"))
+					.thenReturn(attacker);
+			factions.when(() -> me.Plugins.SimpleFactions.Managers.FactionManager.getByString("def"))
+					.thenReturn(defender);
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					org.mockito.ArgumentMatchers.eq(war),
+					org.mockito.ArgumentMatchers.eq(20),
+					org.mockito.ArgumentMatchers.any())).thenReturn(5);
+
+			CampaignBattleRosterService.ensureEnrolledAt(war, battle, beforeSignup, false, false);
+
+			assertTrue(WarbandManager.get().isEmpty());
+			assertEquals(0, battle.getSideById(BattleTemplate.ATTACKER_SIDE).getBands().size());
+		}
+	}
+
+	@Test
+	void tryEnrollWhenSignupOpens_createsShellsAtSignupHour() {
+		War war = new War(1, attacker, defender);
+		war.setScheduledBattleProvinceId(20);
+		war.setBattleDay(BATTLE_DAY);
+		Instant signupHour = BattleWindowService.atScheduleHour(BATTLE_DAY, 20);
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
+				MockedStatic<me.Plugins.SimpleFactions.Managers.WarManager> wars =
+						mockStatic(me.Plugins.SimpleFactions.Managers.WarManager.class);
+				MockedStatic<me.Plugins.SimpleFactions.Managers.FactionManager> factions =
+						mockStatic(me.Plugins.SimpleFactions.Managers.FactionManager.class);
+				MockedStatic<me.Plugins.SimpleFactions.War.battle.military.BattlePoolService> pool =
+						mockStatic(me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.class)) {
+			mockBossBar(bukkit);
+			Battle battle = createBattle(1);
+			wars.when(() -> me.Plugins.SimpleFactions.Managers.WarManager.getById(1)).thenReturn(war);
+			factions.when(() -> me.Plugins.SimpleFactions.Managers.FactionManager.getByString("atk"))
+					.thenReturn(attacker);
+			factions.when(() -> me.Plugins.SimpleFactions.Managers.FactionManager.getByString("def"))
+					.thenReturn(defender);
+			pool.when(() -> me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.totalCommittedRegiments(
+					org.mockito.ArgumentMatchers.eq(war),
+					org.mockito.ArgumentMatchers.eq(20),
+					org.mockito.ArgumentMatchers.any())).thenReturn(5);
+
+			CampaignBattleRosterService.tryEnrollWhenSignupOpens(war, signupHour);
+
+			assertEquals(2, WarbandManager.get().size());
+			assertEquals(1, battle.getSideById(BattleTemplate.ATTACKER_SIDE).getBands().size());
 		}
 	}
 
@@ -113,7 +185,7 @@ class CampaignBattleRosterServiceTest {
 					org.mockito.ArgumentMatchers.eq(20),
 					org.mockito.ArgumentMatchers.any())).thenReturn(5);
 
-			CampaignBattleRosterService.ensureEnrolled(war, battle);
+			CampaignBattleRosterService.ensureEnrolledForced(war, battle);
 
 			assertEquals(1, battle.getSideById(BattleTemplate.ATTACKER_SIDE).getBands().size());
 			assertEquals(1, battle.getSideById(BattleTemplate.DEFENDER_SIDE).getBands().size());
@@ -156,6 +228,7 @@ class CampaignBattleRosterServiceTest {
 		Battle battle = BattleFactory.createBlank(BattleType.FIELD, "campaign_w" + warId);
 		battle.setWarId(warId);
 		battle.setProvinceId(20);
+		battle.setDisplayName("Battle of Lanbury");
 		battle.setLocked(false);
 		BattleManager.addBattle(battle);
 		return battle;

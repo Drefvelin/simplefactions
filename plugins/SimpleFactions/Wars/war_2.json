@@ -1,17 +1,22 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": 2,
   "status": "active",
+  "goal": "subjugate",
+  "warType": "subjugate",
   "attackerLeaderId": "atk",
   "defenderLeaderId": "def",
+  "objectiveProvinceId": 30,
   "campaignProvinces": [
-    42,
-    43,
-    44
+    5,
+    10,
+    20,
+    30
   ],
-  "cursorIndex": 0,
-  "initiativeAttacker": 0,
-  "initiativeDefender": 0,
+  "cursorIndex": 2,
+  "initiativeAttacker": 4,
+  "initiativeDefender": 4,
+  "initiativeHolder": "ATTACKER",
   "occupiedByAttacker": [],
   "occupiedByDefender": [],
   "lastBattleOccupied": [],
@@ -20,23 +25,43 @@
   "whitePeaceProposedByAttacker": false,
   "whitePeaceProposedByDefender": false,
   "campaignBattlesFought": 0,
-  "battleSchedulePhase": "idle",
+  "campaignBattleSchedule": [
+    {
+      "provinceId": 18,
+      "kind": "siege",
+      "required": false,
+      "fortInstallationId": "fort-1"
+    }
+  ],
+  "campaignScheduleIndex": 0,
+  "campaignCounterSchedule": [],
+  "campaignCounterScheduleIndex": 0,
+  "fortControllers": {},
+  "concededScheduleSlots": [],
+  "locationBattleCounts": {},
+  "battleSchedulePhase": "voting",
   "battleVotes": {},
+  "battleInstallationPicks": {},
+  "campaignRaidsUsed": {},
+  "raidRepairLockUntil": {},
   "autoresolveProposedByAttacker": false,
   "autoresolveProposedByDefender": false,
   "postponementsThisCycle": 0,
   "defenderChoiceResolved": false,
+  "initiativeHolderCoalition": "aggressor",
+  "pushTarget": "toward_objective",
+  "postBattleChoicePhase": "none",
+  "postBattleChoiceResolved": true,
+  "holdPeaceProposalActive": false,
   "forceQuorumNextClose": false,
-  "startedAt": "2026-08-21T07:35:04.150971700Z",
+  "startedAt": "2026-08-27T09:28:05.666808800Z",
   "attackers": {
     "leader": "atk",
     "participants": [
       {
         "leader": "atk",
         "subjects": [],
-        "allies": {
-          "ally": true
-        },
+        "allies": {},
         "warGoals": {},
         "civilWar": false
       }
@@ -53,19 +78,5 @@
         "civilWar": false
       }
     ]
-  },
-  "commitments": [
-    {
-      "factionId": "atk",
-      "regimentId": "professional",
-      "count": 8,
-      "committedAt": "2026-08-21T07:35:04.150971700Z"
-    },
-    {
-      "factionId": "ally",
-      "regimentId": "professional",
-      "count": 4,
-      "committedAt": "2026-08-21T07:35:04.150971700Z"
-    }
-  ]
+  }
 }

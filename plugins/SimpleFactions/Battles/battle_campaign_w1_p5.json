@@ -12,6 +12,7 @@
   "lifeType": "COLLECTIVE",
   "sequentialCapture": false,
   "capturePointsEnabled": true,
+  "campaignRaid": false,
   "started": false,
   "contestDurationSeconds": 0,
   "contestHoldRemainingSeconds": 0,
@@ -24,9 +25,7 @@
       "lives": 25,
       "maxLives": 0,
       "lifeType": "COLLECTIVE",
-      "warbandIds": [
-        "campaign_w1_attacker"
-      ]
+      "warbandIds": []
     },
     {
       "id": "defender",
@@ -34,9 +33,7 @@
       "lives": 25,
       "maxLives": 0,
       "lifeType": "COLLECTIVE",
-      "warbandIds": [
-        "campaign_w1_defender"
-      ]
+      "warbandIds": []
     }
   ],
   "points": []

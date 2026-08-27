@@ -8,5 +8,6 @@ public enum CanRegisterResult {
     UNSUPPORTED_CATEGORY,
     NO_CAPACITY,
     OUT_OF_RADIUS,
-    WRONG_PROVINCE
+    WRONG_PROVINCE,
+    REPAIR_LOCKED
 }

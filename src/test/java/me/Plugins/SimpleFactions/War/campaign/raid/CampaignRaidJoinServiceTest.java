@@ -1,10 +1,10 @@
 package me.Plugins.SimpleFactions.War.campaign.raid;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -12,9 +12,12 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.UUID;
 
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
@@ -87,8 +90,8 @@ class CampaignRaidJoinServiceTest {
 		WarManager.addWar(war);
 
 		raidWindow = BattleWindowService.atScheduleHour(BATTLE_DAY, 19);
-		raidId = CampaignRaid.buildId(war.getId(), BATTLE_DAY);
 		CampaignRaidService.beginMuster(war, attacker, "port-atk", "port-def", raidWindow);
+		raidId = CampaignRaidService.getActive(war).getId();
 	}
 
 	@AfterEach
@@ -102,13 +105,33 @@ class CampaignRaidJoinServiceTest {
 
 	@Test
 	void join_okDuringMuster() {
-		JoinResult result = CampaignRaidJoinService.join(
-				war, ATTACKER_PLAYER, ATTACKER_NAME, attacker, raidId, raidWindow.plusSeconds(10));
-		assertEquals(JoinResult.OK, result);
-		assertTrue(CampaignRaidService.getActive(war).getMusterParticipantIds().contains(ATTACKER_PLAYER.toString()));
-		Warband atk = CampaignRaidWarbandService.getAttackerWarband(CampaignRaidService.getActive(war));
-		assertNotNull(atk);
-		assertTrue(atk.hasMember(ATTACKER_PLAYER));
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(ATTACKER_PLAYER)).thenReturn(null);
+
+			JoinResult result = CampaignRaidJoinService.join(
+					war, ATTACKER_PLAYER, ATTACKER_NAME, attacker, raidId, raidWindow.plusSeconds(10));
+			assertEquals(JoinResult.OK, result);
+			assertTrue(CampaignRaidService.getActive(war).getMusterParticipantIds().contains(ATTACKER_PLAYER.toString()));
+			Warband atk = CampaignRaidWarbandService.getAttackerWarband(CampaignRaidService.getActive(war));
+			assertNotNull(atk);
+			assertTrue(atk.hasMember(ATTACKER_PLAYER));
+		}
+	}
+
+	@Test
+	void join_rejectsMountedPlayer() {
+		Player player = mock(Player.class);
+		when(player.isOnline()).thenReturn(true);
+		when(player.isInsideVehicle()).thenReturn(true);
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(ATTACKER_PLAYER)).thenReturn(player);
+
+			assertEquals(
+					JoinResult.REJECTED_MOUNTED_ON_VEHICLE,
+					CampaignRaidJoinService.join(
+							war, ATTACKER_PLAYER, ATTACKER_NAME, attacker, raidId, raidWindow.plusSeconds(10)));
+		}
 	}
 
 	@Test

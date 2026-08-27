@@ -222,6 +222,34 @@ class CampaignBattleLaunchServiceTest {
 	}
 
 	@Test
+	void tryStartScheduledBattle_failsWhenSiegeContestMissing() {
+		War war = scheduledWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.SIEGE, false, "fort_a")));
+		war.setCampaignScheduleIndex(0);
+		Instant startAt = war.getScheduledBattleAt();
+		SimpleFactions plugin = mock(SimpleFactions.class);
+		when(plugin.getLogger()).thenReturn(java.util.logging.Logger.getLogger("test"));
+
+		withMockBossBar(() -> {
+			try (MockedStatic<CampaignOffensiveForfeitService> forfeit =
+					mockStatic(CampaignOffensiveForfeitService.class)) {
+				forfeit.when(() -> CampaignOffensiveForfeitService.applyIfBattleOffensiveCannotAttack(
+						any(), anyInt())).thenReturn(false);
+
+				SimpleFactions.plugin = plugin;
+				CampaignBattleLaunchService.prepareScheduledBattle(war);
+				Battle battle = BattleManager.getByWarId(war.getId());
+				assertNotNull(battle);
+				assertEquals(BattleType.SIEGE, battle.getBattleType());
+
+				assertFalse(CampaignBattleLaunchService.tryStartScheduledBattle(war, startAt));
+				assertFalse(battle.hasStarted());
+			}
+		});
+	}
+
+	@Test
 	void tryStartScheduledBattle_startsWhenDue() {
 		War war = scheduledWar();
 		Instant startAt = war.getScheduledBattleAt();

@@ -24,6 +24,8 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidState;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
@@ -126,6 +128,25 @@ class BattleVehicleEligibilityServiceTest {
 	}
 
 	@Test
+	void cloudskimmer_atCampaignRaidSource_okWithoutPick() {
+		CampaignRaid raid = new CampaignRaid();
+		raid.setAttackerCoalition(CampaignCoalition.AGGRESSOR);
+		raid.setState(CampaignRaidState.FIGHTING);
+		raid.setSourceInstallationId("airport-1");
+		raid.setTargetInstallationId("airport-def");
+		war.setActiveCampaignRaid(raid);
+
+		PlayerVehicleRecord record = new PlayerVehicleRecord(
+				PLAYER_UUID,
+				"veh-1",
+				"cloudskimmer",
+				OwnershipMode.INSTALLATION,
+				"airport-1");
+
+		assertTrue(BattleVehicleEligibilityService.isEligible(war, "atk", record));
+	}
+
+	@Test
 	void cloudskimmer_personal_denied() {
 		setPicks("atk", "airport-1");
 		PlayerVehicleRecord record = new PlayerVehicleRecord(
@@ -136,6 +157,12 @@ class BattleVehicleEligibilityServiceTest {
 				null);
 
 		assertFalse(BattleVehicleEligibilityService.isEligible(war, "atk", record));
+	}
+
+	@Test
+	void cloudskimmer_missingBerthRow_denied() {
+		setPicks("atk", "airport-1");
+		assertFalse(BattleVehicleEligibilityService.isEligible(war, "atk", "cloudskimmer", null));
 	}
 
 	@Test

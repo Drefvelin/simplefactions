@@ -3,10 +3,10 @@
 
 world-name: TFMC_Map
 
-# When true, debug sessions are appended to plugins/SimpleFactions/log.txt
-logging: false
-# When true, log.txt is deleted on every plugin start/reload
-wipe-log: false
+# When true, debug sessions are appended to plugins/SimpleFactions/logs/log.txt
+logging: true
+# When true, logs/log.txt is deleted on every plugin start/reload
+wipe-log: true
 
 max-prestige-from-wealth: 800 # shared between factions based on % of global wealth
 max-members: 64
@@ -64,20 +64,34 @@ war:
     require_smallest_side_full: true
     pass_if_either: true
     dev_min_players: 1
+  devmode:
+    phantom_count: 10
   battle_military:
     lives_per_regiment: 5
     min_side_lives: 1
   campaign_raid:
     muster_seconds: 60
+    muster_reminder_seconds_before:
+      - 45
+      - 30
+      - 15
+      - 10
     duration_seconds: 600
     repair_lock_hours: 48
+    intruder_damage_interval_ticks: 10
+    intruder_damage_amount: 4
 
 battle:
   province_poll_interval_ticks: 20
   province_leave_countdown_seconds: 10
+  province_block_protection_enabled: false
   capture_min_players: 1
-  devmode:
-    phantom_count: 10
+  retreat_min_elapsed_seconds: 1200
+  signup_reminder_seconds_before:
+    - 1800
+    - 600
+    - 300
+    - 60
   siege:
     contest_duration_seconds: 180
   raid:

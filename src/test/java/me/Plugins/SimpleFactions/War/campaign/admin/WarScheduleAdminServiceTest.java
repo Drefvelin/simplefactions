@@ -68,6 +68,7 @@ class WarScheduleAdminServiceTest {
 		Cache.warBattleVotingPassIfEither = true;
 		Cache.warBattleVotingDevMinPlayersEnabled = false;
 		Cache.warFirstBattleAtBorder = true;
+		Cache.warBattleLivesPerRegiment = 4;
 
 		attacker = mock(Faction.class);
 		defender = mock(Faction.class);
@@ -166,8 +167,8 @@ class WarScheduleAdminServiceTest {
 
 	@Test
 	void battleCreate_seedsPhantomsWhenDevmodeOn() {
-		me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode.setEnabled(true);
-		Cache.battleDevmodePhantomCount = 10;
+		me.Plugins.SimpleFactions.War.core.WarDevMode.setEnabled(true);
+		Cache.warDevmodePhantomCount = 10;
 		War war = votingWar();
 		try (MockedStatic<me.Plugins.SimpleFactions.War.battle.military.BattlePoolService> pool =
 				mockStatic(me.Plugins.SimpleFactions.War.battle.military.BattlePoolService.class)) {
@@ -175,27 +176,28 @@ class WarScheduleAdminServiceTest {
 					any(), any(Integer.class), any())).thenReturn(5);
 			withMockBossBar(() -> {
 				assertTrue(WarScheduleAdminService.battleCreate(war).success());
+				Battle battle = BattleManager.getByWarId(war.getId());
 				me.Plugins.SimpleFactions.War.battle.warband.Warband attackerBand =
 						WarbandManager.getByString(
-								me.Plugins.SimpleFactions.War.battle.warband.Warband.campaignSideWarbandId(
-										war.getId(),
+								me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService.campaignWarbandId(
+										battle.getDisplayName(),
 										me.Plugins.SimpleFactions.War.battle.template.BattleTemplate.ATTACKER_SIDE));
 				me.Plugins.SimpleFactions.War.battle.warband.Warband defenderBand =
 						WarbandManager.getByString(
-								me.Plugins.SimpleFactions.War.battle.warband.Warband.campaignSideWarbandId(
-										war.getId(),
+								me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService.campaignWarbandId(
+										battle.getDisplayName(),
 										me.Plugins.SimpleFactions.War.battle.template.BattleTemplate.DEFENDER_SIDE));
 				assertNotNull(attackerBand);
 				assertNotNull(defenderBand);
 				assertTrue(attackerBand.getDummyMemberCount() > 0);
 				assertTrue(defenderBand.getDummyMemberCount() > 0);
 				assertEquals(
-						me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode.dummyDisplayName(
+						me.Plugins.SimpleFactions.War.core.WarDevMode.dummyDisplayName(
 								attackerBand.getId(), 0),
 						attackerBand.getLeaderDisplayName());
 			});
 		}
-		me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode.resetForTests();
+		me.Plugins.SimpleFactions.War.core.WarDevMode.resetForTests();
 	}
 
 	@Test
@@ -203,15 +205,16 @@ class WarScheduleAdminServiceTest {
 		War war = votingWar();
 		withMockBossBar(() -> {
 			assertTrue(WarScheduleAdminService.battleCreate(war).success());
-			String attackerWarbandId = me.Plugins.SimpleFactions.War.battle.warband.Warband.campaignSideWarbandId(
-					war.getId(),
+			Battle battle = BattleManager.getByWarId(war.getId());
+			String attackerWarbandId = me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService.campaignWarbandId(
+					battle.getDisplayName(),
 					me.Plugins.SimpleFactions.War.battle.template.BattleTemplate.ATTACKER_SIDE);
 			assertNotNull(WarbandManager.getByString(attackerWarbandId));
 
 			WarScheduleAdminResult result = WarScheduleAdminService.battleDelete(war);
 			assertTrue(result.success());
 			assertTrue(result.message().contains("Reset campaign battle"));
-			Battle battle = BattleManager.getByWarId(war.getId());
+			battle = BattleManager.getByWarId(war.getId());
 			assertNotNull(battle);
 			assertNotNull(WarbandManager.getByString(attackerWarbandId));
 			assertEquals(1, battle.getSideById(
@@ -223,16 +226,16 @@ class WarScheduleAdminServiceTest {
 
 	@Test
 	void devModeReminderLines_disabledWhenDevmodeOff() {
-		me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode.resetForTests();
+		me.Plugins.SimpleFactions.War.core.WarDevMode.resetForTests();
 		assertEquals(1, WarScheduleAdminService.devModeReminderLines().size());
 		assertTrue(WarScheduleAdminService.devModeReminderLines().get(0).contains("disabled"));
 	}
 
 	@Test
 	void devModeReminderLines_emptyWhenDevmodeOn() {
-		me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode.setEnabled(true);
+		me.Plugins.SimpleFactions.War.core.WarDevMode.setEnabled(true);
 		assertTrue(WarScheduleAdminService.devModeReminderLines().isEmpty());
-		me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode.resetForTests();
+		me.Plugins.SimpleFactions.War.core.WarDevMode.resetForTests();
 	}
 
 	@Test

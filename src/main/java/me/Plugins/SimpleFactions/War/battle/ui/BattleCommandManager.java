@@ -1,17 +1,24 @@
 package me.Plugins.SimpleFactions.War.battle.ui;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.time.Instant;
+
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.War.battle.campaign.BattleWarbandRetreatMessages;
+import me.Plugins.SimpleFactions.War.battle.campaign.BattleWarbandRetreatService;
+import me.Plugins.SimpleFactions.War.battle.campaign.BattleWarbandRetreatService.RetreatResult;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignWarbandBattleService;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignWarbandSignupService;
-import me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode;
+import me.Plugins.SimpleFactions.War.core.WarDevMode;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.capture.BattleCapturePoints;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSideSetupService;
@@ -69,38 +76,6 @@ public class BattleCommandManager implements CommandExecutor{
 				p.sendMessage("§aJoined "+args[2]+" in the battle "+b.getId());
 				return true;
 			}
-			if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("devmode") && args.length == 2) {
-				if (!BattlePermissions.isAdmin(sender)) {
-					p.sendMessage("§a[Battle]§4You do not have access to this command");
-					return true;
-				}
-				if (args[1].equalsIgnoreCase("on")) {
-					int filled = BattleDevMode.setEnabled(true);
-					if (filled > 0) {
-						p.sendMessage("§aBattle devmode enabled. Filled " + filled + " campaign side warbands.");
-					} else {
-						p.sendMessage("§aBattle devmode enabled.");
-					}
-					return true;
-				}
-				if (args[1].equalsIgnoreCase("off")) {
-					int cleared = BattleDevMode.setEnabled(false);
-					if (cleared > 0) {
-						p.sendMessage("§aBattle devmode disabled. Cleared dummies from " + cleared + " warbands.");
-					} else {
-						p.sendMessage("§aBattle devmode disabled.");
-					}
-					return true;
-				}
-				if (args[1].equalsIgnoreCase("status")) {
-					p.sendMessage("§aBattle devmode: "
-							+ (BattleDevMode.isEnabled() ? "§aenabled" : "§cdisabled")
-							+ "§a, roster fill: §e" + Cache.battleDevmodePhantomCount);
-					return true;
-				}
-				p.sendMessage("§cUsage: /battle devmode on|off|status");
-				return true;
-			}
 			if(cmd.getName().equalsIgnoreCase(cmd2) && !BattlePermissions.isAdmin(sender)) {
 				p.sendMessage("§a[Battle]§4You do not have access to this command");
 				return true;
@@ -111,7 +86,7 @@ public class BattleCommandManager implements CommandExecutor{
 					return true;
 				}
 				Warband w = new Warband(args[1], p);
-				BattleDevMode.seedDummyMembersIfEnabled(w);
+				WarDevMode.seedDummyMembersIfEnabled(w);
 				WarbandManager.addWarband(w);
 				BattlePersistenceService.persistWarband(w);
 				p.sendMessage("§aWarband "+w.getId()+" §acreated!");
@@ -279,6 +254,24 @@ public class BattleCommandManager implements CommandExecutor{
 				CampaignWarbandBattleService.processLeave(p, w, true);
 				p.sendMessage("§aLeft "+w.getId());
 				return true;
+			} else if (cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("retreat") && args.length == 1) {
+				Instant now = Instant.now();
+				RetreatResult rejection = BattleWarbandRetreatService.retreatRejection(p, now);
+				if (rejection != null) {
+					String message = BattleWarbandRetreatMessages.messageForResult(rejection, p, now);
+					if (message != null) {
+						p.sendMessage(message);
+					}
+					return true;
+				}
+				Warband warband = WarbandManager.getByLeader(p);
+				CampaignBattleJoinService.CampaignBattleContext ctx =
+						CampaignBattleJoinService.findCampaignBattleForWarband(warband);
+				Faction faction = FactionManager.getByMember(p.getName());
+				FactionManager.inv.confirming.put(p, faction);
+				FactionManager.inv.confirmBattleRetreatView(p, ctx.battle().getId());
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				return true;
 			}
 			if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("create") && args.length == 3) {
 				if (BattleManager.hasManualBattle()) {
@@ -324,7 +317,7 @@ public class BattleCommandManager implements CommandExecutor{
 				}
 				if (b.getWarId() != null) {
 					p.sendMessage("§cCampaign battles cannot be deleted with §e/battle delete§c.");
-					p.sendMessage("§7Reset setup with §e/faction warschedule " + b.getWarId() + " battledelete§7.");
+					p.sendMessage("§7Reset setup with §e/war admin schedule " + b.getWarId() + " battledelete§7.");
 					return true;
 				}
 				if (b.hasStarted()) {

@@ -149,8 +149,9 @@ class CampaignRaidBattleServiceTest {
 			assertTrue(battle.isCampaignRaid());
 			assertTrue(battle.hasStarted());
 			assertTrue(battle.getPoints().isEmpty());
-			assertEquals("cr_battle_1_2026-08-21", battle.getId());
-			assertEquals("cr_battle_1_2026-08-21", raid.getBattleId());
+			assertEquals("def_port_raid", battle.getId());
+			assertEquals("def_port_raid", raid.getBattleId());
+			assertEquals("Def Port Raid", battle.getDisplayName());
 
 			Warband atk = CampaignRaidWarbandService.getAttackerWarband(raid);
 			assertNotNull(atk);
@@ -182,7 +183,8 @@ class CampaignRaidBattleServiceTest {
 							null,
 							Map.of(),
 							Set.of(),
-							BattleEndReason.TIMER));
+							BattleEndReason.TIMER,
+							true));
 
 			assertNull(CampaignRaidService.getActive(war));
 			assertTrue(BattleManager.get().isEmpty());

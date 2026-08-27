@@ -15,14 +15,18 @@ import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
 
 class VehicleSlotGuardTest {
     private Path tempDir;
+    private PlayerVehicleRegistry registry;
 
     @BeforeEach
     void setUp() throws IOException {
         tempDir = Files.createTempDirectory("sf-vehicle-slot-guard-");
+        registry = new PlayerVehicleRegistry();
+        VehicleOwnershipQueries.setSourceForTests(new FakeOwnedInventory());
     }
 
     @AfterEach
     void tearDown() throws IOException {
+        VehicleOwnershipQueries.setSourceForTests(null);
         if (tempDir != null) {
             Files.walk(tempDir)
                 .sorted(java.util.Comparator.reverseOrder())
@@ -34,6 +38,10 @@ class VehicleSlotGuardTest {
         Path vehiclesYaml = tempDir.resolve("vehicles.yml");
         Files.writeString(vehiclesYaml, yaml);
         VehiclesConfigLoader.load(vehiclesYaml.toFile());
+    }
+
+    private static String playerName(UUID player) {
+        return "p-" + player.toString().substring(0, 8);
     }
 
     @Test
@@ -51,10 +59,10 @@ class VehicleSlotGuardTest {
               aircraft: {}
             """);
 
-        PlayerVehicleRegistry registry = new PlayerVehicleRegistry();
         UUID player = UUID.randomUUID();
-
-        assertEquals(CanBuildResult.OK, VehicleSlotGuard.checkCanBuild(player, "ironclad", registry));
+        assertEquals(
+            CanBuildResult.OK,
+            VehicleSlotGuard.checkCanBuild(playerName(player), "ironclad", registry));
     }
 
     @Test
@@ -71,12 +79,10 @@ class VehicleSlotGuardTest {
               aircraft: {}
             """);
 
-        PlayerVehicleRegistry registry = new PlayerVehicleRegistry();
         UUID player = UUID.randomUUID();
-
         assertEquals(
             CanBuildResult.UNKNOWN_TYPE,
-            VehicleSlotGuard.checkCanBuild(player, "unknown", registry));
+            VehicleSlotGuard.checkCanBuild(playerName(player), "unknown", registry));
     }
 
     @Test
@@ -93,14 +99,14 @@ class VehicleSlotGuardTest {
               static_emplacements: {}
             """);
 
-        PlayerVehicleRegistry registry = new PlayerVehicleRegistry();
         UUID player = UUID.randomUUID();
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-1", "cloudskimmer", OwnershipMode.PERSONAL, null));
+        String name = playerName(player);
+        VehicleOwnershipQueries.setSourceForTests(
+                new FakeOwnedInventory().add("vehicle-1", "cloudskimmer", "player_" + name));
 
         assertEquals(
             CanBuildResult.PER_TYPE_LIMIT,
-            VehicleSlotGuard.checkCanBuild(player, "cloudskimmer", registry));
+            VehicleSlotGuard.checkCanBuild(name, "cloudskimmer", registry));
     }
 
     @Test
@@ -120,23 +126,21 @@ class VehicleSlotGuardTest {
               aircraft: {}
             """);
 
-        PlayerVehicleRegistry registry = new PlayerVehicleRegistry();
         UUID player = UUID.randomUUID();
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-1", "horse_cart", OwnershipMode.PERSONAL, null));
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-2", "horse_cart", OwnershipMode.PERSONAL, null));
+        String name = playerName(player);
+        FakeOwnedInventory inventory = new FakeOwnedInventory()
+                .add("vehicle-1", "horse_cart", "player_" + name)
+                .add("vehicle-2", "horse_cart", "player_" + name);
+        VehicleOwnershipQueries.setSourceForTests(inventory);
 
         assertEquals(
             CanBuildResult.OK,
-            VehicleSlotGuard.checkCanBuild(player, "horse_cart", registry));
+            VehicleSlotGuard.checkCanBuild(name, "horse_cart", registry));
 
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-3", "horse_cart", OwnershipMode.PERSONAL, null));
-
+        inventory.add("vehicle-3", "horse_cart", "player_" + name);
         assertEquals(
             CanBuildResult.PER_TYPE_LIMIT,
-            VehicleSlotGuard.checkCanBuild(player, "horse_cart", registry));
+            VehicleSlotGuard.checkCanBuild(name, "horse_cart", registry));
     }
 
     @Test
@@ -163,18 +167,16 @@ class VehicleSlotGuardTest {
               aircraft: {}
             """);
 
-        PlayerVehicleRegistry registry = new PlayerVehicleRegistry();
         UUID player = UUID.randomUUID();
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-1", "ironclad", OwnershipMode.PERSONAL, null));
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-2", "gunboat", OwnershipMode.PERSONAL, null));
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-3", "cruiser", OwnershipMode.PERSONAL, null));
+        String name = playerName(player);
+        VehicleOwnershipQueries.setSourceForTests(new FakeOwnedInventory()
+                .add("vehicle-1", "ironclad", "player_" + name)
+                .add("vehicle-2", "gunboat", "player_" + name)
+                .add("vehicle-3", "cruiser", "player_" + name));
 
         assertEquals(
             CanBuildResult.TOTAL_LIMIT,
-            VehicleSlotGuard.checkCanBuild(player, "ironclad", registry));
+            VehicleSlotGuard.checkCanBuild(name, "ironclad", registry));
     }
 
     @Test
@@ -203,18 +205,16 @@ class VehicleSlotGuardTest {
               aircraft: {}
             """);
 
-        PlayerVehicleRegistry registry = new PlayerVehicleRegistry();
         UUID player = UUID.randomUUID();
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-1", "ironclad", OwnershipMode.PERSONAL, null));
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-2", "gunboat", OwnershipMode.PERSONAL, null));
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-3", "cruiser", OwnershipMode.PERSONAL, null));
+        String name = playerName(player);
+        VehicleOwnershipQueries.setSourceForTests(new FakeOwnedInventory()
+                .add("vehicle-1", "ironclad", "player_" + name)
+                .add("vehicle-2", "gunboat", "player_" + name)
+                .add("vehicle-3", "cruiser", "player_" + name));
 
         assertEquals(
             CanBuildResult.OK,
-            VehicleSlotGuard.checkCanBuild(player, "coal_car", registry));
+            VehicleSlotGuard.checkCanBuild(name, "coal_car", registry));
     }
 
     @Test
@@ -235,18 +235,16 @@ class VehicleSlotGuardTest {
               aircraft: {}
             """);
 
-        PlayerVehicleRegistry registry = new PlayerVehicleRegistry();
         UUID player = UUID.randomUUID();
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-1", "coal_car", OwnershipMode.PERSONAL, null));
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-2", "coal_car", OwnershipMode.PERSONAL, null));
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-3", "coal_car", OwnershipMode.PERSONAL, null));
+        String name = playerName(player);
+        VehicleOwnershipQueries.setSourceForTests(new FakeOwnedInventory()
+                .add("vehicle-1", "coal_car", "player_" + name)
+                .add("vehicle-2", "coal_car", "player_" + name)
+                .add("vehicle-3", "coal_car", "player_" + name));
 
         assertEquals(
             CanBuildResult.PER_TYPE_LIMIT,
-            VehicleSlotGuard.checkCanBuild(player, "coal_car", registry));
+            VehicleSlotGuard.checkCanBuild(name, "coal_car", registry));
     }
 
     @Test
@@ -265,16 +263,15 @@ class VehicleSlotGuardTest {
               aircraft: {}
             """);
 
-        PlayerVehicleRegistry registry = new PlayerVehicleRegistry();
         UUID player = UUID.randomUUID();
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-1", "ironclad", OwnershipMode.PERSONAL, null));
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-2", "ironclad", OwnershipMode.PERSONAL, null));
+        String name = playerName(player);
+        VehicleOwnershipQueries.setSourceForTests(new FakeOwnedInventory()
+                .add("vehicle-1", "ironclad", "player_" + name)
+                .add("vehicle-2", "ironclad", "player_" + name));
 
         assertEquals(
             CanBuildResult.OK,
-            VehicleSlotGuard.checkCanBuild(player, "ironclad", registry));
+            VehicleSlotGuard.checkCanBuild(name, "ironclad", registry));
     }
 
     @Test
@@ -292,13 +289,41 @@ class VehicleSlotGuardTest {
               aircraft: {}
             """);
 
-        PlayerVehicleRegistry registry = new PlayerVehicleRegistry();
         UUID player = UUID.randomUUID();
-        registry.register(new PlayerVehicleRecord(
-            player, "vehicle-1", "ironclad", OwnershipMode.PERSONAL, null));
+        String name = playerName(player);
+        VehicleOwnershipQueries.setSourceForTests(new FakeOwnedInventory()
+                .add("vehicle-1", "ironclad", "player_" + name));
 
         assertEquals(
             CanBuildResult.PER_TYPE_LIMIT,
-            VehicleSlotGuard.checkCanBuild(player, "ironclad", registry));
+            VehicleSlotGuard.checkCanBuild(name, "ironclad", registry));
+    }
+
+    @Test
+    void checkCanBuild_excludesBerthedFromPersonalCount() throws IOException {
+        loadConfig("""
+            personal-slot-limit: 1
+            default-upkeep: 4
+
+            categories:
+              ships:
+                ironclad:
+                  upkeep: 20
+                  size: 1
+                  per-person: 3
+              static_emplacements: {}
+              aircraft: {}
+            """);
+
+        UUID player = UUID.randomUUID();
+        String name = playerName(player);
+        registry.register(new PlayerVehicleRecord(
+                player, "vehicle-1", "ironclad", OwnershipMode.INSTALLATION, "port-1"));
+        VehicleOwnershipQueries.setSourceForTests(new FakeOwnedInventory()
+                .add("vehicle-1", "ironclad", "player_" + name));
+
+        assertEquals(
+            CanBuildResult.OK,
+            VehicleSlotGuard.checkCanBuild(name, "ironclad", registry));
     }
 }

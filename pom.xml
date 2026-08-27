@@ -80,7 +80,7 @@
             <artifactId>VehicleFramework</artifactId>
             <version>1.0.0</version>
             <scope>system</scope>
-            <systemPath>${tfmc.vehicleframework}/vehicleframework-1.1.9.jar</systemPath>
+            <systemPath>${tfmc.vehicleframework}/vehicleframework-1.1.11.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>

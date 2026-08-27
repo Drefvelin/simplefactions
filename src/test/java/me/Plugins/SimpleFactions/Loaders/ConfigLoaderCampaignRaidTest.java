@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.Loaders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -50,6 +51,8 @@ class ConfigLoaderCampaignRaidTest {
 		assertEquals(60, Cache.campaignRaidMusterSeconds);
 		assertEquals(600, Cache.campaignRaidDurationSeconds);
 		assertEquals(48, Cache.campaignRaidRepairLockHours);
+		assertEquals(10, Cache.campaignRaidIntruderDamageIntervalTicks);
+		assertEquals(4, Cache.campaignRaidIntruderDamageAmount);
 	}
 
 	@Test
@@ -67,6 +70,8 @@ class ConfigLoaderCampaignRaidTest {
 				    muster_seconds: 30
 				    duration_seconds: 300
 				    repair_lock_hours: 24
+				    intruder_damage_interval_ticks: 5
+				    intruder_damage_amount: 2
 				  battle_voting:
 				    min_players: 4
 				""");
@@ -76,6 +81,26 @@ class ConfigLoaderCampaignRaidTest {
 		assertEquals(30, Cache.campaignRaidMusterSeconds);
 		assertEquals(300, Cache.campaignRaidDurationSeconds);
 		assertEquals(24, Cache.campaignRaidRepairLockHours);
+		assertEquals(5, Cache.campaignRaidIntruderDamageIntervalTicks);
+		assertEquals(2, Cache.campaignRaidIntruderDamageAmount);
+	}
+
+	@Test
+	void loadConfig_invalidCampaignRaidIntruderIntervalThrows() {
+		assertThrows(IllegalStateException.class, () -> writeAndLoad("""
+				war:
+				  battle_schedule:
+				    vote_close_hour: 16
+				    raid_window_start_hour: 19
+				    raid_window_end_hour: 20
+				    window_start_hour: 21
+				    window_end_hour: 24
+				    defender_choice_deadline_hour: 12
+				  campaign_raid:
+				    intruder_damage_interval_ticks: 0
+				  battle_voting:
+				    min_players: 4
+				"""));
 	}
 
 	@Test

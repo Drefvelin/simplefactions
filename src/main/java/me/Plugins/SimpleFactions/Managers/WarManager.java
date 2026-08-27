@@ -19,6 +19,7 @@ import me.Plugins.SimpleFactions.War.core.WarCommitment;
 import me.Plugins.SimpleFactions.War.core.WarDeclareHelper;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationPickService;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
+import me.Plugins.SimpleFactions.War.combat.WarCombatTeardownService;
 import me.Plugins.SimpleFactions.War.campaign.WarCampaignService;
 import me.Plugins.SimpleFactions.War.commitment.WarCommitmentService;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
@@ -141,14 +142,14 @@ public class WarManager {
 		for(String m : w.getAttackers().getLeader().getMembers()){
 			Player p = Bukkit.getPlayerExact(m);
 			if(p != null && p.isOnline()){
-				p.sendTitle("§cWar Declared!", "§e/faction warlist §7to view", 10, 120, 10);
+				p.sendTitle("§cWar Declared!", "§e/war list §7to view", 10, 120, 10);
 				p.playSound(p, Sound.ITEM_GOAT_HORN_SOUND_2, SoundCategory.MASTER, 10f, 0.6f);
 			}
 		}
 		for(String m : w.getDefenders().getLeader().getMembers()){
 			Player p = Bukkit.getPlayerExact(m);
 			if(p != null && p.isOnline()){
-				p.sendTitle("§cWar Declared!", "§e/faction warlist §7to view", 10, 120, 10);
+				p.sendTitle("§cWar Declared!", "§e/war list §7to view", 10, 120, 10);
 				p.playSound(p, Sound.ITEM_GOAT_HORN_SOUND_2, SoundCategory.MASTER, 10f, 0.6f);
 			}
 		}
@@ -201,6 +202,7 @@ public class WarManager {
 		if (w == null || reason == null) {
 			return;
 		}
+		WarCombatTeardownService.teardownCombatForWar(w);
 		w.end(reason);
 		BattleInstallationPickService.clearForNewBattleDay(w);
 		CampaignRaidService.clearForNewBattleDay(w);

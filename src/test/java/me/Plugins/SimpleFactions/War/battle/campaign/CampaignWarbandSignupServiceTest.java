@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -25,7 +26,7 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode;
+import me.Plugins.SimpleFactions.War.core.WarDevMode;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleFactory;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
@@ -34,6 +35,8 @@ import me.Plugins.SimpleFactions.War.battle.military.BattlePoolService;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidState;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
 import me.Plugins.SimpleFactions.War.core.War;
 
@@ -48,7 +51,7 @@ class CampaignWarbandSignupServiceTest {
 	void setUp() {
 		BattleManager.resetForTests();
 		WarbandManager.resetForTests();
-		BattleDevMode.resetForTests();
+		WarDevMode.resetForTests();
 		Cache.warBattleLivesPerRegiment = 5;
 		Cache.warBattleMinSideLives = 1;
 		Cache.warRaidWindowStartHour = 19;
@@ -73,6 +76,23 @@ class CampaignWarbandSignupServiceTest {
 	}
 
 	@Test
+	void isSignupOpen_falseOffBattleDay() {
+		War war = battleDayWar();
+		war.setBattleDay(BATTLE_DAY.plusDays(1));
+
+		assertFalse(CampaignWarbandSignupService.isSignupOpen(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 20)));
+	}
+
+	@Test
+	void isSignupOpen_falseBeforeSignupOnBattleDay() {
+		War war = battleDayWar();
+
+		assertFalse(CampaignWarbandSignupService.isSignupOpen(
+				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 10)));
+	}
+
+	@Test
 	void isSignupOpen_trueAtSignupHour() {
 		War war = battleDayWar();
 
@@ -80,14 +100,6 @@ class CampaignWarbandSignupServiceTest {
 				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 20)));
 	}
 
-	@Test
-	void isSignupOpen_trueOffBattleDay() {
-		War war = battleDayWar();
-		war.setBattleDay(BATTLE_DAY.plusDays(1));
-
-		assertTrue(CampaignWarbandSignupService.isSignupOpen(
-				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 19)));
-	}
 
 	@Test
 	void signupMember_blockedDuringRaidCall() {
@@ -139,8 +151,14 @@ class CampaignWarbandSignupServiceTest {
 	@Test
 	void signupMember_raidWarbandNotBlocked() {
 		War war = battleDayWar();
+		CampaignRaid raid = new CampaignRaid();
+		raid.setId("harbor_raid");
+		raid.setDisplayName("Harbor Raid");
+		raid.setWarId(1);
+		raid.setState(CampaignRaidState.MUSTER);
+		war.setActiveCampaignRaid(raid);
 		Warband raidShell = Warband.createRaidShell(
-				"campaign_raid_w1_" + BATTLE_DAY + "_atk",
+				"harbor_raid_attacker",
 				war.getAttackers(),
 				BattleTemplate.ATTACKER_SIDE);
 		addWarbandToBattle(war, raidShell);
@@ -155,6 +173,7 @@ class CampaignWarbandSignupServiceTest {
 			mockBukkitPlayerLookup(bukkit);
 			factions.when(() -> FactionManager.getByMember("Alice")).thenReturn(attacker);
 			wars.when(() -> WarManager.getById(1)).thenReturn(war);
+			wars.when(WarManager::getActive).thenReturn(List.of(war));
 			pool.when(() -> BattlePoolService.totalCommittedRegiments(eq(war), eq(PROVINCE_ID), eq(war.getAttackers())))
 					.thenReturn(5);
 

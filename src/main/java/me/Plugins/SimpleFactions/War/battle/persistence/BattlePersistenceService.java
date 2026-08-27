@@ -18,6 +18,7 @@ import me.Plugins.SimpleFactions.Database.JsonUtil;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleRosterService;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.capture.BattleCapturePoints;
@@ -26,6 +27,9 @@ import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBattleService;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBossBarService;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResumeService;
 
 public final class BattlePersistenceService {
 	private static final Database DATABASE = new Database();
@@ -77,18 +81,24 @@ public final class BattlePersistenceService {
 				}
 				normalizeCapturePointsAfterLoad(battle);
 				linkWarbands(battle, data);
+				if (battle.getWarId() != null) {
+					CampaignRaidResumeService.applyLoadedBattle(battle);
+				}
 				if (battle.getWarId() == null) {
 					manualBattles.add(battle);
 					continue;
 				}
-				if (BattleManager.getByString(battle.getId()) != null
-						|| BattleManager.getByWarId(battle.getWarId()) != null) {
+				if (BattleManager.getByString(battle.getId()) != null) {
+					DATABASE.deleteBattleFile(battle.getId());
+					continue;
+				}
+				if (!battle.isCampaignRaid() && BattleManager.getByWarId(battle.getWarId()) != null) {
 					DATABASE.deleteBattleFile(battle.getId());
 					continue;
 				}
 				BattleManager.addBattle(battle);
 				War war = WarManager.getById(battle.getWarId());
-				if (war != null && war.isActive()) {
+				if (war != null && war.isActive() && !CampaignRaidBattleService.isCampaignRaidBattle(war, battle)) {
 					CampaignBattleRosterService.ensureEnrolled(war, battle);
 				}
 			} catch (Exception e) {
@@ -112,6 +122,8 @@ public final class BattlePersistenceService {
 				DATABASE.deleteBattleFile(battle.getId());
 			}
 		}
+
+		CampaignRaidResumeService.resumeAll();
 	}
 
 	public static void saveAll() {
@@ -161,7 +173,9 @@ public final class BattlePersistenceService {
 		if (battle == null || battle.getWarId() == null) {
 			return;
 		}
-		purgeCampaignWarbandsForWar(battle.getWarId());
+		removeAutoBattleWarbands(battle);
+		purgeCampaignWarbandsForBattle(battle);
+		purgeLegacyCampaignWarbandsForWar(battle.getWarId());
 		BattleManager.deleteBattle(battle);
 		DATABASE.deleteBattleFile(battle.getId());
 	}
@@ -170,11 +184,31 @@ public final class BattlePersistenceService {
 		if (battle == null) {
 			return;
 		}
+		CampaignRaidBossBarService.clear(battle);
+		removeAutoBattleWarbands(battle);
 		BattleManager.deleteBattle(battle);
 		DATABASE.deleteBattleFile(battle.getId());
 	}
 
+	public static void purgeCampaignWarbandsForBattle(Battle battle) {
+		if (battle == null) {
+			return;
+		}
+		purgeCampaignWarband(BattleNamingService.campaignWarbandId(
+				battle.getDisplayName(), BattleTemplate.ATTACKER_SIDE));
+		purgeCampaignWarband(BattleNamingService.campaignWarbandId(
+				battle.getDisplayName(), BattleTemplate.DEFENDER_SIDE));
+	}
+
 	public static void purgeCampaignWarbandsForWar(int warId) {
+		Battle battle = BattleManager.getByWarId(warId);
+		if (battle != null) {
+			purgeCampaignWarbandsForBattle(battle);
+		}
+		purgeLegacyCampaignWarbandsForWar(warId);
+	}
+
+	private static void purgeLegacyCampaignWarbandsForWar(int warId) {
 		purgeCampaignWarband(Warband.campaignSideWarbandId(warId, BattleTemplate.ATTACKER_SIDE));
 		purgeCampaignWarband(Warband.campaignSideWarbandId(warId, BattleTemplate.DEFENDER_SIDE));
 	}
@@ -218,6 +252,12 @@ public final class BattlePersistenceService {
 		for (Warband warband : toRemove) {
 			WarbandManager.deleteWarband(warband);
 			DATABASE.deleteWarbandFile(warband.getId());
+		}
+	}
+
+	private static void removeAutoBattleWarbands(Battle battle) {
+		for (String warbandId : warbandIdsOnBattle(battle)) {
+			purgeCampaignWarband(warbandId);
 		}
 	}
 

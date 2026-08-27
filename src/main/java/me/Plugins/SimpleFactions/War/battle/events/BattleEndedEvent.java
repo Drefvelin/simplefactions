@@ -22,6 +22,7 @@ public class BattleEndedEvent extends Event {
 	private final Map<String, Integer> sideCasualties;
 	private final Set<UUID> participantIds;
 	private final BattleEndReason endReason;
+	private final boolean campaignRaid;
 
 	public BattleEndedEvent(
 			String battleId,
@@ -37,7 +38,8 @@ public class BattleEndedEvent extends Event {
 				winningSideId,
 				sideCasualties,
 				participantIds,
-				inferEndReason(winningSideId));
+				inferEndReason(winningSideId),
+				false);
 	}
 
 	public BattleEndedEvent(
@@ -48,6 +50,26 @@ public class BattleEndedEvent extends Event {
 			Map<String, Integer> sideCasualties,
 			Set<UUID> participantIds,
 			BattleEndReason endReason) {
+		this(
+				battleId,
+				battleType,
+				warId,
+				winningSideId,
+				sideCasualties,
+				participantIds,
+				endReason,
+				false);
+	}
+
+	public BattleEndedEvent(
+			String battleId,
+			BattleType battleType,
+			Integer warId,
+			String winningSideId,
+			Map<String, Integer> sideCasualties,
+			Set<UUID> participantIds,
+			BattleEndReason endReason,
+			boolean campaignRaid) {
 		this.battleId = battleId;
 		this.battleType = battleType;
 		this.warId = warId;
@@ -63,6 +85,7 @@ public class BattleEndedEvent extends Event {
 			this.participantIds = Set.copyOf(participantIds);
 		}
 		this.endReason = endReason != null ? endReason : inferEndReason(winningSideId);
+		this.campaignRaid = campaignRaid;
 	}
 
 	private static BattleEndReason inferEndReason(String winningSideId) {
@@ -102,6 +125,10 @@ public class BattleEndedEvent extends Event {
 
 	public boolean hasWinner() {
 		return winningSideId != null && !winningSideId.isBlank();
+	}
+
+	public boolean isCampaignRaid() {
+		return campaignRaid;
 	}
 
 	@Override

@@ -22,6 +22,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import net.tfminecraft.VehicleFramework.Events.VFExplosionEvent;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.War.battle.enums.BattleEndReason;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 import me.Plugins.SimpleFactions.War.battle.military.BattleCasualtyLedger;
@@ -30,6 +31,7 @@ import me.Plugins.SimpleFactions.War.battle.engine.capture.BattleCapturePoints;
 import me.Plugins.SimpleFactions.War.battle.engine.capture.CapturePoint;
 import me.Plugins.SimpleFactions.War.battle.engine.raid.BattleRaidSetup;
 import me.Plugins.SimpleFactions.War.battle.engine.raid.RaidAttackerEliminationService;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidIntruderService;
 import me.Plugins.SimpleFactions.War.battle.engine.raid.RaidRespawnService;
 import me.Plugins.SimpleFactions.War.battle.engine.raid.RaidWinService;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleInventoryManager;
@@ -57,6 +59,16 @@ public class BattleManager implements Listener{
 			}
 		}
 		return null;
+	}
+
+	public static List<Battle> getAllByWarId(int warId) {
+		List<Battle> result = new ArrayList<>();
+		for (Battle battle : battles) {
+			if (battle.getWarId() != null && battle.getWarId() == warId) {
+				result.add(battle);
+			}
+		}
+		return result;
 	}
 	
 	public static void addBattle(Battle b) {
@@ -88,6 +100,9 @@ public class BattleManager implements Listener{
 				continue;
 			}
 			battle.getPointManager().end(battle.getAllParticipants());
+			if (battle.isCampaignRaid()) {
+				me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBossBarService.clear(battle);
+			}
 			for (BattleSide side : battle.getSides()) {
 				side.removeBossBar();
 			}
@@ -231,6 +246,9 @@ public class BattleManager implements Listener{
 	@EventHandler
 	public void playerDeath(PlayerDeathEvent e) {
 		Player p = e.getEntity();
+		if (CampaignRaidIntruderService.consumeIntruderDeath(p.getUniqueId())) {
+			return;
+		}
 		Battle b = getBattleByPlayer(p);
 		if(b == null) return;
 		if(!b.hasStarted()) return;
@@ -413,10 +431,15 @@ public class BattleManager implements Listener{
 				BattlePersistenceService.persistBattle(b);
 			} else if(e.getSlot() == 18) {
 				if(b.hasStarted()) {
-					b.end();
-					BattlePersistenceService.persistBattle(b);
-					inv.updateView(p, b, e.getClickedInventory());
-				BattlePersistenceService.persistBattle(b);
+					BattleEndSupport.endBattle(b, null, BattleEndReason.TIMER);
+					if (b.getWarId() != null) {
+						currentBattle.remove(p);
+						p.closeInventory();
+						p.sendMessage("§aBattle ended.");
+					} else {
+						BattlePersistenceService.persistBattle(b);
+						inv.updateView(p, b, e.getClickedInventory());
+					}
 				} else {
 					String startError = b.start();
 					if (startError != null) {
@@ -430,7 +453,7 @@ public class BattleManager implements Listener{
 			} else if(e.getSlot() == 22) {
 				if (b.getWarId() != null) {
 					p.sendMessage("§cCampaign battles cannot be deleted from the battle editor.");
-					p.sendMessage("§7Reset setup with §e/faction warschedule " + b.getWarId() + " battledelete§7.");
+					p.sendMessage("§7Reset setup with §e/war admin schedule " + b.getWarId() + " battledelete§7.");
 					p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
 					return;
 				}
@@ -585,7 +608,29 @@ public class BattleManager implements Listener{
 			if(b.hasStarted()) {
 				return;
 			}
-			if(e.getSlot() == 2) {
+			if(e.getSlot() == 0) {
+				try {
+					BattleContestSetup.setContestMin(b, p.getLocation());
+					BattlePersistenceService.persistBattle(b);
+					p.sendMessage("§aContest area min set!");
+					p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					inv.contestView(p, b);
+				} catch (IllegalArgumentException ex) {
+					p.sendMessage("§c" + ex.getMessage());
+					p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				}
+			} else if(e.getSlot() == 1) {
+				try {
+					BattleContestSetup.setContestMax(b, p.getLocation());
+					BattlePersistenceService.persistBattle(b);
+					p.sendMessage("§aContest area max set!");
+					p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					inv.contestView(p, b);
+				} catch (IllegalArgumentException ex) {
+					p.sendMessage("§c" + ex.getMessage());
+					p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				}
+			} else if(e.getSlot() == 2) {
 				int next = BattleInventoryManager.cycleContestDuration(
 						BattleContestSetup.getEffectiveDurationSeconds(b));
 				b.setContestDurationSeconds(next);

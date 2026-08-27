@@ -1,6 +1,8 @@
 package me.Plugins.SimpleFactions.vehicles;
 
+import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.bukkit.Location;
 
@@ -24,27 +26,30 @@ public final class InstallationVehicleService {
         this.ownerSync = ownerSync;
     }
 
-    public CanRegisterResult canRegister(
-            Installation installation,
-            ActiveVehicle vehicle,
-            PlayerVehicleRecord record) {
-        return canRegister(installation, adapt(vehicle), record);
+    public CanRegisterResult canRegister(Installation installation, ActiveVehicle vehicle) {
+        return canRegister(installation, adapt(vehicle));
     }
 
-    CanRegisterResult canRegister(
-            Installation installation,
-            VehicleBerthTarget vehicle,
-            PlayerVehicleRecord record) {
-        if (record == null || vehicle == null
-                || !record.getVehicleUuid().equals(vehicle.getVehicleUuid())) {
+    CanRegisterResult canRegister(Installation installation, VehicleBerthTarget vehicle) {
+        if (vehicle == null || vehicle.getVehicleUuid() == null) {
             return CanRegisterResult.NOT_IN_REGISTRY;
         }
 
-        if (record.getMode() == OwnershipMode.INSTALLATION) {
+        if (registry.isBerthed(vehicle.getVehicleUuid())) {
             return CanRegisterResult.ALREADY_BERTHED;
         }
 
-        String vehicleTypeId = record.getVehicleTypeId();
+        OwnerData ownerData = vehicle.getOwnerData();
+        String owner = ownerData == null ? null : ownerData.getOwner();
+        if (!VehicleOwnershipQueries.isPlayerOwner(owner)) {
+            return CanRegisterResult.NOT_IN_REGISTRY;
+        }
+
+        if (VehicleInstallationLockService.isVehicleLocked(installation.getId(), Instant.now())) {
+            return CanRegisterResult.REPAIR_LOCKED;
+        }
+
+        String vehicleTypeId = vehicle.getVehicleTypeId();
         Optional<String> categoryId = VehiclesConfigLoader.getCategoryId(vehicleTypeId);
         if (categoryId.isEmpty()) {
             return CanRegisterResult.UNKNOWN_TYPE;
@@ -78,20 +83,20 @@ public final class InstallationVehicleService {
     public void register(
             Installation installation,
             ActiveVehicle vehicle,
-            PlayerVehicleRecord record,
-            Faction faction) {
-        register(installation, adapt(vehicle), record, faction);
+            Faction faction,
+            UUID originalOwnerUuid) {
+        register(installation, adapt(vehicle), faction, originalOwnerUuid);
     }
 
     void register(
             Installation installation,
             VehicleBerthTarget vehicle,
-            PlayerVehicleRecord record,
-            Faction faction) {
+            Faction faction,
+            UUID originalOwnerUuid) {
         registry.register(new PlayerVehicleRecord(
-                record.getPlayerUuid(),
-                record.getVehicleUuid(),
-                record.getVehicleTypeId(),
+                originalOwnerUuid,
+                vehicle.getVehicleUuid(),
+                vehicle.getVehicleTypeId(),
                 OwnershipMode.INSTALLATION,
                 installation.getId()));
         ownerSync.applyLeaderOwner(vehicle.getOwnerData(), faction);
@@ -109,6 +114,11 @@ public final class InstallationVehicleService {
             }
 
             @Override
+            public String getVehicleTypeId() {
+                return vehicle.getId();
+            }
+
+            @Override
             public Location getLocation() {
                 return vehicle.getLocation();
             }
@@ -122,6 +132,8 @@ public final class InstallationVehicleService {
 
     interface VehicleBerthTarget {
         String getVehicleUuid();
+
+        String getVehicleTypeId();
 
         Location getLocation();
 

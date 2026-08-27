@@ -62,17 +62,17 @@ class CampaignRaidMessagesTest {
 		when(launcher.getName()).thenReturn("Attackers");
 		Installation target = new Installation("port-def", "Harbor", InstallationKind.PORT, 20, 0, 0, 0L);
 
-		String message = CampaignRaidMessages.buildRaidCalledMessage(launcher, target, "cr_1_2026-08-21");
+		String message = CampaignRaidMessages.buildRaidCalledMessage(launcher, target, "harbor_raid");
 
 		assertNotNull(message);
 		assertTrue(message.contains("Harbor"));
-		assertTrue(message.contains("cr_1_2026-08-21"));
+		assertTrue(message.contains("harbor_raid"));
 		assertTrue(message.contains("/raid join"));
 	}
 
 	@Test
-	void buildRaidStartedMessage_containsTargetName() {
+	void buildRaidStartedMessage_containsDisplayName() {
 		Installation target = new Installation("port-def", "Harbor", InstallationKind.PORT, 20, 0, 0, 0L);
-		assertTrue(CampaignRaidMessages.buildRaidStartedMessage(target).contains("Harbor"));
+		assertTrue(CampaignRaidMessages.buildRaidStartedMessage(target, "Harbor Raid").contains("Harbor Raid"));
 	}
 }

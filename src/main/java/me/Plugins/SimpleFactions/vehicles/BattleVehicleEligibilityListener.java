@@ -1,6 +1,5 @@
 package me.Plugins.SimpleFactions.vehicles;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -45,12 +44,7 @@ public final class BattleVehicleEligibilityListener implements Listener {
 			return;
 		}
 
-		PlayerVehicleRecord record = registry.getByVehicleUuid(vehicle.getUUID()).orElse(null);
-		if (record == null || record.getPlayerUuid() == null) {
-			return;
-		}
-
-		Player player = Bukkit.getPlayer(record.getPlayerUuid());
+		Player player = BattleVehicleEligibilityService.resolveNotifyPlayer(vehicle, registry);
 		if (player == null) {
 			return;
 		}

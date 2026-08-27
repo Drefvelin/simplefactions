@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.util.UUID;
@@ -22,6 +23,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
+import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleFactory;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleJoinService;
@@ -30,6 +33,7 @@ import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
+import me.Plugins.SimpleFactions.War.core.War;
 
 class BattlePersistenceServiceTest {
 	private BossBar bossBar;
@@ -102,6 +106,69 @@ class BattlePersistenceServiceTest {
 		assertEquals(1, BattleManager.get().size());
 		assertNotNull(BattleManager.getByString("manual_b"));
 		assertFalse(new File("plugins/SimpleFactions/Battles/battle_manual_a.json").exists());
+	}
+
+	@Test
+	void deleteCampaignBattle_removesAttachedAndShellWarbands() {
+		War war = mockWar(1);
+		Battle battle = BattleFactory.createBlank(BattleType.FIELD, "campaign_w1_p20");
+		battle.setWarId(1);
+		battle.setDisplayName("Battle of Lanbury");
+		battle.setLocked(false);
+		Warband attacker = Warband.createCampaignSideShell(
+				BattleNamingService.campaignWarbandId(battle.getDisplayName(), BattleTemplate.ATTACKER_SIDE),
+				war,
+				war.getAttackers(),
+				BattleTemplate.ATTACKER_SIDE);
+		Warband defender = Warband.createCampaignSideShell(
+				BattleNamingService.campaignWarbandId(battle.getDisplayName(), BattleTemplate.DEFENDER_SIDE),
+				war,
+				war.getDefenders(),
+				BattleTemplate.DEFENDER_SIDE);
+		WarbandManager.addWarband(attacker);
+		WarbandManager.addWarband(defender);
+		BattleManager.addBattle(battle);
+		battle.getSideById(BattleTemplate.ATTACKER_SIDE).addBand(attacker);
+		battle.getSideById(BattleTemplate.DEFENDER_SIDE).addBand(defender);
+
+		BattlePersistenceService.deleteCampaignBattle(battle);
+
+		assertNull(WarbandManager.getByString(
+				BattleNamingService.campaignWarbandId(battle.getDisplayName(), BattleTemplate.ATTACKER_SIDE)));
+		assertNull(WarbandManager.getByString(
+				BattleNamingService.campaignWarbandId(battle.getDisplayName(), BattleTemplate.DEFENDER_SIDE)));
+		assertTrue(BattleManager.get().isEmpty());
+	}
+
+	@Test
+	void deleteRaidBattle_removesAttachedWarbands() {
+		War war = mockWar(1);
+		Battle battle = BattleFactory.createBlank(BattleType.RAID, "harbor_raid");
+		battle.setCampaignRaid(true);
+		battle.setLocked(false);
+		Warband attacker = Warband.createRaidShell(
+				"harbor_raid_attacker", war.getAttackers(), BattleTemplate.ATTACKER_SIDE);
+		Warband defender = Warband.createRaidShell(
+				"harbor_raid_defender", war.getDefenders(), BattleTemplate.DEFENDER_SIDE);
+		WarbandManager.addWarband(attacker);
+		WarbandManager.addWarband(defender);
+		BattleManager.addBattle(battle);
+		battle.getSideById(BattleTemplate.ATTACKER_SIDE).addBand(attacker);
+		battle.getSideById(BattleTemplate.DEFENDER_SIDE).addBand(defender);
+
+		BattlePersistenceService.deleteRaidBattle(battle);
+
+		assertNull(WarbandManager.getByString("harbor_raid_attacker"));
+		assertNull(WarbandManager.getByString("harbor_raid_defender"));
+		assertTrue(BattleManager.get().isEmpty());
+	}
+
+	private War mockWar(int id) {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getName()).thenReturn("Attacker");
+		when(defender.getName()).thenReturn("Defender");
+		return new War(id, attacker, defender);
 	}
 
 	@Test

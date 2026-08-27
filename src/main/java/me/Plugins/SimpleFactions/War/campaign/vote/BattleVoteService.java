@@ -13,8 +13,10 @@ import java.util.function.Function;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 
 public final class BattleVoteService {
 	private BattleVoteService() {}
@@ -33,6 +35,9 @@ public final class BattleVoteService {
 		}
 		if (playerFaction == null || war.getSide(playerFaction) == null) {
 			return VoteResults.BattleVoteToggleResult.REJECTED_NOT_PARTICIPANT;
+		}
+		if (BattleScheduleService.isVoteCloseDue(war, CampaignClock.now())) {
+			return VoteResults.BattleVoteToggleResult.REJECTED_VOTE_CLOSED;
 		}
 		if (!BattleWindowService.isValidHour(hour)) {
 			return VoteResults.BattleVoteToggleResult.REJECTED_INVALID_HOUR;

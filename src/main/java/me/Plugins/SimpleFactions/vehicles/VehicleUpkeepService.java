@@ -9,6 +9,7 @@ import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.player.PlayerEconomyManager;
 import me.Plugins.SimpleFactions.player.income.PlayerCashflow;
+import net.tfminecraft.VehicleFramework.Data.OwnedVehicleSummary;
 
 public final class VehicleUpkeepService {
     private final PlayerVehicleRegistry registry;
@@ -31,15 +32,17 @@ public final class VehicleUpkeepService {
     }
 
     public void processDailyUpkeep() {
-        for (PlayerVehicleRecord record : registry.getAll()) {
-            if (record.getMode() != OwnershipMode.PERSONAL) {
-                continue;
-            }
-            double upkeep = VehiclesConfigLoader.getUpkeep(record.getVehicleTypeId());
+        for (OwnedVehicleSummary vehicle : VehicleOwnershipQueries.allPersonalVehicles(registry)) {
+            double upkeep = VehiclesConfigLoader.getUpkeep(vehicle.getTypeId());
             if (upkeep <= 0.0) {
                 continue;
             }
-            chargePlayer(record.getPlayerUuid(), upkeep, record.getVehicleTypeId());
+            String playerName = VehicleOwnershipQueries.playerNameFromOwner(vehicle.getOwner());
+            UUID playerUuid = VehicleOwnershipQueries.resolvePlayerUuid(playerName);
+            if (playerUuid == null) {
+                continue;
+            }
+            chargePlayer(playerUuid, upkeep, vehicle.getTypeId());
         }
     }
 

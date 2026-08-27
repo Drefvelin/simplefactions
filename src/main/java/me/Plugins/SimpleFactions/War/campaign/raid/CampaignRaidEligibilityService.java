@@ -18,6 +18,7 @@ import me.Plugins.SimpleFactions.War.campaign.runtime.RaidKind;
 import me.Plugins.SimpleFactions.War.campaign.runtime.RaidTargetCandidate;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.core.WarDevMode;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
@@ -258,12 +259,17 @@ public final class CampaignRaidEligibilityService {
 	}
 
 	private static boolean isRaidListingAllowed(War war, String factionId, Instant now) {
-		return war != null
-				&& war.isActive()
-				&& factionId != null
-				&& !factionId.isBlank()
-				&& now != null
-				&& war.getBattleDay() != null
+		if (war == null
+				|| !war.isActive()
+				|| factionId == null
+				|| factionId.isBlank()
+				|| now == null) {
+			return false;
+		}
+		if (WarDevMode.isEnabled()) {
+			return true;
+		}
+		return war.getBattleDay() != null
 				&& BattleScheduleService.isRaidWindowOpen(war, now);
 	}
 

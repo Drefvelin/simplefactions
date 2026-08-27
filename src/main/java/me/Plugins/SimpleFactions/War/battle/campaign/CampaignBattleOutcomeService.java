@@ -37,6 +37,7 @@ import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.zoc.FortControlService;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBattleService;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 
 public class CampaignBattleOutcomeService implements Listener {
@@ -60,11 +61,12 @@ public class CampaignBattleOutcomeService implements Listener {
 			return;
 		}
 
-		BelligerentRole winnerRole = mapWinningSide(event.getWinningSideId());
-		Battle battle = BattleManager.getByString(event.getBattleId());
-		if (battle != null && battle.isCampaignRaid()) {
+		if (CampaignRaidBattleService.isCampaignRaidEvent(war, event)) {
 			return;
 		}
+
+		Battle battle = BattleManager.getByString(event.getBattleId());
+		BelligerentRole winnerRole = mapWinningSide(event.getWinningSideId());
 		Integer battleProvinceId = battle != null && battle.getProvinceId() != null
 				? battle.getProvinceId()
 				: war.getScheduledBattleProvinceId();

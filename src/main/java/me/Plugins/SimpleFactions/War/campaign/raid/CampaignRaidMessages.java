@@ -26,6 +26,8 @@ public final class CampaignRaidMessages {
 	public static final String RAID_NOT_FOUND = "§cNo active campaign raid with that id.";
 	public static final String JOINED = "§aJoined the campaign raid muster.";
 	public static final String ALREADY_JOINED = "§7You are already in this campaign raid muster.";
+	public static final String MOUNTED_ON_VEHICLE = "§cYou cannot join a raid while mounted on a vehicle.";
+	public static final String INTRUDER = "§cYou are not part of this raid. Leave the area!";
 
 	private CampaignRaidMessages() {}
 
@@ -61,21 +63,31 @@ public final class CampaignRaidMessages {
 		};
 	}
 
-	public static String buildRaidCalledMessage(Faction launcher, Installation target, String raidId) {
+	public static String buildRaidCalledMessage(Faction launcher, Installation target, String raidJoinId) {
 		String factionName = launcher != null ? launcher.getName() : "A faction";
 		String targetName = target != null ? target.getName() : "an installation";
-		String id = raidId != null ? raidId : "";
-		return "§e" + factionName + " raid called on §c" + targetName + "§e! §7/raid join " + id + " §e(60s)";
+		String joinId = raidJoinId != null ? raidJoinId : "";
+		int musterSeconds = me.Plugins.SimpleFactions.Cache.campaignRaidMusterSeconds;
+		return "§e" + factionName + " raid called on §c" + targetName
+				+ "§e! §7/raid join " + joinId + " §e(" + musterSeconds + "s)";
 	}
 
-	public static String buildRaidStartedMessage(Installation target) {
-		String targetName = target != null ? target.getName() : "an installation";
-		return "§cCampaign raid underway at §e" + targetName + "§c!";
+	public static String buildRaidStartedMessage(Installation target, String displayName) {
+		String raidName = displayName != null && !displayName.isBlank()
+				? displayName
+				: (target != null ? target.getName() + " Raid" : "Campaign raid");
+		return "§c" + raidName + " §cis underway!";
+	}
+
+	public static String buildRaidEndedMessage(Installation target, String displayName) {
+		String raidName = displayName != null && !displayName.isBlank()
+				? displayName
+				: (target != null ? "Campaign raid at " + target.getName() : "Campaign raid");
+		return "§7" + raidName + " §7has ended.";
 	}
 
 	public static String buildRaidEndedMessage(Installation target) {
-		String targetName = target != null ? target.getName() : "an installation";
-		return "§7Campaign raid at §e" + targetName + " §7has ended.";
+		return buildRaidEndedMessage(target, null);
 	}
 
 	public static String messageForJoinResult(JoinResult result) {
@@ -89,6 +101,7 @@ public final class CampaignRaidMessages {
 			case REJECTED_NOT_MUSTER -> NOT_MUSTER;
 			case REJECTED_IN_WARBAND -> IN_WARBAND;
 			case REJECTED_ALREADY_JOINED -> ALREADY_JOINED;
+			case REJECTED_MOUNTED_ON_VEHICLE -> MOUNTED_ON_VEHICLE;
 			default -> null;
 		};
 	}

@@ -6,12 +6,15 @@ import java.util.UUID;
 
 import org.bukkit.Bukkit;
 
+import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleEndReason;
 import me.Plugins.SimpleFactions.War.battle.events.BattleEndedEvent;
 import me.Plugins.SimpleFactions.War.battle.engine.raid.RaidAttackerEliminationService;
 import me.Plugins.SimpleFactions.War.battle.engine.win.SiegeContestService;
 import me.Plugins.SimpleFactions.War.battle.military.BattleCasualtyLedger;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBattleService;
+import me.Plugins.SimpleFactions.War.core.War;
 
 public final class BattleEndSupport {
 	private BattleEndSupport() {
@@ -32,6 +35,13 @@ public final class BattleEndSupport {
 		Set<UUID> participantIds = BattleParticipantCollector.collect(battle);
 		battle.end();
 		if (SimpleFactions.plugin != null) {
+			boolean campaignRaid = battle.isCampaignRaid();
+			if (!campaignRaid && battle.getWarId() != null) {
+				War war = WarManager.getById(battle.getWarId());
+				CampaignRaidBattleService.markAsCampaignRaidIfActive(war, battle);
+				campaignRaid = battle.isCampaignRaid()
+						|| CampaignRaidBattleService.isCampaignRaidBattle(war, battle);
+			}
 			Bukkit.getPluginManager().callEvent(
 					new BattleEndedEvent(
 							battle.getId(),
@@ -40,7 +50,8 @@ public final class BattleEndSupport {
 							winningSideId,
 							sideCasualties,
 							participantIds,
-							endReason));
+							endReason,
+							campaignRaid));
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package me.Plugins.SimpleFactions.War.battle.campaign;
 
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Title;
@@ -9,6 +10,7 @@ import java.util.List;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
+import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService.ScheduleLeg;
@@ -19,6 +21,7 @@ import me.Plugins.SimpleFactions.settlement.Settlement;
 
 public final class BattleNamingService {
 	public static final String WILDERNESS = "Wilderness";
+	private static final int MAX_SLUG_LENGTH = 48;
 
 	private BattleNamingService() {
 	}
@@ -122,10 +125,56 @@ public final class BattleNamingService {
 		return buildDisplayName(slot.battleType(), locationDisplay, ordinal);
 	}
 
+	public static String buildRaidDisplayName(War war, Installation target) {
+		String location = target != null && target.getName() != null && !target.getName().isBlank()
+				? target.getName()
+				: WILDERNESS;
+		String key = raidLocationKey(target);
+		int ordinal = war != null ? war.getLocationBattleCount(key) + 1 : 1;
+		return buildDisplayName(BattleType.RAID, location, ordinal);
+	}
+
+	public static String raidLocationKey(Installation target) {
+		if (target == null || target.getId() == null || target.getId().isBlank()) {
+			return "raid:unknown";
+		}
+		return "raid:" + target.getId();
+	}
+
+	public static String slugifyDisplayName(String displayName) {
+		if (displayName == null || displayName.isBlank()) {
+			return "wilderness";
+		}
+		String stripped = Formatter.formatId(displayName).trim();
+		if (stripped.isBlank()) {
+			return "wilderness";
+		}
+		String slug = stripped
+				.toLowerCase()
+				.replaceAll("[^a-z0-9]+", "_")
+				.replaceAll("_+", "_")
+				.replaceAll("^_|_$", "");
+		if (slug.isBlank()) {
+			return "wilderness";
+		}
+		if (slug.length() > MAX_SLUG_LENGTH) {
+			slug = slug.substring(0, MAX_SLUG_LENGTH).replaceAll("_+$", "");
+		}
+		return slug.isBlank() ? "wilderness" : slug;
+	}
+
+	public static String campaignWarbandId(String displayName, String battleSideId) {
+		String slug = slugifyDisplayName(displayName);
+		if (BattleTemplate.DEFENDER_SIDE.equals(battleSideId)) {
+			return slug + "_defender";
+		}
+		return slug + "_attacker";
+	}
+
 	public static String buildDisplayName(BattleType type, String locationName, int ordinal) {
 		String safeLocation = locationName != null && !locationName.isBlank() ? locationName : WILDERNESS;
 		if (type == BattleType.RAID) {
-			return safeLocation + " Raid";
+			return ordinalPrefix(ordinal) + safeLocation + " Raid";
 		}
 		String prefix = ordinalPrefix(ordinal);
 		if (type == BattleType.SIEGE) {

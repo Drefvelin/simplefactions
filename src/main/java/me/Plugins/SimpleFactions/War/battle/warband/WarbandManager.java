@@ -27,6 +27,7 @@ import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleInventoryManager;
 import me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService;
+import me.Plugins.SimpleFactions.War.battle.warband.WarbandVehicleRules;
 
 public class WarbandManager implements Listener {
 	private static List<Warband> bands = new ArrayList<>();
@@ -108,7 +109,7 @@ public class WarbandManager implements Listener {
 					player.getOpenInventory().getTitle())) {
 				continue;
 			}
-			inventoryManager.populateWarbandList(top);
+			inventoryManager.populateWarbandList(top, player);
 		}
 	}
 
@@ -174,6 +175,12 @@ public class WarbandManager implements Listener {
 				p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			} else if (w.isLocked()) {
 				if (w.isInvited(p)) {
+					String vehicleError = WarbandVehicleRules.joinBlockedReason(p);
+					if (vehicleError != null) {
+						p.sendMessage("§c" + vehicleError);
+						p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+						return;
+					}
 					w.addPlayer(p);
 					p.sendMessage("§aJoined §e" + w.getId());
 					p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
@@ -182,6 +189,12 @@ public class WarbandManager implements Listener {
 					p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
 				}
 			} else {
+				String vehicleError = WarbandVehicleRules.joinBlockedReason(p);
+				if (vehicleError != null) {
+					p.sendMessage("§c" + vehicleError);
+					p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					return;
+				}
 				w.addPlayer(p);
 				p.sendMessage("§aJoined §e" + w.getId());
 				p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);

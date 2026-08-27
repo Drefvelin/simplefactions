@@ -101,13 +101,6 @@ class VehicleTransferConsentServiceTest {
         when(faction.getInstallationHandler()).thenReturn(handler);
         FactionManager.factions.add(faction);
 
-        registry.register(new PlayerVehicleRecord(
-                ownerUuid,
-                "vehicle-1",
-                "ironclad",
-                OwnershipMode.PERSONAL,
-                null));
-
         Player owner = playerStub(ownerUuid, "Owner", ownerMessages);
         Player leader = playerStub(leaderUuid, "Leader", new ArrayList<>());
 
@@ -121,8 +114,9 @@ class VehicleTransferConsentServiceTest {
                 leaderUuid);
 
         OwnerData ownerData = new OwnerData();
+        ownerData.setOwner("player_Owner");
         InstallationVehicleService.VehicleBerthTarget vehicle =
-                berthTarget("vehicle-1", locationAt(0, 64, 0), ownerData);
+                berthTarget("vehicle-1", "ironclad", locationAt(0, 64, 0), ownerData);
 
         VehicleTransferConsentService spiedService = spy(consentService);
         doReturn(vehicle).when(spiedService).resolveBerthTarget("vehicle-1");
@@ -255,12 +249,18 @@ class VehicleTransferConsentServiceTest {
 
     private static InstallationVehicleService.VehicleBerthTarget berthTarget(
             String uuid,
+            String typeId,
             Location location,
             OwnerData ownerData) {
         return new InstallationVehicleService.VehicleBerthTarget() {
             @Override
             public String getVehicleUuid() {
                 return uuid;
+            }
+
+            @Override
+            public String getVehicleTypeId() {
+                return typeId;
             }
 
             @Override

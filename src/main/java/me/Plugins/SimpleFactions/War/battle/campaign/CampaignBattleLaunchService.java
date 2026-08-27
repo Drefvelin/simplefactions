@@ -105,6 +105,7 @@ public final class CampaignBattleLaunchService {
 		if (startError != null) {
 			SimpleFactions.plugin.getLogger().warning(
 					"[SimpleFactions] Could not start scheduled battle: " + startError);
+			broadcastStartFailure(war, battle, startError);
 			return false;
 		}
 		return true;
@@ -118,7 +119,7 @@ public final class CampaignBattleLaunchService {
 		if (battle.hasStarted()) {
 			return "Battle already started.";
 		}
-		CampaignBattleRosterService.ensureEnrolled(war, battle);
+		CampaignBattleRosterService.ensureEnrolledForced(war, battle);
 		return battle.start();
 	}
 
@@ -142,10 +143,7 @@ public final class CampaignBattleLaunchService {
 		}
 		BattleNamingService.applyCampaignName(battle, war, provinceId, type, slot);
 		BattleManager.addBattle(battle);
-		CampaignBattleRosterService.enrollWarbands(war, battle);
-		if (!immediateStart) {
-			broadcastJoinMessage(war, battle);
-		}
+		CampaignBattleRosterService.ensureEnrolled(war, battle);
 		BattlePersistenceService.persistBattle(battle);
 		return battle;
 	}
@@ -154,9 +152,13 @@ public final class CampaignBattleLaunchService {
 		return "campaign_w" + warId + "_p" + provinceId;
 	}
 
-	private static void broadcastJoinMessage(War war, Battle battle) {
-		String message = "§a" + battle.getDisplayName()
-				+ " ready. Sign up with §e/warband list §7and join your faction warband.";
+	private static void broadcastStartFailure(War war, Battle battle, String error) {
+		String battleName = battle != null ? battle.getDisplayName() : "The scheduled battle";
+		String message = "§c" + battleName + " could not start: §7" + error;
+		broadcastToBelligerents(war, message);
+	}
+
+	private static void broadcastToBelligerents(War war, String message) {
 		for (String memberName : BattleSideMembers.collectEligibleMemberNames(war.getAttackers())) {
 			Player player = Bukkit.getPlayerExact(memberName);
 			if (player != null && player.isOnline()) {

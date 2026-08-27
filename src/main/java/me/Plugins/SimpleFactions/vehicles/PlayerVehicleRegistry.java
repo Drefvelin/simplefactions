@@ -5,57 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
 
 public final class PlayerVehicleRegistry {
     private final Map<String, PlayerVehicleRecord> byVehicleUuid = new HashMap<>();
-
-    public int countPersonal(UUID playerUuid) {
-        if (playerUuid == null) {
-            return 0;
-        }
-        int count = 0;
-        for (PlayerVehicleRecord record : byVehicleUuid.values()) {
-            if (record.getMode() == OwnershipMode.PERSONAL
-                    && record.getPlayerUuid().equals(playerUuid)) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    public int countPersonalOfType(UUID playerUuid, String vehicleTypeId) {
-        if (playerUuid == null || vehicleTypeId == null || vehicleTypeId.isEmpty()) {
-            return 0;
-        }
-        String normalizedTypeId = vehicleTypeId.toLowerCase();
-        int count = 0;
-        for (PlayerVehicleRecord record : byVehicleUuid.values()) {
-            if (record.getMode() == OwnershipMode.PERSONAL
-                    && record.getPlayerUuid().equals(playerUuid)
-                    && normalizedTypeId.equalsIgnoreCase(record.getVehicleTypeId())) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    public int countPersonalExcludingIgnoreLimit(UUID playerUuid) {
-        if (playerUuid == null) {
-            return 0;
-        }
-        int count = 0;
-        for (PlayerVehicleRecord record : byVehicleUuid.values()) {
-            if (record.getMode() == OwnershipMode.PERSONAL
-                    && record.getPlayerUuid().equals(playerUuid)
-                    && !VehiclesConfigLoader.ignoresPersonalSlotLimit(record.getVehicleTypeId())) {
-                count++;
-            }
-        }
-        return count;
-    }
 
     public void register(PlayerVehicleRecord record) {
         if (record == null || record.getVehicleUuid() == null) {
@@ -78,18 +32,10 @@ public final class PlayerVehicleRegistry {
         return Optional.ofNullable(byVehicleUuid.get(vehicleUuid));
     }
 
-    public List<PlayerVehicleRecord> getPersonalVehicles(UUID playerUuid) {
-        List<PlayerVehicleRecord> out = new ArrayList<>();
-        if (playerUuid == null) {
-            return out;
-        }
-        for (PlayerVehicleRecord record : byVehicleUuid.values()) {
-            if (record.getMode() == OwnershipMode.PERSONAL
-                    && record.getPlayerUuid().equals(playerUuid)) {
-                out.add(record);
-            }
-        }
-        return out;
+    public boolean isBerthed(String vehicleUuid) {
+        return getByVehicleUuid(vehicleUuid)
+                .filter(record -> record.getMode() == OwnershipMode.INSTALLATION)
+                .isPresent();
     }
 
     public List<PlayerVehicleRecord> getAll() {

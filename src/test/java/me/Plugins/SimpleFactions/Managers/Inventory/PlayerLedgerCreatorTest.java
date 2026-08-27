@@ -1,6 +1,7 @@
 package me.Plugins.SimpleFactions.Managers.Inventory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -23,6 +24,9 @@ class PlayerLedgerCreatorTest {
         assertEquals(2, ledger.getExpenseFlows().size());
 
         List<String> lore = new PlayerLedgerCreator().buildLore(ledger);
-        assertTrue(lore.size() >= 10);
+        String upkeepAmount = String.format("%.2f", -20.0) + "d";
+        assertTrue(lore.stream().anyMatch(line ->
+                line.contains("Vehicles") && line.contains(upkeepAmount)));
+        assertFalse(lore.stream().anyMatch(line -> line.contains("Personal Vehicles")));
     }
 }

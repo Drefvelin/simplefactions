@@ -11,6 +11,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 import java.io.File;
+import java.time.Instant;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -76,6 +77,27 @@ class BattleMapperTest {
 			assertEquals(42, restored.getContestHoldRemainingSeconds());
 			assertEquals(12, restored.getSideById(BattleTemplate.ATTACKER_SIDE).getLives());
 			assertEquals(25, restored.getSideById(BattleTemplate.ATTACKER_SIDE).getMaxLives());
+		}
+	}
+
+	@Test
+	void roundTrip_startedAt() {
+		BossBar bossBar = mock(BossBar.class);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.createBossBar(anyString(), any(BarColor.class), any(BarStyle.class)))
+					.thenReturn(bossBar);
+
+			Instant startedAt = Instant.parse("2026-08-21T18:00:00Z");
+			Battle battle = BattleFactory.createBlank(BattleType.FIELD, "campaign_field");
+			battle.setStarted(true);
+			battle.setStartedAt(startedAt);
+
+			BattleData data = BattleMapper.toData(battle);
+			Battle restored = BattleMapper.fromData(data);
+
+			assertNotNull(restored);
+			assertTrue(restored.hasStarted());
+			assertEquals(startedAt, restored.getStartedAt());
 		}
 	}
 }

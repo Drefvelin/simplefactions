@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.vehicles;
 
+import me.Plugins.SimpleFactions.War.battle.warband.WarbandVehicleRules;
+
 public final class BattleVehicleEligibilityMessages {
 	private BattleVehicleEligibilityMessages() {}
 
@@ -8,6 +10,8 @@ public final class BattleVehicleEligibilityMessages {
 			return null;
 		}
 		return switch (result) {
+			case DENIED_PRE_BATTLE_WARBAND ->
+					"§c" + WarbandVehicleRules.VEHICLE_BLOCKED_PRE_BATTLE;
 			case DENIED_NOT_BERTHED ->
 					"§cThis vehicle must be berthed at a committed installation for this battle.";
 			case DENIED_NOT_COMMITTED ->

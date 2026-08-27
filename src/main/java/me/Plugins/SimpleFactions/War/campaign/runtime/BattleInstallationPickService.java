@@ -24,7 +24,7 @@ public final class BattleInstallationPickService {
 			Faction faction,
 			String playerName,
 			String installationId) {
-		return togglePick(war, faction, playerName, installationId, Instant.now());
+		return togglePick(war, faction, playerName, installationId, CampaignClock.now());
 	}
 
 	public static InstallationPickToggleResult togglePick(
@@ -112,7 +112,7 @@ public final class BattleInstallationPickService {
 	}
 
 	public static Map<String, Set<String>> getVisibleEnemyPicks(War war, String viewerFactionId) {
-		return getVisibleEnemyPicks(war, viewerFactionId, Instant.now());
+		return getVisibleEnemyPicks(war, viewerFactionId, CampaignClock.now());
 	}
 
 	public static Map<String, Set<String>> getVisibleEnemyPicks(

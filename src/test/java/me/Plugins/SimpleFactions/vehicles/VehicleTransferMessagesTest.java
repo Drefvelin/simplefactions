@@ -50,7 +50,7 @@ class VehicleTransferMessagesTest {
                 port,
                 null,
                 null);
-        assertEquals("§cThis vehicle is not registered for faction upkeep.", message);
+        assertEquals("§cThis vehicle must be owned by a player before it can be berthed.", message);
         assertFalse(message.contains("—"));
     }
 
@@ -70,17 +70,11 @@ class VehicleTransferMessagesTest {
 
     @Test
     void unsupportedCategory_includesCategoryId() {
-        PlayerVehicleRecord record = new PlayerVehicleRecord(
-                UUID.randomUUID(),
-                "vehicle-1",
-                "ironclad",
-                OwnershipMode.PERSONAL,
-                null);
         String message = VehicleTransferMessages.forResult(
                 CanRegisterResult.UNSUPPORTED_CATEGORY,
                 port,
                 null,
-                record);
+                "ironclad");
         assertEquals("§cThis installation does not support ships vehicles.", message);
     }
 
@@ -92,6 +86,17 @@ class VehicleTransferMessagesTest {
                 null,
                 null);
         assertEquals("§cThis vehicle is already berthed at an installation.", message);
+        assertFalse(message.contains("—"));
+    }
+
+    @Test
+    void repairLocked_usesLockedCopy() {
+        String message = VehicleTransferMessages.forResult(
+                CanRegisterResult.REPAIR_LOCKED,
+                port,
+                null,
+                null);
+        assertEquals(VehicleInstallationLockService.BERTH_BLOCKED, message);
         assertFalse(message.contains("—"));
     }
 
@@ -141,12 +146,6 @@ class VehicleTransferMessagesTest {
 
     @Test
     void noCapacity_usesLockedCopy() {
-        PlayerVehicleRecord record = new PlayerVehicleRecord(
-                UUID.randomUUID(),
-                "vehicle-1",
-                "ironclad",
-                OwnershipMode.PERSONAL,
-                null);
         PlayerVehicleRegistry registry = new PlayerVehicleRegistry();
         for (int i = 0; i < 8; i++) {
             registry.register(new PlayerVehicleRecord(
@@ -164,7 +163,7 @@ class VehicleTransferMessagesTest {
                     CanRegisterResult.NO_CAPACITY,
                     port,
                     null,
-                    record);
+                    "ironclad");
             assertEquals("§cHarbour has no space for ships (8/8 used).", message);
             assertFalse(message.contains("—"));
         }

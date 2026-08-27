@@ -1,15 +1,28 @@
 package me.Plugins.SimpleFactions.vehicles;
 
-import java.util.UUID;
+import java.util.List;
+
+import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
+import net.tfminecraft.VehicleFramework.Data.OwnedVehicleSummary;
 
 public final class VehicleSlotGuard {
     private VehicleSlotGuard() {}
 
+    public static CanBuildResult checkCanBuild(Player player, String vehicleTypeId) {
+        if (player == null) {
+            return CanBuildResult.UNKNOWN_TYPE;
+        }
+        return checkCanBuild(
+                player.getName(),
+                vehicleTypeId,
+                me.Plugins.SimpleFactions.SimpleFactions.getVehicleRegistry());
+    }
+
     public static CanBuildResult checkCanBuild(
-            UUID playerUuid, String vehicleTypeId, PlayerVehicleRegistry registry) {
-        if (playerUuid == null || registry == null) {
+            String playerName, String vehicleTypeId, PlayerVehicleRegistry registry) {
+        if (playerName == null || playerName.isBlank() || registry == null) {
             return CanBuildResult.UNKNOWN_TYPE;
         }
         if (vehicleTypeId == null || vehicleTypeId.isEmpty()) {
@@ -19,7 +32,10 @@ public final class VehicleSlotGuard {
             return CanBuildResult.UNKNOWN_TYPE;
         }
 
-        if (registry.countPersonalOfType(playerUuid, vehicleTypeId)
+        List<OwnedVehicleSummary> personal =
+                VehicleOwnershipQueries.personalVehicles(playerName, registry);
+
+        if (VehicleOwnershipQueries.countOfType(personal, vehicleTypeId)
                 >= VehiclesConfigLoader.getPerPersonLimit(vehicleTypeId)) {
             return CanBuildResult.PER_TYPE_LIMIT;
         }
@@ -33,7 +49,7 @@ public final class VehicleSlotGuard {
             return CanBuildResult.OK;
         }
 
-        if (registry.countPersonalExcludingIgnoreLimit(playerUuid) >= totalLimit) {
+        if (VehicleOwnershipQueries.countExcludingIgnoreLimit(personal) >= totalLimit) {
             return CanBuildResult.TOTAL_LIMIT;
         }
 

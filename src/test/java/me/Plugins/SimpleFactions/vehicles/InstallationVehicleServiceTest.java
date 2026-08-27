@@ -60,57 +60,45 @@ class InstallationVehicleServiceTest {
     }
 
     @Test
-    void canRegister_nullRecord_returnsNotInRegistry() {
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0));
+    void canRegister_unowned_returnsNotInRegistry() {
+        VehicleBerthTarget vehicle = berthTarget("vehicle-1", "ironclad", locationAt(0, 64, 0), unowned());
 
         assertEquals(
             CanRegisterResult.NOT_IN_REGISTRY,
-            service.canRegister(port, vehicle, null));
-    }
-
-    @Test
-    void canRegister_uuidMismatch_returnsNotInRegistry() {
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0));
-        PlayerVehicleRecord record = personalRecord("vehicle-2", "ironclad");
-
-        assertEquals(
-            CanRegisterResult.NOT_IN_REGISTRY,
-            service.canRegister(port, vehicle, record));
+            service.canRegister(port, vehicle));
     }
 
     @Test
     void canRegister_alreadyBerthed_returnsAlreadyBerthed() {
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0));
-        PlayerVehicleRecord record = new PlayerVehicleRecord(
+        registry.register(new PlayerVehicleRecord(
             UUID.randomUUID(),
             "vehicle-1",
             "ironclad",
             OwnershipMode.INSTALLATION,
-            "port-1");
+            "port-1"));
+        VehicleBerthTarget vehicle = ownedTarget("vehicle-1", "ironclad");
 
         assertEquals(
             CanRegisterResult.ALREADY_BERTHED,
-            service.canRegister(port, vehicle, record));
+            service.canRegister(port, vehicle));
     }
 
     @Test
     void canRegister_unknownType_returnsUnknownType() {
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0));
-        PlayerVehicleRecord record = personalRecord("vehicle-1", "unknown-type");
+        VehicleBerthTarget vehicle = ownedTarget("vehicle-1", "unknown-type");
 
         assertEquals(
             CanRegisterResult.UNKNOWN_TYPE,
-            service.canRegister(port, vehicle, record));
+            service.canRegister(port, vehicle));
     }
 
     @Test
     void canRegister_unsupportedCategory_returnsUnsupportedCategory() {
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0));
-        PlayerVehicleRecord record = personalRecord("vehicle-1", "ironclad");
+        VehicleBerthTarget vehicle = ownedTarget("vehicle-1", "ironclad");
 
         assertEquals(
             CanRegisterResult.UNSUPPORTED_CATEGORY,
-            service.canRegister(fort, vehicle, record));
+            service.canRegister(fort, vehicle));
     }
 
     @Test
@@ -124,8 +112,7 @@ class InstallationVehicleServiceTest {
                 port.getId()));
         }
 
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0));
-        PlayerVehicleRecord record = personalRecord("vehicle-1", "ironclad");
+        VehicleBerthTarget vehicle = ownedTarget("vehicle-1", "ironclad");
 
         try (MockedStatic<InstallationBounds> bounds = mockStatic(InstallationBounds.class)) {
             bounds.when(() -> InstallationBounds.isWithinRadius(eq(port), any())).thenReturn(true);
@@ -133,28 +120,26 @@ class InstallationVehicleServiceTest {
 
             assertEquals(
                 CanRegisterResult.NO_CAPACITY,
-                service.canRegister(port, vehicle, record));
+                service.canRegister(port, vehicle));
         }
     }
 
     @Test
     void canRegister_outOfRadius_returnsOutOfRadius() {
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0));
-        PlayerVehicleRecord record = personalRecord("vehicle-1", "ironclad");
+        VehicleBerthTarget vehicle = ownedTarget("vehicle-1", "ironclad");
 
         try (MockedStatic<InstallationBounds> bounds = mockStatic(InstallationBounds.class)) {
             bounds.when(() -> InstallationBounds.isWithinRadius(eq(port), any())).thenReturn(false);
 
             assertEquals(
                 CanRegisterResult.OUT_OF_RADIUS,
-                service.canRegister(port, vehicle, record));
+                service.canRegister(port, vehicle));
         }
     }
 
     @Test
     void canRegister_wrongProvince_returnsWrongProvince() {
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0));
-        PlayerVehicleRecord record = personalRecord("vehicle-1", "ironclad");
+        VehicleBerthTarget vehicle = ownedTarget("vehicle-1", "ironclad");
 
         try (MockedStatic<InstallationBounds> bounds = mockStatic(InstallationBounds.class)) {
             bounds.when(() -> InstallationBounds.isWithinRadius(eq(port), any())).thenReturn(true);
@@ -162,14 +147,13 @@ class InstallationVehicleServiceTest {
 
             assertEquals(
                 CanRegisterResult.WRONG_PROVINCE,
-                service.canRegister(port, vehicle, record));
+                service.canRegister(port, vehicle));
         }
     }
 
     @Test
     void canRegister_allChecksPass_returnsOk() {
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0));
-        PlayerVehicleRecord record = personalRecord("vehicle-1", "ironclad");
+        VehicleBerthTarget vehicle = ownedTarget("vehicle-1", "ironclad");
 
         try (MockedStatic<InstallationBounds> bounds = mockStatic(InstallationBounds.class)) {
             bounds.when(() -> InstallationBounds.isWithinRadius(eq(port), any())).thenReturn(true);
@@ -177,14 +161,13 @@ class InstallationVehicleServiceTest {
 
             assertEquals(
                 CanRegisterResult.OK,
-                service.canRegister(port, vehicle, record));
+                service.canRegister(port, vehicle));
         }
     }
 
     @Test
     void canRegister_landVehicleAtFort_returnsOk() {
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0));
-        PlayerVehicleRecord record = personalRecord("vehicle-1", "horse_cart");
+        VehicleBerthTarget vehicle = ownedTarget("vehicle-1", "horse_cart");
 
         try (MockedStatic<InstallationBounds> bounds = mockStatic(InstallationBounds.class)) {
             bounds.when(() -> InstallationBounds.isWithinRadius(eq(fort), any())).thenReturn(true);
@@ -192,7 +175,21 @@ class InstallationVehicleServiceTest {
 
             assertEquals(
                 CanRegisterResult.OK,
-                service.canRegister(fort, vehicle, record));
+                service.canRegister(fort, vehicle));
+        }
+    }
+
+    @Test
+    void canRegister_destinationLocked_returnsRepairLocked() {
+        VehicleBerthTarget vehicle = ownedTarget("vehicle-1", "ironclad");
+
+        try (MockedStatic<VehicleInstallationLockService> lock = mockStatic(VehicleInstallationLockService.class)) {
+            lock.when(() -> VehicleInstallationLockService.isVehicleLocked(eq("port-1"), any()))
+                    .thenReturn(true);
+
+            assertEquals(
+                    CanRegisterResult.REPAIR_LOCKED,
+                    service.canRegister(port, vehicle));
         }
     }
 
@@ -211,8 +208,7 @@ class InstallationVehicleServiceTest {
             OwnershipMode.INSTALLATION,
             fort.getId()));
 
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0));
-        PlayerVehicleRecord record = personalRecord("vehicle-1", "horse_cart");
+        VehicleBerthTarget vehicle = ownedTarget("vehicle-1", "horse_cart");
 
         try (MockedStatic<InstallationBounds> bounds = mockStatic(InstallationBounds.class)) {
             bounds.when(() -> InstallationBounds.isWithinRadius(eq(fort), any())).thenReturn(true);
@@ -220,33 +216,24 @@ class InstallationVehicleServiceTest {
 
             assertEquals(
                 CanRegisterResult.NO_CAPACITY,
-                service.canRegister(fort, vehicle, record));
+                service.canRegister(fort, vehicle));
         }
     }
 
     @Test
     void canRegister_landVehicleAtPort_unsupportedCategory() {
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0));
-        PlayerVehicleRecord record = personalRecord("vehicle-1", "horse_cart");
+        VehicleBerthTarget vehicle = ownedTarget("vehicle-1", "horse_cart");
 
         assertEquals(
             CanRegisterResult.UNSUPPORTED_CATEGORY,
-            service.canRegister(port, vehicle, record));
+            service.canRegister(port, vehicle));
     }
 
     @Test
     void register_updatesRegistryOwnerAndPersists() {
         UUID playerUuid = UUID.randomUUID();
-        PlayerVehicleRecord record = new PlayerVehicleRecord(
-            playerUuid,
-            "vehicle-1",
-            "ironclad",
-            OwnershipMode.PERSONAL,
-            null);
-        registry.register(record);
-
-        OwnerData ownerData = new OwnerData();
-        VehicleBerthTarget vehicle = berthTarget("vehicle-1", locationAt(0, 64, 0), ownerData);
+        OwnerData ownerData = ownedData();
+        VehicleBerthTarget vehicle = berthTarget("vehicle-1", "ironclad", locationAt(0, 64, 0), ownerData);
 
         Faction faction = mock(Faction.class);
         when(faction.getLeader()).thenReturn("Alice");
@@ -255,7 +242,7 @@ class InstallationVehicleServiceTest {
         try (MockedStatic<SimpleFactions> sf = mockStatic(SimpleFactions.class)) {
             sf.when(SimpleFactions::getInstance).thenReturn(plugin);
 
-            service.register(port, vehicle, record, faction);
+            service.register(port, vehicle, faction, playerUuid);
 
             PlayerVehicleRecord updated = registry.getByVehicleUuid("vehicle-1").orElseThrow();
             assertEquals(OwnershipMode.INSTALLATION, updated.getMode());
@@ -266,24 +253,31 @@ class InstallationVehicleServiceTest {
         }
     }
 
-    private static PlayerVehicleRecord personalRecord(String vehicleUuid, String typeId) {
-        return new PlayerVehicleRecord(
-            UUID.randomUUID(),
-            vehicleUuid,
-            typeId,
-            OwnershipMode.PERSONAL,
-            null);
+    private static OwnerData unowned() {
+        return new OwnerData();
     }
 
-    private static VehicleBerthTarget berthTarget(String uuid, Location location) {
-        return berthTarget(uuid, location, new OwnerData());
+    private static OwnerData ownedData() {
+        OwnerData ownerData = new OwnerData();
+        ownerData.setOwner("player_Alice");
+        return ownerData;
     }
 
-    private static VehicleBerthTarget berthTarget(String uuid, Location location, OwnerData ownerData) {
+    private static VehicleBerthTarget ownedTarget(String uuid, String typeId) {
+        return berthTarget(uuid, typeId, locationAt(0, 64, 0), ownedData());
+    }
+
+    private static VehicleBerthTarget berthTarget(
+            String uuid, String typeId, Location location, OwnerData ownerData) {
         return new VehicleBerthTarget() {
             @Override
             public String getVehicleUuid() {
                 return uuid;
+            }
+
+            @Override
+            public String getVehicleTypeId() {
+                return typeId;
             }
 
             @Override

@@ -11,6 +11,7 @@ import me.Plugins.SimpleFactions.War.campaign.runtime.RaidKind;
 
 public class CampaignRaid {
 	private String id;
+	private String displayName;
 	private int warId;
 	private LocalDate battleDay;
 	private CampaignCoalition attackerCoalition;
@@ -23,10 +24,7 @@ public class CampaignRaid {
 	private Instant fightEndsAt;
 	private String battleId;
 	private Set<String> musterParticipantIds = new LinkedHashSet<>();
-
-	public static String buildId(int warId, LocalDate battleDay) {
-		return "cr_" + warId + "_" + battleDay;
-	}
+	private Set<Integer> musterRemindersSent = new LinkedHashSet<>();
 
 	public static CampaignRaid fromData(CampaignRaidData data) {
 		if (data == null || data.id == null || data.id.isBlank()) {
@@ -34,6 +32,7 @@ public class CampaignRaid {
 		}
 		CampaignRaid raid = new CampaignRaid();
 		raid.id = data.id;
+		raid.displayName = data.displayName;
 		raid.warId = data.warId;
 		if (data.battleDay != null && !data.battleDay.isBlank()) {
 			raid.battleDay = LocalDate.parse(data.battleDay);
@@ -54,12 +53,20 @@ public class CampaignRaid {
 		if (data.musterParticipantIds != null) {
 			raid.musterParticipantIds.addAll(data.musterParticipantIds);
 		}
+		if (data.musterRemindersSent != null) {
+			for (Integer offset : data.musterRemindersSent) {
+				if (offset != null) {
+					raid.musterRemindersSent.add(offset);
+				}
+			}
+		}
 		return raid;
 	}
 
 	public CampaignRaidData toData() {
 		CampaignRaidData data = new CampaignRaidData();
 		data.id = id;
+		data.displayName = displayName;
 		data.warId = warId;
 		if (battleDay != null) {
 			data.battleDay = battleDay.toString();
@@ -86,6 +93,9 @@ public class CampaignRaid {
 		if (musterParticipantIds != null && !musterParticipantIds.isEmpty()) {
 			data.musterParticipantIds = new java.util.ArrayList<>(musterParticipantIds);
 		}
+		if (musterRemindersSent != null && !musterRemindersSent.isEmpty()) {
+			data.musterRemindersSent = new java.util.ArrayList<>(musterRemindersSent);
+		}
 		return data;
 	}
 
@@ -106,6 +116,14 @@ public class CampaignRaid {
 
 	public void setId(String id) {
 		this.id = id;
+	}
+
+	public String getDisplayName() {
+		return displayName;
+	}
+
+	public void setDisplayName(String displayName) {
+		this.displayName = displayName;
 	}
 
 	public int getWarId() {
@@ -207,5 +225,22 @@ public class CampaignRaid {
 		this.musterParticipantIds = musterParticipantIds != null
 				? new LinkedHashSet<>(musterParticipantIds)
 				: new LinkedHashSet<>();
+	}
+
+	public Set<Integer> getMusterRemindersSent() {
+		if (musterRemindersSent == null) {
+			musterRemindersSent = new LinkedHashSet<>();
+		}
+		return musterRemindersSent;
+	}
+
+	public void setMusterRemindersSent(Set<Integer> musterRemindersSent) {
+		this.musterRemindersSent = musterRemindersSent != null
+				? new LinkedHashSet<>(musterRemindersSent)
+				: new LinkedHashSet<>();
+	}
+
+	public void clearMusterRemindersSent() {
+		getMusterRemindersSent().clear();
 	}
 }

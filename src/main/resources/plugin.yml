@@ -23,6 +23,9 @@ commands:
   raid:
       useage: /<command>
       description: Campaign raid command
+  war:
+      useage: /<command>
+      description: War command
   ledger:
       useage: /<command>
       description: View your daily cashflow ledger

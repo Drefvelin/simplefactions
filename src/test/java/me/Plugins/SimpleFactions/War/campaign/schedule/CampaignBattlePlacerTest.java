@@ -211,6 +211,35 @@ class CampaignBattlePlacerTest {
 	}
 
 	@Test
+	void placeBattle_offAxisSiege_dropsOptionalFieldOnChronologyTile() {
+		List<Integer> axis = List.of(704, 705);
+		Province airfield = province(704);
+		Province fortHome = province(713);
+		Province capital = province(705);
+		link(fortHome, airfield);
+		link(airfield, capital);
+		pm.start(Map.of(704, airfield, 713, fortHome, 705, capital));
+		titleManager.when(() -> TitleManager.getByProvince(704)).thenReturn(defender);
+		titleManager.when(() -> TitleManager.getByProvince(713)).thenReturn(defender);
+		titleManager.when(() -> TitleManager.getByProvince(705)).thenReturn(defender);
+		FortZocIndex index = FortZocIndex.fromForts(List.of(
+				new OperationalFort("Greenfort", defender, 713, 100L)));
+		CampaignScheduleBuildContext ctx = new CampaignScheduleBuildContext(axis, 704, 0, 1, index);
+		War war = war();
+		war.putFortController("Greenfort", CampaignCoalition.DEFENDER);
+
+		CampaignBattlePlacer.placeBattle(
+				ctx, war, ScheduleLeg.INVASION, 704, BattleTrigger.BORDER, CampaignCoalition.AGGRESSOR, null, null);
+		CampaignBattlePlacer.placeBattle(
+				ctx, war, ScheduleLeg.INVASION, 704, BattleTrigger.FORT_ZOC, CampaignCoalition.AGGRESSOR, "Greenfort", null);
+
+		assertEquals(1, ctx.invasion().size());
+		assertEquals(CampaignBattleKind.SIEGE, ctx.invasion().get(0).kind());
+		assertEquals(713, ctx.invasion().get(0).provinceId());
+		assertEquals(704, ctx.invasion().get(0).chronologyProvinceId());
+	}
+
+	@Test
 	void placeBattle_axisOrder_counterNavalInsertsBySeaIndex() {
 		pm.start(Map.of(5, province(5), 10, province(10), 11, seaProvince(11), 20, province(20)));
 		List<Integer> axis = List.of(5, 10, 11, 20);

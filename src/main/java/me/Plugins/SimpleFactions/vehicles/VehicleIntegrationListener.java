@@ -27,11 +27,9 @@ public final class VehicleIntegrationListener implements Listener {
             return;
         }
 
-        PlayerVehicleRegistry registry = SimpleFactions.getVehicleRegistry();
         Blueprint blueprint = event.getBlueprint();
         String vehicleTypeId = blueprint == null ? null : resolveVehicleTypeId(blueprint);
-        CanBuildResult result = VehicleSlotGuard.checkCanBuild(
-                constructor.getUniqueId(), vehicleTypeId, registry);
+        CanBuildResult result = VehicleSlotGuard.checkCanBuild(constructor, vehicleTypeId);
         if (result != CanBuildResult.OK) {
             event.setCancelled(true);
             String message = VehicleConstructionMessages.forResult(result, vehicleTypeId);
@@ -58,16 +56,6 @@ public final class VehicleIntegrationListener implements Listener {
         if (Cache.allowWhitelist) {
             vehicle.getOwnerData().setWhiteListed(true);
         }
-
-        String vehicleTypeId = resolveVehicleTypeId(blueprint);
-        SimpleFactions.getVehicleRegistry().register(
-            new PlayerVehicleRecord(
-                constructorUuid,
-                vehicle.getUUID(),
-                vehicleTypeId,
-                OwnershipMode.PERSONAL,
-                null));
-        SimpleFactions.getInstance().saveVehicleRegistry();
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

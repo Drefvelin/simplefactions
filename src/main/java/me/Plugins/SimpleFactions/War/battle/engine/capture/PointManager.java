@@ -87,10 +87,19 @@ public class PointManager {
 	}
 	public void end(List<Player> list) {
 		markers.reset();
-		for(Player p : list) {
+		ScoreboardManager manager = Bukkit.getScoreboardManager();
+		for (Player p : list) {
+			if (p == null) {
+				continue;
+			}
 			Scoreboard board = p.getScoreboard();
 			Objective obj = board.getObjective("pointDummy");
-			obj.unregister();
+			if (obj != null) {
+				obj.unregister();
+			}
+			if (manager != null) {
+				p.setScoreboard(manager.getMainScoreboard());
+			}
 		}
 	}
 	public void subtitle(CapturePoint p) {

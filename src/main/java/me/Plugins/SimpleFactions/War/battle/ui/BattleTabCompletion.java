@@ -33,7 +33,7 @@ public class BattleTabCompletion implements TabCompleter{
     @Override
     public List<String> onTabComplete (CommandSender sender, Command cmd, String label, String[] args){
     	if(cmd.getName().equalsIgnoreCase("warband") && args.length < 2 &&
-        		!isKnownSubcommand(args, "create", "delete", "invite", "kick", "setleader", "list", "toggleopen")){
+        		!isKnownSubcommand(args, "create", "delete", "invite", "kick", "setleader", "list", "toggleopen", "leave", "retreat")){
             if(sender instanceof Player){
                 List<String> completions = new ArrayList<>();
                 
@@ -44,6 +44,8 @@ public class BattleTabCompletion implements TabCompleter{
                 completions.add("setleader");
                 completions.add("list");
                 completions.add("toggleopen");
+                completions.add("leave");
+                completions.add("retreat");
                 return completions;
             }
         } else if(cmd.getName().equalsIgnoreCase("warband") && args.length == 2 && args[0].equalsIgnoreCase("create")){
@@ -101,7 +103,7 @@ public class BattleTabCompletion implements TabCompleter{
     	if(cmd.getName().equalsIgnoreCase("battle") && args.length < 2 &&
         		!isKnownSubcommand(args, "create", "edit", "delete", "addside", "addpoint", "setlives", "setspawn",
         				"setjail", "setcontestmin", "setcontestmax", "setcontestduration", "setraidtarget",
-        				"setdefenderlives", "devmode", "list", "join")){
+        				"setdefenderlives", "list", "join")){
             if(sender instanceof Player){
                 List<String> completions = new ArrayList<>();
                 completions.add("list");
@@ -120,7 +122,6 @@ public class BattleTabCompletion implements TabCompleter{
 	                completions.add("setcontestduration");
 	                completions.add("setraidtarget");
 	                completions.add("setdefenderlives");
-	                completions.add("devmode");
                 }
                 return completions;
             }
@@ -152,12 +153,6 @@ public class BattleTabCompletion implements TabCompleter{
         		List<String> completions = new ArrayList<>();
         		completions.add("<battleId>");
         		return completions;
-        	} else if(cmd.getName().equalsIgnoreCase("battle") && args.length == 2 && args[0].equalsIgnoreCase("devmode")) {
-        		List<String> completions = new ArrayList<>();
-        		completions.add("on");
-        		completions.add("off");
-        		completions.add("status");
-        		return completions;
         	} else if(cmd.getName().equalsIgnoreCase("battle") && args.length == 2 && 
             		!(args[0].equalsIgnoreCase("create")
             				|| args[0].equalsIgnoreCase("edit") 
@@ -169,7 +164,8 @@ public class BattleTabCompletion implements TabCompleter{
             				|| args[0].equalsIgnoreCase("setcontestmin")
             				|| args[0].equalsIgnoreCase("setcontestmax")
             				|| args[0].equalsIgnoreCase("setcontestduration")
-            				|| args[0].equalsIgnoreCase("devmode")
+            				|| args[0].equalsIgnoreCase("setraidtarget")
+            				|| args[0].equalsIgnoreCase("setdefenderlives")
             		)){
                 if(sender instanceof Player){
                     List<String> completions = new ArrayList<>();

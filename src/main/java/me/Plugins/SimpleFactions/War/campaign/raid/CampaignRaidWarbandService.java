@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignWarbandBattleService;
 import me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
@@ -19,28 +20,72 @@ import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
 
 public final class CampaignRaidWarbandService {
-	private static final String RAID_WARBAND_PREFIX = "campaign_raid_";
-	private static final String ATTACKER_SUFFIX = "_atk";
-	private static final String DEFENDER_SUFFIX = "_def";
-
 	private CampaignRaidWarbandService() {}
 
 	public static String attackerWarbandId(CampaignRaid raid) {
-		if (raid == null || raid.getBattleDay() == null) {
+		if (raid == null || raid.getDisplayName() == null || raid.getDisplayName().isBlank()) {
 			return null;
 		}
-		return raidWarbandId(raid.getWarId(), raid.getBattleDay().toString(), ATTACKER_SUFFIX);
+		return BattleNamingService.campaignWarbandId(raid.getDisplayName(), BattleTemplate.ATTACKER_SIDE);
 	}
 
 	public static String defenderWarbandId(CampaignRaid raid) {
-		if (raid == null || raid.getBattleDay() == null) {
+		if (raid == null || raid.getDisplayName() == null || raid.getDisplayName().isBlank()) {
 			return null;
 		}
-		return raidWarbandId(raid.getWarId(), raid.getBattleDay().toString(), DEFENDER_SUFFIX);
+		return BattleNamingService.campaignWarbandId(raid.getDisplayName(), BattleTemplate.DEFENDER_SIDE);
+	}
+
+	public static boolean isRaidWarbandHiddenFromPlayer(Warband warband, org.bukkit.entity.Player player) {
+		if (warband == null || !isRaidWarband(warband) || player == null) {
+			return false;
+		}
+		me.Plugins.SimpleFactions.Objects.Faction faction =
+				me.Plugins.SimpleFactions.Managers.FactionManager.getByMember(player.getName());
+		if (faction == null) {
+			faction = me.Plugins.SimpleFactions.Managers.FactionManager.getByLeader(player.getName());
+		}
+		for (War war : WarManager.getActive()) {
+			CampaignRaid raid = CampaignRaidService.getActive(war);
+			if (raid == null || raid.getState() != CampaignRaidState.MUSTER) {
+				continue;
+			}
+			String attackerId = attackerWarbandId(raid);
+			String defenderId = defenderWarbandId(raid);
+			if (!warband.getId().equalsIgnoreCase(attackerId)
+					&& !warband.getId().equalsIgnoreCase(defenderId)) {
+				continue;
+			}
+			if (CampaignRaidService.isMusterHiddenFromFaction(war, faction)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public static boolean isRaidWarband(Warband warband) {
-		return warband != null && warband.getId() != null && warband.getId().startsWith(RAID_WARBAND_PREFIX);
+		if (warband == null || warband.getId() == null) {
+			return false;
+		}
+		for (War war : WarManager.getActive()) {
+			CampaignRaid raid = CampaignRaidService.getActive(war);
+			if (raid == null) {
+				continue;
+			}
+			String attackerId = attackerWarbandId(raid);
+			String defenderId = defenderWarbandId(raid);
+			if (warband.getId().equalsIgnoreCase(attackerId) || warband.getId().equalsIgnoreCase(defenderId)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static void createAttackerWarband(War war, CampaignRaid raid) {
+		if (war == null || raid == null) {
+			return;
+		}
+		ensureWarband(war, raid, true);
 	}
 
 	public static void createRaidWarbands(War war, CampaignRaid raid) {
@@ -205,10 +250,6 @@ public final class CampaignRaidWarbandService {
 			return null;
 		}
 		return coalition == CampaignCoalition.AGGRESSOR ? war.getAttackers() : war.getDefenders();
-	}
-
-	private static String raidWarbandId(int warId, String battleDay, String suffix) {
-		return RAID_WARBAND_PREFIX + warId + "_" + battleDay + suffix;
 	}
 
 	private static void deleteIfPresent(String warbandId) {

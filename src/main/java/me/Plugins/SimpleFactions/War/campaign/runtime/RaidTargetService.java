@@ -25,7 +25,7 @@ public final class RaidTargetService {
 			String attackerFactionId,
 			String installationId,
 			RaidKind raidKind) {
-		return isValidTarget(war, attackerFactionId, installationId, raidKind, Instant.now());
+		return isValidTarget(war, attackerFactionId, installationId, raidKind, CampaignClock.now());
 	}
 
 	public static boolean isValidTarget(
@@ -42,7 +42,7 @@ public final class RaidTargetService {
 			War war,
 			String attackerFactionId,
 			RaidKind raidKind) {
-		return listValidTargets(war, attackerFactionId, raidKind, Instant.now());
+		return listValidTargets(war, attackerFactionId, raidKind, CampaignClock.now());
 	}
 
 	public static List<RaidTargetCandidate> listValidTargets(

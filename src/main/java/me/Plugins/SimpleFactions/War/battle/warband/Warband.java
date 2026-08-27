@@ -63,15 +63,21 @@ public class Warband {
 		return "campaign_w" + warId + "_" + battleSideId;
 	}
 
-	public static Warband createCampaignSideShell(War war, Side side, String battleSideId) {
+	public static Warband createCampaignSideShell(String warbandId, War war, Side side, String battleSideId) {
 		Warband warband = new Warband();
-		warband.id = campaignSideWarbandId(war.getId(), battleSideId);
+		warband.id = warbandId;
 		warband.name = "The " + side.getLeader().getName() + " Host";
 		warband.leaderId = pendingLeaderUuid(warband.id);
 		warband.locked = true;
 		warband.faction = true;
 		warband.campaignSideId = battleSideId;
 		return warband;
+	}
+
+	/** @deprecated use {@link #createCampaignSideShell(String, War, Side, String)} */
+	@Deprecated
+	public static Warband createCampaignSideShell(War war, Side side, String battleSideId) {
+		return createCampaignSideShell(campaignSideWarbandId(war.getId(), battleSideId), war, side, battleSideId);
 	}
 
 	public static Warband createRaidShell(String id, Side side, String campaignSideId) {

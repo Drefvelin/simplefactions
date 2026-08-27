@@ -525,6 +525,34 @@ class WarMapperTest {
 	}
 
 	@Test
+	void roundTrip_concededScheduleSlots() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			WarData data = minimalWarData();
+			data.concededScheduleSlots = List.of("invasion:0", "counter:1");
+
+			War war = WarMapper.fromData(data);
+			assertTrue(war.getConcededScheduleSlots().contains("invasion:0"));
+			assertTrue(war.getConcededScheduleSlots().contains("counter:1"));
+			assertEquals(2, war.getConcededScheduleSlots().size());
+
+			WarData roundTripped = WarMapper.toData(war);
+			assertEquals(List.of("invasion:0", "counter:1"), roundTripped.concededScheduleSlots);
+
+			War reloaded = WarMapper.fromData(roundTripped);
+			assertEquals(war.getConcededScheduleSlots(), reloaded.getConcededScheduleSlots());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
 	void roundTrip_fortControllers() {
 		Faction attacker = mock(Faction.class);
 		Faction defender = mock(Faction.class);
@@ -627,7 +655,8 @@ class WarMapperTest {
 					Instant.parse("2026-08-27T20:00:00+02:00"));
 
 			CampaignRaid raid = new CampaignRaid();
-			raid.setId("cr_42_2026-08-21");
+			raid.setId("harbor_raid");
+			raid.setDisplayName("Harbor Raid");
 			raid.setWarId(42);
 			raid.setBattleDay(LocalDate.parse("2026-08-21"));
 			raid.setAttackerCoalition(CampaignCoalition.AGGRESSOR);
@@ -643,7 +672,8 @@ class WarMapperTest {
 			WarData data = WarMapper.toData(war);
 			assertEquals("2026-08-21", data.campaignRaidsUsed.get("aggressor"));
 			assertNotNull(data.activeCampaignRaid);
-			assertEquals("cr_42_2026-08-21", data.activeCampaignRaid.id);
+			assertEquals("harbor_raid", data.activeCampaignRaid.id);
+			assertEquals("Harbor Raid", data.activeCampaignRaid.displayName);
 			assertEquals("port-def", data.raidRepairLockUntil.keySet().iterator().next());
 
 			War restored = WarMapper.fromData(data);

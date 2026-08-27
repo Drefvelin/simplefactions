@@ -64,6 +64,13 @@ public final class CampaignWarbandBattleService {
 		if (side == null) {
 			return;
 		}
+		if (battle.isCampaignRaid()) {
+			BattleManager.currentBattle.put(player, battle);
+			if (battle.hasTeleport() && side.getSpawn() != null) {
+				player.teleport(side.getSpawn());
+			}
+			return;
+		}
 		side.tickLife();
 		side.updateBossBar(battle.getAllParticipants());
 		BattleManager.currentBattle.put(player, battle);

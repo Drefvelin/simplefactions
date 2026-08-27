@@ -15,7 +15,6 @@ import net.tfminecraft.VehicleFramework.Vehicles.ActiveVehicle;
 
 public final class VehicleTransferListener implements Listener {
     private final VehicleTransferSessionManager sessionManager;
-    private final PlayerVehicleRegistry registry;
     private final InstallationVehicleService installationVehicleService;
     private final VehicleTransferConsentService consentService;
 
@@ -25,7 +24,6 @@ public final class VehicleTransferListener implements Listener {
             InstallationVehicleService installationVehicleService,
             VehicleTransferConsentService consentService) {
         this.sessionManager = sessionManager;
-        this.registry = registry;
         this.installationVehicleService = installationVehicleService;
         this.consentService = consentService;
     }
@@ -63,18 +61,17 @@ public final class VehicleTransferListener implements Listener {
             return;
         }
 
-        PlayerVehicleRecord record = registry.getByVehicleUuid(vehicle.getUUID()).orElse(null);
-        if (record != null && !record.getPlayerUuid().equals(leader.getUniqueId())) {
-            handleOtherOwnerTransfer(leader, faction, installation, vehicle, record, event);
+        String ownerName = VehicleOwnershipQueries.playerNameFromOwner(
+                vehicle.getOwnerData() == null ? null : vehicle.getOwnerData().getOwner());
+        if (ownerName != null && !ownerName.equalsIgnoreCase(leader.getName())) {
+            handleOtherOwnerTransfer(leader, faction, installation, vehicle, ownerName, event);
             return;
         }
 
-        CanRegisterResult result = installationVehicleService.canRegister(
-                installation,
-                vehicle,
-                record);
+        CanRegisterResult result = installationVehicleService.canRegister(installation, vehicle);
         if (result != CanRegisterResult.OK) {
-            String message = VehicleTransferMessages.forResult(result, installation, vehicle, record);
+            String message = VehicleTransferMessages.forResult(
+                    result, installation, vehicle, vehicle.getId());
             if (message != null) {
                 leader.sendMessage(message);
             }
@@ -82,7 +79,7 @@ public final class VehicleTransferListener implements Listener {
             return;
         }
 
-        installationVehicleService.register(installation, vehicle, record, faction);
+        installationVehicleService.register(installation, vehicle, faction, leader.getUniqueId());
         sessionManager.clear(leader.getUniqueId());
         leader.sendMessage(VehicleTransferMessages.berthSuccess(installation));
         event.setCancelled(true);
@@ -93,9 +90,9 @@ public final class VehicleTransferListener implements Listener {
             Faction faction,
             Installation installation,
             ActiveVehicle vehicle,
-            PlayerVehicleRecord record,
+            String ownerName,
             VehiclePreInteractEvent event) {
-        Player owner = Bukkit.getPlayer(record.getPlayerUuid());
+        Player owner = Bukkit.getPlayerExact(ownerName);
         if (owner == null || !owner.isOnline()) {
             leader.sendMessage(VehicleTransferMessages.ownerOffline());
             event.setCancelled(true);
@@ -113,12 +110,10 @@ public final class VehicleTransferListener implements Listener {
             return;
         }
 
-        CanRegisterResult result = installationVehicleService.canRegister(
-                installation,
-                vehicle,
-                record);
+        CanRegisterResult result = installationVehicleService.canRegister(installation, vehicle);
         if (result != CanRegisterResult.OK) {
-            String message = VehicleTransferMessages.forResult(result, installation, vehicle, record);
+            String message = VehicleTransferMessages.forResult(
+                    result, installation, vehicle, vehicle.getId());
             if (message != null) {
                 leader.sendMessage(message);
             }
@@ -126,7 +121,7 @@ public final class VehicleTransferListener implements Listener {
             return;
         }
 
-        consentService.sendConsentRequest(leader, owner, faction, installation, vehicle, record);
+        consentService.sendConsentRequest(leader, owner, faction, installation, vehicle);
         sessionManager.clear(leader.getUniqueId());
         event.setCancelled(true);
     }

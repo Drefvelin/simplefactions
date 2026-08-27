@@ -21,7 +21,9 @@ public class BattleData {
 	public String lifeType;
 	public boolean sequentialCapture;
 	public boolean capturePointsEnabled;
+	public boolean campaignRaid;
 	public boolean started;
+	public String startedAt;
 	public int contestDurationSeconds;
 	public int contestHoldRemainingSeconds;
 	public String defenderRespawnMode;

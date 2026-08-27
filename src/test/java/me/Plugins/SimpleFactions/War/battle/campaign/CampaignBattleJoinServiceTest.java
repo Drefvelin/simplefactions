@@ -27,7 +27,7 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.War;
-import me.Plugins.SimpleFactions.War.battle.dev.BattleDevMode;
+import me.Plugins.SimpleFactions.War.core.WarDevMode;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleFactory;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleJoinService;
@@ -53,7 +53,7 @@ class CampaignBattleJoinServiceTest {
 		WarbandManager.resetForTests();
 		WarbandMembershipService.resetForTests();
 		CampaignWarbandLeaveBlock.resetForTests();
-		BattleDevMode.resetForTests();
+		WarDevMode.resetForTests();
 		Cache.warBattleLivesPerRegiment = 5;
 		Cache.warBattleMinSideLives = 1;
 		leaderId = UUID.randomUUID();
@@ -107,7 +107,7 @@ class CampaignBattleJoinServiceTest {
 		war.setScheduledBattleProvinceId(PROVINCE_ID);
 		Battle battle = campaignBattle(1);
 		Warband warband = campaignSideWarband(war, BattleTemplate.ATTACKER_SIDE);
-		BattleDevMode.seedPhantoms(warband, 5);
+		WarDevMode.seedDummyMembers(warband, 5);
 
 		try (MockedStatic<BattlePoolService> pool = mockStatic(BattlePoolService.class)) {
 			pool.when(() -> BattlePoolService.totalCommittedRegiments(eq(war), eq(PROVINCE_ID), eq(war.getAttackers())))
@@ -125,7 +125,7 @@ class CampaignBattleJoinServiceTest {
 		War war = new War(1, attacker, defender);
 		Battle battle = campaignBattle(1);
 		Warband warband = campaignSideWarband(war, BattleTemplate.ATTACKER_SIDE);
-		BattleDevMode.seedPhantoms(warband, 10);
+		WarDevMode.seedDummyMembers(warband, 10);
 		battle.getSideById(BattleTemplate.ATTACKER_SIDE).addBand(warband);
 
 		try (MockedStatic<BattlePoolService> pool = mockStatic(BattlePoolService.class)) {

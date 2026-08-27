@@ -2,7 +2,9 @@ package me.Plugins.SimpleFactions.Managers.Inventory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -16,6 +18,8 @@ import me.Plugins.SimpleFactions.installation.InstallationConstruction;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
 import me.Plugins.SimpleFactions.keys.Keys;
+import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRecord;
+import me.Plugins.SimpleFactions.vehicles.VehicleFindMessages;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import me.Plugins.TLibs.Utils.TimeFormatter;
 
@@ -137,5 +141,24 @@ public class InstallationCreator {
                                 InstallationConfigLoader.getDailyUpkeep(installation.getKind()))
                         + "d/day");
         return lore;
+    }
+
+    public ItemStack createBerthedVehicleIcon(
+            PlayerVehicleRecord record, Optional<Location> location, boolean leader) {
+        ItemStack item = new ItemStack(Material.MINECART, 1);
+        ItemMeta meta = item.getItemMeta();
+        String displayName = VehicleFindMessages.resolveVehicleName(record.getVehicleUuid());
+        meta.setDisplayName("§e" + displayName);
+        List<String> lore = new ArrayList<>();
+        lore.add("§7Type: §f" + record.getVehicleTypeId());
+        lore.add("§7Location: " + VehicleFindMessages.formatLocation(location));
+        if (leader) {
+            lore.add("§cClick to unberth");
+        }
+        meta.setLore(lore);
+        meta.getPersistentDataContainer()
+                .set(Keys.STRING_KEY, PersistentDataType.STRING, record.getVehicleUuid());
+        item.setItemMeta(meta);
+        return item;
     }
 }

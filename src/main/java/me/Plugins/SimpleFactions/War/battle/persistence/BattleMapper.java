@@ -1,5 +1,6 @@
 package me.Plugins.SimpleFactions.War.battle.persistence;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,7 +43,11 @@ public final class BattleMapper {
 		data.lifeType = battle.getLifeType() != null ? battle.getLifeType().name() : LifeType.COLLECTIVE.name();
 		data.sequentialCapture = battle.isSequentialCapture();
 		data.capturePointsEnabled = battle.isCapturePointsEnabled();
+		data.campaignRaid = battle.isCampaignRaid();
 		data.started = battle.hasStarted();
+		if (battle.getStartedAt() != null) {
+			data.startedAt = battle.getStartedAt().toString();
+		}
 		data.contestDurationSeconds = battle.getContestDurationSeconds();
 		data.contestHoldRemainingSeconds = battle.getContestHoldRemainingSeconds();
 		data.defenderRespawnMode = battle.getDefenderRespawnMode() != null
@@ -83,7 +88,11 @@ public final class BattleMapper {
 		battle.setLifeType(parseLifeType(data.lifeType));
 		battle.setSequentialCapture(data.sequentialCapture);
 		battle.setCapturePointsEnabled(data.capturePointsEnabled);
+		battle.setCampaignRaid(data.campaignRaid);
 		battle.setStarted(data.started);
+		if (data.startedAt != null && !data.startedAt.isBlank()) {
+			battle.setStartedAt(Instant.parse(data.startedAt));
+		}
 		battle.setContestDurationSeconds(data.contestDurationSeconds);
 		battle.setContestHoldRemainingSeconds(data.contestHoldRemainingSeconds);
 		battle.setDefenderRespawnMode(parseDefenderRespawnMode(data.defenderRespawnMode));

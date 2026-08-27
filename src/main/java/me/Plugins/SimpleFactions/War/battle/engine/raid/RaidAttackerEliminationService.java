@@ -66,6 +66,36 @@ public final class RaidAttackerEliminationService {
 		return true;
 	}
 
+	public static int countActiveAttackers(Battle battle) {
+		if (battle == null || battle.getBattleType() != BattleType.RAID) {
+			return 0;
+		}
+		BattleSide attacker = battle.getSideById(BattleTemplate.ATTACKER_SIDE);
+		if (attacker == null) {
+			return 0;
+		}
+		int active = 0;
+		for (UUID memberId : collectMemberIds(attacker)) {
+			Player player = Bukkit.getPlayer(memberId);
+			if (player != null && player.isOnline()
+					&& !isParticipantOut(battle, memberId, player, attacker)) {
+				active++;
+			}
+		}
+		return active;
+	}
+
+	public static int countAttackerRoster(Battle battle) {
+		if (battle == null || battle.getBattleType() != BattleType.RAID) {
+			return 0;
+		}
+		BattleSide attacker = battle.getSideById(BattleTemplate.ATTACKER_SIDE);
+		if (attacker == null) {
+			return 0;
+		}
+		return collectMemberIds(attacker).size();
+	}
+
 	public static void clearBattleState(Battle battle) {
 		if (battle != null) {
 			OUT_ATTACKERS.remove(battle.getId());

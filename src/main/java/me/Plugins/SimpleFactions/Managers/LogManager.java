@@ -15,13 +15,15 @@ import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * Buffered debug log written to {@code log.txt} in the plugin data folder.
+ * Buffered debug log written to {@code logs/log.txt} in the plugin data folder.
  * Enable via {@code logging: true} in config.yml.
  */
 public final class LogManager {
 	private static final Logger LOGGER = Logger.getLogger(LogManager.class.getName());
 	private static final DateTimeFormatter SESSION_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 			.withZone(ZoneId.systemDefault());
+	static final String LOG_DIRECTORY = "logs";
+	static final String LOG_FILE_NAME = "log.txt";
 
 	private static volatile boolean enabled;
 	private static volatile Path logFile;
@@ -34,7 +36,7 @@ public final class LogManager {
 	public static void configure(boolean loggingEnabled, boolean wipeLog, File dataFolder) {
 		enabled = loggingEnabled;
 		if (dataFolder != null) {
-			logFile = dataFolder.toPath().resolve("log.txt");
+			logFile = dataFolder.toPath().resolve(LOG_DIRECTORY).resolve(LOG_FILE_NAME);
 		}
 		if (wipeLog) {
 			wipeLogFile();

@@ -19,6 +19,7 @@ import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidEligibilityService;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidMessages;
@@ -27,6 +28,7 @@ import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.ValidateL
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.ValidateLaunchResult;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.campaign.runtime.RaidTargetCandidate;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
@@ -53,7 +55,7 @@ public class CampaignRaidLaunchView {
 		if (!validateParticipation(player, war, viewerFaction)) {
 			return;
 		}
-		Instant now = Instant.now();
+		Instant now = CampaignClock.now();
 		List<Installation> sources = CampaignRaidEligibilityService.listValidSources(
 				war, viewerFaction.getId(), now);
 
@@ -76,7 +78,7 @@ public class CampaignRaidLaunchView {
 					creator.createRaidLaunchInstallationItem(war, installation, null, true));
 		}
 		clearUnusedListSlots(inventory, sources.size());
-		inventory.setItem(BACK_SLOT, inv.createBackButton(null));
+		inventory.setItem(BACK_SLOT, inv.createBackButton(SFGUI.CAMPAIGN_VIEW));
 		if (openInventory) {
 			player.openInventory(inventory);
 		}
@@ -95,7 +97,7 @@ public class CampaignRaidLaunchView {
 		if (!validateParticipation(player, war, viewerFaction)) {
 			return;
 		}
-		Instant now = Instant.now();
+		Instant now = CampaignClock.now();
 		Installation source = viewerFaction.getInstallationHandler().getById(sourceInstallationId);
 		List<RaidTargetCandidate> targets = CampaignRaidEligibilityService.listValidTargets(
 				war, viewerFaction.getId(), sourceInstallationId, now);
@@ -122,7 +124,7 @@ public class CampaignRaidLaunchView {
 							war, candidate.installation(), ownerName, false));
 		}
 		clearUnusedListSlots(inventory, targets.size());
-		inventory.setItem(BACK_SLOT, inv.createBackButton(null));
+		inventory.setItem(BACK_SLOT, inv.createBackButton(SFGUI.CAMPAIGN_RAID_LAUNCH_VIEW));
 		if (openInventory) {
 			player.openInventory(inventory);
 		}
@@ -178,7 +180,7 @@ public class CampaignRaidLaunchView {
 			return;
 		}
 
-		Instant now = Instant.now();
+		Instant now = CampaignClock.now();
 		if (holder.isSourcePage()) {
 			if (CampaignRaidService.canLaunch(war, viewerFaction, now) != LaunchResult.STARTED) {
 				sendLaunchFailure(player, war, viewerFaction, now, null);

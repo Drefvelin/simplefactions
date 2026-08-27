@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.UUID;
+
 import org.bukkit.World;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -16,6 +18,7 @@ import org.mockito.Mockito;
 
 import me.Plugins.SimpleFactions.War.battle.engine.capture.CapturePoint;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleEndSupport;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleFactory;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
 import me.Plugins.SimpleFactions.War.battle.engine.win.FieldWinService;
@@ -24,6 +27,7 @@ import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 import me.Plugins.SimpleFactions.War.battle.template.BattleLocation;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.template.CapturePointDefinition;
+import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 
 class RaidWinServiceTest {
 	@BeforeEach
@@ -54,6 +58,54 @@ class RaidWinServiceTest {
 	}
 
 	@Test
+	void campaignRaid_endsWhenAttackersEliminated() {
+		withMockWorldAndBossBar(() -> {
+			UUID attackerId = UUID.randomUUID();
+			Battle battle = startedRaidWithAttacker(attackerId);
+			battle.setCampaignRaid(true);
+			RaidAttackerEliminationService.markOut(battle, attackerId);
+			assertTrue(RaidAttackerEliminationService.isAttackerSideEliminated(battle));
+
+			try (MockedStatic<BattleEndSupport> end = Mockito.mockStatic(BattleEndSupport.class)) {
+				RaidWinService.checkRaidWin(battle);
+				end.verify(() -> BattleEndSupport.endBattle(
+						battle, BattleTemplate.DEFENDER_SIDE));
+			}
+		});
+	}
+
+	@Test
+	void campaignRaid_doesNotEndEarlyWhenDefendersEliminatedInLivesMode() {
+		withMockWorldAndBossBar(() -> {
+			Battle battle = startedRaid("harbor_raid");
+			battle.setCampaignRaid(true);
+			battle.setDefenderRespawnMode(DefenderRespawnMode.LIVES);
+			BattleSide defender = battle.getSideById(BattleTemplate.DEFENDER_SIDE);
+			defender.setLives(0);
+
+			RaidWinService.checkRaidWin(battle);
+
+			assertTrue(battle.hasStarted());
+		});
+	}
+
+	@Test
+	void staffRaid_endsWhenAttackersEliminated() {
+		withMockWorldAndBossBar(() -> {
+			UUID attackerId = UUID.randomUUID();
+			Battle battle = startedRaidWithAttacker(attackerId);
+			RaidAttackerEliminationService.markOut(battle, attackerId);
+			assertTrue(RaidAttackerEliminationService.isAttackerSideEliminated(battle));
+
+			try (MockedStatic<BattleEndSupport> end = Mockito.mockStatic(BattleEndSupport.class)) {
+				RaidWinService.checkRaidWin(battle);
+				end.verify(() -> BattleEndSupport.endBattle(
+						battle, BattleTemplate.DEFENDER_SIDE));
+			}
+		});
+	}
+
+	@Test
 	void defenderEliminationOnlyAppliesInLivesMode() {
 		withMockWorldAndBossBar(() -> {
 			Battle battle = startedRaid("test_raid");
@@ -70,6 +122,13 @@ class RaidWinServiceTest {
 		Battle battle = BattleFactory.createBlank(BattleType.RAID, id);
 		battle.setRaidTarget(new CapturePointDefinition("target", new BattleLocation("world", 10, 64, 10, 0, 0)));
 		battle.start();
+		return battle;
+	}
+
+	private Battle startedRaidWithAttacker(UUID attackerId) {
+		Battle battle = startedRaid("test_raid");
+		Warband warband = Warband.createWithMemberIds("atk_band", attackerId, false);
+		battle.getSideById(BattleTemplate.ATTACKER_SIDE).addBand(warband);
 		return battle;
 	}
 

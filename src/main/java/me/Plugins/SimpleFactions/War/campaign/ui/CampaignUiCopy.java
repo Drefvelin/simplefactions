@@ -23,6 +23,7 @@ public final class CampaignUiCopy {
 	public static final String WARNING = "#e6c84a";
 	public static final String BATTLE_KIND = "#9ec8ff";
 	public static final String FOUGHT_LABEL = "Fought";
+	public static final String RETREATED_LABEL = "Retreated";
 
 	private CampaignUiCopy() {}
 

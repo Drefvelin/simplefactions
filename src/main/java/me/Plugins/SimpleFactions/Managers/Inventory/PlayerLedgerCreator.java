@@ -9,12 +9,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
-import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.player.PlayerEconomyManager;
 import me.Plugins.SimpleFactions.player.income.PlayerCashflow;
 import me.Plugins.SimpleFactions.player.income.PlayerLedger;
-import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRecord;
+import me.Plugins.SimpleFactions.vehicles.VehicleUpkeepProjection;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public final class PlayerLedgerCreator {
@@ -68,7 +66,9 @@ public final class PlayerLedgerCreator {
         lore.add(StringFormatter.formatHex("#3b2f2f────────────"));
         boolean hasExpenses = false;
         for (PlayerCashflow cashflow : PlayerCashflow.values()) {
-            double value = ledger.getAmount(cashflow);
+            double value = cashflow == PlayerCashflow.VEHICLE_UPKEEP
+                    ? VehicleUpkeepProjection.displayVehicleExpense(ledger, playerUuid)
+                    : ledger.getAmount(cashflow);
             if (value >= 0) {
                 continue;
             }
@@ -84,9 +84,8 @@ public final class PlayerLedgerCreator {
         if (!hasExpenses) {
             lore.add(StringFormatter.formatHex("#7a706aNo expenses."));
         }
-        addVehicleUpkeepSection(lore, playerUuid);
         lore.add("");
-        double net = ledger.getNetDaily();
+        double net = VehicleUpkeepProjection.displayNetDaily(ledger, playerUuid);
         String netColor = net >= 0 ? "#4fd945" : "#cf493a";
         lore.add(StringFormatter.formatHex("#f2e5c2Net Income"));
         lore.add(StringFormatter.formatHex(
@@ -96,36 +95,5 @@ public final class PlayerLedgerCreator {
             + "d"
         ));
         return lore;
-    }
-
-    private void addVehicleUpkeepSection(List<String> lore, UUID playerUuid) {
-        if (playerUuid == null) {
-            return;
-        }
-        List<PlayerVehicleRecord> personalVehicles = SimpleFactions.getVehicleRegistry()
-            .getPersonalVehicles(playerUuid);
-        if (personalVehicles.isEmpty()) {
-            return;
-        }
-        lore.add("");
-        lore.add(StringFormatter.formatHex("#a6659fPersonal Vehicles"));
-        lore.add(StringFormatter.formatHex("#3b2f3b────────────"));
-        double totalUpkeep = 0.0;
-        for (PlayerVehicleRecord record : personalVehicles) {
-            double upkeep = VehiclesConfigLoader.getUpkeep(record.getVehicleTypeId());
-            totalUpkeep += upkeep;
-            lore.add(StringFormatter.formatHex(
-                "#cfc7a2• "
-                + record.getVehicleTypeId()
-                + "#d6cf69: #7a706a"
-                + String.format("%.2f", upkeep)
-                + "d/day"
-            ));
-        }
-        lore.add(StringFormatter.formatHex(
-            "#cfc7a2Charged from bank at settlement: #cf493a"
-            + String.format("%.2f", totalUpkeep)
-            + "d"
-        ));
     }
 }

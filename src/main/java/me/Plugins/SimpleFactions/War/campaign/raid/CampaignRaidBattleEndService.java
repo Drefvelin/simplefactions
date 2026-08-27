@@ -1,23 +1,21 @@
 package me.Plugins.SimpleFactions.War.campaign.raid;
 
-import java.time.Instant;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
-import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
-import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.events.BattleEndedEvent;
 import me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.installation.Installation;
+import me.Plugins.SimpleFactions.installation.InstallationLookup;
 
 public class CampaignRaidBattleEndService implements Listener {
 	@EventHandler
@@ -29,26 +27,35 @@ public class CampaignRaidBattleEndService implements Listener {
 		if (event == null || event.getWarId() == null) {
 			return;
 		}
-		Battle battle = BattleManager.getByString(event.getBattleId());
-		if (battle == null || !battle.isCampaignRaid()) {
+		War war = WarManager.getById(event.getWarId());
+		if (war == null || !war.isActive()) {
 			return;
 		}
-		War war = WarManager.getById(event.getWarId());
-		if (war == null) {
+		if (!CampaignRaidBattleService.isCampaignRaidEvent(war, event)) {
 			return;
 		}
 		CampaignRaid raid = CampaignRaidService.getActive(war);
-		Installation target = raid != null ? resolveInstallation(raid.getTargetInstallationId()) : null;
-		CampaignRaidService.endRaid(war, Instant.now());
-		BattlePersistenceService.deleteRaidBattle(battle);
-		broadcastRaidEnded(war, target);
+		if (raid == null) {
+			return;
+		}
+		Battle battle = BattleManager.getByString(event.getBattleId());
+		Installation target = InstallationLookup.findById(raid.getTargetInstallationId());
+		String displayName = raid.getDisplayName();
+		if (battle != null && battle.getDisplayName() != null && !battle.getDisplayName().isBlank()) {
+			displayName = battle.getDisplayName();
+		}
+		CampaignRaidService.endRaid(war, CampaignClock.now());
+		if (battle != null) {
+			BattlePersistenceService.deleteRaidBattle(battle);
+		}
+		broadcastRaidEnded(war, target, displayName);
 	}
 
-	private static void broadcastRaidEnded(War war, Installation target) {
+	private static void broadcastRaidEnded(War war, Installation target, String displayName) {
 		if (war == null) {
 			return;
 		}
-		String message = CampaignRaidMessages.buildRaidEndedMessage(target);
+		String message = CampaignRaidMessages.buildRaidEndedMessage(target, displayName);
 		broadcastToSide(war.getAttackers(), message);
 		broadcastToSide(war.getDefenders(), message);
 	}
@@ -63,21 +70,5 @@ public class CampaignRaidBattleEndService implements Listener {
 				player.sendMessage(message);
 			}
 		}
-	}
-
-	private static Installation resolveInstallation(String installationId) {
-		if (installationId == null || installationId.isBlank()) {
-			return null;
-		}
-		for (Faction faction : FactionManager.factions) {
-			if (faction == null || faction.getInstallationHandler() == null) {
-				continue;
-			}
-			Installation installation = faction.getInstallationHandler().getById(installationId);
-			if (installation != null) {
-				return installation;
-			}
-		}
-		return null;
 	}
 }

@@ -3,12 +3,12 @@ package me.Plugins.SimpleFactions.War.core;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,12 +63,14 @@ public class War {
 	private List<ScheduledCampaignBattle> campaignCounterSchedule = new ArrayList<>();
 	private int campaignCounterScheduleIndex;
 	private Map<String, CampaignCoalition> fortControllers = new HashMap<>();
+	private Set<String> concededScheduleSlots = new LinkedHashSet<>();
 	private Map<String, Integer> locationBattleCounts = new HashMap<>();
 	private BattleSchedulePhase battleSchedulePhase = BattleSchedulePhase.IDLE;
 	private LocalDate battleDay;
 	private Instant scheduledBattleAt;
 	private int scheduledBattleHour;
 	private Integer scheduledBattleProvinceId;
+	private Set<Integer> signupRemindersSent = new LinkedHashSet<>();
 	private Map<UUID, Set<Integer>> battleVotes = new HashMap<>();
 	private Map<String, LinkedHashSet<String>> battleInstallationPicks = new LinkedHashMap<>();
 	private LocalDate battleInstallationPicksBattleDay;
@@ -393,6 +395,27 @@ public class War {
 		fortControllers.put(fortInstallationId, coalition);
 	}
 
+	public Set<String> getConcededScheduleSlots() {
+		return Collections.unmodifiableSet(concededScheduleSlots);
+	}
+
+	public void setConcededScheduleSlots(Collection<String> slots) {
+		concededScheduleSlots = new LinkedHashSet<>();
+		if (slots != null) {
+			for (String slot : slots) {
+				if (slot != null && !slot.isBlank()) {
+					concededScheduleSlots.add(slot);
+				}
+			}
+		}
+	}
+
+	public void addConcededScheduleSlot(String slotKey) {
+		if (slotKey != null && !slotKey.isBlank()) {
+			concededScheduleSlots.add(slotKey);
+		}
+	}
+
 	public int getLocationBattleCount(String locationKey) {
 		if (locationKey == null || locationKey.isBlank()) {
 			return 0;
@@ -455,6 +478,20 @@ public class War {
 
 	public void setScheduledBattleProvinceId(Integer scheduledBattleProvinceId) {
 		this.scheduledBattleProvinceId = scheduledBattleProvinceId;
+	}
+
+	public Set<Integer> getSignupRemindersSent() {
+		return signupRemindersSent;
+	}
+
+	public void setSignupRemindersSent(Set<Integer> signupRemindersSent) {
+		this.signupRemindersSent = signupRemindersSent != null
+				? new LinkedHashSet<>(signupRemindersSent)
+				: new LinkedHashSet<>();
+	}
+
+	public void clearSignupRemindersSent() {
+		signupRemindersSent.clear();
 	}
 
 	public Map<UUID, Set<Integer>> getBattleVotes() {

@@ -23,6 +23,7 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationPickService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationPickEligibility;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.campaign.runtime.InstallationPickResults.InstallationPickToggleResult;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.installation.Installation;
@@ -54,7 +55,7 @@ public class CampaignInstallationPickView {
 			return;
 		}
 
-		boolean locked = BattleInstallationPickService.isLocked(war, Instant.now());
+		boolean locked = BattleInstallationPickService.isLocked(war, CampaignClock.now());
 		Set<String> picks = BattleInstallationPickService.getPicks(war, viewerFaction.getId());
 
 		Inventory inventory = SimpleFactions.plugin.getServer().createInventory(
@@ -132,7 +133,7 @@ public class CampaignInstallationPickView {
 			return;
 		}
 
-		if (BattleInstallationPickService.isLocked(war, Instant.now())) {
+		if (BattleInstallationPickService.isLocked(war, CampaignClock.now())) {
 			player.sendMessage("§cInstallation choices are locked until the next battle day.");
 			return;
 		}

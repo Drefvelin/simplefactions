@@ -159,6 +159,7 @@ public final class CampaignBattlePlacer {
 				homeOnAxis,
 				chronologyProvinceId);
 		insertOrdered(ctx, leg, siege, "SIEGE");
+		removeOptionalFieldsReplacedBySiege(ctx, leg, siege);
 		ctx.scheduledFortIds().add(fort.id());
 	}
 
@@ -210,18 +211,58 @@ public final class CampaignBattlePlacer {
 				return;
 			}
 		}
-		for (ScheduledCampaignBattle slot : schedule) {
-			if (slot.provinceId() == provinceId && slot.kind() == CampaignBattleKind.SIEGE) {
-				LogManager.line(
-						"  NOTE %s province=%d already has SIEGE fort=%s; still placing optional FIELD",
-						trigger,
-						provinceId,
-						slot.fortInstallationId());
-				break;
-			}
+		if (!isObjectiveProvince(ctx, provinceId) && siegeOwnsFightTile(schedule, provinceId)) {
+			LogManager.line(
+					"  SKIP %s FIELD at province=%d; siege already owns that fight-order tile",
+					trigger,
+					provinceId);
+			return;
 		}
 		ScheduledCampaignBattle field = new ScheduledCampaignBattle(provinceId, CampaignBattleKind.FIELD, false, null);
 		insertOrdered(ctx, leg, field, trigger.name());
+	}
+
+	private static void removeOptionalFieldsReplacedBySiege(
+			CampaignScheduleBuildContext ctx,
+			ScheduleLeg leg,
+			ScheduledCampaignBattle siege) {
+		List<ScheduledCampaignBattle> schedule = ctx.scheduleFor(leg);
+		int sortTile = siege.sortProvinceId();
+		int home = siege.provinceId();
+		schedule.removeIf(slot -> {
+			if (slot.kind() != CampaignBattleKind.FIELD || slot.required()) {
+				return false;
+			}
+			if (slot.provinceId() != sortTile && slot.provinceId() != home) {
+				return false;
+			}
+			if (isObjectiveProvince(ctx, slot.provinceId())) {
+				return false;
+			}
+			LogManager.line(
+					"  DROP optional FIELD at province=%d; siege %s owns fight-order tile %d",
+					slot.provinceId(),
+					siege.fortInstallationId(),
+					sortTile);
+			return true;
+		});
+	}
+
+	private static boolean siegeOwnsFightTile(List<ScheduledCampaignBattle> schedule, int provinceId) {
+		for (ScheduledCampaignBattle slot : schedule) {
+			if (slot.kind() == CampaignBattleKind.SIEGE
+					&& (slot.provinceId() == provinceId || slot.sortProvinceId() == provinceId)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static boolean isObjectiveProvince(CampaignScheduleBuildContext ctx, int provinceId) {
+		int objectiveIndex = ctx.objectiveAxisIndex();
+		return objectiveIndex >= 0
+				&& objectiveIndex < ctx.axis().size()
+				&& ctx.axis().get(objectiveIndex) == provinceId;
 	}
 
 	private static void insertOrdered(

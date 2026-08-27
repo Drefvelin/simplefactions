@@ -10,6 +10,7 @@ import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.LaunchRes
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.core.WarDevMode;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import me.Plugins.SimpleFactions.War.campaign.ui.CampaignUiCopy;
 
@@ -20,30 +21,46 @@ public final class CampaignRaidLaunchAvailability {
 
 	public static LaunchAvailability describe(War war, Faction faction, Instant now) {
 		List<String> lore = new ArrayList<>();
-		boolean windowOpen = war != null && faction != null && now != null
-				&& BattleScheduleService.isRaidWindowOpen(war, now);
-		if (windowOpen) {
-			lore.add(StringFormatter.formatHex(CampaignUiCopy.SELECT + "Raid window open (19:00-20:00)"));
+		if (WarDevMode.isEnabled()) {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.SELECT + "War devmode: raid launch unrestricted"));
 		} else {
-			lore.add(StringFormatter.formatHex(CampaignUiCopy.REMOVE + "Outside raid call window"));
+			boolean windowOpen = war != null && faction != null && now != null
+					&& BattleScheduleService.isRaidWindowOpen(war, now);
+			if (windowOpen) {
+				lore.add(StringFormatter.formatHex(CampaignUiCopy.SELECT + "Raid window open (19:00-20:00)"));
+			} else {
+				lore.add(StringFormatter.formatHex(CampaignUiCopy.REMOVE + "Outside raid call window"));
+			}
 		}
 
 		CampaignCoalition coalition = coalitionForFaction(war, faction);
 		if (coalition != null) {
 			boolean ownQuota = CampaignRaidService.isSideQuotaUsed(war, coalition);
+			String ownQuotaLabel = WarDevMode.isEnabled()
+					? CampaignUiCopy.SELECT + "bypassed (devmode)"
+					: (ownQuota ? CampaignUiCopy.REMOVE + "spent" : CampaignUiCopy.SELECT + "available");
 			lore.add(StringFormatter.formatHex(
-					CampaignUiCopy.LABEL + "Your raid quota: "
-							+ (ownQuota ? CampaignUiCopy.REMOVE + "spent" : CampaignUiCopy.SELECT + "available")));
+					CampaignUiCopy.LABEL + "Your raid quota: " + ownQuotaLabel));
 			CampaignCoalition enemy = coalition.opposing();
 			boolean enemyQuota = CampaignRaidService.isSideQuotaUsed(war, enemy);
 			String enemyLabel = enemy == CampaignCoalition.AGGRESSOR ? "Attacker" : "Defender";
+			String enemyQuotaLabel = WarDevMode.isEnabled()
+					? CampaignUiCopy.SELECT + "bypassed (devmode)"
+					: (enemyQuota ? CampaignUiCopy.REMOVE + "spent" : CampaignUiCopy.SELECT + "available");
 			lore.add(StringFormatter.formatHex(
-					CampaignUiCopy.LABEL + enemyLabel + " raid quota: "
-							+ (enemyQuota ? CampaignUiCopy.REMOVE + "spent" : CampaignUiCopy.SELECT + "available")));
+					CampaignUiCopy.LABEL + enemyLabel + " raid quota: " + enemyQuotaLabel));
 		}
 
 		if (war != null && CampaignRaidService.getActive(war) != null) {
-			lore.add(StringFormatter.formatHex(CampaignUiCopy.WARNING + "Campaign raid in progress"));
+			CampaignRaid active = CampaignRaidService.getActive(war);
+			boolean hidden = CampaignRaidService.isMusterHiddenFromFaction(war, faction);
+			if (!hidden) {
+				if (active.getState() == CampaignRaidState.FIGHTING) {
+					lore.add(StringFormatter.formatHex(CampaignUiCopy.WARNING + "Campaign raid in progress"));
+				} else if (active.getState() == CampaignRaidState.MUSTER) {
+					lore.add(StringFormatter.formatHex(CampaignUiCopy.WARNING + "Raid muster in progress"));
+				}
+			}
 		}
 
 		boolean enabled = war != null && faction != null && now != null

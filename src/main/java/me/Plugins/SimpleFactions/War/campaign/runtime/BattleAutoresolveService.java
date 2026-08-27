@@ -35,7 +35,7 @@ public final class BattleAutoresolveService {
 	}
 
 	public static SendResult sendProposeRequest(Player proposer, War war, BelligerentRole side) {
-		Instant now = Instant.now();
+		Instant now = CampaignClock.now();
 		if (!canProposeAutoresolveNow(war, now) || side == null) {
 			return SendResult.NOT_ALLOWED;
 		}
@@ -86,7 +86,7 @@ public final class BattleAutoresolveService {
 			return;
 		}
 
-		if (!canProposeAutoresolveNow(war, Instant.now())) {
+		if (!canProposeAutoresolveNow(war, CampaignClock.now())) {
 			acceptor.sendMessage("§cAutoresolve is only available before vote close.");
 			return;
 		}

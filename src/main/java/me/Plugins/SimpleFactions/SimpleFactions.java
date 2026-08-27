@@ -28,6 +28,7 @@ import me.Plugins.SimpleFactions.Loaders.TierLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Loaders.InstallationConfigLoader;
+import me.Plugins.SimpleFactions.installation.InstallationProtectionListener;
 import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
 import me.Plugins.SimpleFactions.Loaders.WarGoalLoader;
 import me.Plugins.SimpleFactions.Managers.BankManager;
@@ -46,9 +47,13 @@ import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.TabCompletion;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleTickService;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignViewRefreshService;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.core.WarCommandManager;
+import me.Plugins.SimpleFactions.War.core.WarTabCompletion;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleOutcomeService;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleProvinceBlockProtectionListener;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleCommandManager;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleTabCompletion;
 import me.Plugins.SimpleFactions.War.campaign.raid.RaidCommandManager;
@@ -57,12 +62,17 @@ import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandMembershipListener;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplateService;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBattleEndService;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidIntruderListener;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidIntruderTickService;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidWarbandListener;
 import me.Plugins.SimpleFactions.vehicles.BattleVehicleEligibilityListener;
 import me.Plugins.SimpleFactions.vehicles.InstallationVehicleOwnerSync;
 import me.Plugins.SimpleFactions.vehicles.InstallationVehicleService;
+import me.Plugins.SimpleFactions.vehicles.InstallationVehicleUnberthService;
 import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRegistry;
 import me.Plugins.SimpleFactions.vehicles.VehicleIntegrationListener;
+import me.Plugins.SimpleFactions.vehicles.VehicleRegistryClaimListener;
+import me.Plugins.SimpleFactions.vehicles.VehicleRegistryClaimService;
 import me.Plugins.SimpleFactions.vehicles.VehicleRegistryPersistence;
 import me.Plugins.SimpleFactions.vehicles.VehicleSpawnListener;
 import me.Plugins.SimpleFactions.vehicles.VehicleTransferConsentService;
@@ -107,13 +117,19 @@ public class SimpleFactions extends JavaPlugin{
 	private final CapitalMovePrompt capitalMovePrompt = new CapitalMovePrompt();
 	private final ProvincePresenceListener provincePresenceListener = new ProvincePresenceListener();
 	private final BattleManager battleManager = new BattleManager();
+	private final BattleProvinceBlockProtectionListener battleProvinceBlockProtectionListener =
+			new BattleProvinceBlockProtectionListener();
 	private final WarbandManager warbandManager = new WarbandManager();
 	private final BattleCommandManager battleCommandManager = new BattleCommandManager();
 	private final RaidCommandManager raidCommandManager = new RaidCommandManager();
+	private final WarCommandManager warCommandManager = new WarCommandManager();
 	private final WarbandMembershipListener warbandMembershipListener = new WarbandMembershipListener();
 	private final CampaignRaidWarbandListener campaignRaidWarbandListener = new CampaignRaidWarbandListener();
+	private final CampaignRaidIntruderListener campaignRaidIntruderListener = new CampaignRaidIntruderListener();
 	private final CampaignRaidBattleEndService campaignRaidBattleEndService = new CampaignRaidBattleEndService();
 	private final CampaignBattleOutcomeService campaignBattleOutcomeService = new CampaignBattleOutcomeService();
+	private final InstallationProtectionListener installationProtectionListener =
+			new InstallationProtectionListener();
 	private ProvinceManager provinceSnapshot = new ProvinceManager();
 	private ProvinceGrid provinceGrid;
 	private final PlayerVehicleRegistry vehicleRegistry = new PlayerVehicleRegistry();
@@ -122,6 +138,8 @@ public class SimpleFactions extends JavaPlugin{
 			new InstallationVehicleOwnerSync(vehicleRegistry);
 	private final InstallationVehicleService installationVehicleService =
 			new InstallationVehicleService(vehicleRegistry, installationVehicleOwnerSync);
+	private final InstallationVehicleUnberthService installationVehicleUnberthService =
+			new InstallationVehicleUnberthService(vehicleRegistry);
 	private final VehicleTransferSessionManager vehicleTransferSessionManager =
 			new VehicleTransferSessionManager();
 	private final VehicleTransferConsentService vehicleTransferConsentService =
@@ -129,6 +147,10 @@ public class SimpleFactions extends JavaPlugin{
 					installationVehicleService,
 					vehicleRegistry,
 					vehicleTransferSessionManager);
+	private final VehicleRegistryClaimService vehicleRegistryClaimService =
+			new VehicleRegistryClaimService(vehicleRegistry);
+	private final VehicleRegistryClaimListener vehicleRegistryClaimListener =
+			new VehicleRegistryClaimListener(vehicleRegistryClaimService);
 	private final VehicleIntegrationListener vehicleIntegrationListener = new VehicleIntegrationListener();
 	private final VehicleTransferListener vehicleTransferListener = new VehicleTransferListener(
 			vehicleTransferSessionManager,
@@ -199,6 +221,7 @@ public class SimpleFactions extends JavaPlugin{
 		}
 		factionManager.run();
 		ProvincePresenceTickService.start();
+		CampaignRaidIntruderTickService.start();
 		warbandManager.start();
 		battleManager.start();
 		getCommand(battleCommandManager.cmd1).setExecutor(battleCommandManager);
@@ -209,11 +232,15 @@ public class SimpleFactions extends JavaPlugin{
 		RaidTabCompletion raidTabCompletion = new RaidTabCompletion();
 		getCommand(raidCommandManager.cmd).setExecutor(raidCommandManager);
 		getCommand(raidCommandManager.cmd).setTabCompleter(raidTabCompletion);
+		WarTabCompletion warTabCompletion = new WarTabCompletion();
+		getCommand(WarCommandManager.CMD).setExecutor(warCommandManager);
+		getCommand(WarCommandManager.CMD).setTabCompleter(warTabCompletion);
 		RequestManager.start();
 		WarManager.start();
 		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.loadAll();
 		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.startAutosave();
 		BattleScheduleTickService.start();
+		CampaignViewRefreshService.start();
 		sessionManager.start();
 		provinceSnapshot = provinceManager.createSnapshotShell();
 		provinceManager.recalculate();
@@ -221,6 +248,7 @@ public class SimpleFactions extends JavaPlugin{
 	}
 	@Override
 	public void onDisable() {
+		CampaignViewRefreshService.stop();
 		BattleManager.shutdown();
 		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.stopAutosave();
 		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.saveAll();
@@ -271,11 +299,14 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(factionManager, this);
 		getServer().getPluginManager().registerEvents(provincePresenceListener, this);
 		getServer().getPluginManager().registerEvents(battleManager, this);
+		getServer().getPluginManager().registerEvents(battleProvinceBlockProtectionListener, this);
 		getServer().getPluginManager().registerEvents(warbandManager, this);
 		getServer().getPluginManager().registerEvents(warbandMembershipListener, this);
 		getServer().getPluginManager().registerEvents(campaignRaidWarbandListener, this);
+		getServer().getPluginManager().registerEvents(campaignRaidIntruderListener, this);
 		getServer().getPluginManager().registerEvents(campaignRaidBattleEndService, this);
 		getServer().getPluginManager().registerEvents(campaignBattleOutcomeService, this);
+		getServer().getPluginManager().registerEvents(installationProtectionListener, this);
 	}
 	public void createFolders() {
 		File dataFolder = getDataFolder();
@@ -288,7 +319,8 @@ public class SimpleFactions extends JavaPlugin{
 			"Cache",
 			"MapAPI",
 			"Input",
-			"Guilds"
+			"Guilds",
+			"logs"
 		};
 
 		for (String name : subFolders) {
@@ -329,6 +361,10 @@ public class SimpleFactions extends JavaPlugin{
 		titleLoader.reload();
 	}
 
+	public static void reloadConfigs() {
+		plugin.loadConfigs();
+	}
+
 	public static SimpleFactions getInstance() {
 		return plugin;
 	}
@@ -363,6 +399,10 @@ public class SimpleFactions extends JavaPlugin{
 
 	public VehicleTransferConsentService getVehicleTransferConsentService() {
 		return vehicleTransferConsentService;
+	}
+
+	public InstallationVehicleUnberthService getInstallationVehicleUnberthService() {
+		return installationVehicleUnberthService;
 	}
 
 	public static PlayerEconomyManager getPlayerEconomyManager() {
@@ -400,6 +440,7 @@ public class SimpleFactions extends JavaPlugin{
 			return;
 		}
 		getServer().getPluginManager().registerEvents(vehicleIntegrationListener, this);
+		getServer().getPluginManager().registerEvents(vehicleRegistryClaimListener, this);
 		getServer().getPluginManager().registerEvents(vehicleTransferListener, this);
 		getServer().getPluginManager().registerEvents(vehicleSpawnListener, this);
 		getServer().getPluginManager().registerEvents(battleVehicleEligibilityListener, this);

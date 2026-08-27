@@ -5,14 +5,13 @@ import java.time.Instant;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
-import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.TransitionResult;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.installation.Installation;
+import me.Plugins.SimpleFactions.installation.InstallationLookup;
 
 public final class CampaignRaidLaunchService {
 	private CampaignRaidLaunchService() {}
@@ -44,26 +43,10 @@ public final class CampaignRaidLaunchService {
 		if (raid == null) {
 			return;
 		}
-		Installation target = resolveInstallation(raid.getTargetInstallationId());
-		String message = CampaignRaidMessages.buildRaidStartedMessage(target);
+		Installation target = InstallationLookup.findById(raid.getTargetInstallationId());
+		String message = CampaignRaidMessages.buildRaidStartedMessage(target, raid.getDisplayName());
 		broadcastToSide(war.getAttackers(), message);
 		broadcastToSide(war.getDefenders(), message);
-	}
-
-	private static Installation resolveInstallation(String installationId) {
-		if (installationId == null || installationId.isBlank()) {
-			return null;
-		}
-		for (Faction faction : FactionManager.factions) {
-			if (faction == null || faction.getInstallationHandler() == null) {
-				continue;
-			}
-			Installation installation = faction.getInstallationHandler().getById(installationId);
-			if (installation != null) {
-				return installation;
-			}
-		}
-		return null;
 	}
 
 	private static void broadcastToSide(Side side, String message) {

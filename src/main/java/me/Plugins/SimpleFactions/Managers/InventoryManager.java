@@ -49,6 +49,7 @@ import me.Plugins.SimpleFactions.Managers.Inventory.TaxChange;
 import me.Plugins.SimpleFactions.Managers.Inventory.TaxView;
 import me.Plugins.SimpleFactions.Managers.Inventory.TierTitleView;
 import me.Plugins.SimpleFactions.Managers.Inventory.WarView;
+import me.Plugins.SimpleFactions.War.battle.campaign.BattleWarbandRetreatConfirmHandler;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.SimpleFactions;
@@ -475,6 +476,21 @@ public class InventoryManager implements Listener{
 		i.setItem(15, createButton("cancel", "setcapital", "1"));
 		player.openInventory(i);
 	}
+
+	public void confirmBattleRetreatView(Player player, String battleId) {
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Confirm Action");
+		ItemStack info = new ItemStack(Material.PAPER);
+		ItemMeta infoMeta = info.getItemMeta();
+		infoMeta.setDisplayName("§eRetreat from battle?");
+		infoMeta.setLore(java.util.List.of(
+				"§7Your side will lose the battle.",
+				"§7Casualties already taken will apply."));
+		info.setItemMeta(infoMeta);
+		i.setItem(13, info);
+		i.setItem(11, createButton("confirm", "warband_battle_retreat", battleId));
+		i.setItem(15, createButton("cancel", "warband_battle_retreat", battleId));
+		player.openInventory(i);
+	}
 	
 	//Basic Items
 	public ItemStack getFiller(Material mat) {
@@ -887,6 +903,20 @@ public class InventoryManager implements Listener{
 			if (data != null) {
 				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
 				campaignView.handleConfirm(p, "campaign_loser_peace", data, confirmed);
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "warband_battle_retreat");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if (data != null) {
+				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
+				BattleWarbandRetreatConfirmHandler.handleConfirm(p, confirmed);
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "campaign_retreat");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if (data != null) {
+				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
+				campaignView.handleConfirm(p, "campaign_retreat", data, confirmed);
 				return;
 			}
 			key = new NamespacedKey(SimpleFactions.plugin, "campaign_surrender");

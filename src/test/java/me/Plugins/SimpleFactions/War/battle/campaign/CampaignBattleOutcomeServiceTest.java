@@ -34,6 +34,7 @@ import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleFactory;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
+import me.Plugins.SimpleFactions.War.battle.enums.BattleEndReason;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.events.BattleEndedEvent;
 import me.Plugins.SimpleFactions.War.battle.military.BattleCasualtyService;
@@ -49,6 +50,8 @@ import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPostBattleChoiceService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
 import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidState;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
 import me.Plugins.SimpleFactions.enums.Terrain;
@@ -198,6 +201,58 @@ class CampaignBattleOutcomeServiceTest {
 	}
 
 	@Test
+	void handleBattleEnded_skipsCampaignRaidAfterRaidTeardown() {
+		War war = baseWar();
+		int initiativeBefore = war.getInitiativeAttacker();
+		warManagerMock.when(() -> WarManager.getById(1)).thenReturn(war);
+
+		CampaignBattleOutcomeService.handleBattleEnded(
+				new BattleEndedEvent(
+						"def_port_raid",
+						BattleType.RAID,
+						1,
+						BattleTemplate.DEFENDER_SIDE,
+						Map.of(),
+						Set.of(),
+						BattleEndReason.SIDE_WIN,
+						true));
+
+		assertEquals(initiativeBefore, war.getInitiativeAttacker());
+		assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
+		assertTrue(BattleManager.get().isEmpty());
+	}
+
+	@Test
+	void handleBattleEnded_skipsActiveCampaignRaidWithoutPersistedFlag() {
+		War war = baseWar();
+		int initiativeBefore = war.getInitiativeAttacker();
+		warManagerMock.when(() -> WarManager.getById(1)).thenReturn(war);
+
+		CampaignRaid raid = new CampaignRaid();
+		raid.setId("def_port_raid");
+		raid.setState(CampaignRaidState.FIGHTING);
+		raid.setBattleId("def_port_raid");
+		war.setActiveCampaignRaid(raid);
+
+		Battle battle = BattleFactory.createBlank(BattleType.RAID, "def_port_raid");
+		battle.setWarId(1);
+		BattleManager.addBattle(battle);
+
+		CampaignBattleOutcomeService.handleBattleEnded(
+				new BattleEndedEvent(
+						battle.getId(),
+						BattleType.RAID,
+						1,
+						null,
+						Map.of(),
+						Set.of()));
+
+		assertEquals(initiativeBefore, war.getInitiativeAttacker());
+		assertEquals(1, BattleManager.get().size());
+		assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());
+	}
+
+	@Test
 	void handleBattleEnded_skipsCampaignRaidBattles() {
 		War war = baseWar();
 		warManagerMock.when(() -> WarManager.getById(1)).thenReturn(war);
@@ -213,8 +268,10 @@ class CampaignBattleOutcomeServiceTest {
 						BattleType.RAID,
 						1,
 						null,
-						Map.of(BattleTemplate.ATTACKER_SIDE, 2),
-						Set.of()));
+						Map.of(),
+						Set.of(),
+						BattleEndReason.TIMER,
+						true));
 
 		assertEquals(1, BattleManager.get().size());
 		assertEquals(BattleSchedulePhase.SCHEDULED, war.getBattleSchedulePhase());

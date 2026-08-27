@@ -1,6 +1,8 @@
 package me.Plugins.SimpleFactions.War.campaign.raid;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -8,15 +10,29 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.core.War;
 
 public final class CampaignRaidMusterScheduler {
-	private static final Map<Integer, Integer> scheduledWarTasks = new ConcurrentHashMap<>();
+	private static final Map<Integer, List<Integer>> scheduledWarTasks = new ConcurrentHashMap<>();
 
 	private CampaignRaidMusterScheduler() {}
 
 	static void resetForTests() {
 		scheduledWarTasks.clear();
+		CampaignRaidMusterReminderService.resetForTests();
+	}
+
+	public static void cancelAllScheduled() {
+		for (Integer warId : scheduledWarTasks.keySet().toArray(Integer[]::new)) {
+			cancelScheduled(warId);
+		}
+		CampaignRaidMusterReminderService.cancelAllScheduled();
+	}
+
+	public static void cancelForWar(int warId) {
+		cancelScheduled(warId);
+		CampaignRaidMusterReminderService.cancelForWar(warId);
 	}
 
 	public static void onMusterStarted(War war, Instant now) {
@@ -28,32 +44,34 @@ public final class CampaignRaidMusterScheduler {
 			return;
 		}
 		cancelScheduled(war.getId());
+		CampaignRaidMusterReminderService.schedule(war, now);
 		long delayTicks = delayTicksUntil(raid.getMusterEndsAt(), now);
 		if (delayTicks <= 0L) {
 			onMusterEnd(war, now);
 			return;
 		}
-		if (!canScheduleTasks()) {
+		if (!canScheduleTasks() || CampaignClock.isSpoofed()) {
 			return;
 		}
 		int warId = war.getId();
 		int taskId = new BukkitRunnable() {
 			@Override
 			public void run() {
-				scheduledWarTasks.remove(warId);
+				removeTask(warId, getTaskId());
 				War current = WarManager.getById(warId);
 				if (current != null) {
-					onMusterEnd(current, Instant.now());
+					onMusterEnd(current, CampaignClock.now());
 				}
 			}
 		}.runTaskLater(SimpleFactions.plugin, delayTicks).getTaskId();
-		scheduledWarTasks.put(warId, taskId);
+		trackTask(warId, taskId);
 	}
 
 	public static boolean processOverdue(War war, Instant now) {
 		if (war == null || now == null) {
 			return false;
 		}
+		CampaignRaidMusterReminderService.processReminders(war, now);
 		CampaignRaid raid = CampaignRaidService.getActive(war);
 		if (raid == null || raid.getState() != CampaignRaidState.MUSTER) {
 			return false;
@@ -85,9 +103,26 @@ public final class CampaignRaidMusterScheduler {
 		return seconds * 20L;
 	}
 
+	private static void trackTask(int warId, int taskId) {
+		scheduledWarTasks.computeIfAbsent(warId, ignored -> new ArrayList<>()).add(taskId);
+	}
+
+	private static void removeTask(int warId, int taskId) {
+		List<Integer> tasks = scheduledWarTasks.get(warId);
+		if (tasks != null) {
+			tasks.remove(Integer.valueOf(taskId));
+			if (tasks.isEmpty()) {
+				scheduledWarTasks.remove(warId);
+			}
+		}
+	}
+
 	private static void cancelScheduled(int warId) {
-		Integer taskId = scheduledWarTasks.remove(warId);
-		if (taskId != null && canScheduleTasks()) {
+		List<Integer> taskIds = scheduledWarTasks.remove(warId);
+		if (taskIds == null || !canScheduleTasks()) {
+			return;
+		}
+		for (int taskId : taskIds) {
 			SimpleFactions.plugin.getServer().getScheduler().cancelTask(taskId);
 		}
 	}
