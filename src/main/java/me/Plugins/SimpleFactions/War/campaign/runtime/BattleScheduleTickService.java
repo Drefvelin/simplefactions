@@ -14,6 +14,7 @@ import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleSignupReminde
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidFightScheduler;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidMusterScheduler;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResumeService;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.BattleScheduleCloseResult;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.CloseVoteOptions;
 
@@ -36,6 +37,7 @@ public final class BattleScheduleTickService {
 		resetHourGateForTests();
 		CampaignRaidMusterScheduler.cancelAllScheduled();
 		CampaignRaidFightScheduler.cancelAllScheduled();
+		CampaignRaidResumeService.resumeAll();
 	}
 
 	static void resetHourGateForTests() {

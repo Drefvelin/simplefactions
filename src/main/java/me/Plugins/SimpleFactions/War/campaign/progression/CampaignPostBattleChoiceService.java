@@ -44,6 +44,10 @@ public final class CampaignPostBattleChoiceService {
 		if (!needsWinnerChoice(war)) {
 			return false;
 		}
+		CampaignCoalition winner = war.getPostBattleWinnerCoalition();
+		if (!CampaignCapabilityService.canMountOffensiveAfterPush(war, winner)) {
+			return false;
+		}
 		if (!CampaignBattleEndService.applyPush(war)) {
 			return false;
 		}
@@ -111,7 +115,11 @@ public final class CampaignPostBattleChoiceService {
 			return false;
 		}
 		if (needsWinnerChoice(war)) {
-			return applyPushChoice(war);
+			CampaignCoalition winner = war.getPostBattleWinnerCoalition();
+			if (CampaignCapabilityService.canMountOffensiveAfterPush(war, winner)) {
+				return applyPushChoice(war);
+			}
+			return applyHoldChoice(war);
 		}
 		if (needsLoserResponse(war)) {
 			return applyLoserAttack(war);

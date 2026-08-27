@@ -2,22 +2,29 @@ package me.Plugins.SimpleFactions.War.campaign.progression;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
+import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
 
 class CampaignPushProjectionTest {
 	private Faction attacker;
@@ -40,6 +47,27 @@ class CampaignPushProjectionTest {
 		war.setInitiativeAttacker(0);
 		war.setLastBattleOffensiveCoalition(CampaignCoalition.AGGRESSOR);
 		assertFalse(CampaignPushProjection.canMountOffensiveAfterPush(war, CampaignCoalition.AGGRESSOR));
+	}
+
+	@Test
+	void canMountOffensiveAfterPush_falseWhenNextSlotIsNavalWithoutPort() {
+		InstallationHandler attackerHandler = mock(InstallationHandler.class);
+		InstallationHandler defenderHandler = mock(InstallationHandler.class);
+		when(attacker.getInstallationHandler()).thenReturn(attackerHandler);
+		when(defender.getInstallationHandler()).thenReturn(defenderHandler);
+		when(attackerHandler.getAll()).thenReturn(List.of());
+		when(defenderHandler.getAll()).thenReturn(List.of());
+		War war = baseWar();
+		war.setLastBattleOffensiveCoalition(CampaignCoalition.AGGRESSOR);
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.NAVAL, false, null)));
+		war.setCampaignScheduleIndex(0);
+		try (MockedStatic<CampaignCapabilityService> capability =
+				mockStatic(CampaignCapabilityService.class, CALLS_REAL_METHODS)) {
+			capability.when(() -> CampaignCapabilityService.hasOffensiveArmy(any(), any(), anyInt()))
+					.thenReturn(true);
+			assertFalse(CampaignPushProjection.canMountOffensiveAfterPush(war, CampaignCoalition.AGGRESSOR));
+		}
 	}
 
 	@Test

@@ -22,7 +22,10 @@ public final class CampaignPushProjection {
 		if (next.isEmpty()) {
 			return false;
 		}
-		return CampaignCapabilityService.hasOffensiveArmy(war, winner, next.getAsInt());
+		if (!CampaignCapabilityService.hasOffensiveArmy(war, winner, next.getAsInt())) {
+			return false;
+		}
+		return CampaignNavyGate.winnerCanContestNextNaval(war, winner);
 	}
 
 	static ProjectedState afterPush(War war, CampaignCoalition winner) {

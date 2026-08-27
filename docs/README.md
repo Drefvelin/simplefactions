@@ -22,6 +22,7 @@ This `docs/` folder is the product and technical reference for the **SimpleFacti
 - [campaign-time-dev](./planning/campaign-time-dev/00-index.md) - spoof campaign schedule clock for E2E QA (`campaigntime`, route countdown)
 - [campaign-retreat](./planning/campaign-retreat/00-index.md) - strategic retreat during voting, live GUI refresh
 - [battle-retreat](./planning/battle-retreat/00-index.md) - mid-fight `/warband retreat` during campaign battles
+- [war-goals-apply](./planning/war-goals-apply/00-index.md) - gameplay lock; [01-phases.md](./planning/war-goals-apply/01-phases.md) - implementation phases
 
 ## Agent / contributor guide
 

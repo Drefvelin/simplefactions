@@ -2,7 +2,8 @@
 
 ## Planned
 
-- **Pillage war type** - one-battle border settlement pillage (distinct from campaign raids)
+- **War-goal auto-apply** - [planning/war-goals-apply/00-index.md](./planning/war-goals-apply/00-index.md), sequence [01-phases.md](./planning/war-goals-apply/01-phases.md) (navy done; no parallel diplomacy engine)
+- **Pillage war type** - one-battle settlement pillage (distinct from campaign raids)
 - **Full war map export** - occupation zones and chronicle event hooks for ProvinceSystem
 - **Declare codes and ticket gate** - Discord ticket → staff code → in-game declare (production gate)
 - **Website occupation tint** - blocked on SF occupation export; PS side: [ProvinceSystem/docs/map/wars-on-map.md](../../ProvinceSystem/docs/map/wars-on-map.md)

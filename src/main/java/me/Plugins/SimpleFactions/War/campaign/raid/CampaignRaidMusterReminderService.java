@@ -21,6 +21,7 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.TLibs.Utils.TimeFormatter;
 
 public final class CampaignRaidMusterReminderService {
+	private static final int REMINDER_WINDOW_SECONDS = 60;
 	private static final Map<Integer, List<Integer>> scheduledReminderTasks = new ConcurrentHashMap<>();
 
 	private CampaignRaidMusterReminderService() {
@@ -63,6 +64,7 @@ public final class CampaignRaidMusterReminderService {
 			return;
 		}
 		cancelScheduled(war.getId());
+		tryFireDueReminders(war, now);
 		if (CampaignClock.isSpoofed() || !canScheduleTasks()) {
 			return;
 		}
@@ -70,19 +72,45 @@ public final class CampaignRaidMusterReminderService {
 	}
 
 	private static void tryFireDueReminders(War war, Instant now) {
-		List<Integer> offsets = Cache.campaignRaidMusterReminderSecondsBefore;
-		if (offsets == null || offsets.isEmpty()) {
+		int offset = findNextDueReminderOffset(war, now);
+		if (offset < 0) {
 			return;
 		}
-		boolean persisted = false;
-		for (int offset : offsets) {
-			if (tryFireReminder(war, offset, now)) {
-				persisted = true;
-			}
-		}
-		if (persisted) {
+		if (tryFireReminder(war, offset, now)) {
 			WarManager.persist(war);
 		}
+	}
+
+	static int findNextDueReminderOffset(War war, Instant now) {
+		CampaignRaid raid = CampaignRaidService.getActive(war);
+		if (raid == null || raid.getState() != CampaignRaidState.MUSTER || now == null) {
+			return -1;
+		}
+		Instant musterEndsAt = raid.getMusterEndsAt();
+		if (musterEndsAt == null || !now.isBefore(musterEndsAt)) {
+			return -1;
+		}
+		List<Integer> offsets = Cache.campaignRaidMusterReminderSecondsBefore;
+		if (offsets == null || offsets.isEmpty()) {
+			return -1;
+		}
+		int nextOffset = -1;
+		for (int offset : offsets) {
+			if (raid.getMusterRemindersSent().contains(offset)) {
+				continue;
+			}
+			Instant reminderAt = musterEndsAt.minusSeconds(offset);
+			if (now.isBefore(reminderAt)) {
+				continue;
+			}
+			if (!now.isBefore(reminderAt.plusSeconds(REMINDER_WINDOW_SECONDS))) {
+				continue;
+			}
+			if (nextOffset < 0 || offset < nextOffset) {
+				nextOffset = offset;
+			}
+		}
+		return nextOffset;
 	}
 
 	static boolean tryFireReminder(War war, int offsetSeconds, Instant now) {
@@ -98,7 +126,7 @@ public final class CampaignRaidMusterReminderService {
 			return false;
 		}
 		Instant reminderAt = musterEndsAt.minusSeconds(offsetSeconds);
-		if (now.isBefore(reminderAt)) {
+		if (now.isBefore(reminderAt) || !now.isBefore(reminderAt.plusSeconds(REMINDER_WINDOW_SECONDS))) {
 			return false;
 		}
 		broadcastReminder(war, raid, offsetSeconds);

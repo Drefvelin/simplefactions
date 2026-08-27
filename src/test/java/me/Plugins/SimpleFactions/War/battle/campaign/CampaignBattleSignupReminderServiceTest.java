@@ -50,6 +50,8 @@ class CampaignBattleSignupReminderServiceTest {
 	void setUp() {
 		BattleManager.resetForTests();
 		WarbandManager.resetForTests();
+		Cache.warBattleWindowStartHour = 16;
+		Cache.warBattleWindowEndHour = 24;
 		Cache.battleSignupReminderSecondsBefore = List.of(300, 60);
 		attacker = mock(Faction.class);
 		defender = mock(Faction.class);
@@ -67,6 +69,30 @@ class CampaignBattleSignupReminderServiceTest {
 	void tearDown() {
 		BattleManager.resetForTests();
 		WarbandManager.resetForTests();
+	}
+
+	@Test
+	void catchUpFiresOnlyMostUrgentDueReminder() {
+		Cache.battleSignupReminderSecondsBefore = List.of(300, 60, 30);
+		War war = scheduledWar();
+		createFieldBattle("Battle of Test");
+		Instant now = war.getScheduledBattleAt().minusSeconds(25);
+
+		Player player = mock(Player.class);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getUniqueId()).thenReturn(UUID.randomUUID());
+
+		withMocks(player, null, () -> {
+			try (MockedStatic<WarManager> warManager = mockStatic(WarManager.class)) {
+				warManager.when(() -> WarManager.persist(any())).then(inv -> null);
+
+				CampaignBattleSignupReminderService.processReminders(war, now);
+
+				verify(player).sendMessage(org.mockito.ArgumentMatchers.contains("Battle of Test"));
+				assertEquals(1, war.getSignupRemindersSent().size());
+				assertTrue(war.getSignupRemindersSent().contains(30));
+			}
+		});
 	}
 
 	@Test

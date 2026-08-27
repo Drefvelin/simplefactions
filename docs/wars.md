@@ -48,23 +48,49 @@ Previous-season wars were informal: players arranged fights in Discord, staff so
 
 ## War goals (locked)
 
-Generic **conquest** is **not** a goal. The goal defines the political outcome.
+Generic **conquest** is **not** a goal. The goal defines the political outcome. **One war = one goal**, chosen at declare.
 
-| Goal | When available | On attacker win |
-|------|----------------|-----------------|
-| **`de_jure_annex`** | Target de jure region has **no settlements** (protects player builds) | Title/region annexed |
-| **`subjugate`** | Target has settlements, or vassalization is intended | Target becomes subject |
-| **`transfer_subject`** | Ticket specifies subject transfer between overlords | Subject transferred |
+Implementation lock: [planning/war-goals-apply/00-index.md](./planning/war-goals-apply/00-index.md). Phase sequence: [planning/war-goals-apply/01-phases.md](./planning/war-goals-apply/01-phases.md).
 
-**De jure annex blocked** when any settlement exists in the target region → use **subjugate** or **transfer_subject**.
+**Do not** add a second diplomacy/law/tax engine. Apply calls `RelationManager`, `FactionManager.usurp`, `Faction.applyLaw`, tax handlers, and one movement apply gate.
 
-**One war = one goal**, chosen at declare (validated at declare time; code validation in ).
+**War defender** is the **top liege** of the clicked faction. The goal payload may still be a nested vassal, title, or settlement.
 
-### De jure wars
+### Shared declare blocks
 
-- Attacker must already **partially control** the de jure title/region.
-- **Rank gate:** may only target titles **at or below** own rank (kingdom → kingdom; county → county only).
-- Victory is at a single **objective province** (see [Objective province](#objective-province)), not 100% province occupation.
+Cannot declare (goal exceptions are in the planning lock) if: same realm (vassal / overlord / nested), ally, NAP (stub), or tributary unless the goal is **subjugate** or staff **War**. Usurp may target **direct overlord** only.
+
+**Navy (implemented):** if the generated **invasion** schedule includes a naval slot and the attacker has no operational port, declare is rejected (`Faction has a navy blockading your approach, and you lack a navy to challenge them`). If the next battle after a win is naval and that coalition has no port, they cannot **Push** (must **Hold**). See planning lock.
+
+### Goal list
+
+| Goal | Layer 2 | On attacker win |
+|------|---------|-----------------|
+| **Tributary** | None | Tributary relation |
+| **Subjugate** | Subject type (not Integrated) | Chosen vassal type |
+| **De jure annex** | Title (show blocked reasons) | Defender-realm provinces in title transfer; **unowned title is not granted** |
+| **Transfer subject** | Nested realm faction | `transferSubject` |
+| **Usurp** | None | `FactionManager.usurp` (primary title + subjects) |
+| **Overthrow** | Movement / leader | Movement apply gate + coup (stub) |
+| **Change law** | Law GUI (movement) | Law + Civil War stability |
+| **Change tax** | Tax pick + chat (movement) | Rate + Civil War stability |
+| **Open market** | None (law ids in war-goal config) | Configured free-trade law + stability |
+| **Change government** | Gov ± leadership | Laws + stability |
+| **Pillage** | Settlement | Trade-income hit + loot (not a campaign raid) |
+| **War** | None | Staff / manual; no auto-apply |
+| **Revolt** | None | Civil war / manual; no auto-apply in this lock |
+
+**De jure:** own the title, **or** title unowned and you own at least one province in it. No settlements in the title. Prestige must cover incoming land. Rank gate: title at or below attacker rank. Victory is still a single **objective province** (see [Objective province](#objective-province)), not 100% occupation.
+
+**Pillage vs campaign raid:** pillage is a **war type / goal**. Campaign raids stay inter-battle installation assaults ([campaign-raids.md](./campaign-raids.md)).
+
+### On war end
+
+| Outcome | Apply |
+|---------|--------|
+| Attacker victory | Goal |
+| Defender victory | Reparations from attacker (no goal) |
+| White peace / admin | Neither |
 
 ---
 
@@ -72,10 +98,10 @@ Generic **conquest** is **not** a goal. The goal defines the political outcome.
 
 | Type | Campaign | Battles | End |
 |------|----------|---------|-----|
-| **De jure / subjugate / transfer** | Border → objective province (and capital push if counter-invasion) | Campaign battles on schedule | Goal applied or reparations / white peace |
-| **Raid (war type)** | Shortest path border → **one settlement** within **X** provinces of border | **One** battle | Pillage + war ends (no return battle) |
+| **De jure / subjugate / transfer / usurp / diplomatic / law** | Border → objective province (and capital push if counter-invasion) | Campaign battles on schedule | Goal applied or reparations / white peace |
+| **Pillage (war type)** | Shortest path border → **one settlement** | **One** battle | Pillage apply + war ends (no return battle) |
 
-**Raid distance:** settlements only within **X** provinces of attacker border (config). Deep raids require future airborne raids (out of v1 scope).
+**Pillage distance:** settlement within **X** provinces of attacker land borders, **or** within **X** of sea **and** `hasSeaConnection` between the realms. Disconnected oceans and landlocked attackers cannot seaborne-pillage. Deep inland raids require future airborne pillage (out of this lock).
 
 ### Campaign raids
 
@@ -86,7 +112,7 @@ Generic **conquest** is **not** a goal. The goal defines the political outcome.
 | Term | Meaning |
 |------|---------|
 | **Campaign raid** (this section) | 19-20 inter-battle installation assault; timer fight; no plugin scoring |
-| **Pillage war** | One-battle border **settlement** war type |
+| **Pillage war** | One-battle **settlement** war goal/type (land range or connected-sea range) |
 | **Staff `BattleType.RAID`** | Manual template battle with capture points (dev/lore tool; unchanged) |
 
 #### Timeline (battle day, Europe/Paris)
@@ -941,10 +967,10 @@ See [installations.md](./installations.md) for fort/port/airport pipeline. War-a
 
 | Outcome | Trigger | Goal | Reparations |
 |---------|---------|------|-------------|
-| **Attacker victory** | Aggressor wins battle at defender capital, failed objective retake, or defender leader **surrenders** (slot 47) | Goal apply (future) | No |
-| **Defender victory** | Defender wins battle at attacker capital, or attacker leader **surrenders** (slot 47) | — | **Attacker pays** (future) |
+| **Attacker victory** | Aggressor wins battle at defender capital, failed objective retake, or defender leader **surrenders** (slot 47) | Goal apply | No |
+| **Defender victory** | Defender wins battle at attacker capital, or attacker leader **surrenders** (slot 47) | None | **Attacker pays** |
 | **White peace** | Leader accept of auto-proposal, voluntary mutual agreement, mutual exhaustion auto-proposal, or offensive stalemate | None | **No** |
-| **Raid success** | Raid battle won at settlement | Pillage | No (unless attacker loses — N/A for one-shot raid) |
+| **Pillage success** | Pillage battle won at settlement | Pillage apply | No (unless attacker loses; N/A for one-shot pillage) |
 
 ### `WarEndReason` values (shipped )
 
@@ -966,7 +992,7 @@ Opening the campaign view **recalculates** white peace proposal flags only; it d
 
 **Not when:** defender loses (land/subject loss is enough), any **white peace** (including accepted auto-proposal), initiative exhaustion white peace.
 
-**Mechanic:** flat **% of main guild ledger income** for **X days** paid to winner (e.g. 25% tax). Source: **main faction guild ledger only** — not subsidiary guilds. Applied like other taxes via ledger pipeline.
+**Mechanic:** flat **% of main guild ledger income** for **X days** paid to winner (e.g. 25% tax). Source: **main faction guild ledger only** - not subsidiary guilds. Applied like other taxes via ledger pipeline (`Cashflow.WAR_REPARATIONS` / `WAR_REPARATIONS_PAYMENT`). Not implemented until the war-goals apply batch.
 
 ---
 
@@ -1003,15 +1029,20 @@ Visible on nation, county, duchy, kingdom, empire, and trade map modes (same as 
 | [campaign-raids.md](./campaign-raids.md) | Inter-battle installation assaults |
 | [map-export.md](./map-export.md) | War route slice in `map_markers.json` |
 | [roadmap.md](./roadmap.md) | Shipped vs planned features |
+| [war-goals-apply lock](./planning/war-goals-apply/00-index.md) | Navy gate, goal apply, movement gate |
 | [ProvinceSystem map wars overlay](../../ProvinceSystem/docs/map/wars-on-map.md) | Website overlay |
 
 ---
 
 ## Open items
 
-- Exact **X** provinces for raid war border distance
+- Exact **X** provinces for pillage land/sea distance
 - **Occupation bulge** adjacency rule (which extra provinces per battle win)
 - Reparations **%** and **days** defaults
 - When to **recalculate** white peace auto-proposal flags after cursor / phase change
+- NAP relation (stub only in the war-goals lock)
+- Civil war rebel factions and relation snapshots (explicitly later)
+
+War-goal apply and navy gate: [planning/war-goals-apply/00-index.md](./planning/war-goals-apply/00-index.md).
 
 `provinces_between_battles` (default **3**), `max_battles_per_leg`, and `initiative_factor` are locked in config (see `config.yml` war section).

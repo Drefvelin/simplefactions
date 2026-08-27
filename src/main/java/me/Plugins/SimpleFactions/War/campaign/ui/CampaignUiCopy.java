@@ -24,6 +24,8 @@ public final class CampaignUiCopy {
 	public static final String BATTLE_KIND = "#9ec8ff";
 	public static final String FOUGHT_LABEL = "Fought";
 	public static final String RETREATED_LABEL = "Retreated";
+	public static final String NAVY_BLOCKADE =
+			"Faction has a navy blockading your approach, and you lack a navy to challenge them";
 
 	private CampaignUiCopy() {}
 
@@ -89,5 +91,9 @@ public final class CampaignUiCopy {
 			return "Autoresolve Pending";
 		}
 		return "Between Battles";
+	}
+
+	public static String navyBlockadeDeclareMessage() {
+		return "§c" + NAVY_BLOCKADE;
 	}
 }

@@ -29,6 +29,7 @@ import me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.pathfinder.TitleManagerProvinceOwnerLookup;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignNavyGate;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteEntry;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteRenderer;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.BattleHourTally;
@@ -410,6 +411,17 @@ public class CampaignCreator {
 	}
 
 	public ItemStack createPushButton(War war) {
+		boolean navyBlocked = !CampaignNavyGate.winnerCanContestNextNaval(
+				war,
+				war != null ? war.getPostBattleWinnerCoalition() : null);
+		if (navyBlocked) {
+			ItemStack item = new ItemStack(Material.GRAY_CONCRETE, 1);
+			ItemMeta meta = item.getItemMeta();
+			meta.setDisplayName(StringFormatter.formatHex(CampaignUiCopy.MUTED + "Push"));
+			meta.setLore(List.of(StringFormatter.formatHex(CampaignUiCopy.LABEL + CampaignUiCopy.NAVY_BLOCKADE)));
+			item.setItemMeta(meta);
+			return item;
+		}
 		ItemStack item = new ItemStack(Material.LIME_CONCRETE, 1);
 		ItemMeta meta = item.getItemMeta();
 		meta.setDisplayName(StringFormatter.formatHex(CampaignUiCopy.SELECT + "Push"));

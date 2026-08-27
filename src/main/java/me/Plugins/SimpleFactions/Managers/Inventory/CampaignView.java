@@ -29,6 +29,7 @@ import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteEntry;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteRenderer;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignChoiceService;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCapabilityService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPostBattleChoiceService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRetreatService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRetreatService.RetreatResult;
@@ -568,7 +569,10 @@ public class CampaignView {
 
 		switch (key) {
 			case "campaign_push" -> {
-				if (!canMakePostBattleChoice(player, war) || !CampaignChoiceService.applyPush(war)) {
+				if (!canMakePostBattleChoice(player, war)
+						|| !CampaignCapabilityService.canMountOffensiveAfterPush(
+								war, war.getPostBattleWinnerCoalition())
+						|| !CampaignChoiceService.applyPush(war)) {
 					player.sendMessage("§cCould not push.");
 					return;
 				}

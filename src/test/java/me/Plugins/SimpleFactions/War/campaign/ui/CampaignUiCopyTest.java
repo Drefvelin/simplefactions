@@ -21,6 +21,13 @@ import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
 class CampaignUiCopyTest {
 
 	@Test
+	void navyBlockadeDeclareMessage_usesLockedCopy() {
+		assertEquals(
+				"§cFaction has a navy blockading your approach, and you lack a navy to challenge them",
+				CampaignUiCopy.navyBlockadeDeclareMessage());
+	}
+
+	@Test
 	void formatBattleKind_formatsNavalKinds() {
 		assertEquals("Field Battle", CampaignUiCopy.formatBattleKind(CampaignBattleKind.FIELD));
 		assertEquals("Siege", CampaignUiCopy.formatBattleKind(CampaignBattleKind.SIEGE));

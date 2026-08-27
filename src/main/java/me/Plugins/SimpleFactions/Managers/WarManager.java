@@ -26,6 +26,7 @@ import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignDeclareValidator;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignNavyGate;
 import me.Plugins.SimpleFactions.War.declare.WarDeclareRequest;
 import me.Plugins.SimpleFactions.War.declare.WarGoalValidator;
 import me.Plugins.SimpleFactions.War.declare.WarValidationResult;
@@ -76,6 +77,11 @@ public class WarManager {
 		}
 		if (!populateCampaignIfNeeded(war)) {
 			lastDeclareError = "§cCould not declare war: no campaign route could be generated.";
+			return null;
+		}
+		WarValidationResult navy = CampaignNavyGate.validateDeclareAfterPopulate(war);
+		if (!navy.isValid()) {
+			lastDeclareError = navy.getMessage();
 			return null;
 		}
 		WarCommitmentService.commitAllParticipants(war);

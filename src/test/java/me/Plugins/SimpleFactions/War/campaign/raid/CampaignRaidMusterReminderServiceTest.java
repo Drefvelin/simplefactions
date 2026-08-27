@@ -1,5 +1,6 @@
 package me.Plugins.SimpleFactions.War.campaign.raid;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -43,6 +44,29 @@ class CampaignRaidMusterReminderServiceTest {
 		when(defender.getLeader()).thenReturn("Bob");
 		when(attacker.getMembers()).thenReturn(List.of("Alice"));
 		when(defender.getMembers()).thenReturn(List.of("Bob"));
+	}
+
+	@Test
+	void catchUpFiresOnlyMostUrgentDueReminder() {
+		Cache.campaignRaidMusterReminderSecondsBefore = List.of(45, 30, 15, 10);
+		War war = warWithMusterRaid();
+		CampaignRaid raid = war.getActiveCampaignRaid();
+		Instant now = raid.getMusterEndsAt().minusSeconds(8);
+
+		Player player = mock(Player.class);
+		when(player.isOnline()).thenReturn(true);
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
+				MockedStatic<WarManager> warManager = mockStatic(WarManager.class)) {
+			bukkit.when(() -> Bukkit.getPlayerExact("Alice")).thenReturn(player);
+			warManager.when(() -> WarManager.persist(any())).then(inv -> null);
+
+			CampaignRaidMusterReminderService.processReminders(war, now);
+
+			verify(player).sendMessage(org.mockito.ArgumentMatchers.contains("starts in"));
+			assertEquals(1, raid.getMusterRemindersSent().size());
+			assertTrue(raid.getMusterRemindersSent().contains(10));
+		}
 	}
 
 	@Test

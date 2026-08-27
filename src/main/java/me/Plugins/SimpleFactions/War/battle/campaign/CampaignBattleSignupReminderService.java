@@ -17,6 +17,8 @@ import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.TLibs.Utils.TimeFormatter;
 
 public final class CampaignBattleSignupReminderService {
+	private static final int REMINDER_WINDOW_SECONDS = 60;
+
 	private CampaignBattleSignupReminderService() {
 	}
 
@@ -40,22 +42,37 @@ public final class CampaignBattleSignupReminderService {
 			return;
 		}
 
-		boolean persisted = false;
+		int offset = findNextDueReminderOffset(war, scheduledAt, now);
+		if (offset < 0) {
+			return;
+		}
+		broadcastReminder(war, battle, offset);
+		war.getSignupRemindersSent().add(offset);
+		WarManager.persist(war);
+	}
+
+	static int findNextDueReminderOffset(War war, Instant scheduledAt, Instant now) {
+		if (war == null || scheduledAt == null || now == null) {
+			return -1;
+		}
+		List<Integer> offsets = Cache.battleSignupReminderSecondsBefore;
+		if (offsets == null || offsets.isEmpty()) {
+			return -1;
+		}
+		int nextOffset = -1;
 		for (int offset : offsets) {
 			if (war.getSignupRemindersSent().contains(offset)) {
 				continue;
 			}
 			Instant reminderAt = scheduledAt.minusSeconds(offset);
-			Instant reminderEnd = reminderAt.plusSeconds(60);
-			if (!now.isBefore(reminderAt) && now.isBefore(reminderEnd)) {
-				broadcastReminder(war, battle, offset);
-				war.getSignupRemindersSent().add(offset);
-				persisted = true;
+			if (now.isBefore(reminderAt) || !now.isBefore(reminderAt.plusSeconds(REMINDER_WINDOW_SECONDS))) {
+				continue;
+			}
+			if (nextOffset < 0 || offset < nextOffset) {
+				nextOffset = offset;
 			}
 		}
-		if (persisted) {
-			WarManager.persist(war);
-		}
+		return nextOffset;
 	}
 
 	private static void broadcastReminder(War war, Battle battle, int offsetSeconds) {
