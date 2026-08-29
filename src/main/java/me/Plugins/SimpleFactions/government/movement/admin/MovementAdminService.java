@@ -6,13 +6,17 @@ import java.util.List;
 import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarStartService;
 import me.Plugins.SimpleFactions.government.movement.Movement;
+import me.Plugins.SimpleFactions.government.movement.MovementOutcomeService;
+import me.Plugins.SimpleFactions.government.movement.MovementOutcomeSource;
 import me.Plugins.SimpleFactions.government.movement.Pool;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
 
 public final class MovementAdminService {
-	public static final String USAGE = "§cUsage: /movement admin list|join|leave ...";
+	public static final String USAGE = "§cUsage: /movement admin list|join|leave|demands|target ...";
 	public static final String JOIN_USAGE =
 			"§cUsage: /movement admin join <id> supporter citizen|guild|vassal <target>"
 					+ " | join <id> cause <index> citizen|guild|vassal <target>"
@@ -21,6 +25,10 @@ public final class MovementAdminService {
 			"§cUsage: /movement admin leave <id> supporter citizen|guild|vassal <target>"
 					+ " | leave <id> cause <index> citizen|guild|vassal <target>"
 					+ " | leave <id> backer <faction>";
+	public static final String DEMANDS_USAGE =
+			"§cUsage: /movement admin demands <id> accept|reject";
+	public static final String TARGET_USAGE =
+			"§cUsage: /movement admin target <id> <causeIndex> <player>";
 
 	private MovementAdminService() {}
 
@@ -71,6 +79,87 @@ public final class MovementAdminService {
 
 	public static Result leaveBacker(String movementId, String factionId) {
 		return mutateBacker(false, movementId, factionId);
+	}
+
+	public static Result demands(String movementId, String outcome) {
+		Movement movement = resolveMovement(movementId);
+		if (movement == null) {
+			return new Result(false, "§cUnknown movement: " + movementId);
+		}
+		if (outcome == null) {
+			return new Result(false, DEMANDS_USAGE);
+		}
+		String missingTarget = missingTargetReason(movement);
+		if (missingTarget != null) {
+			return new Result(false, missingTarget);
+		}
+		if (outcome.equalsIgnoreCase("accept")) {
+			LogManager.movement(
+					"ADMIN_DEMANDS_ACCEPT movementId=%s faction=%s power=%.1f",
+					movement.getId(),
+					movement.getFaction() != null ? movement.getFaction().getId() : "-",
+					movement.getPower());
+			MovementOutcomeService.apply(movement, MovementOutcomeSource.ACCEPTED);
+			persist(movement);
+			return new Result(true, "§aAccepted demands for " + movement.getId() + " (organization bypassed).");
+		}
+		if (outcome.equalsIgnoreCase("reject") || outcome.equalsIgnoreCase("decline")) {
+			LogManager.movement(
+					"ADMIN_DEMANDS_REJECT movementId=%s faction=%s power=%.1f",
+					movement.getId(),
+					movement.getFaction() != null ? movement.getFaction().getId() : "-",
+					movement.getPower());
+			String error = CivilWarStartService.start(movement);
+			if (error != null) {
+				return new Result(false, error);
+			}
+			persist(movement);
+			return new Result(true, "§aRejected demands for " + movement.getId() + " (organization bypassed). Civil war started.");
+		}
+		return new Result(false, DEMANDS_USAGE);
+	}
+
+	public static Result target(String movementId, String causeIndex, String player) {
+		Movement movement = resolveMovement(movementId);
+		if (movement == null) {
+			return new Result(false, "§cUnknown movement: " + movementId);
+		}
+		if (movement.isFrozen()) {
+			return new Result(false, "§cMovement is frozen.");
+		}
+		Cause cause = resolveCause(movement, causeIndex);
+		if (cause == null) {
+			return new Result(false, "§cUnknown cause index: " + causeIndex);
+		}
+		if (cause.getProposal() == null || !cause.getProposal().needsTarget()) {
+			return new Result(false, "§cThat cause does not take a wanted leader.");
+		}
+		if (player == null || player.isBlank()) {
+			return new Result(false, TARGET_USAGE);
+		}
+		Faction host = movement.getFaction();
+		if (host == null || !host.canBecomeLeader(player)) {
+			return new Result(false, "§c" + player + " cannot be the wanted leader.");
+		}
+		cause.getProposal().setTarget(player);
+		persist(movement);
+		return new Result(true, "§aSet wanted leader of " + movement.getId() + " cause " + causeIndex + " to " + player + ".");
+	}
+
+	private static String missingTargetReason(Movement movement) {
+		if (movement.getCauses() == null) {
+			return null;
+		}
+		for (Cause cause : movement.getCauses()) {
+			if (cause == null || cause.getProposal() == null) {
+				continue;
+			}
+			if (cause.getProposal().isPoliticalActionProposal() && cause.getProposal().needsTarget()
+					&& !cause.getProposal().hasTarget()) {
+				return "§cOne or more causes lack a target.";
+			}
+		}
+		return null;
 	}
 
 	private static Result mutateMember(
@@ -312,6 +401,20 @@ public final class MovementAdminService {
 			ids.add(faction.getId());
 		}
 		return ids;
+	}
+
+	public static List<String> wantedLeaderNames(Movement movement) {
+		List<String> names = new ArrayList<>();
+		Faction host = movement == null ? null : movement.getFaction();
+		if (host == null || host.getMembers() == null) {
+			return names;
+		}
+		for (String member : host.getMembers()) {
+			if (host.canBecomeLeader(member)) {
+				names.add(member);
+			}
+		}
+		return names;
 	}
 
 	public static List<String> causeIndices(Movement movement) {

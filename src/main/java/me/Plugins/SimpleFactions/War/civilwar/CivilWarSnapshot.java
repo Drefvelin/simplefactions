@@ -12,6 +12,8 @@ public final class CivilWarSnapshot {
 	private List<CivilWarWartimeVassalEnd> wartimeVassalEnds = new ArrayList<>();
 	private Integer hostOldCapitalId;
 	private Integer rebelCapitalId;
+	private String wantedLeaderName;
+	private List<CivilWarMemberMove> memberMoves = new ArrayList<>();
 
 	public String getHostFactionId() {
 		return hostFactionId;
@@ -63,5 +65,23 @@ public final class CivilWarSnapshot {
 
 	public void setRebelCapitalId(Integer rebelCapitalId) {
 		this.rebelCapitalId = rebelCapitalId;
+	}
+
+	public String getWantedLeaderName() {
+		return wantedLeaderName;
+	}
+
+	public void setWantedLeaderName(String wantedLeaderName) {
+		this.wantedLeaderName = wantedLeaderName;
+	}
+
+	public List<CivilWarMemberMove> getMemberMoves() {
+		return memberMoves;
+	}
+
+	public void setMemberMoves(List<CivilWarMemberMove> memberMoves) {
+		this.memberMoves = memberMoves == null
+				? new ArrayList<>()
+				: new ArrayList<>(memberMoves);
 	}
 }

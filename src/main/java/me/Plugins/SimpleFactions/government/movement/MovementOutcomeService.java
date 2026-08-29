@@ -3,6 +3,7 @@ package me.Plugins.SimpleFactions.government.movement;
 import java.util.ArrayList;
 import java.util.List;
 
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.StabilityModifier;
@@ -16,6 +17,12 @@ public final class MovementOutcomeService {
 		if (movement == null || source == null) {
 			return;
 		}
+		LogManager.movement(
+				"OUTCOME movementId=%s faction=%s source=%s power=%.1f",
+				movement.getId(),
+				movement.getFaction() != null ? movement.getFaction().getId() : "-",
+				source.name(),
+				movement.getPower());
 		Faction faction = movement.getFaction();
 		if (faction == null) {
 			return;

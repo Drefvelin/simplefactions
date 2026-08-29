@@ -37,11 +37,38 @@ public class MovementCommandManager implements CommandExecutor {
 			}
 			case "join" -> handleMutate(player, true, args);
 			case "leave" -> handleMutate(player, false, args);
+			case "demands" -> handleDemands(player, args, 2);
+			case "target" -> handleTarget(player, args);
 			default -> {
+				if (args.length >= 4 && args[2].equalsIgnoreCase("demands")) {
+					yield handleDemands(player, args, 1);
+				}
 				player.sendMessage(MovementAdminService.USAGE);
 				yield true;
 			}
 		};
+	}
+
+	private boolean handleDemands(Player player, String[] args, int idIndex) {
+		if (args.length < 4) {
+			player.sendMessage(MovementAdminService.DEMANDS_USAGE);
+			return true;
+		}
+		String movementId = args[idIndex];
+		String outcome = args[3];
+		MovementAdminService.Result result = MovementAdminService.demands(movementId, outcome);
+		player.sendMessage(result.message());
+		return true;
+	}
+
+	private boolean handleTarget(Player player, String[] args) {
+		if (args.length < 5) {
+			player.sendMessage(MovementAdminService.TARGET_USAGE);
+			return true;
+		}
+		MovementAdminService.Result result = MovementAdminService.target(args[2], args[3], args[4]);
+		player.sendMessage(result.message());
+		return true;
 	}
 
 	private boolean handleMutate(Player player, boolean joining, String[] args) {

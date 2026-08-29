@@ -44,6 +44,7 @@ public final class ProvincePresenceService {
 						if (player != null) {
 							Bukkit.getPluginManager().callEvent(
 									new PlayerProvinceEnterEvent(player, provinceId, previousProvinceId));
+							TitlePresenceService.getInstance().applyProvince(player, provinceId);
 						}
 					}
 

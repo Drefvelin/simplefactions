@@ -34,26 +34,28 @@ public class LawView {
     }
 
     public void lawView(Player player, Faction f, Inventory i) {
-		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.LAW_VIEW), 54, "§7Laws");
+		boolean open = i == null;
+		if(open) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.LAW_VIEW), 54, "§7Laws");
 		i.clear();
 		for(int x = 0; x<f.getLawHandler().getGroupList().size(); x++) {
 			LawGroup group = f.getLawHandler().getGroupList().get(x);
 			i.setItem(LAW_SLOTS.get(x), creator.createLawGroupItem(player, f, group));
 		}
-		player.openInventory(i);
 		i.setItem(53, inv.createBackButton(SFGUI.LAW_VIEW));
+		if(open) player.openInventory(i);
 	}
 
 	public void lawSelect(Player player, Faction f, LawGroup group, Inventory i) {
-		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.LAW_SELECT), 27, "§7Law View");
+		boolean open = i == null;
+		if(open) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.LAW_SELECT, group.getId()), 27, "§7Law View");
 		i.clear();
 		int slot = 0;
 		for(Law law : group.getLaws().values()) {
 			i.setItem(slot, creator.createLawItem(player, f, group, law, false));
 			slot++;
 		}
-		player.openInventory(i);
 		i.setItem(26, inv.createBackButton(SFGUI.LAW_SELECT));
+		if(open) player.openInventory(i);
 	}
 
 	public void click(InventoryClickEvent e, Inventory inventory, Player p) {

@@ -65,7 +65,7 @@ class WarManagerCivilWarEndTest {
 				marks[0] = step.incrementAndGet();
 				return null;
 			});
-			untangle.when(() -> CivilWarUntangleService.restore(war)).thenAnswer(invocation -> {
+			untangle.when(() -> CivilWarUntangleService.restore(war, WarEndReason.ADMIN_END)).thenAnswer(invocation -> {
 				marks[1] = step.incrementAndGet();
 				return null;
 			});

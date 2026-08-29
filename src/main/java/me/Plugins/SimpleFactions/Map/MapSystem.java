@@ -16,10 +16,12 @@ import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
+import me.Plugins.SimpleFactions.Map.export.OccupationMapExport;
 import me.Plugins.SimpleFactions.Map.export.Markers;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarBorderLock;
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarCopy;
+import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.installation.InstallationTransferService;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
@@ -116,6 +118,12 @@ public class MapSystem {
 			return;
 		}
 		queues.put(type, new ArrayList<>(Arrays.asList(value)));
+	}
+
+	public void enqueueOccupationFromWar(War war) {
+		for (String rgb : OccupationMapExport.nationRgbsToEnqueue(war, FactionManager::getByProvince)) {
+			enqueue("nation", rgb);
+		}
 	}
 	
 	public void clear() {

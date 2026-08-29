@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.Material;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -51,6 +52,9 @@ public class DefaultCreator {
                 break;
         }
 		ItemMeta meta = i.getItemMeta();
+		if (t == RankType.MEMBERS) {
+			meta.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+		}
 		meta.setDisplayName("§aCurrently ranking based on §e"+t.toString());
 		List<String> lore = new ArrayList<String>();
 		lore.add("§7Click to change");

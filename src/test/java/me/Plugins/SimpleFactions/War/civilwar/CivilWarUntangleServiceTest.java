@@ -24,6 +24,7 @@ import org.mockito.MockedStatic;
 
 import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.Regiment;
+import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.GuildType;
@@ -35,6 +36,7 @@ import me.Plugins.SimpleFactions.Map.MapSystem;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.GuildHandler;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
@@ -82,6 +84,7 @@ class CivilWarUntangleServiceTest {
 		Guild base = mock(Guild.class);
 		when(base.isBase()).thenReturn(true);
 		when(base.hasCapital()).thenReturn(false);
+		when(base.getOwnName()).thenReturn("Cape Wells");
 		GuildHandler rebelGuilds = mock(GuildHandler.class);
 		when(rebelGuilds.getGuilds()).thenReturn(new ArrayList<>(List.of(relocated, base)));
 		when(rebels.getGuildHandler()).thenReturn(rebelGuilds);
@@ -93,6 +96,7 @@ class CivilWarUntangleServiceTest {
 		Faction vassal = mock(Faction.class);
 		when(vassal.getId()).thenReturn("vassal");
 		RelationType vassalType = mock(RelationType.class);
+		when(vassalType.isVassalage()).thenReturn(true);
 
 		CivilWarSnapshot snapshot = new CivilWarSnapshot();
 		snapshot.setHostFactionId("host");
@@ -135,6 +139,7 @@ class CivilWarUntangleServiceTest {
 			verify(host).setCapital(2, true, false);
 			verify(relocated).relocate(host, 2);
 			verify(base).relocate(host, -1);
+			verify(base).setName("Cape Wells");
 			relations.verify(() -> RelationManager.setRelationForced(vassalType, vassal, host));
 			factions.verify(() -> FactionManager.deleteFaction(rebels));
 		}
@@ -150,6 +155,7 @@ class CivilWarUntangleServiceTest {
 		Faction vassal = mock(Faction.class);
 		when(vassal.getId()).thenReturn("vassal");
 		RelationType vassalType = mock(RelationType.class);
+		when(vassalType.isVassalage()).thenReturn(true);
 
 		CivilWarSnapshot snapshot = new CivilWarSnapshot();
 		snapshot.setHostFactionId("host");
@@ -171,6 +177,117 @@ class CivilWarUntangleServiceTest {
 			verify(host, never()).addProvince(anyInt());
 			relations.verify(() -> RelationManager.setRelationForced(vassalType, vassal, host));
 			factions.verify(() -> FactionManager.deleteFaction(any()), never());
+		}
+	}
+
+	@Test
+	void restore_mapsOverlordLinkToVassalageType() {
+		Faction host = mock(Faction.class);
+		when(host.getId()).thenReturn("host");
+		Faction vassal = mock(Faction.class);
+		when(vassal.getId()).thenReturn("vassal");
+		RelationType overlordType = mock(RelationType.class);
+		RelationType vassalType = mock(RelationType.class);
+		when(overlordType.isOverlord()).thenReturn(true);
+		when(overlordType.isVassalage()).thenReturn(false);
+		when(overlordType.getLink()).thenReturn(vassalType);
+		when(vassalType.isVassalage()).thenReturn(true);
+
+		CivilWarSnapshot snapshot = new CivilWarSnapshot();
+		snapshot.setHostFactionId("host");
+		snapshot.setWartimeVassalEnds(List.of(new CivilWarWartimeVassalEnd("vassal", "host", "overlord")));
+
+		War war = new War(3, vassal, host);
+		war.setCivilWarSnapshot(snapshot);
+
+		try (MockedStatic<FactionManager> factions = mockStatic(FactionManager.class);
+				MockedStatic<RelationManager> relations = mockStatic(RelationManager.class);
+				MockedStatic<RelationLoader> relationLoader = mockStatic(RelationLoader.class)) {
+			factions.when(() -> FactionManager.getByString("host")).thenReturn(host);
+			factions.when(() -> FactionManager.getByString("vassal")).thenReturn(vassal);
+			relationLoader.when(() -> RelationLoader.getType("overlord")).thenReturn(overlordType);
+
+			CivilWarUntangleService.restore(war);
+
+			relations.verify(() -> RelationManager.setRelationForced(vassalType, vassal, host));
+		}
+	}
+
+	@Test
+	void snapshotVassalageTypeId_usesOverlordVassalageRow() {
+		Faction host = mock(Faction.class);
+		when(host.getId()).thenReturn("host");
+		Faction vassal = mock(Faction.class);
+		when(vassal.getId()).thenReturn("vassal");
+		RelationType vassalage = mock(RelationType.class);
+		when(vassalage.isVassalage()).thenReturn(true);
+		when(vassalage.getId()).thenReturn("vassal_type");
+		RelationType overlordLink = mock(RelationType.class);
+		when(overlordLink.isOverlord()).thenReturn(true);
+		when(overlordLink.isVassalage()).thenReturn(false);
+		Relation fromOverlord = mock(Relation.class);
+		when(fromOverlord.getType()).thenReturn(vassalage);
+		Relation fromVassal = mock(Relation.class);
+		when(fromVassal.getType()).thenReturn(overlordLink);
+		when(host.getRelation("vassal")).thenReturn(fromOverlord);
+		when(vassal.getRelation("host")).thenReturn(fromVassal);
+
+		assertEquals("vassal_type", CivilWarUntangleService.snapshotVassalageTypeId(vassal, host));
+	}
+
+	@Test
+	void restore_putsMemberBackOnOriginGuild() {
+		Faction host = mock(Faction.class);
+		when(host.getId()).thenReturn("host");
+		Guild origin = mock(Guild.class);
+		when(origin.isBase()).thenReturn(false);
+		GuildHandler handler = mock(GuildHandler.class);
+		when(host.getGuildHandler()).thenReturn(handler);
+		when(handler.getGuild("guild-a")).thenReturn(origin);
+
+		CivilWarSnapshot snapshot = new CivilWarSnapshot();
+		snapshot.setHostFactionId("host");
+		snapshot.setMemberMoves(List.of(new CivilWarMemberMove("dummy_11", "guild-a", true)));
+
+		War war = new War(4, mock(Faction.class), host);
+		war.setCivilWarSnapshot(snapshot);
+
+		try (MockedStatic<FactionManager> factions = mockStatic(FactionManager.class)) {
+			factions.when(() -> FactionManager.getByString("host")).thenReturn(host);
+			CivilWarUntangleService.restore(war, WarEndReason.DEFENDER_VICTORY);
+			verify(handler).forceKick("dummy_11");
+			verify(origin).addMember("dummy_11");
+			verify(origin).setLeader("dummy_11");
+		}
+	}
+
+	@Test
+	void restore_attackerWin_movesWantedLeaderToMainGuild() {
+		Faction host = mock(Faction.class);
+		when(host.getId()).thenReturn("host");
+		Guild origin = mock(Guild.class);
+		when(origin.isBase()).thenReturn(false);
+		Guild main = mock(Guild.class);
+		GuildHandler handler = mock(GuildHandler.class);
+		when(host.getGuildHandler()).thenReturn(handler);
+		when(host.getOrCreateMainGuild()).thenReturn(main);
+		when(handler.getGuild("guild-a")).thenReturn(origin);
+
+		CivilWarSnapshot snapshot = new CivilWarSnapshot();
+		snapshot.setHostFactionId("host");
+		snapshot.setWantedLeaderName("dummy_11");
+		snapshot.setMemberMoves(List.of(new CivilWarMemberMove("dummy_11", "guild-a", true)));
+
+		War war = new War(5, mock(Faction.class), host);
+		war.setCivilWarSnapshot(snapshot);
+
+		try (MockedStatic<FactionManager> factions = mockStatic(FactionManager.class)) {
+			factions.when(() -> FactionManager.getByString("host")).thenReturn(host);
+			CivilWarUntangleService.restore(war, WarEndReason.ATTACKER_VICTORY);
+			verify(handler).forceKick("dummy_11");
+			verify(main).addMember("dummy_11");
+			verify(origin, never()).addMember("dummy_11");
+			verify(origin, never()).setLeader("dummy_11");
 		}
 	}
 

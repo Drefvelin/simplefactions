@@ -444,6 +444,7 @@ public class GovernmentCreator {
         }
         
         ItemMeta m = item.getItemMeta();
+        m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
         
         if(isEmpty) {
             m.setDisplayName(StringFormatter.formatHex("#89504eEmpty Seat"));
@@ -507,6 +508,7 @@ public class GovernmentCreator {
         
         
         ItemMeta m = item.getItemMeta();
+        m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
 
         m.setDisplayName(StringFormatter.formatHex("#93c9a7" + member));
         List<String> lore = new ArrayList<>();
@@ -599,6 +601,7 @@ public class GovernmentCreator {
     public ItemStack createFavourRepressEntryButton() {
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         ItemMeta m = item.getItemMeta();
+        m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
         m.setDisplayName(StringFormatter.formatHex("#93c9a7Favour & Repress"));
         List<String> lore = new ArrayList<String>();
         lore.add(StringFormatter.formatHex("#b8ae61Manage which guilds and vassals"));

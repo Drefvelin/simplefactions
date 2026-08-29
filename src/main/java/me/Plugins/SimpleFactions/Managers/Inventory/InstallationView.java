@@ -81,6 +81,10 @@ public class InstallationView {
     }
 
     public void installationDetailView(Player player, Faction f, String installationId) {
+        installationDetailView(player, f, installationId, null);
+    }
+
+    public void installationDetailView(Player player, Faction f, String installationId, Inventory inventory) {
         InstallationHandler handler = f.getInstallationHandler();
         InstallationConstruction pending = handler.getPendingConstruction();
         boolean isPending =
@@ -88,18 +92,24 @@ public class InstallationView {
         Installation installation = handler.getById(installationId);
 
         if (!isPending && installation == null) {
-            player.sendMessage("§cNo installation with id §f" + installationId);
+            if (inventory == null) {
+                player.sendMessage("§cNo installation with id §f" + installationId);
+            }
             installationsView(null, player, f, true);
             return;
         }
 
-        Inventory inventory =
-                SimpleFactions.plugin
-                        .getServer()
-                        .createInventory(
-                                new SFInventoryHolder(f.getId(), SFGUI.INSTALLATION_DETAIL_VIEW),
-                                54,
-                                "§7Installation Details");
+        boolean open = inventory == null;
+        if (open) {
+            inventory =
+                    SimpleFactions.plugin
+                            .getServer()
+                            .createInventory(
+                                    new SFInventoryHolder(f.getId(), SFGUI.INSTALLATION_DETAIL_VIEW, installationId),
+                                    54,
+                                    "§7Installation Details");
+        }
+        inventory.clear();
 
         boolean leader = f.getLeader().equalsIgnoreCase(player.getName());
         if (isPending) {
@@ -128,7 +138,7 @@ public class InstallationView {
         }
 
         inventory.setItem(53, inv.createBackButton(SFGUI.INSTALLATION_DETAIL_VIEW));
-        player.openInventory(inventory);
+        if (open) player.openInventory(inventory);
     }
 
     public void click(InventoryClickEvent event, Inventory inventory, Player player) {

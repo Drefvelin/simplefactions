@@ -61,6 +61,30 @@ class VehiclesConfigLoaderTest {
     }
 
     @Test
+    void load_readsUpcomingBattleIconFromCategory() throws IOException {
+        Path vehiclesYaml = tempDir.resolve("vehicles.yml");
+        Files.writeString(vehiclesYaml, """
+            personal-slot-limit: 1
+            default-upkeep: 4
+
+            categories:
+              ships:
+                show-on-upcoming-battle-icon: true
+                ironclad:
+                  size: 1
+              land_vehicles: {}
+              train: {}
+              static_emplacements: {}
+              aircraft: {}
+            """);
+
+        VehiclesConfigLoader.load(vehiclesYaml.toFile());
+
+        assertTrue(VehiclesConfigLoader.showsOnUpcomingBattleIcon("ironclad"));
+        assertFalse(VehiclesConfigLoader.showsOnUpcomingBattleIcon("unknown"));
+    }
+
+    @Test
     void load_readsDefaultPerPersonAndPerTypeOverrides() throws IOException {
         Path vehiclesYaml = tempDir.resolve("vehicles.yml");
         Files.writeString(vehiclesYaml, """

@@ -5,8 +5,9 @@ world-name: TFMC_Map
 
 # When true, debug sessions are appended to plugins/SimpleFactions/logs/log.txt
 # and relation events are appended to plugins/SimpleFactions/logs/relations.log
+# Movement / civil war / war events go to movement.log, civilwar.log, war.log
 logging: true
-# When true, logs/log.txt and logs/relations.log are deleted on every plugin start/reload
+# When true, all files in plugins/SimpleFactions/logs/ are deleted on every plugin start/reload
 wipe-log: true
 
 max-prestige-from-wealth: 800 # shared between factions based on % of global wealth

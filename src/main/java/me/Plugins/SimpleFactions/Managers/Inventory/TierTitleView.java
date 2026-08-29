@@ -87,7 +87,7 @@ public class TierTitleView {
 	}
 	public void titleTypeView(Inventory i, Player player, Faction f, Tier tier, boolean open, int page) {
 		if(open) {
-			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TITLE_TYPE_VIEW, page), 54, tier.getName()+"§7 View");
+			i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TITLE_TYPE_VIEW, page, false, tier.getId()), 54, tier.getName()+"§7 View");
 		}
 		Faction pf = FactionManager.getByLeader(player.getName());
 		String overlord = RelationManager.getOverlord(f);

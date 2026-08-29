@@ -27,24 +27,28 @@ public class TaxView {
         this.inv = inv;
     }
 
-    public void taxView(Player player, Faction f) {
+    public void taxView(Player player, Faction f, Inventory i) {
         if(f == null) return;
-		Inventory i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TAX_VIEW), 9, "§7Tax View");
-		
+		boolean open = i == null;
+		if(open) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TAX_VIEW), 9, "§7Tax View");
+		i.clear();
 		int slot = 0;
 		for(TaxTarget target : TaxTarget.values()) {
 			if(!f.getTaxHandler().canCollectTax(target)) continue;
 			i.setItem(slot, creator.createTaxTypeItem(player, f, target, false));
 			slot++;
 		}
-		
 		i.setItem(8, inv.createBackButton(SFGUI.TAX_VIEW));
-		player.openInventory(i);
+		if(open) player.openInventory(i);
+	}
+
+	public void taxView(Player player, Faction f) {
+		taxView(player, f, null);
 	}
 
 	public void specificTaxView(Player player, Faction f, TaxTarget target, Inventory i) {
 		boolean open = i == null;
-		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TAX_VIEW_SPECIFIC), 54, "§7"+target.getDisplayName());
+		if(open) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.TAX_VIEW_SPECIFIC, target.name()), 54, "§7"+target.getDisplayName());
 		i.clear();
 		int x = 0;
 		if(target == TaxTarget.GUILD_ID) {

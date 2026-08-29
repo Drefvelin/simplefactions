@@ -41,8 +41,16 @@ public class DeclareWarView {
 	}
 
 	public void openGoalPicker(Player player, Faction attacker, Faction defender) {
-		DeclareWarHolder holder = new DeclareWarHolder(attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_GOAL);
-		Inventory inventory = SimpleFactions.plugin.getServer().createInventory(holder, 27, "§7Declare War - Goal");
+		openGoalPicker(player, attacker, defender, null);
+	}
+
+	public void openGoalPicker(Player player, Faction attacker, Faction defender, Inventory inventory) {
+		boolean open = inventory == null;
+		if(open) {
+			DeclareWarHolder holder = new DeclareWarHolder(attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_GOAL);
+			inventory = SimpleFactions.plugin.getServer().createInventory(holder, 27, "§7Declare War - Goal");
+		}
+		inventory.clear();
 		int slot = 10;
 		inventory.setItem(slot++, creator.createWarGoalItem());
 		inventory.setItem(slot++, creator.createTributaryGoalItem());
@@ -62,55 +70,87 @@ public class DeclareWarView {
 			inventory.setItem(slot, creator.createTransferSubjectGoalItem());
 		}
 		inventory.setItem(26, inv.createBackButton(SFGUI.WAR_DECLARE_GOAL));
-		player.openInventory(inventory);
+		if(open) player.openInventory(inventory);
 	}
 
 	public void openRelationTypePicker(Player player, Faction attacker, Faction defender) {
-		DeclareWarHolder holder = new DeclareWarHolder(attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_RELATION_TYPE);
-		Inventory inventory = SimpleFactions.plugin.getServer().createInventory(holder, 27, "§7Declare War - Type");
+		openRelationTypePicker(player, attacker, defender, null);
+	}
+
+	public void openRelationTypePicker(Player player, Faction attacker, Faction defender, Inventory inventory) {
+		boolean open = inventory == null;
+		if(open) {
+			DeclareWarHolder holder = new DeclareWarHolder(attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_RELATION_TYPE);
+			inventory = SimpleFactions.plugin.getServer().createInventory(holder, 27, "§7Declare War - Type");
+		}
+		inventory.clear();
 		int slot = 0;
 		for (RelationType type : RelationLoader.getWarPickableVassalTypes()) {
 			if (slot >= 26) break;
 			inventory.setItem(slot++, creator.createRelationTypeItem(type, attacker));
 		}
 		inventory.setItem(26, inv.createBackButton(SFGUI.WAR_DECLARE_RELATION_TYPE));
-		player.openInventory(inventory);
+		if(open) player.openInventory(inventory);
 	}
 
 	public void openTitlePicker(Player player, Faction attacker, Faction defender) {
-		DeclareWarHolder holder = new DeclareWarHolder(attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_TITLE);
-		Inventory inventory = SimpleFactions.plugin.getServer().createInventory(holder, 27, "§7Declare War - Title");
+		openTitlePicker(player, attacker, defender, null);
+	}
+
+	public void openTitlePicker(Player player, Faction attacker, Faction defender, Inventory inventory) {
+		boolean open = inventory == null;
+		if(open) {
+			DeclareWarHolder holder = new DeclareWarHolder(attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_TITLE);
+			inventory = SimpleFactions.plugin.getServer().createInventory(holder, 27, "§7Declare War - Title");
+		}
+		inventory.clear();
 		int slot = 0;
 		for (DeJureTitleOption option : WarDeclareHelper.deJureTitleOptions(attacker, defender)) {
 			if (slot >= 26) break;
 			inventory.setItem(slot++, creator.createTitleItem(option));
 		}
 		inventory.setItem(26, inv.createBackButton(SFGUI.WAR_DECLARE_TITLE));
-		player.openInventory(inventory);
+		if(open) player.openInventory(inventory);
 	}
 
 	public void openSubjectPicker(Player player, Faction attacker, Faction defender) {
-		DeclareWarHolder holder = new DeclareWarHolder(attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_SUBJECT);
-		Inventory inventory = SimpleFactions.plugin.getServer().createInventory(holder, 27, "§7Declare War - Subject");
+		openSubjectPicker(player, attacker, defender, null);
+	}
+
+	public void openSubjectPicker(Player player, Faction attacker, Faction defender, Inventory inventory) {
+		boolean open = inventory == null;
+		if(open) {
+			DeclareWarHolder holder = new DeclareWarHolder(attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_SUBJECT);
+			inventory = SimpleFactions.plugin.getServer().createInventory(holder, 27, "§7Declare War - Subject");
+		}
+		inventory.clear();
 		int slot = 0;
 		for (Faction subject : WarDeclareHelper.defenderSubjects(defender)) {
 			if (slot >= 26) break;
 			inventory.setItem(slot++, creator.createSubjectItem(subject));
 		}
 		inventory.setItem(26, inv.createBackButton(SFGUI.WAR_DECLARE_SUBJECT));
-		player.openInventory(inventory);
+		if(open) player.openInventory(inventory);
 	}
 
 	public void openSettlementPicker(Player player, Faction attacker, Faction defender) {
-		DeclareWarHolder holder = new DeclareWarHolder(attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_SETTLEMENT);
-		Inventory inventory = SimpleFactions.plugin.getServer().createInventory(holder, 27, "§7Declare War - Settlement");
+		openSettlementPicker(player, attacker, defender, null);
+	}
+
+	public void openSettlementPicker(Player player, Faction attacker, Faction defender, Inventory inventory) {
+		boolean open = inventory == null;
+		if(open) {
+			DeclareWarHolder holder = new DeclareWarHolder(attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_SETTLEMENT);
+			inventory = SimpleFactions.plugin.getServer().createInventory(holder, 27, "§7Declare War - Settlement");
+		}
+		inventory.clear();
 		int slot = 0;
 		for (PillageEligibility.PillageSettlementOption option : PillageEligibility.options(attacker, defender)) {
 			if (slot >= 26) break;
 			inventory.setItem(slot++, creator.createSettlementItem(option));
 		}
 		inventory.setItem(26, inv.createBackButton(SFGUI.WAR_DECLARE_SETTLEMENT));
-		player.openInventory(inventory);
+		if(open) player.openInventory(inventory);
 	}
 
 	public void openGovernmentPicker(
@@ -119,15 +159,29 @@ public class DeclareWarView {
 			Faction defender,
 			String governmentLawId,
 			String leadershipLawId) {
+		openGovernmentPicker(player, attacker, defender, governmentLawId, leadershipLawId, null);
+	}
+
+	public void openGovernmentPicker(
+			Player player,
+			Faction attacker,
+			Faction defender,
+			String governmentLawId,
+			String leadershipLawId,
+			Inventory inventory) {
 		String govId = governmentLawId != null
 				? governmentLawId
 				: ChangeGovernmentEligibility.currentLawId(defender, ChangeGovernmentEligibility.GOVERNMENT_GROUP);
 		String leadId = leadershipLawId != null
 				? leadershipLawId
 				: ChangeGovernmentEligibility.currentLawId(defender, ChangeGovernmentEligibility.LEADERSHIP_GROUP);
-		DeclareWarHolder holder = new DeclareWarHolder(
-				attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_GOVERNMENT, govId, leadId);
-		Inventory inventory = SimpleFactions.plugin.getServer().createInventory(holder, 27, "§7Declare War - Government");
+		boolean open = inventory == null;
+		if(open) {
+			DeclareWarHolder holder = new DeclareWarHolder(
+					attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_GOVERNMENT, govId, leadId);
+			inventory = SimpleFactions.plugin.getServer().createInventory(holder, 27, "§7Declare War - Government");
+		}
+		inventory.clear();
 		LawGroup government = ChangeGovernmentEligibility.group(defender, ChangeGovernmentEligibility.GOVERNMENT_GROUP);
 		if (government != null) {
 			inventory.setItem(11, creator.createGovernmentAxisItem(government, lawInGroup(government, govId)));
@@ -140,7 +194,7 @@ public class DeclareWarView {
 			inventory.setItem(22, creator.createGovernmentConfirmItem());
 		}
 		inventory.setItem(26, inv.createBackButton(SFGUI.WAR_DECLARE_GOVERNMENT));
-		player.openInventory(inventory);
+		if(open) player.openInventory(inventory);
 	}
 
 	public void click(InventoryClickEvent e, Inventory inventory, Player player) {

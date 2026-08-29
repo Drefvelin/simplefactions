@@ -46,6 +46,10 @@ public class CampaignInstallationPickView {
 	}
 
 	public void open(Player player, War war, Faction viewerFaction, boolean openInventory) {
+		open(player, war, viewerFaction, openInventory, null);
+	}
+
+	public void open(Player player, War war, Faction viewerFaction, boolean openInventory, Inventory existingInventory) {
 		if (war == null || !war.isActive() || viewerFaction == null) {
 			player.sendMessage("§cWar not found.");
 			return;
@@ -58,10 +62,12 @@ public class CampaignInstallationPickView {
 		boolean locked = BattleInstallationPickService.isLocked(war, CampaignClock.now());
 		Set<String> picks = BattleInstallationPickService.getPicks(war, viewerFaction.getId());
 
-		Inventory inventory = SimpleFactions.plugin.getServer().createInventory(
-				new CampaignInventoryHolder(war.getId(), SFGUI.CAMPAIGN_INSTALLATION_PICK_VIEW),
-				54,
-				war.getName() + " §7Installations");
+		Inventory inventory = existingInventory != null ? existingInventory
+				: SimpleFactions.plugin.getServer().createInventory(
+						new CampaignInventoryHolder(war.getId(), SFGUI.CAMPAIGN_INSTALLATION_PICK_VIEW),
+						54,
+						war.getName() + " §7Installations");
+		inventory.clear();
 
 		inventory.setItem(SUMMARY_SLOT, creator.createInstallationPickSummaryItem(war, viewerFaction, locked));
 

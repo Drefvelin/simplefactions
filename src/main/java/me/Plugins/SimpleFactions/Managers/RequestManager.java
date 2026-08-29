@@ -10,6 +10,7 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Objects.Request.AutoresolveRequest;
 import me.Plugins.SimpleFactions.Objects.Request.ElevateRequest;
 import me.Plugins.SimpleFactions.Objects.Request.MovementJoinRequest;
+import me.Plugins.SimpleFactions.Objects.Request.MovementLeaderTargetRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelocateRequest;
 import me.Plugins.SimpleFactions.Objects.Request.Request;
@@ -77,6 +78,8 @@ public class RequestManager {
 			FactionManager.acceptElevationRequest(p);
 		} else if(req instanceof MovementJoinRequest) {
 			FactionManager.acceptMovementJoinRequest(p);
+		} else if(req instanceof MovementLeaderTargetRequest) {
+			FactionManager.acceptMovementLeaderTargetRequest(p);
 		} else if(req instanceof VehicleTransferConsentRequest) {
 			SimpleFactions plugin = SimpleFactions.getInstance();
 			if (plugin != null) {

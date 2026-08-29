@@ -71,7 +71,11 @@ public final class VehiclesConfigLoader {
             ConfigurationSection categorySection = categoriesSection.getConfigurationSection(categoryId);
             Map<String, VehicleTypeConfig> types = new HashMap<>();
             if (categorySection != null) {
+                boolean categoryShowIcon = categorySection.getBoolean("show-on-upcoming-battle-icon", false);
                 for (String vehicleTypeId : categorySection.getKeys(false)) {
+                    if (!categorySection.isConfigurationSection(vehicleTypeId)) {
+                        continue;
+                    }
                     String path = "categories." + categoryId + "." + vehicleTypeId;
                     if (!config.contains(path + ".size")) {
                         fail("vehicles.yml " + path + ".size is required");
@@ -101,6 +105,9 @@ public final class VehiclesConfigLoader {
                     }
 
                     boolean ignoreLimit = config.getBoolean(path + ".ignore-limit", false);
+                    boolean showOnUpcomingBattleIcon = config.contains(path + ".show-on-upcoming-battle-icon")
+                            ? config.getBoolean(path + ".show-on-upcoming-battle-icon")
+                            : categoryShowIcon;
 
                     String normalizedTypeId = vehicleTypeId.toLowerCase();
                     if (typeToCategory.containsKey(normalizedTypeId)) {
@@ -108,7 +115,7 @@ public final class VehiclesConfigLoader {
                     }
                     types.put(
                             normalizedTypeId,
-                            new VehicleTypeConfig(upkeep, size, perPerson, ignoreLimit));
+                            new VehicleTypeConfig(upkeep, size, perPerson, ignoreLimit, showOnUpcomingBattleIcon));
                     typeToCategory.put(normalizedTypeId, normalizedCategoryId);
                 }
             }
@@ -140,6 +147,11 @@ public final class VehiclesConfigLoader {
     public static boolean ignoresPersonalSlotLimit(String vehicleTypeId) {
         VehicleTypeConfig type = resolveType(vehicleTypeId);
         return type != null && type.isIgnoreLimit();
+    }
+
+    public static boolean showsOnUpcomingBattleIcon(String vehicleTypeId) {
+        VehicleTypeConfig type = resolveType(vehicleTypeId);
+        return type != null && type.isShowOnUpcomingBattleIcon();
     }
 
     public static double getUpkeep(String vehicleTypeId) {

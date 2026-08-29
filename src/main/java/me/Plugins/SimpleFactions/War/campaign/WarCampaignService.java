@@ -55,6 +55,14 @@ public class WarCampaignService {
 		}
 
 		LogManager.beginSession("populateCampaign warId=" + war.getId());
+		LogManager.war("POPULATE warId=%d attacker=%s defender=%s",
+				war.getId(),
+				war.getAttackers() != null && war.getAttackers().getLeader() != null
+						? war.getAttackers().getLeader().getId()
+						: "-",
+				war.getDefenders() != null && war.getDefenders().getLeader() != null
+						? war.getDefenders().getLeader().getId()
+						: "-");
 		try {
 			return populateCampaignInternal(war);
 		} finally {
@@ -275,6 +283,7 @@ public class WarCampaignService {
 		war.setPostBattleChoicePhase(PostBattleChoicePhase.NONE);
 		war.setPostBattleChoiceResolved(true);
 		war.setHoldPeaceProposalActive(false);
+		FactionManager.getMap().enqueueOccupationFromWar(war);
 		war.setOccupiedByAttacker(new ArrayList<>());
 		war.setOccupiedByDefender(new ArrayList<>());
 		war.setLastBattleOccupied(new ArrayList<>());

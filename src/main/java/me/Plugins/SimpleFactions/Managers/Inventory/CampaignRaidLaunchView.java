@@ -52,6 +52,10 @@ public class CampaignRaidLaunchView {
 	}
 
 	public void openSourcePage(Player player, War war, Faction viewerFaction, boolean openInventory) {
+		openSourcePage(player, war, viewerFaction, openInventory, null);
+	}
+
+	public void openSourcePage(Player player, War war, Faction viewerFaction, boolean openInventory, Inventory existingInventory) {
 		if (!validateParticipation(player, war, viewerFaction)) {
 			return;
 		}
@@ -59,10 +63,12 @@ public class CampaignRaidLaunchView {
 		List<Installation> sources = CampaignRaidEligibilityService.listValidSources(
 				war, viewerFaction.getId(), now);
 
-		Inventory inventory = SimpleFactions.plugin.getServer().createInventory(
-				new CampaignRaidLaunchHolder(war.getId(), null),
-				54,
-				war.getName() + " §7Raid - Source");
+		Inventory inventory = existingInventory != null ? existingInventory
+				: SimpleFactions.plugin.getServer().createInventory(
+						new CampaignRaidLaunchHolder(war.getId(), null),
+						54,
+						war.getName() + " §7Raid - Source");
+		inventory.clear();
 
 		inventory.setItem(SUMMARY_SLOT, creator.createRaidLaunchSummaryItem(
 				war, viewerFaction, null, sources.isEmpty(), now));
@@ -94,6 +100,16 @@ public class CampaignRaidLaunchView {
 			Faction viewerFaction,
 			String sourceInstallationId,
 			boolean openInventory) {
+		openTargetPage(player, war, viewerFaction, sourceInstallationId, openInventory, null);
+	}
+
+	public void openTargetPage(
+			Player player,
+			War war,
+			Faction viewerFaction,
+			String sourceInstallationId,
+			boolean openInventory,
+			Inventory existingInventory) {
 		if (!validateParticipation(player, war, viewerFaction)) {
 			return;
 		}
@@ -102,10 +118,12 @@ public class CampaignRaidLaunchView {
 		List<RaidTargetCandidate> targets = CampaignRaidEligibilityService.listValidTargets(
 				war, viewerFaction.getId(), sourceInstallationId, now);
 
-		Inventory inventory = SimpleFactions.plugin.getServer().createInventory(
-				new CampaignRaidLaunchHolder(war.getId(), sourceInstallationId),
-				54,
-				war.getName() + " §7Raid - Target");
+		Inventory inventory = existingInventory != null ? existingInventory
+				: SimpleFactions.plugin.getServer().createInventory(
+						new CampaignRaidLaunchHolder(war.getId(), sourceInstallationId),
+						54,
+						war.getName() + " §7Raid - Target");
+		inventory.clear();
 
 		inventory.setItem(SUMMARY_SLOT, creator.createRaidLaunchSummaryItem(
 				war, viewerFaction, source, targets.isEmpty(), now));

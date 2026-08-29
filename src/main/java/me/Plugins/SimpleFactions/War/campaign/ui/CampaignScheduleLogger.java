@@ -56,6 +56,7 @@ public final class CampaignScheduleLogger {
 					index,
 					slot,
 					slot.provinceId());
+			LogManager.war("[%d] warId=%s %s | %s", index, war.getId(), displayName, formatSlot(slot, axis));
 			LogManager.line("[%d] %s | %s", index, displayName, formatSlot(slot, axis));
 		}
 	}

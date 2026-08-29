@@ -100,6 +100,8 @@ public final class WarMapExporter {
 		if (defenderCapital != null) {
 			row.add("defender_capital", defenderCapital);
 		}
+		row.add("occupied_by_attacker", OccupationMapExport.toIntArray(war.getOccupiedByAttacker()));
+		row.add("occupied_by_defender", OccupationMapExport.toIntArray(war.getOccupiedByDefender()));
 		return row;
 	}
 

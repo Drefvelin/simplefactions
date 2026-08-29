@@ -25,9 +25,13 @@ import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarStartService;
 import me.Plugins.SimpleFactions.government.movement.Movement;
+import me.Plugins.SimpleFactions.government.movement.MovementOutcomeService;
+import me.Plugins.SimpleFactions.government.movement.MovementOutcomeSource;
 import me.Plugins.SimpleFactions.government.movement.Pool;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
+import me.Plugins.SimpleFactions.government.proposal.Proposal;
 
 class MovementAdminServiceTest {
 
@@ -192,6 +196,79 @@ class MovementAdminServiceTest {
 					MovementAdminService.joinCause("alice_movement", "0", "citizen", "Bob");
 			assertTrue(result.ok());
 			verify(movement).join("Bob", cause);
+		}
+	}
+
+	@Test
+	void demands_accept_bypassesOrganizationAndAppliesOutcome() {
+		Movement movement = mock(Movement.class);
+		when(movement.getId()).thenReturn("alice_movement");
+		when(movement.getCauses()).thenReturn(List.of());
+		when(movement.getFaction()).thenReturn(mock(Faction.class));
+
+		try (MockedStatic<FactionManager> factions = mockStatic(FactionManager.class);
+				MockedStatic<MovementOutcomeService> outcomes = mockStatic(MovementOutcomeService.class);
+				MockedStatic<CivilWarStartService> start = mockStatic(CivilWarStartService.class);
+				MockedConstruction<Database> ignored = mockConstruction(Database.class)) {
+			factions.when(() -> FactionManager.getMovementById("alice_movement")).thenReturn(movement);
+			MovementAdminService.Result result = MovementAdminService.demands("alice_movement", "accept");
+			assertTrue(result.ok());
+			outcomes.verify(() -> MovementOutcomeService.apply(movement, MovementOutcomeSource.ACCEPTED));
+			start.verifyNoInteractions();
+			verify(movement, never()).getOrganization();
+		}
+	}
+
+	@Test
+	void demands_reject_startsCivilWarWithoutOrganization() {
+		Movement movement = mock(Movement.class);
+		when(movement.getId()).thenReturn("alice_movement");
+		when(movement.getCauses()).thenReturn(List.of());
+		when(movement.getFaction()).thenReturn(mock(Faction.class));
+
+		try (MockedStatic<FactionManager> factions = mockStatic(FactionManager.class);
+				MockedStatic<MovementOutcomeService> outcomes = mockStatic(MovementOutcomeService.class);
+				MockedStatic<CivilWarStartService> start = mockStatic(CivilWarStartService.class);
+				MockedConstruction<Database> ignored = mockConstruction(Database.class)) {
+			factions.when(() -> FactionManager.getMovementById("alice_movement")).thenReturn(movement);
+			start.when(() -> CivilWarStartService.start(movement)).thenReturn(null);
+			MovementAdminService.Result result = MovementAdminService.demands("alice_movement", "reject");
+			assertTrue(result.ok());
+			start.verify(() -> CivilWarStartService.start(movement));
+			outcomes.verifyNoInteractions();
+			verify(movement, never()).getOrganization();
+		}
+	}
+
+	@Test
+	void demands_unknownMovement_fails() {
+		try (MockedStatic<FactionManager> factions = mockStatic(FactionManager.class)) {
+			factions.when(() -> FactionManager.getMovementById("missing")).thenReturn(null);
+			MovementAdminService.Result result = MovementAdminService.demands("missing", "accept");
+			assertFalse(result.ok());
+		}
+	}
+
+	@Test
+	void target_setsWantedLeaderWithoutOnlineCheck() {
+		Movement movement = mock(Movement.class);
+		Faction host = mock(Faction.class);
+		Cause cause = mock(Cause.class);
+		Proposal proposal = mock(Proposal.class);
+		when(movement.getId()).thenReturn("alice_movement");
+		when(movement.isFrozen()).thenReturn(false);
+		when(movement.getFaction()).thenReturn(host);
+		when(movement.getCauses()).thenReturn(List.of(cause));
+		when(cause.getProposal()).thenReturn(proposal);
+		when(proposal.needsTarget()).thenReturn(true);
+		when(host.canBecomeLeader("dummy_11")).thenReturn(true);
+
+		try (MockedStatic<FactionManager> factions = mockStatic(FactionManager.class);
+				MockedConstruction<Database> ignored = mockConstruction(Database.class)) {
+			factions.when(() -> FactionManager.getMovementById("alice_movement")).thenReturn(movement);
+			MovementAdminService.Result result = MovementAdminService.target("alice_movement", "0", "dummy_11");
+			assertTrue(result.ok());
+			verify(proposal).setTarget("dummy_11");
 		}
 	}
 }

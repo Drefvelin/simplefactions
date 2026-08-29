@@ -5,6 +5,7 @@ import java.util.Map;
 
 import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.Regiment;
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 
 public final class CivilWarRegimentSplitService {
@@ -27,6 +28,7 @@ public final class CivilWarRegimentSplitService {
 		if (hostMilitary.getRegiments() == null) {
 			return moved;
 		}
+		zeroRebelGrant(rebelMilitary);
 		for (Regiment hostRegiment : hostMilitary.getRegiments()) {
 			if (hostRegiment == null || hostRegiment.isLevy() || hostRegiment.getId() == null) {
 				continue;
@@ -35,16 +37,48 @@ public final class CivilWarRegimentSplitService {
 			if (rebelRegiment == null) {
 				continue;
 			}
-			int slots = Math.max(0, hostRegiment.getCurrentSlots());
-			int transfer = Math.min(slots, (int) Math.round(slots * percent / 100.0));
+			int current = Math.max(0, hostRegiment.getCurrentSlots());
+			int free = Math.max(0, hostRegiment.getFreeSlots());
+			int paid = Math.max(0, current - free);
+			int transfer = Math.min(paid, (int) Math.round(paid * percent / 100.0));
+			LogManager.civilwar(
+					"REGIMENT host=%s rebels=%s type=%s current=%d free=%d paid=%d percent=%.1f transfer=%d",
+					host.getId(),
+					rebels.getId(),
+					hostRegiment.getId(),
+					current,
+					free,
+					paid,
+					percent,
+					transfer);
 			if (transfer <= 0) {
 				continue;
 			}
-			hostRegiment.setCurrentSlots(slots - transfer);
-			rebelRegiment.setCurrentSlots(Math.max(0, rebelRegiment.getCurrentSlots()) + transfer);
+			hostRegiment.setCurrentSlots(current - transfer);
+			rebelRegiment.setCurrentSlots(transfer);
+			rebelRegiment.setFreeSlots(0);
 			moved.put(hostRegiment.getId(), transfer);
+			LogManager.civilwar(
+					"REGIMENT_AFTER type=%s hostCurrent=%d rebelCurrent=%d rebelFree=%d",
+					hostRegiment.getId(),
+					hostRegiment.getCurrentSlots(),
+					rebelRegiment.getCurrentSlots(),
+					rebelRegiment.getFreeSlots());
 		}
 		return moved;
+	}
+
+	private static void zeroRebelGrant(Military rebelMilitary) {
+		if (rebelMilitary.getRegiments() == null) {
+			return;
+		}
+		for (Regiment rebelRegiment : rebelMilitary.getRegiments()) {
+			if (rebelRegiment == null || rebelRegiment.isLevy()) {
+				continue;
+			}
+			rebelRegiment.setCurrentSlots(0);
+			rebelRegiment.setFreeSlots(0);
+		}
 	}
 
 	public static void rollback(Faction host, Faction rebels, Map<String, Integer> moved) {

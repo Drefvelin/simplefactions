@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
 
+import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
@@ -105,15 +106,37 @@ class BattleNamingServiceTest {
 	}
 
 	@Test
-	void resolveLocation_settlementOverCounty() {
-		Settlement settlement = mock(Settlement.class);
-		when(settlement.getName()).thenReturn("Lanbury");
+	void resolveLocation_countySettlementWhenExactProvinceMisses() {
+		Settlement city = mock(Settlement.class);
+		when(city.getName()).thenReturn("Lanbury");
+		when(city.getCenterProvince()).thenReturn(41);
 
-		BattleNamingService.LocationInfo info =
-				new BattleNamingService.LocationInfo("settlement:Lanbury", "Lanbury");
+		Title county = mock(Title.class);
+		when(county.isComposite()).thenReturn(false);
+		when(county.getProvinces()).thenReturn(List.of(41, 44));
+		when(county.getName()).thenReturn("county_44");
+		when(county.getId()).thenReturn("county_44");
 
-		assertEquals("settlement:Lanbury", info.key());
-		assertEquals("Lanbury", info.displayName());
+		me.Plugins.SimpleFactions.settlement.handler.SettlementHandler handler =
+				mock(me.Plugins.SimpleFactions.settlement.handler.SettlementHandler.class);
+		when(handler.getByProvince(44)).thenReturn(null);
+		when(handler.getAll()).thenReturn(List.of(city));
+
+		Faction faction = mock(Faction.class);
+		when(faction.getSettlementHandler()).thenReturn(handler);
+		when(faction.getInstallationHandler()).thenReturn(null);
+
+		try (org.mockito.MockedStatic<me.Plugins.SimpleFactions.Managers.FactionManager> factions =
+						org.mockito.Mockito.mockStatic(me.Plugins.SimpleFactions.Managers.FactionManager.class);
+				org.mockito.MockedStatic<me.Plugins.SimpleFactions.Loaders.TitleLoader> titles =
+						org.mockito.Mockito.mockStatic(me.Plugins.SimpleFactions.Loaders.TitleLoader.class)) {
+			factions.when(me.Plugins.SimpleFactions.Managers.FactionManager::getCopy).thenReturn(List.of(faction));
+			titles.when(() -> me.Plugins.SimpleFactions.Loaders.TitleLoader.getByProvince(44)).thenReturn(county);
+
+			BattleNamingService.LocationInfo info = BattleNamingService.resolveLocation(44);
+			assertEquals("Lanbury", info.displayName());
+			assertEquals("settlement:Lanbury", info.key());
+		}
 	}
 
 	@Test

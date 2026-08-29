@@ -69,6 +69,9 @@ class FortZocIndexTest {
 
 		assertEquals("fort_old", index.fortForProvince(21).orElseThrow().id());
 		assertEquals("fort_old", index.fortForProvince(20).orElseThrow().id());
+		assertEquals(
+				List.of("fort_old", "fort_young"),
+				index.fortsCovering(21).stream().map(OperationalFort::id).toList());
 	}
 
 	@Test

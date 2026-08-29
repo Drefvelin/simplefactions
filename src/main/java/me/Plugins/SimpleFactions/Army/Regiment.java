@@ -132,6 +132,14 @@ public class Regiment {
 		return freeSlots;
 	}
 
+	public void setFreeSlots(int i) {
+		freeSlots = Math.max(0, i);
+	}
+
+	public int getPaidSlots() {
+		return Math.max(0, currentSlots - freeSlots);
+	}
+
 	public double getUpkeep() {
 		return upkeep;
 	}

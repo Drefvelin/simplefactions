@@ -5,11 +5,18 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
+import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
+import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
+import me.Plugins.SimpleFactions.War.campaign.zoc.FortControlService;
+import me.Plugins.SimpleFactions.War.campaign.zoc.FortZocIndex;
+import me.Plugins.SimpleFactions.War.campaign.zoc.FortZocIndex.OperationalFort;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.pathfinder.BelligerentTerritory;
 import me.Plugins.SimpleFactions.War.pathfinder.ProvinceOwnerLookup;
@@ -18,10 +25,23 @@ import me.Plugins.SimpleFactions.installation.WartimeInstallationService;
 public class OccupationService {
 	private final ProvinceManager provinceManager;
 	private final ProvinceOwnerLookup owners;
+	private final FortZocIndex fortIndex;
 
 	public OccupationService(ProvinceManager provinceManager, ProvinceOwnerLookup owners) {
+		this(provinceManager, owners, null);
+	}
+
+	public OccupationService(
+			ProvinceManager provinceManager,
+			ProvinceOwnerLookup owners,
+			FortZocIndex fortIndex) {
 		this.provinceManager = provinceManager;
 		this.owners = owners;
+		this.fortIndex = fortIndex;
+	}
+
+	private FortZocIndex forts() {
+		return fortIndex != null ? fortIndex : FortZocIndex.fromGameState();
 	}
 
 	public OccupationZone computeOccupationZone(War war, int battleProvinceId, BelligerentRole winner) {
@@ -38,9 +58,10 @@ public class OccupationService {
 			return OccupationZone.of(zone);
 		}
 
+		FortZocIndex forts = forts();
 		List<Integer> neighbors = new ArrayList<>();
 		for (int neighborId : battleProvince.getNeighbours()) {
-			if (qualifiesNeighbor(war, battleProvinceId, neighborId, winner, territory)) {
+			if (qualifiesNeighbor(war, battleProvinceId, neighborId, winner, territory, forts)) {
 				neighbors.add(neighborId);
 			}
 		}
@@ -77,6 +98,7 @@ public class OccupationService {
 			war.setLastBattleOccupied(unionOccupied(stripped, newlyAdded));
 		}
 		WartimeInstallationService.occupyLastBattle(war, winner);
+		FactionManager.getMap().enqueueOccupationFromWar(war);
 		return true;
 	}
 
@@ -86,7 +108,29 @@ public class OccupationService {
 			int neighborId,
 			BelligerentRole winner,
 			BelligerentTerritory territory) {
+		return qualifiesNeighbor(
+				war,
+				battleProvinceId,
+				neighborId,
+				winner,
+				territory,
+				FortZocIndex.fromGameState());
+	}
+
+	static boolean qualifiesNeighbor(
+			War war,
+			int battleProvinceId,
+			int neighborId,
+			BelligerentRole winner,
+			BelligerentTerritory territory,
+			FortZocIndex forts) {
 		if (neighborId == battleProvinceId) {
+			return false;
+		}
+		if (isUpcomingUnfoughtSlot(war, neighborId, battleProvinceId)) {
+			return false;
+		}
+		if (blockedByUntakenEnemyFortZoc(war, neighborId, battleProvinceId, winner, forts)) {
 			return false;
 		}
 		if (isOnCampaignLine(war, neighborId)) {
@@ -97,6 +141,54 @@ public class OccupationService {
 		}
 		if (Cache.warOccupationIncludeEnemyNeighbors && isEnemyOwned(neighborId, winner, territory)) {
 			return true;
+		}
+		return false;
+	}
+
+	private static boolean isUpcomingUnfoughtSlot(War war, int provinceId, int battleProvinceId) {
+		if (war == null || !CampaignScheduleService.hasActiveSchedule(war)) {
+			return false;
+		}
+		List<ScheduledCampaignBattle> schedule = CampaignScheduleService.scheduleListForLeg(
+				war,
+				CampaignScheduleService.activeLeg(war));
+		int fromIndex = Math.max(0, CampaignScheduleService.getActiveScheduleIndex(war));
+		for (int index = fromIndex; index < schedule.size(); index++) {
+			ScheduledCampaignBattle slot = schedule.get(index);
+			if (slotMatchesBattle(slot, battleProvinceId)) {
+				continue;
+			}
+			return slot.provinceId() == provinceId
+					|| Objects.equals(slot.chronologyProvinceId(), provinceId);
+		}
+		return false;
+	}
+
+	private static boolean slotMatchesBattle(ScheduledCampaignBattle slot, int battleProvinceId) {
+		return slot.provinceId() == battleProvinceId
+				|| Objects.equals(slot.chronologyProvinceId(), battleProvinceId);
+	}
+
+	private static boolean blockedByUntakenEnemyFortZoc(
+			War war,
+			int provinceId,
+			int battleProvinceId,
+			BelligerentRole winner,
+			FortZocIndex forts) {
+		if (provinceId == battleProvinceId || forts == null) {
+			return false;
+		}
+		CampaignCoalition advancing = winner == BelligerentRole.ATTACKER
+				? CampaignCoalition.AGGRESSOR
+				: CampaignCoalition.DEFENDER;
+		List<OperationalFort> covering = forts.fortsCovering(provinceId);
+		if (covering.isEmpty()) {
+			return false;
+		}
+		for (OperationalFort fort : covering) {
+			if (FortControlService.isEnemyControlled(war, fort.id(), advancing)) {
+				return true;
+			}
 		}
 		return false;
 	}

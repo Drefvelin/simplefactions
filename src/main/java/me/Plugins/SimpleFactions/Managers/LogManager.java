@@ -16,7 +16,8 @@ import java.util.logging.Logger;
 
 /**
  * Buffered debug log written to {@code logs/log.txt} in the plugin data folder.
- * Relation events go to {@code logs/relations.log}. Both use {@code logging} / {@code wipe-log}.
+ * Domain files: {@code relations.log}, {@code movement.log}, {@code civilwar.log}, {@code war.log}.
+ * All files under {@code logs/} are deleted when {@code wipe-log} is true.
  */
 public final class LogManager {
 	private static final Logger LOGGER = Logger.getLogger(LogManager.class.getName());
@@ -25,10 +26,16 @@ public final class LogManager {
 	static final String LOG_DIRECTORY = "logs";
 	static final String LOG_FILE_NAME = "log.txt";
 	static final String RELATIONS_LOG_FILE_NAME = "relations.log";
+	static final String MOVEMENT_LOG_FILE_NAME = "movement.log";
+	static final String CIVILWAR_LOG_FILE_NAME = "civilwar.log";
+	static final String WAR_LOG_FILE_NAME = "war.log";
 
 	private static volatile boolean enabled;
 	private static volatile Path logFile;
 	private static volatile Path relationsLogFile;
+	private static volatile Path movementLogFile;
+	private static volatile Path civilwarLogFile;
+	private static volatile Path warLogFile;
 	private static final Object LOCK = new Object();
 	private static final List<String> sessionLines = new ArrayList<>();
 
@@ -41,10 +48,16 @@ public final class LogManager {
 			Path logDir = dataFolder.toPath().resolve(LOG_DIRECTORY);
 			logFile = logDir.resolve(LOG_FILE_NAME);
 			relationsLogFile = logDir.resolve(RELATIONS_LOG_FILE_NAME);
+			movementLogFile = logDir.resolve(MOVEMENT_LOG_FILE_NAME);
+			civilwarLogFile = logDir.resolve(CIVILWAR_LOG_FILE_NAME);
+			warLogFile = logDir.resolve(WAR_LOG_FILE_NAME);
 		}
 		if (wipeLog) {
 			wipeLogFile();
 			wipeRelationsLogFile();
+			deleteLog(movementLogFile, MOVEMENT_LOG_FILE_NAME);
+			deleteLog(civilwarLogFile, CIVILWAR_LOG_FILE_NAME);
+			deleteLog(warLogFile, WAR_LOG_FILE_NAME);
 		}
 	}
 
@@ -120,7 +133,7 @@ public final class LogManager {
 		writeLines(logFile, List.of(SESSION_TIME.format(Instant.now()) + " " + message), false);
 	}
 
-	/** Immediate line in {@code logs/relations.log}. Same {@code logging} / {@code wipe-log} flags as log.txt. */
+	/** Immediate line in {@code logs/relations.log}. Same {@code logging} / {@code wipe-log} as other log files. */
 	public static void relations(String message) {
 		if (!enabled || message == null || relationsLogFile == null) {
 			return;
@@ -133,6 +146,46 @@ public final class LogManager {
 			return;
 		}
 		relations(String.format(format, args));
+	}
+
+	public static void movement(String message) {
+		appendDomain(movementLogFile, message);
+	}
+
+	public static void movement(String format, Object... args) {
+		if (!enabled) {
+			return;
+		}
+		movement(String.format(format, args));
+	}
+
+	public static void civilwar(String message) {
+		appendDomain(civilwarLogFile, message);
+	}
+
+	public static void civilwar(String format, Object... args) {
+		if (!enabled) {
+			return;
+		}
+		civilwar(String.format(format, args));
+	}
+
+	public static void war(String message) {
+		appendDomain(warLogFile, message);
+	}
+
+	public static void war(String format, Object... args) {
+		if (!enabled) {
+			return;
+		}
+		war(String.format(format, args));
+	}
+
+	private static void appendDomain(Path file, String message) {
+		if (!enabled || message == null || file == null) {
+			return;
+		}
+		writeLines(file, List.of(SESSION_TIME.format(Instant.now()) + " " + message), false);
 	}
 
 	public static void flush() {

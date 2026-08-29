@@ -2,11 +2,15 @@ package me.Plugins.SimpleFactions.War.civilwar;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
+import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public final class CivilWarTempRebelFactory {
+	static final String MUTED_RED_RGB = "138,48,48";
+
 	private CivilWarTempRebelFactory() {}
 
 	public static Faction create(Faction host, String leaderName) {
@@ -15,14 +19,7 @@ public final class CivilWarTempRebelFactory {
 		}
 		String id = uniqueId(host);
 		Faction rebels = new Faction(id, leaderName);
-		rebels.setName(plainName(host) + " Rebels");
-		if (host.getRGB() != null) {
-			String rgb = RandomRGB.similarButDistinct(host.getRGB());
-			while (!RandomRGB.isFree(rgb)) {
-				rgb = RandomRGB.similarButDistinct(host.getRGB());
-			}
-			rebels.setRGB(rgb);
-		}
+		applyRebelIdentity(rebels, host);
 		FactionManager.addFaction(rebels);
 		return rebels;
 	}
@@ -36,9 +33,34 @@ public final class CivilWarTempRebelFactory {
 			oldHost.getGuildHandler().removeGuild(main.getId());
 		}
 		Faction rebels = new Faction(main);
-		rebels.setName(plainName(host) + " Rebels");
+		applyRebelIdentity(rebels, host);
 		FactionManager.addFaction(rebels);
 		return rebels;
+	}
+
+	static void applyRebelIdentity(Faction rebels, Faction host) {
+		if (rebels == null) {
+			return;
+		}
+		rebels.setName(StringFormatter.formatHex(Formatter.formatName(plainName(host) + " Rebels")));
+		rebels.setRGB(uniqueMutedRed());
+		LogManager.civilwar(
+				"REBEL_FACTORY id=%s name=%s rgb=%s host=%s",
+				rebels.getId(),
+				Formatter.formatId(rebels.getName()),
+				rebels.getRGB(),
+				host != null ? host.getId() : "-");
+	}
+
+	static String uniqueMutedRed() {
+		String rgb = MUTED_RED_RGB;
+		int offset = 0;
+		while (!RandomRGB.isFree(rgb) && offset < 80) {
+			offset++;
+			int green = Math.min(255, 48 + offset);
+			rgb = "138," + green + ",48";
+		}
+		return rgb;
 	}
 
 	static String uniqueId(Faction host) {

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import com.google.gson.Gson;
 
+import me.Plugins.SimpleFactions.Database.CivilWarMemberMoveData;
 import me.Plugins.SimpleFactions.Database.CommitmentData;
 import me.Plugins.SimpleFactions.Database.WarData;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
@@ -77,5 +78,23 @@ class WarDataRoundTripTest {
 		assertEquals(Integer.valueOf(7), Integer.valueOf(restored.commitments.get(0).count));
 		assertEquals("subject_a", restored.commitments.get(1).sourceFactionId);
 		assertEquals(Integer.valueOf(4), Integer.valueOf(restored.commitments.get(1).count));
+	}
+
+	@Test
+	void warData_gsonRoundTrip_preservesCivilWarMemberMoves() {
+		WarData original = new WarData();
+		original.civilWarWantedLeaderName = "dummy_11";
+		CivilWarMemberMoveData row = new CivilWarMemberMoveData();
+		row.player = "dummy_11";
+		row.originGuildId = "guild-a";
+		row.originWasGuildLeader = true;
+		original.civilWarMemberMoves = new java.util.ArrayList<>(List.of(row));
+
+		WarData restored = GSON.fromJson(GSON.toJson(original), WarData.class);
+
+		assertEquals("dummy_11", restored.civilWarWantedLeaderName);
+		assertEquals(1, restored.civilWarMemberMoves.size());
+		assertEquals("guild-a", restored.civilWarMemberMoves.get(0).originGuildId);
+		assertTrue(restored.civilWarMemberMoves.get(0).originWasGuildLeader);
 	}
 }

@@ -18,6 +18,8 @@ import com.google.gson.JsonParser;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
+import me.Plugins.SimpleFactions.Managers.WarManager;
+import me.Plugins.SimpleFactions.Map.export.OccupationMapExport;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Map.Provinces.ProvinceDataEntry;
 import me.Plugins.SimpleFactions.SimpleFactions;
@@ -72,12 +74,17 @@ public class Compiler {
 		JsonArray arr = new JsonArray();
 
 		ProvinceManager pm = SimpleFactions.getInstance().getProvinceManager();
+		Map<Integer, String> occupiedBy = OccupationMapExport.occupierByProvince(WarManager.getActive());
 
 		for (Province p : pm.getProvinces()) {
 			JsonObject o = new JsonObject();
 
 			o.addProperty("id", p.getId());
 			o.addProperty("prosperity", p.getProsperity());
+			String occupierId = occupiedBy.get(p.getId());
+			if (occupierId != null) {
+				o.addProperty("occupied_by", occupierId);
+			}
 
 			// trade data
 			JsonObject trade = new JsonObject();

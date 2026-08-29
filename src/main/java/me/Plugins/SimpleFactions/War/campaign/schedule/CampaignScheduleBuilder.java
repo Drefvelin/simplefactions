@@ -102,18 +102,18 @@ public final class CampaignScheduleBuilder {
 		OperationalFort borderFort = fortIndex.fortForProvince(borderProvinceId).orElse(null);
 		boolean enemyBorderFort = borderFort != null
 				&& FortControlService.isEnemyControlled(war, borderFort.id(), CampaignCoalition.AGGRESSOR);
-		boolean borderIsFortHome = enemyBorderFort && borderFort.province() == borderProvinceId;
 		boolean fortHomeOffAxis = enemyBorderFort && axis.indexOf(borderFort.province()) < 0;
 		boolean borderIsObjective = objectiveIndex >= 0
 				&& objectiveIndex < axis.size()
 				&& axis.get(objectiveIndex) == borderProvinceId;
-		if ((borderIsFortHome || fortHomeOffAxis) && !borderIsObjective) {
+		if (enemyBorderFort) {
 			LogManager.line(
-					"Phase 1: border province %d covered by fort %s home=%d offAxis=%s; siege replaces BORDER field",
+					"Phase 1: border province %d covered by fort %s home=%d offAxis=%s objectiveBorder=%s; siege first",
 					borderProvinceId,
 					borderFort.id(),
 					borderFort.province(),
-					fortHomeOffAxis);
+					fortHomeOffAxis,
+					borderIsObjective);
 			CampaignBattlePlacer.placeBattle(
 					ctx,
 					war,
@@ -123,7 +123,8 @@ public final class CampaignScheduleBuilder {
 					CampaignCoalition.AGGRESSOR,
 					borderFort.id(),
 					null);
-		} else {
+		}
+		if (!enemyBorderFort || borderIsObjective) {
 			CampaignBattlePlacer.placeBattle(
 					ctx,
 					war,
@@ -133,17 +134,6 @@ public final class CampaignScheduleBuilder {
 					CampaignCoalition.AGGRESSOR,
 					null,
 					null);
-			if (enemyBorderFort) {
-				CampaignBattlePlacer.placeBattle(
-						ctx,
-						war,
-						ScheduleLeg.INVASION,
-						borderProvinceId,
-						BattleTrigger.FORT_ZOC,
-						CampaignCoalition.AGGRESSOR,
-						borderFort.id(),
-						null);
-			}
 		}
 
 		// Phase 2: invasion land walk

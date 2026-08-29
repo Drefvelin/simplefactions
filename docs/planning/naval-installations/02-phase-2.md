@@ -21,14 +21,14 @@ A movement sometimes creates a temporary `"<faction name> Rebels"` faction. That
 
 | Movement leader | Host supporting guilds | Supporting vassals |
 |-----------------|------------------------|--------------------|
-| In a **host** rebel guild | Merge into temp rebels | Subjects of the rebel faction; nested vassals stay under their overlord |
+| In a **host** rebel guild | Merge into temp rebels | **Direct** supporting vassals become wartime subjects of the temp rebels (same type as under the host) and stay extra main attackers. Nested vassals stay under their overlord and are not extra mains. |
 | Not in a host rebel guild (typically a vassal) | Temp faction only if some host guilds rebel | Independent wartime; still attacker main participants; nested stay under them |
 
 Pure vassal independence with no host rebel guilds: **no** temp faction and **no** overlord land split. Snapshot old subject type; `endVassalage` is wartime map only; lasting independence is apply after restore.
 
 Foreign backers: allies of the rebel war leader (existing call-to-arms). They do not enter the land split.
 
-War leader: movement leader's faction (temp rebels or the leading vassal). Other attacker vassals are extra main participants, not flattened into one nation.
+War leader: movement leader's faction (temp rebels or the leading vassal). Direct supporting vassals of the host are extra main participants (not flattened into one nation). Nested vassals are not extra mains.
 
 ---
 
@@ -42,7 +42,9 @@ Rebel main guild, in order:
 2. Else the strongest rebelling host guild (trade power).
 3. Else a **generated** main guild on the temp faction. Citizen supporters (`Member.MEMBER`) with no guild to follow move into it. Movement leader is faction leader of that guild.
 
-`CHANGE_LEADER` target who is in the host main guild: move them into the rebel main guild and set them as **temp** faction leader. After restore, `CoupService` makes them real if the rebels won.
+`CHANGE_LEADER` wanted leader must pass `canBecomeLeader` (host member who is not the sitting faction leader and does not lead a guild). They become temp rebel faction leader and are pulled from **any host guild** (main or regional) they belong to. Cause leaders pick a target by request: the candidate must be **online** and confirm with `/faction accept`. Offline pick is blocked. Staff `/movement admin target <id> <causeIndex> <player>` sets the target with no handshake (dummies / solo). Snapshot origin guild (and whether they led it). On restore, put them back there unless the rebels **won**, in which case the wanted leader goes to the host main guild and `CoupService` runs after restore.
+
+Citizen supporters in the host main guild are also snapshotted and returned to origin.
 
 ---
 

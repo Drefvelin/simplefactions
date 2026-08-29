@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -67,6 +68,7 @@ public class ElectionCreator {
     public ItemStack createCandidateItem(Faction f, Candidate candidateType, String candidateName) {
         ItemStack item = new ItemStack(org.bukkit.Material.PLAYER_HEAD);
         SkullMeta skull = (SkullMeta) item.getItemMeta();
+        skull.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
         skull.setOwningPlayer(org.bukkit.Bukkit.getOfflinePlayer(candidateName));
         skull.setDisplayName(StringFormatter.formatHex("#84c468" + candidateName));
         List<String> lore = new ArrayList<>();

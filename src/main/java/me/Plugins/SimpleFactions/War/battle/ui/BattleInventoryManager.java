@@ -71,10 +71,15 @@ public class BattleInventoryManager {
 	}
 	public void battleList(Player player) {
 		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Battle List");
-		for(int y = 0; y<BattleManager.get().size();y++) {
+		populateBattleList(i);
+		player.openInventory(i);
+	}
+
+	public void populateBattleList(Inventory i) {
+		i.clear();
+		for (int y = 0; y < BattleManager.get().size(); y++) {
 			i.setItem(y, createBattleItem(BattleManager.get().get(y)));
 		}
-		player.openInventory(i);
 	}
 	public void spawnList(Player player, Battle b) {
 		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Respawn Points");

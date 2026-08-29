@@ -61,6 +61,22 @@ class LogManagerTest {
 	}
 
 	@Test
+	void configure_wipeLog_deletesDomainLogs() throws Exception {
+		Path movementFile = tempDir.resolve("logs").resolve("movement.log");
+		Path civilwarFile = tempDir.resolve("logs").resolve("civilwar.log");
+		Path warFile = tempDir.resolve("logs").resolve("war.log");
+		Files.createDirectories(movementFile.getParent());
+		Files.writeString(movementFile, "old movement");
+		Files.writeString(civilwarFile, "old civilwar");
+		Files.writeString(warFile, "old war");
+		LogManager.configure(false, true, tempDir.toFile());
+
+		assertEquals(false, Files.exists(movementFile));
+		assertEquals(false, Files.exists(civilwarFile));
+		assertEquals(false, Files.exists(warFile));
+	}
+
+	@Test
 	void relations_writesImmediatelyWhenEnabled() throws Exception {
 		LogManager.configure(true, false, tempDir.toFile());
 		LogManager.relations("Lantan -> Invaders subject");
@@ -75,5 +91,17 @@ class LogManagerTest {
 		LogManager.relations("should-not-write");
 
 		assertEquals(false, Files.exists(tempDir.resolve("logs").resolve("relations.log")));
+	}
+
+	@Test
+	void domainLogs_writeImmediatelyWhenEnabled() throws Exception {
+		LogManager.configure(true, false, tempDir.toFile());
+		LogManager.movement("movementId=m1 created");
+		LogManager.civilwar("movementId=m1 split");
+		LogManager.war("warId=9 declared");
+
+		assertTrue(Files.readString(tempDir.resolve("logs").resolve("movement.log")).contains("movementId=m1"));
+		assertTrue(Files.readString(tempDir.resolve("logs").resolve("civilwar.log")).contains("split"));
+		assertTrue(Files.readString(tempDir.resolve("logs").resolve("war.log")).contains("warId=9"));
 	}
 }

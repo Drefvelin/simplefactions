@@ -185,6 +185,7 @@ public class TabCompletion implements TabCompleter{
 					completions.add("settreaty");
 					completions.add("setpower");
 					completions.add("setlaw");
+					completions.add("setstance");
 					completions.add("usurp");
 					completions.add("startelection");
 					completions.add("endelection");
@@ -581,6 +582,27 @@ public class TabCompletion implements TabCompleter{
 							completions.add(lawId);
 						}
 					}
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("setstance")){
+				if(sender instanceof Player){
+					List<String> completions = new ArrayList<String>();
+					for(Guild g : FactionManager.getAllGuilds()) {
+						completions.add(g.getId());
+					}
+					for(Faction f : FactionManager.factions) {
+						if(!completions.contains(f.getId())) {
+							completions.add(f.getId());
+						}
+					}
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("setstance")){
+				if(sender instanceof Player){
+					List<String> completions = new ArrayList<String>();
+					completions.add("oppose");
+					completions.add("neutral");
+					completions.add("support");
 					return completions;
 				}
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("usurp")){

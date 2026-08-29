@@ -55,16 +55,28 @@ public class FactionView {
 	}
 	
 	public void factionList(Player player) {
+		factionList(player, null);
+	}
+
+	public void factionList(Player player, Inventory inv) {
 		currentRanking.putIfAbsent(player, RankType.PRESTIGE);
 		currentPage.putIfAbsent(player, 0);
+		boolean open = inv == null;
+		if(open) inv = SimpleFactions.plugin.getServer()
+				.createInventory(new SFInventoryHolder(null, SFGUI.FACTION_LIST), INVENTORY_SIZE, "§7Faction List");
+		populateFactionList(inv, player);
+		if(open) player.openInventory(inv);
+	}
 
+	public void populateFactionList(Inventory inv, Player player) {
+		currentRanking.putIfAbsent(player, RankType.PRESTIGE);
+		currentPage.putIfAbsent(player, 0);
 		RankType rankType = currentRanking.get(player);
 		int page = currentPage.get(player);
 
 		List<Faction> factions = r.getRankedList(rankType);
 		Collections.reverse(factions);
 
-		// Build list of usable slots
 		List<Integer> usableSlots = new ArrayList<>();
 		for (int i = 0; i < INVENTORY_SIZE; i++) {
 			if (!RESERVED_SLOTS.contains(i)) {
@@ -72,36 +84,35 @@ public class FactionView {
 			}
 		}
 
+		inv.clear();
 		int factionsPerPage = usableSlots.size();
 		int startIndex = page * factionsPerPage;
 		int endIndex = Math.min(startIndex + factionsPerPage, factions.size());
 
-		Inventory inv = SimpleFactions.plugin.getServer()
-				.createInventory(new SFInventoryHolder(null, SFGUI.FACTION_LIST), INVENTORY_SIZE, "§7Faction List");
-
-		// Populate factions
 		for (int i = startIndex; i < endIndex; i++) {
 			Faction f = factions.get(i);
 			int slot = usableSlots.get(i - startIndex);
 			inv.setItem(slot, creator.createListItem(player, f));
 		}
 
-		// Rank toggle button
 		inv.setItem(8, DefaultCreator.createRankButton(rankType));
 
-		// Page buttons
 		if (page > 0) {
 			inv.setItem(PREV_PAGE_SLOT, DefaultCreator.createPreviousPageButton());
 		}
-
 		if (endIndex < factions.size()) {
 			inv.setItem(NEXT_PAGE_SLOT, DefaultCreator.createNextPageButton());
 		}
-
-		player.openInventory(inv);
 	}
+
 	public void factionView(Player player, Faction f) {
-		Inventory i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.FACTION_VIEW), 54, "§7Faction View");
+		factionView(player, f, null);
+	}
+
+	public void factionView(Player player, Faction f, Inventory i) {
+		boolean open = i == null;
+		if(open) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.FACTION_VIEW), 54, "§7Faction View");
+		i.clear();
 		if(f.getMembers().contains(player.getName())) i.setItem(1, creator.createMenuItem(player, f, MenuItemType.BANNER_GET));
 		i.setItem(10, creator.createMenuItem(player, f, MenuItemType.BANNER));
 		if(f.getLeader().equalsIgnoreCase(player.getName())) i.setItem(19, creator.createMenuItem(player, f, MenuItemType.BANNER_RANDOM));
@@ -119,8 +130,8 @@ public class FactionView {
 		i.setItem(32, creator.createMenuItem(player, f, MenuItemType.INSTALLATIONS));
 		i.setItem(33, creator.createMenuItem(player, f, MenuItemType.TIER));
 		i.setItem(34, creator.createMenuItem(player, f, MenuItemType.TITLES));
-		i.setItem(53, inv.createBackButton(SFGUI.FACTION_VIEW));
-		player.openInventory(i);
+		i.setItem(53, this.inv.createBackButton(SFGUI.FACTION_VIEW));
+		if(open) player.openInventory(i);
 	}
 	
 	public void clickPreventions(InventoryClickEvent e, Inventory inventory, Player p) {

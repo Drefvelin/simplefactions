@@ -27,6 +27,7 @@ import me.Plugins.SimpleFactions.Database.StabilityModifierData;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.PoliticalActionLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Wealth;
@@ -153,6 +154,11 @@ public class Government {
         }
         Movement movement = new Movement(f, leader, cause);
         movements.add(movement);
+        LogManager.movement(
+                "CREATE movementId=%s faction=%s leader=%s",
+                movement.getId(),
+                f != null ? f.getId() : "-",
+                leader);
     }
 
     public void endMovement(Movement movement) {

@@ -9,7 +9,6 @@ import org.bukkit.Material;
 import java.util.ArrayList;
 import java.util.List;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
-import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.EconomicImpact;
 import me.Plugins.SimpleFactions.laws.LawGroup;
@@ -64,10 +63,8 @@ public class Proposal {
         if (target == null) return false;
         // For CHANGE_LEADER, target must be a current member of the faction
         if (isPoliticalActionProposal() && action.getAction() == Action.CHANGE_LEADER) {
-            if(!gov.getFaction().isMember(target)) return false;
-            if(gov.getFaction().isLeader(target)) return false; // Can't target current leader
-            if(FactionManager.getGuildByLeader(target) != null) return false; // Can't be leader if they lead a guild
-            return true;
+            Faction faction = gov.getFaction();
+            return faction != null && faction.canBecomeLeader(target);
         }
         return false;
     }

@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 import me.Plugins.SimpleFactions.Army.Military;
@@ -25,9 +26,11 @@ import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
+import me.Plugins.SimpleFactions.Map.MapSystem;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.GuildHandler;
 import me.Plugins.SimpleFactions.War.core.War;
@@ -147,6 +150,93 @@ class CivilWarStartServiceTest {
 	}
 
 	@Test
+	void hostGuildRebels_foldsDirectVassalUnderTempRebels_skipsNestedExtraMain() {
+		Movement movement = baseMovement(Action.CHANGE_LEADER, Member.GUILD_LEADER);
+		Faction host = movement.getFaction();
+		when(host.getProvinces()).thenReturn(new ArrayList<>(List.of(1, 2)));
+		when(host.getCapital()).thenReturn(1);
+		GuildHandler hostGuilds = mock(GuildHandler.class);
+		when(host.getGuildHandler()).thenReturn(hostGuilds);
+		Guild rebelGuild = mock(Guild.class);
+		when(rebelGuild.getId()).thenReturn("guild-a");
+		when(rebelGuild.isBase()).thenReturn(false);
+		when(rebelGuild.getFaction()).thenReturn(host);
+		when(rebelGuild.isMember("Alice")).thenReturn(true);
+		when(rebelGuild.hasCapital()).thenReturn(false);
+		when(hostGuilds.getGuilds()).thenReturn(List.of(rebelGuild));
+		when(movement.getAllSupportingGuilds()).thenReturn(List.of(rebelGuild));
+		when(movement.getLeader()).thenReturn("Alice");
+		when(movement.getId()).thenReturn("mov-fold");
+		when(movement.getSupporters()).thenReturn(new Pool());
+		Cause cause = movement.getCauses().get(0);
+		Proposal proposal = cause.getProposal();
+		when(proposal.hasTarget()).thenReturn(false);
+
+		Faction vassal = mock(Faction.class);
+		when(vassal.getId()).thenReturn("vassal");
+		Faction nested = mock(Faction.class);
+		when(nested.getId()).thenReturn("nested");
+		Relation vassalRelation = relation("vassal_type", true, false);
+		RelationType vassalType = vassalRelation.getType();
+		when(host.getRelation("vassal")).thenReturn(vassalRelation);
+		when(movement.getAllSupportingFactions()).thenReturn(List.of(vassal, nested));
+
+		Faction rebels = mock(Faction.class);
+		when(rebels.getId()).thenReturn("host_rebels");
+		InstallationHandler hostHandler = new InstallationHandler(host);
+		InstallationHandler rebelHandler = new InstallationHandler(rebels);
+		when(host.getInstallationHandler()).thenReturn(hostHandler);
+		when(rebels.getInstallationHandler()).thenReturn(rebelHandler);
+		when(rebels.getOrCreateMainGuild()).thenReturn(mock(Guild.class));
+		hostHandler.acceptTransferred(new Installation("port-1", "Harbour", InstallationKind.PORT, 2, 0, 0, 1L));
+
+		War war = mock(War.class);
+		when(war.getMovementId()).thenReturn("mov-fold");
+
+		try (MockedStatic<CivilWarSeaPortGate> gate = mockStatic(CivilWarSeaPortGate.class);
+				MockedStatic<CivilWarTempRebelFactory> factory = mockStatic(CivilWarTempRebelFactory.class);
+				MockedStatic<WarManager> wars = mockStatic(WarManager.class);
+				MockedStatic<RelationManager> relations = mockStatic(RelationManager.class);
+				MockedStatic<FactionManager> factions = mockStatic(FactionManager.class);
+				MockedStatic<RelationLoader> types = mockStatic(RelationLoader.class);
+				MockedStatic<me.Plugins.SimpleFactions.Loaders.GuildLoader> guildLoader =
+						mockStatic(me.Plugins.SimpleFactions.Loaders.GuildLoader.class)) {
+			guildLoader.when(me.Plugins.SimpleFactions.Loaders.GuildLoader::getBaseType).thenReturn(null);
+			gate.when(() -> CivilWarSeaPortGate.rebelsWouldHaveRequiredPort(eq(host), any()))
+					.thenReturn(true);
+			factory.when(() -> CivilWarTempRebelFactory.createFromMainGuild(eq(host), eq(rebelGuild), eq("Alice")))
+					.thenReturn(rebels);
+			relations.when(() -> RelationManager.getOverlord(vassal)).thenReturn("host");
+			relations.when(() -> RelationManager.getOverlord(nested)).thenReturn("vassal");
+			relations.when(() -> RelationManager.endVassalage(eq(vassal), eq(host), eq(false))).thenReturn(true);
+			factions.when(FactionManager::getMap).thenReturn(mock(MapSystem.class));
+			factions.when(() -> FactionManager.getByString("vassal")).thenReturn(vassal);
+			factions.when(() -> FactionManager.getByString("host_rebels")).thenReturn(rebels);
+			types.when(() -> RelationLoader.getType("vassal_type")).thenReturn(vassalType);
+			@SuppressWarnings("unchecked")
+			ArgumentCaptor<List<Faction>> extras = ArgumentCaptor.forClass(List.class);
+			wars.when(() -> WarManager.startCivilWar(
+					eq(rebels),
+					eq(host),
+					eq(WarGoalType.OVERTHROW),
+					eq("mov-fold"),
+					extras.capture(),
+					any(),
+					any())).thenReturn(war);
+
+			String error = CivilWarStartService.start(movement);
+
+			assertNull(error);
+			relations.verify(() -> RelationManager.setRelationForced(
+					eq(vassalType),
+					eq(vassal),
+					eq(rebels)));
+			relations.verify(() -> RelationManager.endVassalage(eq(nested), any(), anyBoolean()), never());
+			assertEquals(List.of(vassal), extras.getValue());
+		}
+	}
+
+	@Test
 	void pureVassal_noTempFactionNoHostLandMoved() {
 		Movement movement = baseMovement(Action.CHANGE_LEADER, Member.VASSAL_LEADER);
 		Faction host = movement.getFaction();
@@ -154,8 +244,10 @@ class CivilWarStartServiceTest {
 		when(movement.getAllSupportingGuilds()).thenReturn(List.of());
 		Faction vassal = mock(Faction.class);
 		when(vassal.getId()).thenReturn("vassal");
-		Relation vassalRelation = relation("vassal_type");
-		when(vassal.getRelation("host")).thenReturn(vassalRelation);
+		Relation vassalRelation = relation("vassal_type", true, false);
+		when(host.getRelation("vassal")).thenReturn(vassalRelation);
+		Relation overlordRelation = relation("overlord", false, true);
+		when(vassal.getRelation("host")).thenReturn(overlordRelation);
 		when(movement.getAllSupportingFactions()).thenReturn(List.of(vassal));
 		when(movement.getLeader()).thenReturn("Alice");
 		when(movement.getId()).thenReturn("mov-2");
@@ -169,6 +261,8 @@ class CivilWarStartServiceTest {
 				MockedStatic<FactionManager> factions = mockStatic(FactionManager.class);
 				MockedStatic<CivilWarTempRebelFactory> factory = mockStatic(CivilWarTempRebelFactory.class)) {
 			factions.when(() -> FactionManager.getByMember("Alice")).thenReturn(vassal);
+			relations.when(() -> RelationManager.getOverlord(vassal)).thenReturn("host");
+			ArgumentCaptor<CivilWarSnapshot> snapshot = ArgumentCaptor.forClass(CivilWarSnapshot.class);
 			wars.when(() -> WarManager.startCivilWar(
 					eq(vassal),
 					eq(host),
@@ -176,7 +270,7 @@ class CivilWarStartServiceTest {
 					eq("mov-2"),
 					any(),
 					any(),
-					any())).thenReturn(war);
+					snapshot.capture())).thenReturn(war);
 			relations.when(() -> RelationManager.endVassalage(eq(vassal), eq(host), eq(false))).thenReturn(true);
 
 			String error = CivilWarStartService.start(movement);
@@ -186,6 +280,7 @@ class CivilWarStartServiceTest {
 			factory.verifyNoInteractions();
 			verify(host, never()).removeProvince(anyInt(), anyBoolean());
 			verify(host, never()).addProvince(anyInt());
+			assertEquals("vassal_type", snapshot.getValue().getWartimeVassalEnds().get(0).relationTypeId());
 		}
 	}
 
@@ -338,10 +433,12 @@ class CivilWarStartServiceTest {
 		return regiment;
 	}
 
-	private static Relation relation(String typeId) {
+	private static Relation relation(String typeId, boolean vassalage, boolean overlord) {
 		Relation relation = mock(Relation.class);
 		RelationType type = mock(RelationType.class);
 		when(type.getId()).thenReturn(typeId);
+		when(type.isVassalage()).thenReturn(vassalage);
+		when(type.isOverlord()).thenReturn(overlord);
 		when(relation.getType()).thenReturn(type);
 		return relation;
 	}

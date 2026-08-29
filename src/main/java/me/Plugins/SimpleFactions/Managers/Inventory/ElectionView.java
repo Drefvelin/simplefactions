@@ -33,7 +33,13 @@ public class ElectionView {
 	}
 
     public void electionView(Player p, Faction f) {
-        Inventory i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.ELECTION_VIEW), 9, "§7Election View");
+        electionView(p, f, null);
+    }
+
+    public void electionView(Player p, Faction f, Inventory i) {
+        boolean open = i == null;
+        if(open) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.ELECTION_VIEW), 9, "§7Election View");
+        i.clear();
 		Government gov = f.getGovernment();
         int x = 0;
 		for(Candidate c : Candidate.values()) {
@@ -42,22 +48,26 @@ public class ElectionView {
                 x++;
             }
         }
-		p.openInventory(i);
+        if(open) p.openInventory(i);
     }
 
     public void votingView(Player p, Faction f, Candidate candidateType) {
-        Inventory i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.ELECTION_VOTING_VIEW), 54, "§7Vote for " + candidateType.getName());
+        votingView(p, f, candidateType, null);
+    }
+
+    public void votingView(Player p, Faction f, Candidate candidateType, Inventory i) {
+        boolean open = i == null;
+        if(open) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.ELECTION_VOTING_VIEW, candidateType.name()), 54, "§7Vote for " + candidateType.getName());
+        i.clear();
         Election election = f.getGovernment().getElection();
         List<String> candidates = election.getCandidates(candidateType);
-        
         int x = 0;
         for(String candidateName : candidates) {
             if(x >= 54) break;
             i.setItem(x, creator.createCandidateItem(f, candidateType, candidateName));
             x++;
         }
-        
-        p.openInventory(i);
+        if(open) p.openInventory(i);
     }
 
     public void click(InventoryClickEvent e, Inventory inventory, Player p) {

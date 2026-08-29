@@ -64,20 +64,28 @@ public class GuildView {
 	}
 
 	public void guildList(Player p) {
+		guildList(p, null);
+	}
 
+	public void guildList(Player p, Inventory inv) {
 		currentRanking.putIfAbsent(p, RankType.WEALTH);
 		currentPage.putIfAbsent(p, 0);
+		boolean open = inv == null;
+		if(open) inv = SimpleFactions.plugin.getServer()
+				.createInventory(new SFInventoryHolder(null, SFGUI.GUILD_LIST), INVENTORY_SIZE, "§7Guild List");
+		populateGuildList(inv, p);
+		if(open) p.openInventory(inv);
+	}
 
+	public void populateGuildList(Inventory inv, Player p) {
+		currentRanking.putIfAbsent(p, RankType.WEALTH);
+		currentPage.putIfAbsent(p, 0);
 		RankType rank = currentRanking.get(p);
 		int page = currentPage.get(p);
 
 		List<Guild> guilds = new FactionRanker().getRankedGuildList(rank);
 		Collections.reverse(guilds);
 
-		Inventory inv = SimpleFactions.plugin.getServer()
-				.createInventory(new SFInventoryHolder(null, SFGUI.GUILD_LIST), INVENTORY_SIZE, "§7Guild List");
-
-		// Build usable slots
 		List<Integer> usableSlots = new ArrayList<>();
 		for (int i = 0; i < INVENTORY_SIZE; i++) {
 			if (!RESERVED_SLOTS.contains(i)) {
@@ -85,29 +93,19 @@ public class GuildView {
 			}
 		}
 
+		inv.clear();
 		int perPage = usableSlots.size();
 		int start = page * perPage;
 		int end = Math.min(start + perPage, guilds.size());
 
 		for (int i = start; i < end; i++) {
 			Guild g = guilds.get(i);
-			inv.setItem(
-				usableSlots.get(i - start),
-				creator.createListItem(p, g)
-			);
+			inv.setItem(usableSlots.get(i - start), creator.createListItem(p, g));
 		}
 
-		// Rank toggle
 		inv.setItem(8, DefaultCreator.createRankButton(rank));
-
-		// Page buttons
-		if (page > 0)
-			inv.setItem(PREV_PAGE_SLOT, DefaultCreator.createPreviousPageButton());
-
-		if (end < guilds.size())
-			inv.setItem(NEXT_PAGE_SLOT, DefaultCreator.createNextPageButton());
-
-		p.openInventory(inv);
+		if (page > 0) inv.setItem(PREV_PAGE_SLOT, DefaultCreator.createPreviousPageButton());
+		if (end < guilds.size()) inv.setItem(NEXT_PAGE_SLOT, DefaultCreator.createNextPageButton());
 	}
 
 	public void ledgerView(Player player, Guild guild, Inventory i) {
@@ -128,8 +126,8 @@ public class GuildView {
 
 	public void guildView(Player player, Guild guild) {
 		Inventory i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(guild.getId(), SFGUI.GUILD_VIEW), 54, "§7Guild View");
-		guildView(player, guild, i);
 		player.openInventory(i);
+		guildView(player, guild, i);
 	}
 
     public void guildView(Player player, Guild guild, Inventory i) {

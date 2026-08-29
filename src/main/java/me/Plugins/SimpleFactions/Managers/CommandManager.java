@@ -13,7 +13,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
+import me.Plugins.SimpleFactions.enums.Stance;
 import me.Plugins.SimpleFactions.Events.FactionCreateEvent;
 import me.Plugins.SimpleFactions.Events.FactionDeleteEvent;
 import me.Plugins.SimpleFactions.Guild.Guild;
@@ -1505,6 +1507,33 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				faction.applyLaw(law, factionGroup);
 				p.sendMessage("§aSet "+faction.getName()+" §alaw "+template.getId()+" to "+law.getId());
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setstance") && args.length == 3) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Guild guild = FactionManager.getGuildByString(args[1]);
+				if(guild == null) {
+					Faction faction = FactionManager.getByString(args[1]);
+					if(faction != null) {
+						guild = faction.getOrCreateMainGuild();
+					}
+				}
+				if(guild == null) {
+					p.sendMessage("§cNo guild or faction by the id "+args[1]);
+					return false;
+				}
+				Stance stance;
+				try {
+					stance = Stance.valueOf(args[2].toUpperCase());
+				} catch(IllegalArgumentException e) {
+					p.sendMessage("§cStance must be oppose, neutral, or support");
+					return false;
+				}
+				guild.setStance(stance);
+				new Database().saveFaction(guild.getFaction());
+				p.sendMessage("§aSet stance of "+guild.getId()+" to "+stance.name().toLowerCase());
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("usurp") && args.length == 3) {
 				if(!Permissions.isAdmin(sender)) {

@@ -7,6 +7,7 @@ import java.util.Set;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
@@ -100,6 +101,12 @@ public final class CivilWarLandSplitService {
 		if (host == null || rebels == null || plan == null) {
 			return;
 		}
+		LogManager.civilwar(
+				"LAND_PLAN host=%s rebels=%s rebelProvinces=%s loyalProvinces=%s",
+				host.getId(),
+				rebels.getId(),
+				plan.rebelProvinceIds(),
+				plan.loyalProvinceIds());
 		for (int provinceId : plan.rebelProvinceIds()) {
 			rebels.addProvince(provinceId);
 			InstallationTransferService.transfer(host, rebels, provinceId);
@@ -153,6 +160,20 @@ public final class CivilWarLandSplitService {
 		Settlement settlement = fromHandler.detachOnProvince(provinceId);
 		if (settlement != null) {
 			toHandler.acceptTransferred(settlement);
+			LogManager.civilwar(
+					"SETTLEMENT_MOVE province=%d id=%s name=%s center=%d from=%s to=%s",
+					provinceId,
+					settlement.getId(),
+					settlement.getName(),
+					settlement.getCenterProvince(),
+					from.getId(),
+					to.getId());
+		} else {
+			LogManager.civilwar(
+					"SETTLEMENT_MISS province=%d from=%s to=%s",
+					provinceId,
+					from.getId(),
+					to.getId());
 		}
 	}
 }

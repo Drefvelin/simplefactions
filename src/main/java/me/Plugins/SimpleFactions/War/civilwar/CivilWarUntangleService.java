@@ -5,6 +5,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
@@ -13,12 +14,17 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarLandSplitService.LandSplitPlan;
 
 public final class CivilWarUntangleService {
 	private CivilWarUntangleService() {}
 
 	public static void restore(War war) {
+		restore(war, WarEndReason.WHITE_PEACE);
+	}
+
+	public static void restore(War war, WarEndReason reason) {
 		if (war == null) {
 			return;
 		}
@@ -34,6 +40,9 @@ public final class CivilWarUntangleService {
 			mergeTempRebels(host, rebels, snapshot);
 		}
 		restoreVassals(snapshot);
+		if (host != null) {
+			restoreMembers(host, snapshot, reason);
+		}
 	}
 
 	private static void mergeTempRebels(Faction host, Faction rebels, CivilWarSnapshot snapshot) {
@@ -90,8 +99,12 @@ public final class CivilWarUntangleService {
 		if (base == null) {
 			return;
 		}
+		String ownName = base.getOwnName();
 		if (GuildLoader.getDefaultType() != null) {
 			base.convert(GuildLoader.getDefaultType());
+		}
+		if (ownName != null && !ownName.isBlank()) {
+			base.setName(ownName);
 		}
 		if (base.isBase()) {
 			host.getGuildHandler().addGuild(base);
@@ -109,12 +122,82 @@ public final class CivilWarUntangleService {
 			if (end == null) {
 				continue;
 			}
-			Faction vassal = FactionManager.getByString(end.factionId());
-			Faction overlord = FactionManager.getByString(end.formerOverlordId());
-			RelationType type = end.relationTypeId() == null ? null : RelationLoader.getType(end.relationTypeId());
-			if (vassal != null && overlord != null && type != null) {
-				RelationManager.setRelationForced(type, vassal, overlord);
+			restoreVassalRelation(end.factionId(), end.formerOverlordId(), end.relationTypeId());
+		}
+	}
+
+	private static void restoreMembers(Faction host, CivilWarSnapshot snapshot, WarEndReason reason) {
+		if (snapshot.getMemberMoves() == null || snapshot.getMemberMoves().isEmpty()) {
+			return;
+		}
+		boolean attackerWin = reason == WarEndReason.ATTACKER_VICTORY;
+		String wanted = snapshot.getWantedLeaderName();
+		for (CivilWarMemberMove move : snapshot.getMemberMoves()) {
+			if (move == null || move.player() == null || move.player().isBlank()) {
+				continue;
+			}
+			boolean wantedLeader = attackerWin
+					&& wanted != null
+					&& wanted.equalsIgnoreCase(move.player());
+			if (host.getGuildHandler() != null) {
+				host.getGuildHandler().forceKick(move.player());
+			}
+			if (wantedLeader) {
+				host.getOrCreateMainGuild().addMember(move.player());
+				continue;
+			}
+			Guild origin = host.getGuildHandler() == null
+					? null
+					: host.getGuildHandler().getGuild(move.originGuildId());
+			if (origin == null) {
+				origin = host.getOrCreateMainGuild();
+			}
+			origin.addMember(move.player());
+			if (move.originWasGuildLeader() && !origin.isBase()) {
+				origin.setLeader(move.player());
 			}
 		}
+	}
+
+	static String snapshotVassalageTypeId(Faction vassal, Faction overlord) {
+		if (vassal == null || overlord == null) {
+			return null;
+		}
+		RelationType fromOverlord = typeOf(overlord.getRelation(vassal.getId()));
+		if (fromOverlord != null && fromOverlord.isVassalage()) {
+			return fromOverlord.getId();
+		}
+		RelationType fromVassal = typeOf(vassal.getRelation(overlord.getId()));
+		RelationType vassalage = vassalageType(fromOverlord);
+		if (vassalage == null) {
+			vassalage = vassalageType(fromVassal);
+		}
+		return vassalage == null ? null : vassalage.getId();
+	}
+
+	static void restoreVassalRelation(String vassalId, String overlordId, String typeId) {
+		Faction vassal = FactionManager.getByString(vassalId);
+		Faction overlord = FactionManager.getByString(overlordId);
+		RelationType type = vassalageType(typeId == null ? null : RelationLoader.getType(typeId));
+		if (vassal != null && overlord != null && type != null) {
+			RelationManager.setRelationForced(type, vassal, overlord);
+		}
+	}
+
+	private static RelationType typeOf(Relation relation) {
+		return relation == null ? null : relation.getType();
+	}
+
+	private static RelationType vassalageType(RelationType type) {
+		if (type == null) {
+			return null;
+		}
+		if (type.isVassalage()) {
+			return type;
+		}
+		if (type.isOverlord() && type.getLink() != null && type.getLink().isVassalage()) {
+			return type.getLink();
+		}
+		return null;
 	}
 }

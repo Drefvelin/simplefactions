@@ -160,7 +160,7 @@ public class GovernmentView {
 
 	public void specificTaxProposalView(Player player, Faction f, Inventory i, TaxTarget target) {
 		boolean open = i == null;
-		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.SPECIFIC_TAX_PROPOSAL_VIEW), 54, "§7Select Target");
+		if(open) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.SPECIFIC_TAX_PROPOSAL_VIEW, target.name()), 54, "§7Select Target");
 		i.clear();
 		int x = 0;
 		if(target == TaxTarget.GUILD_ID) {
@@ -190,26 +190,28 @@ public class GovernmentView {
 	}
 
 	public void lawProposalView(Player player, Faction f, Inventory i) {
-		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.LAW_PROPOSAL_VIEW), 54, "§7Select Law Group");
+		boolean open = i == null;
+		if(open) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.LAW_PROPOSAL_VIEW), 54, "§7Select Law Group");
 		i.clear();
 		for(int x = 0; x<f.getLawHandler().getGroupList().size(); x++) {
 			LawGroup group = f.getLawHandler().getGroupList().get(x);
 			i.setItem(SLOTS.get(x), lawCreator.createLawGroupItem(player, f, group));
 		}
-		player.openInventory(i);
 		i.setItem(53, inv.createBackButton(SFGUI.LAW_PROPOSAL_VIEW));
+		if(open) player.openInventory(i);
 	}
 
 	public void lawProposalSelect(Player player, Faction f, LawGroup group, Inventory i) {
-		if(i == null) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.LAW_PROPOSAL_SELECT), 27, "§7Select Law");
+		boolean open = i == null;
+		if(open) i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(f.getId(), SFGUI.LAW_PROPOSAL_SELECT, group.getId()), 27, "§7Select Law");
 		i.clear();
 		int slot = 0;
 		for(Law law : group.getLaws().values()) {
 			i.setItem(slot, lawCreator.createLawItem(player, f, group, law, true));
 			slot++;
 		}
-		player.openInventory(i);
 		i.setItem(26, inv.createBackButton(SFGUI.LAW_PROPOSAL_SELECT));
+		if(open) player.openInventory(i);
 	}
 
 	public void favourRepressMainView(Player player, Faction f, Inventory i) {

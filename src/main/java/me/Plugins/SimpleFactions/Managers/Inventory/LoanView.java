@@ -33,87 +33,88 @@ public class LoanView {
     }
 
     public void loanMainView(Player player, Guild guild) {
-        Inventory i = SimpleFactions.plugin.getServer().createInventory(
-            new SFInventoryHolder(guild.getId(), SFGUI.LOAN_MAIN_VIEW), 
-            9, 
+        loanMainView(player, guild, null);
+    }
+
+    public void loanMainView(Player player, Guild guild, Inventory i) {
+        boolean open = i == null;
+        if(open) i = SimpleFactions.plugin.getServer().createInventory(
+            new SFInventoryHolder(guild.getId(), SFGUI.LOAN_MAIN_VIEW),
+            9,
             "§7Loans - " + guild.getName()
         );
-        
-        // Button 1: Loans Given
+        i.clear();
         i.setItem(2, creator.createLoansGivenButton(guild));
-        
-        // Button 2: Loans Taken
         i.setItem(4, creator.createLoansTakenButton(guild));
-        
-        // Button 3: Issue New Loan
         if(guild.isLeader(player)) i.setItem(6, creator.createIssueNewLoanButton());
-        
-        // Back button
         i.setItem(8, inv.createBackButton(SFGUI.LOAN_MAIN_VIEW));
-        
-        player.openInventory(i);
+        if(open) player.openInventory(i);
     }
 
     public void loansGivenView(Player player, Guild guild) {
-        Inventory i = SimpleFactions.plugin.getServer().createInventory(
-            new SFInventoryHolder(guild.getId(), SFGUI.LOANS_GIVEN_VIEW), 
-            54, 
+        loansGivenView(player, guild, null);
+    }
+
+    public void loansGivenView(Player player, Guild guild, Inventory i) {
+        boolean open = i == null;
+        if(open) i = SimpleFactions.plugin.getServer().createInventory(
+            new SFInventoryHolder(guild.getId(), SFGUI.LOANS_GIVEN_VIEW),
+            54,
             "§7Loans Given - " + guild.getName()
         );
-        
+        i.clear();
         List<Loan> loansGiven = guild.getLoanHandler().getLoansGiven();
-        
         int slot = 0;
         for (Loan loan : loansGiven) {
-            if (slot >= 45) break; // Leave space for back button
+            if (slot >= 45) break;
             i.setItem(slot, creator.createLoanItem(loan, true));
             slot++;
         }
-        
-        // Back button
         i.setItem(53, inv.createBackButton(SFGUI.LOANS_GIVEN_VIEW));
-        
-        player.openInventory(i);
+        if(open) player.openInventory(i);
     }
 
     public void loansTakenView(Player player, Guild guild) {
-        Inventory i = SimpleFactions.plugin.getServer().createInventory(
-            new SFInventoryHolder(guild.getId(), SFGUI.LOANS_TAKEN_VIEW), 
-            54, 
+        loansTakenView(player, guild, null);
+    }
+
+    public void loansTakenView(Player player, Guild guild, Inventory i) {
+        boolean open = i == null;
+        if(open) i = SimpleFactions.plugin.getServer().createInventory(
+            new SFInventoryHolder(guild.getId(), SFGUI.LOANS_TAKEN_VIEW),
+            54,
             "§7Loans Taken - " + guild.getName()
         );
-        
+        i.clear();
         List<Loan> loansTaken = guild.getLoanHandler().getLoansTaken();
-        
         int slot = 0;
         for (Loan loan : loansTaken) {
-            if (slot >= 45) break; // Leave space for back button
+            if (slot >= 45) break;
             i.setItem(slot, creator.createLoanItem(loan, false));
             slot++;
         }
-        
-        // Back button
         i.setItem(53, inv.createBackButton(SFGUI.LOANS_TAKEN_VIEW));
-        
-        player.openInventory(i);
+        if(open) player.openInventory(i);
     }
 
     public void loanDetailView(Player player, Guild guild, Loan loan, boolean isTaken) {
-        Inventory i = SimpleFactions.plugin.getServer().createInventory(
-            new SFInventoryHolder(guild.getId(), isTaken ? SFGUI.TAKEN_LOAN_DETAIL_VIEW : SFGUI.ISSUED_LOAN_DETAIL_VIEW), 
-            27, 
+        loanDetailView(player, guild, loan, isTaken, null);
+    }
+
+    public void loanDetailView(Player player, Guild guild, Loan loan, boolean isTaken, Inventory i) {
+        boolean open = i == null;
+        if(open) i = SimpleFactions.plugin.getServer().createInventory(
+            new SFInventoryHolder(guild.getId(), isTaken ? SFGUI.TAKEN_LOAN_DETAIL_VIEW : SFGUI.ISSUED_LOAN_DETAIL_VIEW, loan.getId()),
+            27,
             "§7Loan Details"
         );
-        
-        // Loan details item
+        i.clear();
         i.setItem(15, creator.createLoanItem(loan, !isTaken));
         if(!loan.hasDefaulted() && !loan.isPaidOff()) {
             i.setItem(12, creator.createToggleAutoPayButton(loan, isTaken));
         } else {
             i.setItem(12, creator.createToggleAutoPayButton(loan, false));
         }
-        
-        // Pay off button (only for loans taken)
         if(isTaken) {
             if(!loan.isPaidOff() && !loan.hasDefaulted()) i.setItem(11, creator.createPayOffLoanButton(loan));
             if(!loan.isPaidOff()) i.setItem(14, creator.createDefaultItem(loan));
@@ -121,11 +122,8 @@ public class LoanView {
             i.setItem(13, creator.createPauseInterestItem(loan));
             i.setItem(14, creator.createForgiveLoanItem(loan));
         }
-        
-        // Back button
         i.setItem(26, inv.createBackButton(isTaken ? SFGUI.LOANS_TAKEN_VIEW : SFGUI.LOANS_GIVEN_VIEW));
-        
-        player.openInventory(i);
+        if(open) player.openInventory(i);
     }
 
     public void click(InventoryClickEvent e, Inventory inventory, Player p) {

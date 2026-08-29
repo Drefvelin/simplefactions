@@ -11,6 +11,7 @@ import me.Plugins.SimpleFactions.Loaders.LawLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
+import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Utils.ModifierMerger;
 import me.Plugins.SimpleFactions.enums.Region;
 import me.Plugins.SimpleFactions.enums.Scope;
@@ -90,26 +91,37 @@ public class LawHandler {
             // Add base effects for guild scopes
             Scope secondary = Scope.FACTION;
             Guild guild = FactionManager.getGuildByString(id);
-            switch (scope) {
-                case DOMESTIC_GUILDS:
-                    if(guild.isFavoured()) secondary = Scope.FAVOURED_GUILDS;
-                    else if(guild.isRepressed()) secondary = Scope.REPRESSED_GUILDS;
-                case VASSALS:
-                    if(guild.isFavoured()) secondary = Scope.FAVOURED_VASSALS;
-                    else if(guild.isRepressed()) secondary = Scope.REPRESSED_VASSALS;
-                case VASSAL_GUILDS:
-                    if(guild.isFavoured()) secondary = Scope.FAVOURED_VASSALS;
-                    else if(guild.isRepressed()) secondary = Scope.REPRESSED_VASSALS;
-                default:
-                    break;
-            }
-            if(secondary != Scope.FACTION) {
-                LawEffect baseEffect = Cache.baseEffects.get(secondary);
-                if(baseEffect != null) {
-                    if(baseEffect.hasGlobalModifiers()) result.addAll(baseEffect.getGlobalModifiers());
-                    if(region != null && baseEffect.hasRegionModifiers()) {
-                        List<FactionModifier> regionMods = baseEffect.getRegionModifiers().get(region);
-                        if(regionMods != null) result.addAll(regionMods);
+            if (guild == null) {
+                String factionId = f != null ? f.getId() : "unknown";
+                String message = "[SimpleFactions] Law modifiers: guild not found id=" + id
+                        + " faction=" + factionId + " scope=" + scope;
+                if (SimpleFactions.plugin != null) {
+                    SimpleFactions.plugin.getLogger().warning(message);
+                } else {
+                    System.out.println(message);
+                }
+            } else {
+                switch (scope) {
+                    case DOMESTIC_GUILDS:
+                        if(guild.isFavoured()) secondary = Scope.FAVOURED_GUILDS;
+                        else if(guild.isRepressed()) secondary = Scope.REPRESSED_GUILDS;
+                    case VASSALS:
+                        if(guild.isFavoured()) secondary = Scope.FAVOURED_VASSALS;
+                        else if(guild.isRepressed()) secondary = Scope.REPRESSED_VASSALS;
+                    case VASSAL_GUILDS:
+                        if(guild.isFavoured()) secondary = Scope.FAVOURED_VASSALS;
+                        else if(guild.isRepressed()) secondary = Scope.REPRESSED_VASSALS;
+                    default:
+                        break;
+                }
+                if(secondary != Scope.FACTION) {
+                    LawEffect baseEffect = Cache.baseEffects.get(secondary);
+                    if(baseEffect != null) {
+                        if(baseEffect.hasGlobalModifiers()) result.addAll(baseEffect.getGlobalModifiers());
+                        if(region != null && baseEffect.hasRegionModifiers()) {
+                            List<FactionModifier> regionMods = baseEffect.getRegionModifiers().get(region);
+                            if(regionMods != null) result.addAll(regionMods);
+                        }
                     }
                 }
             }

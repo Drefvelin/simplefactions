@@ -20,7 +20,13 @@ import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
+import me.Plugins.SimpleFactions.War.campaign.zoc.FortZocIndex;
+import me.Plugins.SimpleFactions.War.campaign.zoc.FortZocIndex.OperationalFort;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
@@ -39,7 +45,10 @@ class OccupationServiceTest {
 	void setUp() {
 		Cache.warOccupationIncludeEnemyNeighbors = true;
 		pm = new ProvinceManager();
-		service = new OccupationService(pm, new TitleManagerProvinceOwnerLookup());
+		service = new OccupationService(
+				pm,
+				new TitleManagerProvinceOwnerLookup(),
+				FortZocIndex.fromForts(List.of()));
 		attacker = mock(Faction.class);
 		defender = mock(Faction.class);
 		when(attacker.getId()).thenReturn("atk");
@@ -206,8 +215,119 @@ class OccupationServiceTest {
 			titleManager.when(() -> TitleManager.getByProvince(99)).thenReturn(defender);
 			War war = baseWar(List.of(5, 10, 30));
 			BelligerentTerritory territory = BelligerentTerritory.fromWar(war, new TitleManagerProvinceOwnerLookup());
-			assertTrue(OccupationService.qualifiesNeighbor(war, 10, 99, BelligerentRole.ATTACKER, territory));
-			assertFalse(OccupationService.qualifiesNeighbor(war, 10, 99, BelligerentRole.DEFENDER, territory));
+			assertTrue(OccupationService.qualifiesNeighbor(
+					war, 10, 99, BelligerentRole.ATTACKER, territory, FortZocIndex.fromForts(List.of())));
+			assertFalse(OccupationService.qualifiesNeighbor(
+					war, 10, 99, BelligerentRole.DEFENDER, territory, FortZocIndex.fromForts(List.of())));
+		}
+	}
+
+	@Test
+	void computeOccupationZone_skipsNextUnfoughtSiegeHome() {
+		Province battle = province(10, Terrain.PLAINS);
+		Province nextSiege = province(20, Terrain.PLAINS);
+		link(battle, nextSiege);
+		pm.start(Map.of(10, battle, 20, nextSiege));
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			titleManager.when(() -> TitleManager.getByProvince(10)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(20)).thenReturn(defender);
+			War war = baseWar(List.of(5, 10, 20, 30));
+			war.setCampaignBattleSchedule(List.of(
+					new ScheduledCampaignBattle(10, CampaignBattleKind.FIELD, false, null),
+					new ScheduledCampaignBattle(20, CampaignBattleKind.SIEGE, false, "fort_a")));
+			war.setCampaignScheduleIndex(0);
+			OccupationService withEmptyForts = new OccupationService(
+					pm, new TitleManagerProvinceOwnerLookup(), FortZocIndex.fromForts(List.of()));
+			assertEquals(
+					List.of(10),
+					withEmptyForts.computeOccupationZone(war, 10, BelligerentRole.ATTACKER).provinceIds());
+		}
+	}
+
+	@Test
+	void computeOccupationZone_skipsNeighborInUntakenFortZoc() {
+		Province battle = province(10, Terrain.PLAINS);
+		Province zocNeighbor = province(21, Terrain.PLAINS);
+		Province fortHome = province(20, Terrain.PLAINS);
+		link(battle, zocNeighbor);
+		link(fortHome, zocNeighbor);
+		pm.start(Map.of(10, battle, 20, fortHome, 21, zocNeighbor));
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class);
+				MockedStatic<SimpleFactions> simpleFactions = mockStatic(SimpleFactions.class)) {
+			SimpleFactions plugin = mock(SimpleFactions.class);
+			when(plugin.getProvinceManager()).thenReturn(pm);
+			simpleFactions.when(SimpleFactions::getInstance).thenReturn(plugin);
+			titleManager.when(() -> TitleManager.getByProvince(10)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(20)).thenReturn(defender);
+			titleManager.when(() -> TitleManager.getByProvince(21)).thenReturn(defender);
+			War war = baseWar(List.of(5, 10, 30));
+			war.putFortController("fort_a", CampaignCoalition.DEFENDER);
+			FortZocIndex forts = FortZocIndex.fromForts(List.of(
+					new OperationalFort("fort_a", defender, 20, 100L)));
+			OccupationService zocService = new OccupationService(
+					pm, new TitleManagerProvinceOwnerLookup(), forts);
+			assertEquals(
+					List.of(10),
+					zocService.computeOccupationZone(war, 10, BelligerentRole.ATTACKER).provinceIds());
+		}
+	}
+
+	@Test
+	void computeOccupationZone_allowsBattleProvinceInsideFortZoc() {
+		Province fortHome = province(20, Terrain.PLAINS);
+		pm.start(Map.of(20, fortHome));
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class);
+				MockedStatic<SimpleFactions> simpleFactions = mockStatic(SimpleFactions.class)) {
+			SimpleFactions plugin = mock(SimpleFactions.class);
+			when(plugin.getProvinceManager()).thenReturn(pm);
+			simpleFactions.when(SimpleFactions::getInstance).thenReturn(plugin);
+			titleManager.when(() -> TitleManager.getByProvince(20)).thenReturn(defender);
+			War war = baseWar(List.of(5, 10, 20, 30));
+			war.putFortController("fort_a", CampaignCoalition.DEFENDER);
+			FortZocIndex forts = FortZocIndex.fromForts(List.of(
+					new OperationalFort("fort_a", defender, 20, 100L)));
+			OccupationService zocService = new OccupationService(
+					pm, new TitleManagerProvinceOwnerLookup(), forts);
+			assertEquals(
+					List.of(20),
+					zocService.computeOccupationZone(war, 20, BelligerentRole.ATTACKER).provinceIds());
+		}
+	}
+
+	@Test
+	void computeOccupationZone_overlappingZocRequiresAllFortsTaken() {
+		Province battle = province(10, Terrain.PLAINS);
+		Province overlap = province(21, Terrain.PLAINS);
+		Province fortA = province(20, Terrain.PLAINS);
+		Province fortB = province(22, Terrain.PLAINS);
+		link(battle, overlap);
+		link(fortA, overlap);
+		link(fortB, overlap);
+		pm.start(Map.of(10, battle, 20, fortA, 21, overlap, 22, fortB));
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class);
+				MockedStatic<SimpleFactions> simpleFactions = mockStatic(SimpleFactions.class)) {
+			SimpleFactions plugin = mock(SimpleFactions.class);
+			when(plugin.getProvinceManager()).thenReturn(pm);
+			simpleFactions.when(SimpleFactions::getInstance).thenReturn(plugin);
+			titleManager.when(() -> TitleManager.getByProvince(10)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(20)).thenReturn(defender);
+			titleManager.when(() -> TitleManager.getByProvince(21)).thenReturn(defender);
+			titleManager.when(() -> TitleManager.getByProvince(22)).thenReturn(defender);
+			War war = baseWar(List.of(5, 10, 30));
+			war.putFortController("fort_old", CampaignCoalition.AGGRESSOR);
+			war.putFortController("fort_young", CampaignCoalition.DEFENDER);
+			FortZocIndex forts = FortZocIndex.fromForts(List.of(
+					new OperationalFort("fort_old", defender, 20, 100L),
+					new OperationalFort("fort_young", defender, 22, 200L)));
+			OccupationService zocService = new OccupationService(
+					pm, new TitleManagerProvinceOwnerLookup(), forts);
+			assertEquals(
+					List.of(10),
+					zocService.computeOccupationZone(war, 10, BelligerentRole.ATTACKER).provinceIds());
 		}
 	}
 

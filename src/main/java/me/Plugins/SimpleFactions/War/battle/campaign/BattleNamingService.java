@@ -3,6 +3,7 @@ package me.Plugins.SimpleFactions.War.battle.campaign;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import java.util.List;
@@ -192,24 +193,65 @@ public final class BattleNamingService {
 	}
 
 	static LocationInfo resolveLocation(int provinceId) {
-		Settlement settlement = findSettlement(provinceId);
-		if (settlement != null && settlement.getName() != null && !settlement.getName().isBlank()) {
-			return new LocationInfo("settlement:" + settlement.getName(), settlement.getName());
+		Settlement exact = findSettlement(provinceId);
+		if (exact != null && exact.getName() != null && !exact.getName().isBlank()) {
+			logLocation(provinceId, "settlement-exact", exact.getName(), null);
+			return new LocationInfo("settlement:" + exact.getName(), exact.getName());
+		}
+		Settlement countySettlement = findSettlementInCounty(provinceId);
+		if (countySettlement != null && countySettlement.getName() != null && !countySettlement.getName().isBlank()) {
+			logLocation(provinceId, "settlement-county", countySettlement.getName(), null);
+			return new LocationInfo("settlement:" + countySettlement.getName(), countySettlement.getName());
 		}
 		Installation fort = findInstallation(provinceId, InstallationKind.FORT);
 		if (fort != null && fort.getName() != null && !fort.getName().isBlank()) {
+			logLocation(provinceId, "fort", fort.getName(), null);
 			return new LocationInfo("fort:" + fort.getName(), fort.getName());
 		}
 		Title title = TitleLoader.getByProvince(provinceId);
 		if (title != null && title.getName() != null && !title.getName().isBlank()) {
+			logLocation(provinceId, "title", title.getName(), title.getId());
 			return new LocationInfo("county:" + title.getName(), title.getName());
 		}
+		logLocation(provinceId, "wilderness", WILDERNESS, null);
 		return new LocationInfo("wilderness:" + provinceId, WILDERNESS);
+	}
+
+	private static void logLocation(int provinceId, String path, String display, String titleId) {
+		LogManager.war(
+				"NAME province=%d path=%s display=%s titleId=%s",
+				provinceId,
+				path,
+				display,
+				titleId != null ? titleId : "-");
+	}
+
+	static Settlement findSettlementInCounty(int provinceId) {
+		Title title = TitleLoader.getByProvince(provinceId);
+		if (title == null || title.isComposite() || title.getProvinces() == null || title.getProvinces().isEmpty()) {
+			return null;
+		}
+		for (Faction faction : FactionManager.getCopy()) {
+			if (faction == null || faction.getSettlementHandler() == null) {
+				continue;
+			}
+			for (Settlement settlement : faction.getSettlementHandler().getAll()) {
+				if (settlement == null) {
+					continue;
+				}
+				if (title.getProvinces().contains(settlement.getCenterProvince())
+						&& settlement.getName() != null
+						&& !settlement.getName().isBlank()) {
+					return settlement;
+				}
+			}
+		}
+		return null;
 	}
 
 	private static Settlement findSettlement(int provinceId) {
 		for (Faction faction : FactionManager.getCopy()) {
-			if (faction == null) {
+			if (faction == null || faction.getSettlementHandler() == null) {
 				continue;
 			}
 			Settlement settlement = faction.getSettlementHandler().getByProvince(provinceId);
@@ -222,7 +264,7 @@ public final class BattleNamingService {
 
 	private static Installation findInstallation(int provinceId, InstallationKind kind) {
 		for (Faction faction : FactionManager.getCopy()) {
-			if (faction == null) {
+			if (faction == null || faction.getInstallationHandler() == null) {
 				continue;
 			}
 			Installation installation = faction.getInstallationHandler().getByProvince(kind, provinceId);

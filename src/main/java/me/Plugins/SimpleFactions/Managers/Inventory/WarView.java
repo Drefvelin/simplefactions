@@ -34,13 +34,23 @@ public class WarView {
 	}
 	
 	public void warList(Player player) {
-		Inventory i = SimpleFactions.plugin.getServer().createInventory(
+		warList(player, null);
+	}
+
+	public void warList(Player player, Inventory i) {
+		boolean open = i == null;
+		if(open) i = SimpleFactions.plugin.getServer().createInventory(
 				new SFInventoryHolder("", SFGUI.WAR_LIST), 54, "§7War List");
+		populateWarList(i);
+		if(open) player.openInventory(i);
+	}
+
+	public void populateWarList(Inventory i) {
+		i.clear();
 		List<War> activeWars = WarManager.getActive();
 		for(int x = 0; x < activeWars.size(); x++) {
 			i.setItem(x, creator.createWarItem(activeWars.get(x), true));
 		}
-		player.openInventory(i);
 	}
 	
 	public void warView(Inventory i, Player player, War w, boolean open) {

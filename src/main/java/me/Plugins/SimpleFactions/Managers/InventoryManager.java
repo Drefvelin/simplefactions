@@ -116,12 +116,21 @@ public class InventoryManager implements Listener{
 	///WAAAAR
 	public WarView warView = new WarView(this);
 	public CampaignView campaignView = new CampaignView(this);
+
 	public CampaignInstallationPickView campaignInstallationPickView = new CampaignInstallationPickView(this);
 	public CampaignRaidLaunchView campaignRaidLaunchView = new CampaignRaidLaunchView(this);
 	public DeclareWarView declareWarView = new DeclareWarView(this);
 
 	public void warList(Player player) {
 		warView.warList(player);
+	}
+
+	public void warList(Player player, Inventory i) {
+		warView.warList(player, i);
+	}
+
+	public void populateWarList(Inventory i) {
+		warView.populateWarList(i);
 	}
 	
 	public void warView(Inventory i, Player player, War w, boolean open) {
@@ -147,7 +156,7 @@ public class InventoryManager implements Listener{
 	}
 	
 	//Factions
-	FactionView factionView = new FactionView(this);
+	public FactionView factionView = new FactionView(this);
 	public void factionList(Player player) {
 		factionView.factionList(player);
 	}
@@ -156,7 +165,7 @@ public class InventoryManager implements Listener{
 	}
 
 	//Guilds
-	GuildView guildView = new GuildView(this);
+	public GuildView guildView = new GuildView(this);
 	public PlayerLedgerView playerLedgerView = new PlayerLedgerView(this);
 	public void guildList(Player player) {
 		guildView.guildList(player);
@@ -178,13 +187,13 @@ public class InventoryManager implements Listener{
 	}
 
 	//Laws
-	LawView lawView = new LawView(this);
+	public LawView lawView = new LawView(this);
 	public void lawView(Player player, Faction f, Inventory i) {
 		lawView.lawView(player, f, i);
 	}
 
 	//Government
-	GovernmentView governmentView = new GovernmentView(this);
+	public GovernmentView governmentView = new GovernmentView(this);
 	public void governmentView(Player player, Faction f, Inventory i) {
 		governmentView.governmentView(player, f, i);
 	}
@@ -193,7 +202,7 @@ public class InventoryManager implements Listener{
 	}
 	
 	//Movements
-	MovementView movementView = new MovementView(this);
+	public MovementView movementView = new MovementView(this);
 	public void movementView(Player player, Faction f, me.Plugins.SimpleFactions.government.movement.Movement movement, Inventory i) {
 		movementView.movementView(player, f, movement, i);
 	}
@@ -237,6 +246,10 @@ public class InventoryManager implements Listener{
 	public void installationDetailView(Player player, Faction f, String id) {
 		installationView.installationDetailView(player, f, id);
 	}
+
+	public void installationDetailView(Player player, Faction f, String id, Inventory i) {
+		installationView.installationDetailView(player, f, id, i);
+	}
 	
 	//Relations
 	
@@ -273,12 +286,28 @@ public class InventoryManager implements Listener{
 		loanView.loanMainView(p, guild);
 	}
 
+	public void loanMainView(Player p, Guild guild, Inventory i) {
+		loanView.loanMainView(p, guild, i);
+	}
+
 	public void loansGivenView(Player p, Guild guild) {
 		loanView.loansGivenView(p, guild);
 	}
 
+	public void loansGivenView(Player p, Guild guild, Inventory i) {
+		loanView.loansGivenView(p, guild, i);
+	}
+
 	public void loansTakenView(Player p, Guild guild) {
 		loanView.loansTakenView(p, guild);
+	}
+
+	public void loansTakenView(Player p, Guild guild, Inventory i) {
+		loanView.loansTakenView(p, guild, i);
+	}
+
+	public void loanDetailView(Player p, Guild guild, Loan loan, boolean isTaken, Inventory i) {
+		loanView.loanDetailView(p, guild, loan, isTaken, i);
 	}
 
 	public boolean chatTrigger(Player p) {
@@ -477,6 +506,14 @@ public class InventoryManager implements Listener{
 		i.setItem(13, info);
 		i.setItem(11, createButton("confirm", "setcapital", "1"));
 		i.setItem(15, createButton("cancel", "setcapital", "1"));
+		player.openInventory(i);
+	}
+
+	public void confirmEndMovementView(Player player, Movement movement) {
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Confirm Action");
+		i.setItem(13, movementView.creator.createEndMovementConfirmItem(movement));
+		i.setItem(11, createButton("confirm", "end_movement", movement.getId()));
+		i.setItem(15, createButton("cancel", "end_movement", movement.getId()));
 		player.openInventory(i);
 	}
 
@@ -951,6 +988,13 @@ public class InventoryManager implements Listener{
 			if (data != null) {
 				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
 				CapitalMovePrompt.handleConfirm(p, confirmed);
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "end_movement");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if (data != null) {
+				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
+				movementView.handleEndConfirm(p, data, confirmed);
 				return;
 			}
 			key = new NamespacedKey(SimpleFactions.plugin, "war_declare");

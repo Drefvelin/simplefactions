@@ -28,10 +28,41 @@ public class MovementTabCompletion implements TabCompleter {
 			return List.of();
 		}
 		if (args.length == 2) {
-			return prefix(args[1], "list", "join", "leave");
+			return prefix(args[1], "list", "join", "leave", "demands", "target");
 		}
 		String action = args[1].toLowerCase();
+		if (action.equals("target")) {
+			if (args.length == 3) {
+				return prefixList(args[2], MovementAdminService.allMovementIds());
+			}
+			Movement movement = FactionManager.getMovementById(args[2]);
+			if (movement == null) {
+				return List.of();
+			}
+			if (args.length == 4) {
+				return prefixList(args[3], MovementAdminService.causeIndices(movement));
+			}
+			if (args.length == 5) {
+				return prefixList(args[4], MovementAdminService.wantedLeaderNames(movement));
+			}
+			return List.of();
+		}
+		if (action.equals("demands")) {
+			if (args.length == 3) {
+				return prefixList(args[2], MovementAdminService.allMovementIds());
+			}
+			if (args.length == 4) {
+				return prefix(args[3], "accept", "reject");
+			}
+			return List.of();
+		}
 		if (!action.equals("join") && !action.equals("leave")) {
+			if (args.length == 3) {
+				return prefix(args[2], "demands");
+			}
+			if (args.length == 4 && args[2].equalsIgnoreCase("demands")) {
+				return prefix(args[3], "accept", "reject");
+			}
 			return List.of();
 		}
 		if (args.length == 3) {

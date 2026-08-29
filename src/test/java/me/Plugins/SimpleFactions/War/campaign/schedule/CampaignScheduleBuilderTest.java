@@ -588,15 +588,15 @@ class CampaignScheduleBuilderTest {
 				fortIndex,
 				portIndex);
 
-		assertEquals(4, schedule.size());
+		assertEquals(3, schedule.size());
 		assertEquals(CampaignBattleKind.NAVAL, schedule.get(0).kind());
 		assertEquals(795, schedule.get(0).provinceId());
 		assertEquals("Lan_Harbour", schedule.get(0).portInstallationId());
-		assertEquals(CampaignBattleKind.FIELD, schedule.get(1).kind());
-		assertEquals(709, schedule.get(1).provinceId());
-		assertEquals(CampaignBattleKind.SIEGE, schedule.get(2).kind());
-		assertEquals(713, schedule.get(2).provinceId());
-		assertEquals("Greenfort", schedule.get(2).fortInstallationId());
+		assertEquals(CampaignBattleKind.SIEGE, schedule.get(1).kind());
+		assertEquals(713, schedule.get(1).provinceId());
+		assertEquals("Greenfort", schedule.get(1).fortInstallationId());
+		assertTrue(schedule.stream().noneMatch(slot ->
+				slot.provinceId() == 709 && slot.kind() == CampaignBattleKind.FIELD));
 		ScheduledCampaignBattle last = schedule.get(schedule.size() - 1);
 		assertEquals(705, last.provinceId());
 		assertTrue(last.required());
@@ -783,16 +783,15 @@ class CampaignScheduleBuilderTest {
 				PortSeaZocIndex.fromPorts(List.of()));
 
 		assertTrue(schedule.size() <= 4);
-		assertEquals(3, schedule.size());
-		assertEquals(CampaignBattleKind.FIELD, schedule.get(0).kind());
-		assertEquals(709, schedule.get(0).provinceId());
-		assertFalse(schedule.get(0).required());
-		assertEquals(CampaignBattleKind.SIEGE, schedule.get(1).kind());
-		assertEquals(713, schedule.get(1).provinceId());
-		assertEquals("Greenfort", schedule.get(1).fortInstallationId());
-		assertEquals(CampaignBattleKind.FIELD, schedule.get(2).kind());
-		assertEquals(705, schedule.get(2).provinceId());
-		assertTrue(schedule.get(2).required());
+		assertEquals(2, schedule.size());
+		assertEquals(CampaignBattleKind.SIEGE, schedule.get(0).kind());
+		assertEquals(713, schedule.get(0).provinceId());
+		assertEquals("Greenfort", schedule.get(0).fortInstallationId());
+		assertTrue(schedule.stream().noneMatch(slot ->
+				slot.provinceId() == 709 && slot.kind() == CampaignBattleKind.FIELD));
+		assertEquals(CampaignBattleKind.FIELD, schedule.get(1).kind());
+		assertEquals(705, schedule.get(1).provinceId());
+		assertTrue(schedule.get(1).required());
 		assertTrue(schedule.stream().noneMatch(slot -> slot.kind() == CampaignBattleKind.NAVAL_INVASION));
 		war.setObjectiveProvinceId(705);
 		assertTrue(CampaignScheduleValidator.isValidInvasionSchedule(war, axis, schedule));
@@ -857,7 +856,7 @@ class CampaignScheduleBuilderTest {
 				fortIndex,
 				PortSeaZocIndex.fromPorts(List.of()));
 
-		assertEquals(3, schedule.size());
+		assertEquals(2, schedule.size());
 		assertTrue(schedule.stream().noneMatch(slot -> "Lan_Airfield".equals(slot.fortInstallationId())));
 		assertTrue(schedule.stream().anyMatch(slot ->
 				slot.kind() == CampaignBattleKind.SIEGE && "Greenfort".equals(slot.fortInstallationId())));

@@ -71,7 +71,7 @@ Use this table before creating a file.
 | Fort/port ZOC operational DTOs | nested in `FortZocIndex` / `PortSeaZocIndex` | Standalone `OperationalFort.java` files |
 | Staff `/warschedule` output | `War/campaign/admin` | Chat formatters in engine |
 | `/war` command (list, admin subcommands) | `War/core/WarCommandManager` | `Managers/CommandManager` for war logic |
-| `/movement admin` join/leave/list | `government/movement/admin` | `Managers/CommandManager` |
+| `/movement admin` list/join/leave/demands/target | `government/movement/admin` | `Managers/CommandManager` |
 | GUI lore / schedule debug lines | `War/campaign/ui` | `Managers` unless it is pure inventory layout |
 | Path B, axis, dijkstra | `War/pathfinder` | Schedule package |
 | Occupation, white peace, push/hold | `War/campaign/progression` | Flat `War/` root |
@@ -84,7 +84,7 @@ Use this table before creating a file.
 | Lives, pool, casualties | `War/battle/military` | Battle engine |
 | YAML battle templates | `War/battle/template` | Hard-coded in engine |
 | Faction ledger / war declare GUI | `Managers/Inventory` | War package UI for non-war commands |
-| General file logging | `Managers/LogManager` (`logs/log.txt`, `logs/relations.log`; both use `logging` / `wipe-log`) | War-specific log managers |
+| General file logging | `Managers/LogManager` (`logs/log.txt`, `relations.log`, `movement.log`, `civilwar.log`, `war.log`; all wiped by `wipe-log`) | Mixing domain events into chat |
 | REST/export shape | Keep stable; change mappers + PS docs together | Renaming JSON fields casually |
 | Installation berth / transfer / consent | `vehicles/` | `Managers` or `installation/handler` |
 | Personal slot / construction limits | `vehicles/VehicleSlotGuard.java`, `vehicles/VehicleConstructionMessages.java` | Inline checks in listeners |
@@ -141,7 +141,7 @@ Do **not** create:
 
 1. **Schedule changes:** only `CampaignBattlePlacer.placeBattle` (or documented builder phase) mutates leg lists. Read [docs/wars.md](docs/wars.md) campaign schedule sections before editing insertion.
 2. **Tests:** any war change should run `mvn test -Dtest="me.Plugins.SimpleFactions.War.**"`.
-3. **Brume acceptance:** invasion `709 FIELD → 713 SIEGE → 705 required`; do not regress when touching schedule/pathfinder. Off-axis fort ZOC on a non-objective border replaces that field (`713 SIEGE` chrono `704` → `705 required`, no airfield field).
+3. **Brume acceptance:** invasion `713 SIEGE → 705 required` when Greenfort ZOC covers border `709` (no separate `709` field). Off-axis fort ZOC on a non-objective border still replaces that field (`713 SIEGE` chrono `704` → `705 required`, no airfield field).
 4. **Persistence:** if you add a field to `ScheduledCampaignBattle` or `War`, update `Database/*Data`, `WarMapper`, and tests in the same change.
 5. **Player-facing text:** no em dash (`—`); use `-` or `:`. See workspace rule `no-em-dash.mdc`.
 6. **Config:** faction/map toggles go in `config.yml` + `Cache`. Campaign/war-goal tunables go in `war.yml` (`ConfigLoader.loadWar`). Do not hard-code them in services.
@@ -155,7 +155,7 @@ Do **not** create:
 3. **Database** stores POJOs; domain logic stays in Managers or feature packages.
 4. **Loaders** (`Loaders/`) are for static YAML registries, one loader per file.
 5. Match existing indentation and naming in the file you edit.
-6. **Movements:** new movements get id `{lowercase founder}_movement` (`_2`, `_3` on collision). Saved ids (including old UUIDs) are kept on load. Staff staging: `/movement admin list|join|leave` (`simplefactions.admin`); skip the player join-request flow; do not bypass `canJoin`.
+6. **Movements:** new movements get id `{lowercase founder}_movement` (`_2`, `_3` on collision). Saved ids (including old UUIDs) are kept on load. Staff staging: `/movement admin list|join|leave|demands|target` (`simplefactions.admin`); skip the player join-request flow; do not bypass `canJoin`. `target` sets a CHANGE_LEADER cause wanted leader without online consent.
 
 ---
 

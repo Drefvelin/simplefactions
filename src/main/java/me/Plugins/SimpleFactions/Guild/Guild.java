@@ -315,6 +315,10 @@ public class Guild {
     }
     public boolean isBase() { return type.isBase(); }
     public Faction getFaction() { return host; }
+
+    public void setHost(Faction host) {
+        this.host = host;
+    }
     public List<String> getInvites() { return invites; }
     public boolean isInvited(String p) {
         return invites.contains(p);
@@ -324,6 +328,9 @@ public class Guild {
     }
     public String getId() { return id; }
     public String getName() { return isBase() ? host.getName() : name; }
+
+    /** Backing name, even while this guild is a faction base (display name follows the host). */
+    public String getOwnName() { return name; }
     public List<String> getMembers() { return members; }
     public boolean isMember(String p) { return members.contains(p); }
     public boolean isMember(Player p) { return isMember(p.getName()); }
@@ -651,6 +658,11 @@ public class Guild {
         return stance;
     }
 
+    public void setStance(Stance stance) {
+        if(stance == null) return;
+        this.stance = stance;
+    }
+
     public void switchStance() {
         switch (stance) {
             case OPPOSE:
@@ -770,7 +782,9 @@ public class Guild {
             this.leader = getLeader();
             this.members = new ArrayList<>(getMembers());
             this.invites = new ArrayList<>(getInvites());
-            this.name = getName();
+            if (this.name == null || this.name.isBlank()) {
+                this.name = getName();
+            }
             this.bannerPatterns = new ArrayList<>(getBannerPatterns());
             this.rgb = getRGB();
             this.bank = getBank();

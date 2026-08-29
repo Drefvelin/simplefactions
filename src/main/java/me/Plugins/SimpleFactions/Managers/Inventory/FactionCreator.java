@@ -8,6 +8,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -243,6 +244,7 @@ public class FactionCreator {
 		} else if(t.equals(MenuItemType.LEADER)) {
 			i = new ItemStack(Material.PLAYER_HEAD, 1);
 			SkullMeta m = (SkullMeta) i.getItemMeta();
+			m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
 			m.setDisplayName(StringFormatter.formatHex("#9c9775§l"+f.getRulerTitle()+": #c2bea7"+f.getLeader()));
 			m.setOwningPlayer(Bukkit.getOfflinePlayer(f.getLeader()));
 			List<String> lore = new ArrayList<String>();
@@ -252,6 +254,7 @@ public class FactionCreator {
 		} else if(t.equals(MenuItemType.GOVERNMENT)) {
 			i = new ItemStack(Material.PLAYER_HEAD, 1);
 			SkullMeta m = (SkullMeta) i.getItemMeta();
+			m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
 			m.setDisplayName(StringFormatter.formatHex("#93c9a7Government:"));
 			m.setOwningPlayer(Bukkit.getOfflinePlayer(f.getLeader()));
 			List<String> lore = new ArrayList<String>();
@@ -347,6 +350,7 @@ public class FactionCreator {
 		} else if(t.equals(MenuItemType.MEMBERS)) {
 				i = new ItemStack(Material.PLAYER_HEAD, 1);
 				ItemMeta m = i.getItemMeta();
+				m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
 				List<String> memberNames = f.getCompleteMemberList();
 				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+memberNames.size()));
 				List<String> lore = new ArrayList<String>();
@@ -514,6 +518,9 @@ public class FactionCreator {
 			i.setType(icon.getType());
 			ItemMeta m = i.getItemMeta();
 			m.setCustomModelData(icon.getItemMeta().getCustomModelData());
+			if (i.getType() == Material.PLAYER_HEAD) {
+				m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+			}
 			i.setItemMeta(m);
 		}
 		return i;

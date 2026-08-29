@@ -18,6 +18,7 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.enums.Member;
 import me.Plugins.SimpleFactions.enums.SFGUI;
@@ -372,6 +373,11 @@ public class MovementView {
                 }
                 Player factionLeader = Bukkit.getPlayer(f.getLeader());
                 if (factionLeader != null && factionLeader.isOnline()) {
+                    LogManager.movement(
+                            "SEND_DEMANDS movementId=%s faction=%s power=%.1f",
+                            movement.getId(),
+                            f.getId(),
+                            movement.getPower());
                     demandsView(factionLeader, f, movement, null);
                     p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1.5f);
                     p.sendMessage(StringFormatter.formatHex("§7Demands sent to " + f.getLeader()));
@@ -402,11 +408,12 @@ public class MovementView {
             }
         }
         else if (slot == 34) {
-            if(movement.isLeader(p.getName())) {
-                // End movement
-                movement.getFaction().getGovernment().endMovement(movement);
+            if(!movement.isLeader(p.getName())) {
+                p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+                return;
             }
-            movementListView(p, f, null);
+            inv.confirming.put(p, f);
+            inv.confirmEndMovementView(p, movement);
             p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
         }
     }
@@ -514,13 +521,9 @@ public class MovementView {
             p.sendMessage(StringFormatter.formatHex("§c" + targetName + " cannot become the faction leader!"));
             return;
         }
-        
-        // Set target
-        cause.getProposal().setTarget(targetName);
+
+        FactionManager.requestMovementLeaderTarget(p, movement, cause, targetName);
         p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1.5f);
-        p.sendMessage(StringFormatter.formatHex("§aTarget set to " + targetName));
-        
-        // Return to cause view
         causeView(p, f, movement, cause, null);
     }
 
@@ -532,6 +535,11 @@ public class MovementView {
             if (p.getName().equalsIgnoreCase(f.getLeader())) {
                 p.sendMessage(StringFormatter.formatHex("§aYou have accepted the movement's demands."));
                 p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 2f);
+                LogManager.movement(
+                        "DEMANDS_ACCEPT movementId=%s faction=%s power=%.1f",
+                        movement.getId(),
+                        f.getId(),
+                        movement.getPower());
                 
                 // Notify movement leader if online
                 if (movement.hasLeader()) {
@@ -548,6 +556,11 @@ public class MovementView {
         // Decline button (red concrete)
         else if (slot == 33) {
             if (p.getName().equalsIgnoreCase(f.getLeader())) {
+                LogManager.movement(
+                        "DEMANDS_REJECT movementId=%s faction=%s power=%.1f",
+                        movement.getId(),
+                        f.getId(),
+                        movement.getPower());
                 String error = CivilWarStartService.start(movement);
                 if (error != null) {
                     p.sendMessage(error);
@@ -610,5 +623,33 @@ public class MovementView {
         }
         
         return null;
+    }
+
+    public void handleEndConfirm(Player player, String movementId, boolean confirmed) {
+        Faction f = inv.confirming.remove(player);
+        Movement movement = FactionManager.getMovementById(movementId);
+        if (movement == null) {
+            if (f != null) {
+                movementListView(player, f, null);
+            } else {
+                player.closeInventory();
+            }
+            return;
+        }
+        f = movement.getFaction();
+        if (!confirmed) {
+            movementView(player, f, movement, null);
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
+            return;
+        }
+        if (!movement.isLeader(player.getName())) {
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+            movementView(player, f, movement, null);
+            return;
+        }
+        f.getGovernment().endMovement(movement);
+        movementListView(player, f, null);
+        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1, 1);
+        player.sendMessage(StringFormatter.formatHex("§cThe movement has been disbanded."));
     }
 }

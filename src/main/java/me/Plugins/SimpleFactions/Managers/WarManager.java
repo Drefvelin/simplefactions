@@ -140,6 +140,7 @@ public class WarManager {
 		}
 		WarCommitmentService.commitAllParticipants(war);
 		addWar(war);
+		logWarDeclared(war, attacker, defender);
 		return war;
 	}
 
@@ -211,7 +212,22 @@ public class WarManager {
 		}
 		WarCommitmentService.commitAllParticipants(war);
 		addWar(war);
+		logWarDeclared(war, attacker, defender);
 		return war;
+	}
+
+	private static void logWarDeclared(War war, Faction attacker, Faction defender) {
+		if (war == null) {
+			return;
+		}
+		LogManager.war(
+				"DECLARE warId=%d type=%s goal=%s attacker=%s defender=%s movementId=%s",
+				war.getId(),
+				war.getWarType(),
+				war.getGoal(),
+				attacker != null ? attacker.getId() : "-",
+				defender != null ? defender.getId() : "-",
+				war.getMovementId() != null ? war.getMovementId() : "-");
 	}
 
 	static boolean populateCampaignIfNeeded(War war) {
@@ -328,8 +344,9 @@ public class WarManager {
 		if (w == null || reason == null) {
 			return;
 		}
+		FactionManager.getMap().enqueueOccupationFromWar(w);
 		WartimeInstallationService.revert(w);
-		CivilWarUntangleService.restore(w);
+		CivilWarUntangleService.restore(w, reason);
 		WarOutcomeService.apply(w, reason);
 		WarCombatTeardownService.teardownCombatForWar(w);
 		w.end(reason);

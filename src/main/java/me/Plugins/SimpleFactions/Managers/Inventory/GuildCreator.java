@@ -10,6 +10,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -108,6 +109,7 @@ public class GuildCreator {
 		} else if(t.equals(MenuItemType.LEADER)) {
 			i = new ItemStack(Material.PLAYER_HEAD, 1);
 			SkullMeta m = (SkullMeta) i.getItemMeta();
+			m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
 			m.setDisplayName(StringFormatter.formatHex("#9c9775§lLeader: #c2bea7"+guild.getLeader()));
 			m.setOwningPlayer(Bukkit.getOfflinePlayer(guild.getLeader()));
 			i.setItemMeta(m);
@@ -155,6 +157,7 @@ public class GuildCreator {
 		} else if(t.equals(MenuItemType.MEMBERS)) {
 				i = new ItemStack(Material.PLAYER_HEAD, 1);
 				ItemMeta m = i.getItemMeta();
+				m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
 				m.setDisplayName(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+guild.getMembers().size()+"/"+Cache.maxMembers));
 				List<String> lore = new ArrayList<>();
 				for(String s : guild.getMembers()) {
@@ -168,6 +171,9 @@ public class GuildCreator {
 			i.setType(icon.getType());
 			ItemMeta m = i.getItemMeta();
 			m.setCustomModelData(icon.getItemMeta().getCustomModelData());
+			if (i.getType() == Material.PLAYER_HEAD) {
+				m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+			}
 			i.setItemMeta(m);
 		}
 		return i;
@@ -388,6 +394,7 @@ public class GuildCreator {
 
 		ItemStack i = new ItemStack(Material.PLAYER_HEAD);
 		ItemMeta m = i.getItemMeta();
+		m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
 		m.setDisplayName(StringFormatter.formatHex("#94b572Citizens"));
 
 		List<String> lore = new ArrayList<>();

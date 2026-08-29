@@ -94,6 +94,7 @@ class CampaignRouteRendererTest {
 			List<String> lore = CampaignRouteRenderer.buildRouteLore(
 					war, new CampaignRouteEntry(20, 2, 0), owners);
 			assertTrue(lore.contains(StringFormatter.formatHex(CampaignUiCopy.BATTLE_KIND + "Field Battle")));
+			assertTrue(lore.stream().anyMatch(line -> line.contains("Attackers:")));
 		}
 	}
 

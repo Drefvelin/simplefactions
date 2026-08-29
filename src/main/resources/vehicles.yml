@@ -5,6 +5,7 @@ default-per-person: 1
 
 categories:
   land_vehicles:
+    show-on-upcoming-battle-icon: true
     horse_cart:
       upkeep: 5
       size: 1
@@ -34,6 +35,7 @@ categories:
       ignore-limit: true
       per-person: 3
   ships:
+    show-on-upcoming-battle-icon: true
     gunboat:
       upkeep: 3
       size: 1
@@ -63,6 +65,7 @@ categories:
       upkeep: 3
       size: 1
   aircraft:
+    show-on-upcoming-battle-icon: true
     biplane:
       upkeep: 12
       size: 1

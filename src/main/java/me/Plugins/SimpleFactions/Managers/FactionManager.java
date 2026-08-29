@@ -34,6 +34,7 @@ import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Objects.PrestigeRank;
 import me.Plugins.SimpleFactions.Objects.Request.ElevateRequest;
 import me.Plugins.SimpleFactions.Objects.Request.MovementJoinRequest;
+import me.Plugins.SimpleFactions.Objects.Request.MovementLeaderTargetRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelocateRequest;
 import me.Plugins.SimpleFactions.Cache;
@@ -497,6 +498,17 @@ public class FactionManager implements Listener{
 	}
 	public static void addFaction(Faction f) {
 		factions.add(f);
+		if (f.getProvinces() == null || f.getProvinces().isEmpty()) {
+			return;
+		}
+		if (f.getCapital() != -1) {
+			return;
+		}
+		Guild main = f.getOrCreateMainGuild();
+		if (main == null || !main.hasCapital()) {
+			return;
+		}
+		f.setCapital(main.getCapital(), true);
 	}
 	public static void deleteFaction(Faction f){
 		map.enqueue("nation", f.getRGB());
@@ -856,6 +868,72 @@ public class FactionManager implements Listener{
 		}
 		target.join(o, cause);
 		p.sendMessage("§a"+sender+" has joined your movement as a "+req.getType()+"!");
+	}
+
+	public static void requestMovementLeaderTarget(Player sender, Movement movement, Cause cause, String targetName) {
+		if (sender == null || movement == null || cause == null || targetName == null) {
+			return;
+		}
+		Player target = Bukkit.getPlayerExact(targetName);
+		if (target == null || !target.isOnline()) {
+			sender.sendMessage("§cThat player must be online to become the wanted leader.");
+			return;
+		}
+		Faction host = movement.getFaction();
+		if (host == null || !host.canBecomeLeader(targetName)) {
+			sender.sendMessage("§c" + targetName + " cannot be the wanted leader.");
+			return;
+		}
+		target.sendMessage(sender.getName() + " §7wants you to be the wanted leader of their movement.");
+		target.sendMessage("§7Type §a/faction accept §7to accept");
+		target.sendMessage("§7Request will time out in 60 seconds");
+		sender.sendMessage("§aLeader request sent to " + targetName);
+		RequestManager.addRequest(
+				sender,
+				target,
+				new MovementLeaderTargetRequest(
+						null,
+						sender.getName(),
+						movement.getId(),
+						cause.getIndex(),
+						targetName));
+	}
+
+	public static void acceptMovementLeaderTargetRequest(Player p) {
+		MovementLeaderTargetRequest req = (MovementLeaderTargetRequest) RequestManager.getRequest(p);
+		if (req == null) {
+			return;
+		}
+		if (!p.getName().equalsIgnoreCase(req.getProposedName())) {
+			p.sendMessage("§cThat request is not for you.");
+			return;
+		}
+		Movement movement = getMovementById(req.getMovementId());
+		if (movement == null || movement.isFrozen()) {
+			p.sendMessage("§cThat movement is no longer available.");
+			return;
+		}
+		if (req.getCauseIndex() < 0 || req.getCauseIndex() >= movement.getCauses().size()) {
+			p.sendMessage("§cSpecified cause no longer exists");
+			return;
+		}
+		Cause cause = movement.getCauses().get(req.getCauseIndex());
+		if (cause == null || cause.getProposal() == null || !cause.getProposal().needsTarget()) {
+			p.sendMessage("§cSpecified cause no longer exists");
+			return;
+		}
+		Faction host = movement.getFaction();
+		if (host == null || !host.canBecomeLeader(req.getProposedName())) {
+			p.sendMessage("§cYou can no longer become the wanted leader.");
+			return;
+		}
+		cause.getProposal().setTarget(req.getProposedName());
+		new Database().saveFaction(host);
+		p.sendMessage("§aYou are now the wanted leader of this movement.");
+		Player requester = Bukkit.getPlayerExact(req.getRequester());
+		if (requester != null && requester.isOnline()) {
+			requester.sendMessage("§a" + p.getName() + " accepted becoming the wanted leader.");
+		}
 	}
 
 	//Elections and stuff

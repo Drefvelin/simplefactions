@@ -180,10 +180,16 @@ public final class CampaignRouteRenderer {
 
 		appendRealmLines(lore, war, provinceId, owners);
 
-		if (entry.hasBattleSlot()
-				&& CampaignRetreatService.isSlotConceded(war, entry.scheduleLeg(), entry.scheduleIndex())) {
+		boolean conceded = entry.hasBattleSlot()
+				&& CampaignRetreatService.isSlotConceded(war, entry.scheduleLeg(), entry.scheduleIndex());
+		boolean fought = entry.hasBattleSlot() && isFoughtSlot(war, entry);
+		if (entry.hasBattleSlot() && !conceded && !fought) {
+			CampaignBattleIconLore.appendSoldiers(lore, war);
+		}
+
+		if (conceded) {
 			lore.add(StringFormatter.formatHex(CampaignUiCopy.MUTED + CampaignUiCopy.RETREATED_LABEL));
-		} else if (entry.hasBattleSlot() && isFoughtSlot(war, entry)) {
+		} else if (fought) {
 			lore.add(StringFormatter.formatHex(CampaignUiCopy.MUTED + CampaignUiCopy.FOUGHT_LABEL));
 		} else if (entry.hasBattleSlot()
 				&& entry.scheduleLeg() == CampaignScheduleService.activeLeg(war)
@@ -191,6 +197,7 @@ public final class CampaignRouteRenderer {
 			lore.add(StringFormatter.formatHex(CampaignUiCopy.NEXT_BATTLE + "Next battle"));
 			CampaignScheduleCountdown.formatNextMilestone(war, CampaignClock.now())
 					.ifPresent(text -> lore.add(StringFormatter.formatHex(CampaignUiCopy.MUTED + text)));
+			CampaignBattleIconLore.appendVehiclesIfLocked(lore, war);
 		}
 		return lore;
 	}

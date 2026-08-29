@@ -304,9 +304,9 @@ When **capital itself** is the war target, capital province is the objective.
 
 - **One campaign battle per day** (config) inside **battle window** (default **21:00-24:00** Europe/Paris; see [Battle day timeline](#battle-day-timeline)).
 - Exact hour chosen by [voting](#battle-scheduling--voting).
-- **First invasion battle** is always at **`campaign_provinces[cursor_index]`** (border **B** at declare), regardless of schedule slot order when indices align.
+- **First invasion land battle** is at border **B**, unless an enemy fort ZOC covers B (and B is not the objective). Then the siege is first (fort home, possibly off-axis with `chronologyProvinceId`).
 - **Two battle lists** are built at declare (see [Campaign battle schedule](#campaign-battle-schedule-locked-70)), each trimmed to per-goal **`max_battles_per_leg`**, then fought via the **active** leg index for the current `pushTarget`.
-- Fort ZOC on line → **siege** when the line passes through the ZOC and the fort is enemy-controlled. Capital in fort ZOC → siege then objective field battle.
+- Fort ZOC covering a tile → **siege first**. The field that tile would have had is omitted unless that tile is the **objective** (siege then required field).
 - **Field cadence:** default **`war.battle_cadence.provinces_between_battles: 3`**. Each leg walks its segment once; place a non-required **field** slot when `offset % N == 0` from the leg start (`N` = config value). This is a **grid from leg start**, not step-since-last-battle counting.
  - **Invasion:** `cadenceOrigin = borderIndex` (`cursor_index` at declare); offset = `abs(axisIndex - borderIndex)`.
  - **Counter:** `cadenceOrigin = borderIndex - 1` (first tile **left** of border **B**); offset = `abs(axisIndex - (borderIndex - 1))`.
@@ -341,7 +341,7 @@ Only **`CampaignBattlePlacer.placeBattle`** mutates a leg list. Each slot is **i
 
 **FB** = first invasion battle (required **FIELD** at border **B** = `campaign_provinces[cursor_index]`). If a **NAVAL** battle happens before landing, NAVAL is list index **0** and the FB field at **B** stays at index **1**.
 
-**Example (Brume vs Lantan):** axis `452, 782, 758, 757, 672, 709, 713, 705`. Invasion list: `709 FIELD` → `713 SIEGE` → `705 required` (optional `795 NAVAL` prefix when harbour covers sea). Geographic GUI row (70c): `452 - 782 - 672 - [709] - 713 siege - 705`.
+**Example (Brume vs Lantan):** axis `452, 782, 758, 757, 672, 709, 713, 705`. Invasion list: `713 SIEGE` → `705 required` when Greenfort ZOC covers `709` (no `709` field). Optional `795 NAVAL` prefix when harbour covers sea. Geographic GUI row: `452 - 782 - 672 - 713 siege - 705`.
 
 #### Two legs (axis walk)
 
@@ -365,13 +365,13 @@ Objective battles use **field** template and **Field Battle** display (required 
 
 | Slot | When | `BattleType` | Display |
 |------|------|--------------|---------|
-| **Border / FB** | Phase 1 at border **B**: optional **FIELD**, unless an enemy fort home **is B** or is **off-axis** with ZOC covering B (and B is not the objective). Then the siege is the first land battle. | `FIELD` or `SIEGE` | Field Battle or Siege |
-| **Siege** | Axis passes through province in operational fort ZOC; fort controller is enemy. Optional field at the same fight-order tile is omitted except at the **objective**, where siege and required field both remain. On-axis forts later on the route still keep an earlier border field (Brume `709` then `713`). | `SIEGE` | Siege |
+| **Border / FB** | Phase 1 at border **B**: optional **FIELD**, unless an enemy fort ZOC covers B (and B is not the objective). Then the siege is the first land battle, whether the fort home is on-axis, off-axis, or is B itself. | `FIELD` or `SIEGE` | Field Battle or Siege |
+| **Siege** | Axis passes through province in operational fort ZOC; fort controller is enemy. Optional field at the same fight-order tile is omitted except at the **objective**, where siege and required field both remain. | `SIEGE` | Siege |
 | **Naval** | Invasion: enemy port sea ZOC blocks sea on axis segment AC→DT; prepended at index 0 | `FIELD` + `navalVariant` | Naval Battle |
 | **Field** | Leg walk: `offset % provinces_between_battles == 0` from leg start (non-terminal provinces) | `FIELD` | Field Battle |
 | **Objective** | Always at `objectiveProvinceId` | `FIELD` | Field Battle (`required`) |
 
-Siege fires **once per fort** on the line. The slot **`provinceId`** is the **fort home province** (e.g. Greenfort → **713**); **`fortInstallationId`** names the fort. When the fort home is **off the campaign axis**, **`chronologyProvinceId`** stores the axis tile where ZOC was entered; fight order and GUI geographic sort use that tile. That off-axis siege **replaces** the optional field on that chronology tile (Greenfort covering Lan Airfield **704** → siege first, no airfield field, then Lanbury). On-axis fort homes sort by `provinceId` as before. The invasion leg never schedules battles after the objective province. Overlapping ZOC: **oldest** operational fort wins per province (`completedAt`, then id). The GUI **First Battle** marker is the first non-naval invasion slot (landing field, or the replacing siege).
+Siege fires **once per fort** on the line. The slot **`provinceId`** is the **fort home province** (e.g. Greenfort → **713**); **`fortInstallationId`** names the fort. When the fort home is **off the campaign axis**, **`chronologyProvinceId`** stores the axis tile where ZOC was entered; fight order and GUI geographic sort use that tile. That siege **replaces** the optional field on that chronology tile. On-axis fort homes sort by `provinceId` as before. The invasion leg never schedules battles after the objective province. Overlapping ZOC for **schedule** identity: **oldest** operational fort wins per province (`completedAt`, then id). Occupation still requires **all** covering forts to be taken. The GUI **First Battle** marker is the first non-naval invasion slot (landing field, or the replacing siege).
 
 #### Port sea ZOC (shipped ; updated )
 

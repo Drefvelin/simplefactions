@@ -185,9 +185,8 @@ public class Faction {
 		this.taxHandler = new TaxHandler(this, 5, 5, 5, 5, 5);
 		this.guildHandler = new GuildHandler(this);
 		guildHandler.addGuild(guild);
-		int capital = guild.getCapital();
+		guild.setHost(this);
 		guild.convert(GuildLoader.getBaseType());
-		setCapital(capital, true);
 		createBanner(bannerPatterns);
 		updatePrestige();
 		updateTier();
@@ -618,6 +617,7 @@ public class Faction {
 		}
 		return true;
 	}
+
 	public boolean canRemainLeader(String name) {
 		return isMember(name);
 	}

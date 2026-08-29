@@ -34,6 +34,9 @@ public class MovementCreator {
             item = new ItemStack(Material.RED_CONCRETE);
         }
         ItemMeta m = item.getItemMeta();
+        if (item.getType() == Material.PLAYER_HEAD) {
+            m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+        }
         m.setDisplayName(StringFormatter.formatHex("#c5e0e3Movement Leader"));
         List<String> lore = new ArrayList<>();
         lore.add(StringFormatter.formatHex("#9c9775Leader: #c2bea7" + (movement.hasLeader() ? movement.getLeader() : "None")));
@@ -173,6 +176,9 @@ public class MovementCreator {
             item = new ItemStack(Material.RED_CONCRETE);
         }
         ItemMeta m = item.getItemMeta();
+        if (item.getType() == Material.PLAYER_HEAD) {
+            m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+        }
         m.setDisplayName(StringFormatter.formatHex("#c5e0e3Cause Leader"));
         List<String> lore = new ArrayList<>();
         if (cause.hasLeader()) {
@@ -246,9 +252,23 @@ public class MovementCreator {
         List<String> lore = new ArrayList<>();
         lore.add(StringFormatter.formatHex("#7a7a7aEnd this movement and disband"));
         lore.add("");
-        lore.add(StringFormatter.formatHex("#d87638Click to Disband"));
+        lore.add(StringFormatter.formatHex("#d87638Click to confirm"));
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createEndMovementConfirmItem(Movement movement) {
+        ItemStack item = new ItemStack(Material.PAPER);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#c74d32End this movement?"));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#7a7a7aThis will disband the movement"));
+        lore.add(StringFormatter.formatHex("#7a7a7aand remove all supporters and causes."));
+        lore.add(" ");
+        appendMovementSummaryLore(lore, movement);
+        m.setLore(lore);
         item.setItemMeta(m);
         return item;
     }
@@ -258,8 +278,18 @@ public class MovementCreator {
         ItemMeta m = item.getItemMeta();
         m.setDisplayName(StringFormatter.formatHex("#d1743b" + movement.getLeader() + "'s Movement "));
         List<String> lore = new ArrayList<>();
+        appendMovementSummaryLore(lore, movement);
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#50e846Click to view details"));
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
+    private void appendMovementSummaryLore(List<String> lore, Movement movement) {
         lore.add(StringFormatter.formatHex("#9c9775Leader: #c2bea7" + movement.getLeader()));
-        lore.add(StringFormatter.formatHex("#9c9775Organization: #c2bea7" + Formatter.formatDouble(movement.getOrganization()) + 
+        lore.add(StringFormatter.formatHex("#9c9775Organization: #c2bea7" + Formatter.formatDouble(movement.getOrganization()) +
                                             "/"+movement.getMaxOrganization()+" §7(" + (movement.getOrganizationGain() > 0 ? "+" : "#d65c5c") + movement.getOrganizationGain()) + " §7per day)");
         lore.add(StringFormatter.formatHex("#c45749Power: #d87638"+movement.getPower()+"% #7a7a7aof " + movement.getFaction().getName()));
         lore.add(" ");
@@ -267,12 +297,6 @@ public class MovementCreator {
         lore.add(StringFormatter.formatHex("#9c9775Members: #c2bea7" + movement.getAllMembers().size()));
         lore.add(StringFormatter.formatHex("#9c9775Supporters: #c2bea7" + movement.getSupporters().getAllMembers().size()));
         lore.add(StringFormatter.formatHex("#9c9775Foreign Backers: #c2bea7" + movement.getForeignBackers().size()));
-        lore.add(" ");
-        lore.add(StringFormatter.formatHex("#50e846Click to view details"));
-        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
-        m.setLore(lore);
-        item.setItemMeta(m);
-        return item;
     }
 
     public ItemStack createPhaseItem(Player p, Phase phase, Movement movement) {
@@ -323,9 +347,10 @@ public class MovementCreator {
         lore.add(StringFormatter.formatHex("#7a7a7aThe faction leader will have to accept or reject the demands."));
         lore.add(StringFormatter.formatHex("#7a7a7aIf the demands are rejected a #d87638Civil War #7a7a7abegins"));
         lore.add(" ");
+        appendMovementSummaryLore(lore, movement);
+        lore.add(" ");
         if(movement.getOrganization() < 100) {
             lore.add(StringFormatter.formatHex("#c2bea7Organization must be at #73b870100 #c2bea7to send demands"));
-            lore.add(StringFormatter.formatHex("#7a7a7a(Currently " + movement.getOrganization() + "/100)"));
             lore.add(StringFormatter.formatHex("#c74d32Unavailable"));
         } else {
             lore.add(StringFormatter.formatHex("#50e846Click to Send Demands"));
@@ -464,6 +489,9 @@ public class MovementCreator {
         }
         
         ItemMeta m = item.getItemMeta();
+        if (item.getType() == Material.PLAYER_HEAD) {
+            m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+        }
         m.setDisplayName(StringFormatter.formatHex("#c5e0e3Change Leader Target"));
         List<String> lore = new ArrayList<>();
         
@@ -496,6 +524,7 @@ public class MovementCreator {
     public ItemStack createPotentialTargetItem(Player player, Faction f, String member, int causeIndex) {
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         ItemMeta m = item.getItemMeta();
+        m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
         m.setDisplayName(StringFormatter.formatHex("#c5e0e3" + member));
         List<String> lore = new ArrayList<>();
         lore.add(StringFormatter.formatHex("#7a7a7aSelect this player as the"));

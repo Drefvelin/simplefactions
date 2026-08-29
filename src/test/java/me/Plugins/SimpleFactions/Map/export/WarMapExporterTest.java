@@ -73,7 +73,9 @@ class WarMapExporterTest {
 		assertTrue(row.has("campaign_battle_schedule"));
 		assertTrue(row.has("campaign_counter_schedule"));
 		assertEquals("toward_objective", row.get("push_target").getAsString());
-		assertFalse(row.has("occupied_by_attacker"));
+		assertTrue(row.has("occupied_by_attacker"));
+		assertEquals(0, row.getAsJsonArray("occupied_by_attacker").size());
+		assertEquals(0, row.getAsJsonArray("occupied_by_defender").size());
 		assertFalse(row.has("initiative_attacker"));
 
 		JsonObject invasionSlot = row.getAsJsonArray("campaign_battle_schedule").get(0).getAsJsonObject();
@@ -224,6 +226,19 @@ class WarMapExporterTest {
 		assertEquals(
 				"Siege of Greenfort",
 				schedule.get(2).getAsJsonObject().get("display_name").getAsString());
+	}
+
+	@Test
+	void exportWar_includesOccupationProvinceLists() {
+		War war = campaignWar();
+		war.setOccupiedByAttacker(List.of(20, 18));
+		war.setOccupiedByDefender(List.of(10));
+
+		JsonObject row = WarMapExporter.exportWar(war);
+
+		assertEquals(20, row.getAsJsonArray("occupied_by_attacker").get(0).getAsInt());
+		assertEquals(18, row.getAsJsonArray("occupied_by_attacker").get(1).getAsInt());
+		assertEquals(10, row.getAsJsonArray("occupied_by_defender").get(0).getAsInt());
 	}
 
 	@Test

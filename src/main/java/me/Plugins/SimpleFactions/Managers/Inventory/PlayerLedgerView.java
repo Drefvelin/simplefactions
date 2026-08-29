@@ -18,17 +18,25 @@ public final class PlayerLedgerView {
     }
 
     public void open(Player player) {
-        Inventory inventory = SimpleFactions.plugin.getServer().createInventory(
-            new SFInventoryHolder(player.getUniqueId().toString(), SFGUI.PLAYER_LEDGER_VIEW),
-            27,
-            "§7Your Ledger"
-        );
+        open(player, null);
+    }
+
+    public void open(Player player, Inventory inventory) {
+        boolean openInv = inventory == null;
+        if(openInv) {
+            inventory = SimpleFactions.plugin.getServer().createInventory(
+                new SFInventoryHolder(player.getUniqueId().toString(), SFGUI.PLAYER_LEDGER_VIEW),
+                27,
+                "§7Your Ledger"
+            );
+        }
+        inventory.clear();
         for (int slot = 0; slot < 27; slot++) {
             if (slot != 13) {
                 inventory.setItem(slot, inventoryManager.getFiller(Material.GRAY_STAINED_GLASS_PANE));
             }
         }
         inventory.setItem(13, creator.createLedgerBook(player));
-        player.openInventory(inventory);
+        if(openInv) player.openInventory(inventory);
     }
 }
