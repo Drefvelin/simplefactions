@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 
 /**
  * Buffered debug log written to {@code logs/log.txt} in the plugin data folder.
- * Enable via {@code logging: true} in config.yml.
+ * Relation events go to {@code logs/relations.log}. Both use {@code logging} / {@code wipe-log}.
  */
 public final class LogManager {
 	private static final Logger LOGGER = Logger.getLogger(LogManager.class.getName());
@@ -24,9 +24,11 @@ public final class LogManager {
 			.withZone(ZoneId.systemDefault());
 	static final String LOG_DIRECTORY = "logs";
 	static final String LOG_FILE_NAME = "log.txt";
+	static final String RELATIONS_LOG_FILE_NAME = "relations.log";
 
 	private static volatile boolean enabled;
 	private static volatile Path logFile;
+	private static volatile Path relationsLogFile;
 	private static final Object LOCK = new Object();
 	private static final List<String> sessionLines = new ArrayList<>();
 
@@ -36,23 +38,36 @@ public final class LogManager {
 	public static void configure(boolean loggingEnabled, boolean wipeLog, File dataFolder) {
 		enabled = loggingEnabled;
 		if (dataFolder != null) {
-			logFile = dataFolder.toPath().resolve(LOG_DIRECTORY).resolve(LOG_FILE_NAME);
+			Path logDir = dataFolder.toPath().resolve(LOG_DIRECTORY);
+			logFile = logDir.resolve(LOG_FILE_NAME);
+			relationsLogFile = logDir.resolve(RELATIONS_LOG_FILE_NAME);
 		}
 		if (wipeLog) {
 			wipeLogFile();
+			wipeRelationsLogFile();
 		}
 	}
 
 	private static void wipeLogFile() {
-		if (logFile == null) {
+		deleteLog(logFile, "log.txt");
+		synchronized (LOCK) {
+			sessionLines.clear();
+		}
+	}
+
+	private static void wipeRelationsLogFile() {
+		deleteLog(relationsLogFile, "relations.log");
+	}
+
+	private static void deleteLog(Path file, String label) {
+		if (file == null) {
 			return;
 		}
 		synchronized (LOCK) {
-			sessionLines.clear();
 			try {
-				Files.deleteIfExists(logFile);
+				Files.deleteIfExists(file);
 			} catch (IOException exception) {
-				LOGGER.warning("Failed to wipe log.txt: " + exception.getMessage());
+				LOGGER.warning("Failed to wipe " + label + ": " + exception.getMessage());
 			}
 		}
 	}
@@ -102,7 +117,22 @@ public final class LogManager {
 		if (!enabled || message == null || logFile == null) {
 			return;
 		}
-		writeLines(List.of(SESSION_TIME.format(Instant.now()) + " " + message), false);
+		writeLines(logFile, List.of(SESSION_TIME.format(Instant.now()) + " " + message), false);
+	}
+
+	/** Immediate line in {@code logs/relations.log}. Same {@code logging} / {@code wipe-log} flags as log.txt. */
+	public static void relations(String message) {
+		if (!enabled || message == null || relationsLogFile == null) {
+			return;
+		}
+		writeLines(relationsLogFile, List.of(SESSION_TIME.format(Instant.now()) + " " + message), false);
+	}
+
+	public static void relations(String format, Object... args) {
+		if (!enabled) {
+			return;
+		}
+		relations(String.format(format, args));
 	}
 
 	public static void flush() {
@@ -113,16 +143,16 @@ public final class LogManager {
 			if (sessionLines.isEmpty()) {
 				return;
 			}
-			writeLines(sessionLines, true);
+			writeLines(logFile, sessionLines, true);
 			sessionLines.clear();
 		}
 	}
 
-	private static void writeLines(List<String> lines, boolean trailingBlankLine) {
+	private static void writeLines(Path file, List<String> lines, boolean trailingBlankLine) {
 		try {
-			Files.createDirectories(logFile.getParent());
+			Files.createDirectories(file.getParent());
 			try (BufferedWriter writer = Files.newBufferedWriter(
-					logFile,
+					file,
 					StandardCharsets.UTF_8,
 					StandardOpenOption.CREATE,
 					StandardOpenOption.APPEND)) {
@@ -135,7 +165,7 @@ public final class LogManager {
 				}
 			}
 		} catch (IOException exception) {
-			LOGGER.warning("Failed to write log.txt: " + exception.getMessage());
+			LOGGER.warning("Failed to write " + file.getFileName() + ": " + exception.getMessage());
 		}
 	}
 }

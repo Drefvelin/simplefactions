@@ -57,7 +57,8 @@ Persisted on faction JSON as `installation queue` (single object or null).
 | `tick` | Decrement `timeLeft` each second; complete at 0 |
 | `deconstruct` | Remove operational installation or cancel pending build |
 | `payDailyUpkeep` | Daily pass in `Faction.newDay()`: withdraw upkeep or dissolve (cheapest first) |
-| `onProvinceLost` | Cancel pending + dissolve operational on province |
+| `onProvinceLost` | Wilderness / no new owner: cancel pending + dissolve operational on province |
+| `InstallationTransferService.transfer` | New owner exists: cancel pending on that tile; move completed installs; VF leader sync when a live berthed vehicle exists |
 | `validate()` | Cancel pending / dissolve if province no longer owned |
 | `serialize()` / `load()` | Operational installations |
 | `serializeConstruction()` / `loadConstruction()` | Pending build |
@@ -111,7 +112,13 @@ Implemented in `Managers/Inventory/InstallationView.java` and `InstallationCreat
 
 ## Territory loss
 
-When the faction **loses** a province → cancel any pending construction on that province and dissolve **all** operational installations on that province. Leader notified if online.
+**Wilderness / no new owner:** cancel any pending construction on that province and dissolve **all** operational installations on that province (`InstallationHandler.onProvinceLost`). Leader notified if online.
+
+**New owner:** `InstallationTransferService.transfer` moves completed installs to the new faction and cancels pending construction on that tile. VF owner sync (`player_<newLeader>`) runs when a live berthed vehicle exists. Callers include prestige steal (`MapSystem.claim`: transfer then unclaim), de jure annex, `Guild.elevate`, `Faction.dissolve` into overlord, and war land apply after peace revert.
+
+## Wartime occupation
+
+Occupation lists on the war are **not** de jure owner changes. While a tile is occupied (or a siege takes the fort's own province), installs on that tile transfer to the occupying coalition's **war leader**. Snapshot `installationId -> originalFactionId` persists on the war. Recapture restores the snapshot original (vassal), not the recapturing war leader. Peace always reverts the snapshot first; then land apply may transfer again.
 
 ---
 
@@ -281,6 +288,7 @@ Missing registry rows are **not** eligible for berthable types.
 | In `inPlaySet` | Source |
 |----------------|--------|
 | Committed pick | Leader-selected **port** or **airport** for current `battleDay` |
+| Defender ZOC port | Current naval slot `portInstallationId`, auto-committed for the defender war leader |
 | Siege fort | Active schedule **`SIEGE`** slot `fortInstallationId` owned by that faction |
 
 - **Trains** and other **non-berthable** types: always eligible as personal vehicles.
@@ -291,7 +299,9 @@ Missing registry rows are **not** eligible for berthable types.
 
 Faction leaders commit **ports and airports** for each battle day from the campaign war GUI (**Installations** button, slot 33). Only installations in provinces your coalition still controls are pickable. **Forts** are not pickable; the active **siege** on the campaign schedule puts the owning faction's fort emplacements in play automatically.
 
-Picks lock at **vote close** on battle day. Empty pick means nothing from that faction's installations is in play. See [Wars.md](./wars.md#installation-picks).
+On a current naval slot, the defender war leader's **ZOC port** (`portInstallationId`) is auto-committed and cannot be unpicked. Other pickable ports and airports still toggle.
+
+Picks lock at **vote close** on battle day. After lock, berth and unberth are blocked on **in-play** installs (see [vehicles.md](./vehicles.md#locks-during-battles-and-raids)). Empty pick means nothing from that faction's installations is in play except a required ZOC port. See [Wars.md](./wars.md#installation-picks).
 
 ### Campaign raid damage and repair
 
@@ -328,8 +338,9 @@ Enforced by `VehicleInstallationLockService`.
 
 | Rule | Detail |
 |------|--------|
-| Who | Vehicles with `OwnershipMode.INSTALLATION` (berthed) |
-| During battle/raid | Cannot berth if the installation is **vulnerable** (raid source/target, campaign battle in-play, staff raid target) |
+| Who | Vehicles with `OwnershipMode.INSTALLATION` (berthed) and new berths at the same installation |
+| During battle/raid | Cannot berth or unberth if the installation is **vulnerable** (raid source/target, campaign battle in-play, staff raid target) |
+| After vote close | Cannot berth or unberth on **in-play** installs: committed picks, defender ZOC port, siege fort. Other ports stay open. |
 | After raid | **Target only** keeps the 48h lock for new berths |
 | Repair | Always allowed (personal and berthed vehicles) |
 | Staff | Exempt from berth lock |
@@ -441,7 +452,7 @@ airport:
 
 Loaded at enable by `InstallationConfigLoader` (fail loud if missing or unknown category). Access: `getDailyUpkeep(kind)`, `getConstructionTimeSeconds(kind)`, `getRadius(kind)`, `getConsentProximityBlocks()`, `getTransferRequestTimeoutSeconds()`, `getCategorySlotCapacity(kind, categoryId)`, `getCategorySlots(kind)`.
 
-**`config.yml`** still holds `port-sea-proximity-blocks` and `war.port_sea_zoc_radius`; installation upkeep/construction/slots moved to `installations.yml`.
+**`config.yml`** still holds `port-sea-proximity-blocks`. **`war.yml`** holds `war.port_sea_zoc_radius`. Installation upkeep/construction/slots live in `installations.yml`.
 
 **Live servers:** copy `installations.yml` from the jar default; remove the old `installations:` block from `config.yml`. Add `land_vehicles: 2` under `fort.slots` when merging an existing file. Vehicle categories live in `vehicles.yml` (see [`AGENTS.md`](../AGENTS.md) for package layout).
 

@@ -40,6 +40,7 @@ public class RelationType {
 	private Threshold threshold;
 
 	private boolean elevationTarget;
+	private boolean canPickForWar;
 	
 	public RelationType(String key, ConfigurationSection config) {
 		id = key;
@@ -57,6 +58,7 @@ public class RelationType {
 		overlord = config.getBoolean("overlord", false);
 		lock = config.getBoolean("lock", false);
 		elevationTarget = config.getBoolean("elevation-target", false);
+		canPickForWar = config.getBoolean("can-pick-for-war", true);
 		isTradeAgreement = config.getBoolean("trade-agreement", false);
 		if(config.isConfigurationSection("threshold")) {
 			threshold = new Threshold(config.getConfigurationSection("threshold"));
@@ -89,6 +91,10 @@ public class RelationType {
 
 	public boolean isElevationTarget() {
 		return elevationTarget;
+	}
+
+	public boolean canPickForWar() {
+		return canPickForWar;
 	}
 
 	public double getBaseCost() {

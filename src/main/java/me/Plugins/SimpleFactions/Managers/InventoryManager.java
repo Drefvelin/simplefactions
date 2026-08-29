@@ -56,6 +56,7 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.War.core.Participant;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.declare.WarDeclareRequest;
 import me.Plugins.SimpleFactions.War.campaign.progression.WhitePeaceService;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.installation.handler.ConstructResult;
@@ -70,6 +71,7 @@ import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class InventoryManager implements Listener{
 	public HashMap<Player, Faction> confirming = new HashMap<>();
+	public HashMap<Player, WarDeclareRequest> pendingWarDeclares = new HashMap<>();
 	public HashMap<Player, Integer> campaignConfirmWar = new HashMap<>();
 	public HashMap<Player, Boolean> installationConfirmFromCommand = new HashMap<>();
 	public HashMap<Player, TaxChange> taxChange = new HashMap<>();
@@ -124,10 +126,6 @@ public class InventoryManager implements Listener{
 	
 	public void warView(Inventory i, Player player, War w, boolean open) {
 		warView.warView(i, player, w, open);
-	}
-	
-	public void warGoalView(Inventory i, Player player, War w, Faction target, Faction page, boolean open) {
-		warView.warGoalView(i, player, w, target, page, open);
 	}
 	
 	public void participantView(Inventory i, Player player, War w, Participant p, boolean open) {
@@ -382,6 +380,11 @@ public class InventoryManager implements Listener{
 					governmentView(p, f, null);
 					return;
 				}
+				if (me.Plugins.SimpleFactions.War.civilwar.CivilWarHostMovementRules.blocksHostGuildStart(f, p.getName())) {
+					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					p.sendMessage(me.Plugins.SimpleFactions.War.civilwar.CivilWarCopy.ONE_PROVINCE_HOST_GUILD);
+					return;
+				}
 				gov.startMovement(p.getName(), proposal);
 				p.sendTitle("", "§cMovement Started", 20, 80, 20);
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
@@ -489,6 +492,16 @@ public class InventoryManager implements Listener{
 		i.setItem(13, info);
 		i.setItem(11, createButton("confirm", "warband_battle_retreat", battleId));
 		i.setItem(15, createButton("cancel", "warband_battle_retreat", battleId));
+		player.openInventory(i);
+	}
+
+	public void confirmWarDeclareView(Player player, WarDeclareRequest request) {
+		pendingWarDeclares.put(player, request);
+		confirming.put(player, request.getAttacker());
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Confirm Action");
+		i.setItem(13, declareWarView.creator.createConfirmSummaryItem(request));
+		i.setItem(11, createButton("confirm", "war_declare", request.getDefender().getId()));
+		i.setItem(15, createButton("cancel", "war_declare", request.getDefender().getId()));
 		player.openInventory(i);
 	}
 	
@@ -803,7 +816,7 @@ public class InventoryManager implements Listener{
 		} else if (inv.getHolder() instanceof SFCombinedInventoryHolder combinedHolder) {
 			e.setCancelled(true);
 			SFGUI combinedType = combinedHolder.getType();
-			if (combinedType == SFGUI.PARTICIPANT_VIEW || combinedType == SFGUI.WARGOAL_VIEW) {
+			if (combinedType == SFGUI.PARTICIPANT_VIEW) {
 				warView.click(e, inv, p);
 			}
 		} else if (inv.getHolder() instanceof DeclareWarHolder) {
@@ -938,6 +951,16 @@ public class InventoryManager implements Listener{
 			if (data != null) {
 				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
 				CapitalMovePrompt.handleConfirm(p, confirmed);
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "war_declare");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if (data != null) {
+				WarDeclareRequest request = pendingWarDeclares.remove(p);
+				confirming.remove(p);
+				if (request == null) return;
+				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
+				declareWarView.handleConfirm(p, request, confirmed);
 				return;
 			}
 		}

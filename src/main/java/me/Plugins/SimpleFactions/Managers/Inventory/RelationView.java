@@ -50,6 +50,7 @@ public class RelationView {
 			}
 			i.setItem(12, creator.createRelationTypeItem(r.getType(), f, pf, false));
 			i.setItem(24, creator.createWarButton(f, pf));
+			i.setItem(22, creator.createWarReparationsItem(pf, f));
 			i.setItem(30, creator.createAttitudeItem(r.getAttitude()));
 			
 		}

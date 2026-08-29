@@ -18,6 +18,7 @@ import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
+import me.Plugins.SimpleFactions.War.resolution.PillageTradeHit;
 import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.laws.Law;
@@ -148,6 +149,7 @@ public class ProvinceManager {
         if(save) {
             guild.getTradeBreakdown().setTariffs(tariffs);
             guild.getTradeBreakdown().setUpkeep(upkeep);
+            income = PillageTradeHit.applyToIncome(guild, income);
             guild.getTradeBreakdown().setIncome(income);
             guild.getTradeBreakdown().setTradePower(trade);
         }

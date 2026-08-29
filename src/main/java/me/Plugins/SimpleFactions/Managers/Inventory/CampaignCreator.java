@@ -514,7 +514,8 @@ public class CampaignCreator {
 			War war,
 			Installation installation,
 			boolean selected,
-			boolean locked) {
+			boolean locked,
+			boolean zocLocked) {
 		ItemStack item = installationCreator.createInstallationIcon(installation).clone();
 		ItemMeta meta = item.getItemMeta();
 		List<String> lore = meta.getLore() != null ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
@@ -523,7 +524,9 @@ public class CampaignCreator {
 			meta.addEnchant(Enchantment.UNBREAKING, 1, true);
 			meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
 		}
-		if (locked) {
+		if (zocLocked) {
+			lore.add(StringFormatter.formatHex(CampaignUiCopy.LABEL + CampaignUiCopy.REQUIRED_ZOC_PORT));
+		} else if (locked) {
 			lore.add("§7Locked at vote close");
 		} else if (!selected) {
 			lore.add(StringFormatter.formatHex(CampaignUiCopy.SELECT + "Click to commit"));
@@ -531,7 +534,7 @@ public class CampaignCreator {
 			lore.add(StringFormatter.formatHex(CampaignUiCopy.REMOVE + "Click to uncommit"));
 		}
 		meta.setLore(lore);
-		if (!locked && war != null) {
+		if (war != null && (!locked || zocLocked)) {
 			meta.getPersistentDataContainer().set(
 					installationPickWarKey(), PersistentDataType.INTEGER, war.getId());
 			meta.getPersistentDataContainer().set(

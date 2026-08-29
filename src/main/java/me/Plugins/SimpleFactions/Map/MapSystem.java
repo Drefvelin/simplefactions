@@ -18,6 +18,9 @@ import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Map.export.Markers;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarBorderLock;
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarCopy;
+import me.Plugins.SimpleFactions.installation.InstallationTransferService;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Title;
@@ -134,6 +137,9 @@ public class MapSystem {
 		} else if(f.ownsProvince(pid)) {
 			p.sendMessage("§cYour faction already owns this province!");
 			return;
+		} else if (CivilWarBorderLock.isLocked(f)) {
+			p.sendMessage(CivilWarCopy.CANNOT_CLAIM);
+			return;
 		} else {
 			Province province = SimpleFactions.getInstance().getProvinceManager().get(pid);
 			if(province.getTerrain().equals(Terrain.WATER) || province.getTerrain().equals(Terrain.SEA)) {
@@ -149,6 +155,10 @@ public class MapSystem {
 		boolean stolen = false;
 		if (owner != null) {
 			if(TitleManager.overProvinceCap(owner)) {
+				if (CivilWarBorderLock.isLocked(owner)) {
+					p.sendMessage(CivilWarCopy.CANNOT_STEAL);
+					return;
+				}
 				stolen = true;
 			} else {
 				p.sendMessage("§cProvince already claimed by " + owner.getName() + "!");
@@ -183,6 +193,7 @@ public class MapSystem {
 		if(stolen) {
 			Player leader = Bukkit.getPlayerExact(owner.getLeader());
 			if(leader != null) leader.sendMessage(f.getName()+" §cclaimed one of your provinces since you lacked the prestige to hold it!");
+			InstallationTransferService.transfer(owner, f, province);
 			unclaim(null, owner, province);
 			enqueue("nation", owner.getRGB());
 		}
@@ -216,6 +227,10 @@ public class MapSystem {
 		}
 		if(f.getCapital() == province) {
 			if(p != null) p.sendMessage("§cCannot unclaim the capital!");
+			return;
+		}
+		if (p != null && CivilWarBorderLock.isLocked(f)) {
+			p.sendMessage(CivilWarCopy.CANNOT_UNCLAIM);
 			return;
 		}
 		if(p != null) p.sendMessage("§aSuccessfully  unclaimed province "+province);

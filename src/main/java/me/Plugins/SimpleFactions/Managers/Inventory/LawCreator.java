@@ -26,6 +26,7 @@ import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.keys.Keys;
+import me.Plugins.SimpleFactions.laws.CanHaveLaw;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawEffect;
 import me.Plugins.SimpleFactions.laws.LawGroup;
@@ -107,6 +108,12 @@ public class LawCreator {
 				}
 				lore.add("");
 			}
+		}
+
+		String unavailable = CanHaveLaw.blockReason(f, law);
+		if (unavailable != null) {
+			lore.add(unavailable);
+			lore.add("");
 		}
 
 		// ---- Effects ----

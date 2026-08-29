@@ -37,6 +37,7 @@ import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.zoc.FortControlService;
+import me.Plugins.SimpleFactions.installation.WartimeInstallationService;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBattleService;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 
@@ -112,6 +113,16 @@ public class CampaignBattleOutcomeService implements Listener {
 			Integer battleProvinceId,
 			Battle battle,
 			Map<String, Integer> sideCasualties) {
+		return applyCampaignBattleOutcome(war, winnerRole, battleProvinceId, battle, sideCasualties, null);
+	}
+
+	public static CampaignBattleApplyResult applyCampaignBattleOutcome(
+			War war,
+			BelligerentRole winnerRole,
+			Integer battleProvinceId,
+			Battle battle,
+			Map<String, Integer> sideCasualties,
+			CampaignCoalition lastBattleOffensiveOverride) {
 		if (war == null) {
 			return new CampaignBattleApplyResult(false, false, Optional.empty());
 		}
@@ -119,7 +130,11 @@ public class CampaignBattleOutcomeService implements Listener {
 		CampaignPushTarget preBattlePushTarget = war.getPushTarget();
 		ObjectiveHolder preBattleObjectiveHeldBy = war.getObjectiveHeldBy();
 
-		CampaignBattleEndService.snapshotBattleStart(war);
+		if (lastBattleOffensiveOverride != null) {
+			CampaignBattleEndService.snapshotBattleStart(war, lastBattleOffensiveOverride);
+		} else {
+			CampaignBattleEndService.snapshotBattleStart(war);
+		}
 
 		if (battle != null) {
 			BattleCasualtyService.applyBattleCasualties(
@@ -144,6 +159,7 @@ public class CampaignBattleOutcomeService implements Listener {
 			}
 
 			occupationService().applyBattleWin(war, battleProvinceId, winnerRole);
+			WartimeInstallationService.occupySiegeFort(war, winnerRole, foughtSlot);
 			BattleNamingService.recordLocationBattle(war, battleProvinceId, foughtSlot);
 			if (CampaignScheduleService.hasActiveSchedule(war)) {
 				CampaignScheduleService.advanceIndex(war);

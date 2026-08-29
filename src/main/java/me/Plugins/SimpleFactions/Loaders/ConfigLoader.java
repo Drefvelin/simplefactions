@@ -21,12 +21,7 @@ import me.Plugins.SimpleFactions.laws.LawEffect;
 
 public class ConfigLoader {
 	public void loadConfig(File configFile) {
-		FileConfiguration config = new YamlConfiguration();
-        try {
-        	config.load(configFile);
-        } catch (IOException | InvalidConfigurationException e) {
-            e.printStackTrace();
-        }
+		FileConfiguration config = loadYaml(configFile);
 		Cache.mapRef = config.getString("map-reference", "main");
 		Cache.worldName = config.getString("world-name", "TFMC_Map");
 
@@ -45,76 +40,8 @@ public class ConfigLoader {
 		Cache.settlementLargePopulationThreshold = config.getInt("settlement-large-population-threshold", 8);
 		Cache.portSeaProximityBlocks = config.getInt("port-sea-proximity-blocks", 20);
 
-		Cache.warRequireDeclareCode = config.getBoolean("war.require_declare_code", false);
-		Cache.warDeclareOpinionThreshold = config.getInt("war.declare_opinion_threshold", -50);
-		Cache.warInitiativeFactor = config.getDouble("war.initiative_factor", 1.5);
-		Cache.warPortSeaZocRadius = config.getInt("war.port_sea_zoc_radius", 2);
-		Cache.warGoalMaxBattles = new EnumMap<>(WarGoalType.class);
-		for (WarGoalType goal : WarGoalType.values()) {
-			int maxBattles = config.getInt("war.goals." + goal.name() + ".max_battles_per_leg", -1);
-			if (maxBattles < 0) {
-				maxBattles = config.getInt("war.goals." + goal.toJson() + ".max_battles_per_leg", -1);
-			}
-			if (maxBattles < 0) {
-				maxBattles = config.getInt("war.goals." + goal.name() + ".max_battles", -1);
-			}
-			if (maxBattles < 0) {
-				maxBattles = config.getInt("war.goals." + goal.toJson() + ".max_battles", 4);
-			}
-			if (maxBattles > Cache.MAX_BATTLES_PER_LEG) {
-				if (Bukkit.getServer() != null) {
-					Bukkit.getLogger().warning("[SimpleFactions] war.goals." + goal.name()
-							+ " max_battles_per_leg=" + maxBattles + " exceeds cap "
-							+ Cache.MAX_BATTLES_PER_LEG + "; clamping.");
-				}
-				maxBattles = Cache.MAX_BATTLES_PER_LEG;
-			}
-			Cache.warGoalMaxBattles.put(goal, maxBattles);
-		}
-		Cache.warFirstBattleAtBorder = config.getBoolean("war.battle_cadence.first_battle_at_border", true);
-		Cache.warProvincesBetweenBattles = config.getInt("war.battle_cadence.provinces_between_battles", 3);
-		Cache.warOccupationIncludeEnemyNeighbors = config.getBoolean("war.occupation.include_enemy_neighbors", true);
-		Cache.warDeclinedAllyStabilityPenalty = config.getInt("war.declined_ally_stability_penalty", -30);
-		Cache.warPathfinderNeutralPenalty = config.getDouble("war.pathfinder.neutral_penalty", 8.0);
-		Cache.warPathfinderSeaPassEnabled = config.getBoolean("war.pathfinder.sea_pass_enabled", true);
-		Cache.warPathfinderWaterCost = config.getDouble("war.pathfinder.water_cost", 0.0);
 		Cache.loggingEnabled = config.getBoolean("logging", true);
 		Cache.wipeLog = config.getBoolean("wipe-log", true);
-
-		Cache.warBattleWindowStartHour = config.getInt("war.battle_schedule.window_start_hour", 21);
-		Cache.warBattleWindowEndHour = config.getInt("war.battle_schedule.window_end_hour", 24);
-		Cache.warRaidWindowStartHour = config.getInt("war.battle_schedule.raid_window_start_hour", 19);
-		Cache.warRaidWindowEndHour = config.getInt("war.battle_schedule.raid_window_end_hour", 20);
-		Cache.warVoteCloseHour = config.getInt("war.battle_schedule.vote_close_hour", 16);
-		Cache.warDefenderChoiceDeadlineHour = config.getInt("war.battle_schedule.defender_choice_deadline_hour", 12);
-		Cache.warOneBattlePerDay = config.getBoolean("war.battle_schedule.one_battle_per_day", true);
-		Cache.warFirstBattleDayAfterDeclare = config.getBoolean("war.battle_schedule.first_battle_day_after_declare", true);
-		Cache.warBattleVotingMinPlayers = config.getInt("war.battle_voting.min_players", 4);
-		Cache.warBattleVotingRequireSmallestSideFull = config.getBoolean("war.battle_voting.require_smallest_side_full", true);
-		Cache.warBattleVotingPassIfEither = config.getBoolean("war.battle_voting.pass_if_either", true);
-		Cache.warBattleVotingDevMinPlayersEnabled = config.contains("war.battle_voting.dev_min_players");
-		if (Cache.warBattleVotingDevMinPlayersEnabled) {
-			Cache.warBattleVotingDevMinPlayers = config.getInt("war.battle_voting.dev_min_players");
-		} else {
-			Cache.warBattleVotingDevMinPlayers = Cache.warBattleVotingMinPlayers;
-		}
-		Cache.warDevmodePhantomCount = config.getInt("war.devmode.phantom_count", 10);
-		validateBattleScheduleConfig(config);
-
-		Cache.warBattleLivesPerRegiment = config.getInt("war.battle_military.lives_per_regiment", 5);
-		Cache.warBattleMinSideLives = config.getInt("war.battle_military.min_side_lives", 1);
-		Cache.campaignRaidMusterSeconds = config.getInt("war.campaign_raid.muster_seconds", 60);
-		Cache.campaignRaidMusterReminderSecondsBefore = loadReminderOffsets(
-				config,
-				"war.campaign_raid.muster_reminder_seconds_before",
-				List.of(45, 30, 15, 10));
-		Cache.campaignRaidDurationSeconds = config.getInt("war.campaign_raid.duration_seconds", 600);
-		Cache.campaignRaidRepairLockHours = config.getInt("war.campaign_raid.repair_lock_hours", 48);
-		Cache.campaignRaidIntruderDamageIntervalTicks =
-				config.getInt("war.campaign_raid.intruder_damage_interval_ticks", 10);
-		Cache.campaignRaidIntruderDamageAmount =
-				config.getInt("war.campaign_raid.intruder_damage_amount", 4);
-		validateCampaignRaidConfig();
 
 		Cache.battleProvincePollIntervalTicks = config.getInt("battle.province_poll_interval_ticks", 20);
 		Cache.battleProvinceLeaveCountdownSeconds = config.getInt("battle.province_leave_countdown_seconds", 10);
@@ -177,7 +104,107 @@ public class ConfigLoader {
         }
 	}
 
-	private static void validateBattleScheduleConfig(FileConfiguration config) {
+	public void loadWar(File warFile) {
+		FileConfiguration config = loadYaml(warFile);
+		if (!config.contains("war") && warFile != null && warFile.getParentFile() != null) {
+			FileConfiguration fromConfig = loadYaml(new File(warFile.getParentFile(), "config.yml"));
+			if (fromConfig.contains("war")) {
+				config = fromConfig;
+			}
+		}
+		Cache.warRequireDeclareCode = config.getBoolean("war.require_declare_code", false);
+		Cache.warDeclareOpinionThreshold = config.getInt("war.declare_opinion_threshold", -50);
+		Cache.warInitiativeFactor = config.getDouble("war.initiative_factor", 1.5);
+		Cache.warPortSeaZocRadius = config.getInt("war.port_sea_zoc_radius", 2);
+		Cache.warReparationsIncomePercent = config.getDouble("war.reparations.income_percent", 25);
+		Cache.warReparationsDays = config.getInt("war.reparations.days", 10);
+		Cache.warGoalMaxBattles = new EnumMap<>(WarGoalType.class);
+		for (WarGoalType goal : WarGoalType.values()) {
+			int maxBattles = config.getInt("war.goals." + goal.name() + ".max_battles_per_leg", -1);
+			if (maxBattles < 0) {
+				maxBattles = config.getInt("war.goals." + goal.toJson() + ".max_battles_per_leg", -1);
+			}
+			if (maxBattles < 0) {
+				maxBattles = config.getInt("war.goals." + goal.name() + ".max_battles", -1);
+			}
+			if (maxBattles < 0) {
+				maxBattles = config.getInt("war.goals." + goal.toJson() + ".max_battles", 4);
+			}
+			if (maxBattles > Cache.MAX_BATTLES_PER_LEG) {
+				if (Bukkit.getServer() != null) {
+					Bukkit.getLogger().warning("[SimpleFactions] war.goals." + goal.name()
+							+ " max_battles_per_leg=" + maxBattles + " exceeds cap "
+							+ Cache.MAX_BATTLES_PER_LEG + "; clamping.");
+				}
+				maxBattles = Cache.MAX_BATTLES_PER_LEG;
+			}
+			Cache.warGoalMaxBattles.put(goal, maxBattles);
+		}
+		Cache.openMarketDefenderMustNotHave = warGoalStringList(config, "defender_must_not_have");
+		Cache.openMarketAttackerMustNotHave = warGoalStringList(config, "attacker_must_not_have");
+		Cache.openMarketApplyDefenderLaw = warGoalString(config, "apply_defender_law");
+		Cache.pillageRangeProvinces = pillageInt(config, "range_provinces", 3);
+		Cache.pillageLootDays = pillageInt(config, "loot_days", 10);
+		Cache.pillageTradeHitPercent = pillageDouble(config, "trade_hit_percent", -100);
+		Cache.pillageTradeHitDays = pillageInt(config, "trade_hit_days", 10);
+		Cache.warFirstBattleAtBorder = config.getBoolean("war.battle_cadence.first_battle_at_border", true);
+		Cache.warProvincesBetweenBattles = config.getInt("war.battle_cadence.provinces_between_battles", 3);
+		Cache.warOccupationIncludeEnemyNeighbors = config.getBoolean("war.occupation.include_enemy_neighbors", true);
+		Cache.warDeclinedAllyStabilityPenalty = config.getInt("war.declined_ally_stability_penalty", -30);
+		Cache.warPathfinderNeutralPenalty = config.getDouble("war.pathfinder.neutral_penalty", 8.0);
+		Cache.warPathfinderSeaPassEnabled = config.getBoolean("war.pathfinder.sea_pass_enabled", true);
+		Cache.warPathfinderWaterCost = config.getDouble("war.pathfinder.water_cost", 0.0);
+
+		Cache.warBattleWindowStartHour = config.getInt("war.battle_schedule.window_start_hour", 21);
+		Cache.warBattleWindowEndHour = config.getInt("war.battle_schedule.window_end_hour", 24);
+		Cache.warRaidWindowStartHour = config.getInt("war.battle_schedule.raid_window_start_hour", 19);
+		Cache.warRaidWindowEndHour = config.getInt("war.battle_schedule.raid_window_end_hour", 20);
+		Cache.warVoteCloseHour = config.getInt("war.battle_schedule.vote_close_hour", 16);
+		Cache.warDefenderChoiceDeadlineHour = config.getInt("war.battle_schedule.defender_choice_deadline_hour", 12);
+		Cache.warOneBattlePerDay = config.getBoolean("war.battle_schedule.one_battle_per_day", true);
+		Cache.warFirstBattleDayAfterDeclare = config.getBoolean("war.battle_schedule.first_battle_day_after_declare", true);
+		Cache.warBattleVotingMinPlayers = config.getInt("war.battle_voting.min_players", 4);
+		Cache.warBattleVotingRequireSmallestSideFull = config.getBoolean("war.battle_voting.require_smallest_side_full", true);
+		Cache.warBattleVotingPassIfEither = config.getBoolean("war.battle_voting.pass_if_either", true);
+		Cache.warBattleVotingDevMinPlayersEnabled = config.contains("war.battle_voting.dev_min_players");
+		if (Cache.warBattleVotingDevMinPlayersEnabled) {
+			Cache.warBattleVotingDevMinPlayers = config.getInt("war.battle_voting.dev_min_players");
+		} else {
+			Cache.warBattleVotingDevMinPlayers = Cache.warBattleVotingMinPlayers;
+		}
+		Cache.warDevmodePhantomCount = config.getInt("war.devmode.phantom_count", 10);
+		validateBattleScheduleConfig();
+
+		Cache.warBattleLivesPerRegiment = config.getInt("war.battle_military.lives_per_regiment", 5);
+		Cache.warBattleMinSideLives = config.getInt("war.battle_military.min_side_lives", 1);
+		Cache.campaignRaidMusterSeconds = config.getInt("war.campaign_raid.muster_seconds", 60);
+		Cache.campaignRaidMusterReminderSecondsBefore = loadReminderOffsets(
+				config,
+				"war.campaign_raid.muster_reminder_seconds_before",
+				List.of(45, 30, 15, 10));
+		Cache.campaignRaidDurationSeconds = config.getInt("war.campaign_raid.duration_seconds", 600);
+		Cache.campaignRaidRepairLockHours = config.getInt("war.campaign_raid.repair_lock_hours", 48);
+		Cache.campaignRaidIntruderDamageIntervalTicks =
+				config.getInt("war.campaign_raid.intruder_damage_interval_ticks", 10);
+		Cache.campaignRaidIntruderDamageAmount =
+				config.getInt("war.campaign_raid.intruder_damage_amount", 4);
+		validateCampaignRaidConfig();
+		validateWarDevmodeConfig();
+	}
+
+	private static FileConfiguration loadYaml(File file) {
+		FileConfiguration config = new YamlConfiguration();
+		try {
+			if (file != null && file.exists()) {
+				config.load(file);
+			}
+		} catch (IOException | InvalidConfigurationException e) {
+			e.printStackTrace();
+		}
+		return config;
+	}
+
+	private static void validateBattleScheduleConfig() {
 		// Hours in war.battle_schedule are Europe/Paris (CET/CEST), not UTC.
 		int defenderDeadline = Cache.warDefenderChoiceDeadlineHour;
 		int voteClose = Cache.warVoteCloseHour;
@@ -246,6 +273,9 @@ public class ConfigLoader {
 		if (Cache.battleCaptureMinPlayers < 1) {
 			failBattleSchedule("battle.capture_min_players must be >= 1");
 		}
+	}
+
+	private static void validateWarDevmodeConfig() {
 		if (Cache.warDevmodePhantomCount < 0) {
 			failBattleSchedule("war.devmode.phantom_count must be >= 0");
 		}
@@ -285,5 +315,61 @@ public class ConfigLoader {
 		}
 		offsets.sort(Collections.reverseOrder());
 		return offsets;
+	}
+
+	private static int pillageInt(FileConfiguration config, String key, int defaultValue) {
+		int value;
+		if (config.contains("war.goals.PILLAGE." + key)) {
+			value = config.getInt("war.goals.PILLAGE." + key);
+		} else if (config.contains("war.goals.pillage." + key)) {
+			value = config.getInt("war.goals.pillage." + key);
+		} else {
+			return defaultValue;
+		}
+		return value < 0 ? defaultValue : value;
+	}
+
+	private static double pillageDouble(FileConfiguration config, String key, double defaultValue) {
+		if (config.contains("war.goals.PILLAGE." + key)) {
+			return config.getDouble("war.goals.PILLAGE." + key);
+		}
+		if (config.contains("war.goals.pillage." + key)) {
+			return config.getDouble("war.goals.pillage." + key);
+		}
+		return defaultValue;
+	}
+
+	private static List<String> warGoalStringList(FileConfiguration config, String key) {
+		List<String> fromEnumName = trimmedLawIds(config.getStringList("war.goals.OPEN_MARKET." + key));
+		if (!fromEnumName.isEmpty()) {
+			return fromEnumName;
+		}
+		return trimmedLawIds(config.getStringList("war.goals.open_market." + key));
+	}
+
+	private static String warGoalString(FileConfiguration config, String key) {
+		String fromEnumName = config.getString("war.goals.OPEN_MARKET." + key, "");
+		if (fromEnumName != null && !fromEnumName.isBlank()) {
+			return fromEnumName.trim();
+		}
+		String fromJsonId = config.getString("war.goals.open_market." + key, "");
+		return fromJsonId == null ? "" : fromJsonId.trim();
+	}
+
+	private static List<String> trimmedLawIds(List<String> raw) {
+		List<String> ids = new ArrayList<>();
+		if (raw == null) {
+			return List.of();
+		}
+		for (String id : raw) {
+			if (id == null) {
+				continue;
+			}
+			String trimmed = id.trim();
+			if (!trimmed.isEmpty()) {
+				ids.add(trimmed);
+			}
+		}
+		return List.copyOf(ids);
 	}
 }

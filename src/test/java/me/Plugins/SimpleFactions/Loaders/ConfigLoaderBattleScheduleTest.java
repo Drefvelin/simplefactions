@@ -48,7 +48,7 @@ class ConfigLoaderBattleScheduleTest {
 				    dev_min_players: 1
 				""");
 
-		new ConfigLoader().loadConfig(file.toFile());
+		new ConfigLoader().loadWar(file.toFile());
 
 		assertEquals(21, Cache.warBattleWindowStartHour);
 		assertEquals(24, Cache.warBattleWindowEndHour);
@@ -74,7 +74,7 @@ class ConfigLoaderBattleScheduleTest {
 				    min_players: 4
 				""");
 
-		new ConfigLoader().loadConfig(file.toFile());
+		new ConfigLoader().loadWar(file.toFile());
 
 		assertEquals(19, Cache.warRaidWindowStartHour);
 		assertEquals(20, Cache.warRaidWindowEndHour);
@@ -95,7 +95,7 @@ class ConfigLoaderBattleScheduleTest {
 				    min_players: 4
 				""");
 
-		new ConfigLoader().loadConfig(file.toFile());
+		new ConfigLoader().loadWar(file.toFile());
 
 		assertEquals(4, Cache.warBattleVotingMinPlayers);
 		assertEquals(4, Cache.warBattleVotingDevMinPlayers);
@@ -118,7 +118,7 @@ class ConfigLoaderBattleScheduleTest {
 				    dev_min_players: 1
 				""");
 
-		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadConfig(file.toFile()));
+		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadWar(file.toFile()));
 	}
 
 	@Test
@@ -137,7 +137,7 @@ class ConfigLoaderBattleScheduleTest {
 				    dev_min_players: 1
 				""");
 
-		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadConfig(file.toFile()));
+		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadWar(file.toFile()));
 	}
 
 	private Path writeConfig(String yaml) throws IOException {

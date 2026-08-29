@@ -241,10 +241,33 @@ public class InstallationHandler {
         }
     }
 
-    public void onProvinceLost(int province) {
+    public void cancelPendingConstructionOnProvince(int province) {
         if (pendingConstruction != null && pendingConstruction.getProvince() == province) {
             clearPendingConstruction();
         }
+    }
+
+    public List<Installation> detachOnProvince(int province) {
+        List<Installation> moved = new ArrayList<>();
+        for (Installation installation : new ArrayList<>(byId.values())) {
+            if (installation.getProvince() == province) {
+                removeInstallation(installation);
+                moved.add(installation);
+            }
+        }
+        return moved;
+    }
+
+    public void acceptTransferred(Installation installation) {
+        if (installation == null) {
+            return;
+        }
+        register(installation);
+        enqueueMapUpdate();
+    }
+
+    public void onProvinceLost(int province) {
+        cancelPendingConstructionOnProvince(province);
 
         List<Installation> snapshot = new ArrayList<>(byId.values());
         for (Installation installation : snapshot) {

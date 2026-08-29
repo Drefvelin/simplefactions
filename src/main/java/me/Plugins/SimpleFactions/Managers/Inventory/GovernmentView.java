@@ -11,6 +11,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.checkerframework.checker.units.qual.g;
 
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarCopy;
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarHostMovementRules;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
@@ -29,6 +31,7 @@ import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.keys.Keys;
+import me.Plugins.SimpleFactions.laws.CanHaveLaw;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawGroup;
 
@@ -405,6 +408,12 @@ public class GovernmentView {
 			if(group == null) return;
 			Law law = f.getLawHandler().getLaw(group, id);
 			if(law == null) return;
+			String unavailable = CanHaveLaw.blockReason(f, law);
+			if (unavailable != null) {
+				p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				p.sendMessage(unavailable);
+				return;
+			}
 			Government gov = f.getGovernment();
 			double cost = law.getCost()*law.getCompatibility(f.getLawHandler().getGroup(group).getCurrent().getId());
 			Proposal proposal = new Proposal(p.getName(), gov);
@@ -449,6 +458,11 @@ public class GovernmentView {
 					governmentView(p, f, null);
 					return;
 				}
+				if (CivilWarHostMovementRules.blocksHostGuildStart(f, p.getName())) {
+					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					p.sendMessage(CivilWarCopy.ONE_PROVINCE_HOST_GUILD);
+					return;
+				}
 				gov.startMovement(p.getName(), proposal);
 				p.sendMessage("§aMovement started! Rally support for your proposal by sharing it with your faction and allies!");
 				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
@@ -489,6 +503,11 @@ public class GovernmentView {
 						p.sendMessage("§aProposal added to your movement! Rally support for your proposal by sharing it with your faction and allies!");
 						p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 						governmentView(p, f, null);
+						return;
+					}
+					if (CivilWarHostMovementRules.blocksHostGuildStart(f, p.getName())) {
+						p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+						p.sendMessage(CivilWarCopy.ONE_PROVINCE_HOST_GUILD);
 						return;
 					}
 					gov.startMovement(p.getName(), proposal);

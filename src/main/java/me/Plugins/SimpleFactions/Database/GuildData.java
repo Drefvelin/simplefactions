@@ -43,4 +43,6 @@ public class GuildData {
 
     public Boolean favoured = false;
     public Boolean repressed = false;
+
+    public List<StabilityModifierData> pillageHits = new ArrayList<>();
 }

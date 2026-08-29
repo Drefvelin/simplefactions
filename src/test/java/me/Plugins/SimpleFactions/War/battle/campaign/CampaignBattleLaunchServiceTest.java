@@ -27,7 +27,19 @@ import org.mockito.MockedStatic;
 import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
+import me.Plugins.SimpleFactions.Managers.ProvinceManager;
+import me.Plugins.SimpleFactions.Managers.TitleManager;
+import me.Plugins.SimpleFactions.Managers.WarManager;
+import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.enums.Terrain;
+import me.Plugins.SimpleFactions.installation.Installation;
+import me.Plugins.SimpleFactions.installation.InstallationKind;
+import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
+import me.Plugins.SimpleFactions.vehicles.OwnershipMode;
+import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRecord;
+import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRegistry;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
@@ -272,6 +284,77 @@ class CampaignBattleLaunchServiceTest {
 		});
 	}
 
+	@Test
+	void tryStartScheduledBattle_navalWithoutShips_appliesAutoLossAndDoesNotStart() {
+		War war = scheduledNavalWar();
+		Instant startAt = war.getScheduledBattleAt();
+		SimpleFactions plugin = mock(SimpleFactions.class);
+		when(plugin.getLogger()).thenReturn(java.util.logging.Logger.getLogger("test"));
+		ProvinceManager pm = new ProvinceManager();
+		pm.start(java.util.Map.of(20, new Province(20, Terrain.PLAINS.name(), 50, 200, 200)));
+		when(plugin.getProvinceManager()).thenReturn(pm);
+
+		withMockBossBar(() -> {
+			try (MockedStatic<CampaignOffensiveForfeitService> forfeit =
+							mockStatic(CampaignOffensiveForfeitService.class);
+					MockedStatic<WarManager> warManager = mockStatic(WarManager.class);
+					MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class);
+					MockedStatic<SimpleFactions> simpleFactions = mockStatic(SimpleFactions.class)) {
+				forfeit.when(() -> CampaignOffensiveForfeitService.applyIfBattleOffensiveCannotAttack(
+						any(), anyInt())).thenReturn(false);
+				warManager.when(() -> WarManager.persist(any())).then(inv -> null);
+				warManager.when(() -> WarManager.getById(1)).thenReturn(war);
+				titleManager.when(() -> TitleManager.getByProvince(20)).thenReturn(defender);
+				simpleFactions.when(SimpleFactions::getVehicleRegistry).thenReturn(null);
+				SimpleFactions.plugin = plugin;
+
+				CampaignBattleLaunchService.prepareScheduledBattle(war);
+				assertFalse(BattleManager.getByWarId(war.getId()).hasStarted());
+
+				assertTrue(CampaignBattleLaunchService.tryStartScheduledBattle(war, startAt));
+				assertEquals(3, war.getInitiativeAttacker());
+				assertTrue(BattleManager.getByWarId(war.getId()) == null
+						|| !BattleManager.getByWarId(war.getId()).hasStarted());
+			}
+		});
+	}
+
+	@Test
+	void tryStartScheduledBattle_navalWithBerthedShip_starts() {
+		War war = scheduledNavalWar();
+		Instant startAt = war.getScheduledBattleAt();
+		SimpleFactions plugin = mock(SimpleFactions.class);
+		when(plugin.getLogger()).thenReturn(java.util.logging.Logger.getLogger("test"));
+		PlayerVehicleRegistry registry = new PlayerVehicleRegistry();
+		registry.register(new PlayerVehicleRecord(
+				java.util.UUID.randomUUID(),
+				"v-ship",
+				"ironclad",
+				OwnershipMode.INSTALLATION,
+				"port-atk"));
+
+		withMockBossBar(() -> {
+			try (MockedStatic<CampaignOffensiveForfeitService> forfeit =
+							mockStatic(CampaignOffensiveForfeitService.class);
+					MockedStatic<SimpleFactions> simpleFactions = mockStatic(SimpleFactions.class);
+					MockedStatic<VehiclesConfigLoader> vehicles = mockStatic(VehiclesConfigLoader.class)) {
+				forfeit.when(() -> CampaignOffensiveForfeitService.applyIfBattleOffensiveCannotAttack(
+						any(), anyInt())).thenReturn(false);
+				simpleFactions.when(SimpleFactions::getVehicleRegistry).thenReturn(registry);
+				vehicles.when(() -> VehiclesConfigLoader.getCategoryId("ironclad"))
+						.thenReturn(java.util.Optional.of("ships"));
+				SimpleFactions.plugin = plugin;
+
+				CampaignBattleLaunchService.prepareScheduledBattle(war);
+				assertFalse(BattleManager.getByWarId(war.getId()).hasStarted());
+
+				assertTrue(CampaignBattleLaunchService.tryStartScheduledBattle(war, startAt));
+				assertTrue(BattleManager.getByWarId(war.getId()).hasStarted());
+				assertEquals(4, war.getInitiativeAttacker());
+			}
+		});
+	}
+
 	private War baseWar() {
 		War war = new War(1, attacker, defender);
 		war.setGoal(WarGoalType.SUBJUGATE);
@@ -298,6 +381,25 @@ class CampaignBattleLaunchServiceTest {
 		war.setScheduledBattleAt(BattleWindowService.computeScheduledBattleAt(battleDay, 21));
 		war.setScheduledBattleProvinceId(20);
 		war.setBattleSchedulePhase(BattleSchedulePhase.SCHEDULED);
+		return war;
+	}
+
+	private War scheduledNavalWar() {
+		War war = scheduledWar();
+		Installation port = new Installation("port-atk", "Harbour", InstallationKind.PORT, 5, 0, 0, 1L);
+		InstallationHandler attackerHandler = mock(InstallationHandler.class);
+		when(attacker.getInstallationHandler()).thenReturn(attackerHandler);
+		when(attackerHandler.getAll()).thenReturn(java.util.List.of(port));
+		when(attackerHandler.getById("port-atk")).thenReturn(port);
+		InstallationHandler defenderHandler = mock(InstallationHandler.class);
+		when(defender.getInstallationHandler()).thenReturn(defenderHandler);
+		when(defenderHandler.getAll()).thenReturn(java.util.List.of());
+		war.setCampaignBattleSchedule(java.util.List.of(
+				new ScheduledCampaignBattle(20, CampaignBattleKind.NAVAL, false, null, "port_zoc")));
+		war.setCampaignScheduleIndex(0);
+		war.getBattleInstallationPicks().computeIfAbsent("atk", ignored -> new java.util.LinkedHashSet<>())
+				.add("port-atk");
+		war.setBattleInstallationPicksBattleDay(war.getBattleDay());
 		return war;
 	}
 

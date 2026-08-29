@@ -3,10 +3,8 @@ package me.Plugins.SimpleFactions.government.movement.cause;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
-
 import me.Plugins.SimpleFactions.government.movement.Movement;
+import me.Plugins.SimpleFactions.government.movement.MovementJoinCopy;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -82,42 +80,32 @@ public class Cause {
     }
 
     public boolean canBeLeader(String p) {
-        if(!pool.getAllMembers().contains(p)) return false;
+        if(p == null || !pool.getAllMembers().contains(p)) return false;
         Member relation = movement.getFaction().getRelationToFaction(p);
-        switch(relation) {
-            case LEADER:
-            case FOREIGNER:
-            case VASSAL_MEMBER:
-                return false;
-            case GUILD_LEADER:
-            case GUILD_MEMBER:
-                if(!proposal.getPoliticalAction().allowGuilds()) return false;
-            case VASSAL_LEADER:
-                if(!proposal.getPoliticalAction().allowFactions()) return false;
-            case MEMBER:
-                if(!proposal.getPoliticalAction().allowCitizens()) return false;
-                return true;
-            default:
-                break;
-        }
-        return false;
+        if (relation == null) return false;
+        return switch (relation) {
+            case GUILD_LEADER, GUILD_MEMBER -> proposal.getPoliticalAction().allowGuilds();
+            case VASSAL_LEADER -> proposal.getPoliticalAction().allowFactions();
+            case MEMBER -> proposal.getPoliticalAction().allowCitizens();
+            default -> false;
+        };
     }
 
     public boolean canJoin(Object obj, boolean feedback) {
+        return joinBlockReason(obj, false) == null;
+    }
 
-        if (obj instanceof String) {
-            return canMemberJoin((String) obj, true, feedback);
+    public String joinBlockReason(Object obj, boolean staff) {
+        if (obj instanceof String citizen) {
+            return memberBlockReason(citizen, true, staff);
         }
-
-        if (obj instanceof Guild) {
-            return canGuildJoin((Guild) obj, true, feedback);
+        if (obj instanceof Guild guild) {
+            return guildBlockReason(guild, true, staff);
         }
-
-        if (obj instanceof Faction) {
-            return canFactionJoin((Faction) obj, true, feedback);
+        if (obj instanceof Faction faction) {
+            return factionBlockReason(faction, true, staff);
         }
-
-        return false;
+        return MovementJoinCopy.unknownJoinType();
     }
 
     public void checkMembers(Pool pool) {
@@ -142,103 +130,71 @@ public class Cause {
     }
 
     public boolean canMemberJoin(String playerName, boolean checkExisting, boolean feedback) {
+        return memberBlockReason(playerName, checkExisting, false) == null;
+    }
+
+    public String memberBlockReason(String playerName, boolean checkExisting, boolean staff) {
         Member relation = movement.getFaction().getRelationToFaction(playerName);
-        Player p = Bukkit.getPlayer(playerName);
         if (relation != Member.MEMBER) {
-            if(p != null && feedback) {
-                p.sendMessage("§cYou must be a member of the movement's faction to join it.");
-            }
-            return false;
+            return MovementJoinCopy.causeCitizenMustBeMember(staff, playerName, movement.getFaction());
         }
         if (!proposal.getPoliticalAction().allowCitizens()) {
-            if(p != null && feedback) {
-                p.sendMessage("§cCitizens are not allowed to join this movement as members.");
-            }
-            return false;
+            return MovementJoinCopy.causeCitizensNotAllowed(staff, playerName);
         }
         if (checkExisting && movement.isMember(playerName)) {
-            if(p != null && feedback) {
-                p.sendMessage("§cYou are already a member of this movement.");
-            }
-            return false;
+            return MovementJoinCopy.alreadyCauseMember(staff, playerName);
         }
-
-        return true;
+        return null;
     }
 
     public boolean canGuildJoin(Guild guild, boolean checkExisting, boolean feedback) {
-        Player p = Bukkit.getPlayer(guild.getLeader());
+        return guildBlockReason(guild, checkExisting, false) == null;
+    }
+
+    public String guildBlockReason(Guild guild, boolean checkExisting, boolean staff) {
         if (!proposal.getPoliticalAction().allowGuilds()) {
-            if(p != null && feedback) {
-                p.sendMessage("§cGuilds are not allowed to join this movement as members.");
-            }
-            return false;
+            return MovementJoinCopy.causeGuildsNotAllowed(staff, guild);
         }
         if (guild.isBase()) {
-            if(p != null && feedback) {
-                p.sendMessage("§cGuild cannot be the base guild of the faction.");
-            }
-            return false;
+            return MovementJoinCopy.causeGuildBase(staff, guild);
+        }
+        if (me.Plugins.SimpleFactions.War.civilwar.CivilWarHostMovementRules.blocksHostGuildJoin(movement.getFaction())) {
+            return MovementJoinCopy.oneProvinceHostGuild(staff, guild);
         }
         if (!guild.getFaction().getId().equalsIgnoreCase(movement.getFaction().getId())) {
-            if(p != null && feedback) {
-                p.sendMessage("§cGuild must belong to the same faction as the movement.");
-            }
-            return false;
+            return MovementJoinCopy.causeGuildWrongFaction(staff, guild, movement.getFaction());
         }
         if (guild.getStance(movement.getFaction()) == Stance.SUPPORT) {
-            if(p != null && feedback) {
-                p.sendMessage("§cGuilds that support the movement's faction cannot join.");
-            }
-            return false;
+            return MovementJoinCopy.causeGuildSupportStance(staff, guild, movement.getFaction());
         }
         if (checkExisting && movement.isMember(guild.getLeader())) {
-            if(p != null && feedback) {
-                p.sendMessage("§cGuild leader is already a member of this movement.");
-            }
-            return false;
+            return MovementJoinCopy.causeGuildLeaderAlreadyMember(staff, guild);
         }
-
-        return true;
+        return null;
     }
 
     public boolean canFactionJoin(Faction faction, boolean checkExisting, boolean feedback) {
-        Player p = Bukkit.getPlayer(faction.getLeader());
+        return factionBlockReason(faction, checkExisting, false) == null;
+    }
 
+    public String factionBlockReason(Faction faction, boolean checkExisting, boolean staff) {
         if (!proposal.getPoliticalAction().allowFactions()) {
-            if(p != null && feedback) {
-                p.sendMessage("§cFactions are not allowed to join this movement as members.");
-            }
-            return false;
+            return MovementJoinCopy.causeFactionsNotAllowed(staff, faction);
         }
         if (faction.getId().equalsIgnoreCase(movement.getFaction().getId())) {
-            if(p != null && feedback) {
-                p.sendMessage("§cFaction cannot join its own movement.");
-            }
-            return false;
+            return MovementJoinCopy.causeOwnFaction(staff, movement.getFaction());
         }
-        
-        if (faction.getOverlord() == null ||
-            !faction.getOverlord().getId().equalsIgnoreCase(movement.getFaction().getId())) {
-            if(p != null && feedback) {
-                p.sendMessage("§cFaction must be under the same overlord as the movement.");
-            }
-            return false;
+        if (faction.getOverlord() == null
+                || !faction.getOverlord().getId().equalsIgnoreCase(movement.getFaction().getId())) {
+            return MovementJoinCopy.causeNotVassal(staff, faction, movement.getFaction());
         }
         if (faction.getOrCreateMainGuild().getStance(movement.getFaction()) == Stance.SUPPORT) {
-            if(p != null && feedback) {
-                p.sendMessage("§cFactions that support the movement's faction cannot join.");
-            }
-            return false;
+            return MovementJoinCopy.causeFactionSupportStance(staff, faction, movement.getFaction());
         }
         if (checkExisting && movement.isMember(faction.getLeader())) {
-            if(p != null && feedback) {
-                p.sendMessage("§cFaction leader is already a member of this movement.");
-            }
-            return false;
+            return MovementJoinCopy.causeFactionLeaderAlreadyMember(staff, faction);
         }
-
-        return true;
+        return null;
     }
 
     public int getIndex() {

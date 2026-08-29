@@ -1,0 +1,67 @@
+package me.Plugins.SimpleFactions.War.resolution;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.government.StabilityModifier;
+
+public final class PillageTradeHit {
+	public static final String NAME = "Pillage";
+	public static final int POWER_TICKS_PER_DAY = 8640;
+
+	private PillageTradeHit() {}
+
+	public static double decayPerPowerTick(double percent, int days) {
+		if (days <= 0) {
+			return Math.abs(percent);
+		}
+		return Math.abs(percent) / (days * (double) POWER_TICKS_PER_DAY);
+	}
+
+	public static double decayFromConfig() {
+		return decayPerPowerTick(Cache.pillageTradeHitPercent, Cache.pillageTradeHitDays);
+	}
+
+	public static double applyToIncome(Guild guild, double income) {
+		if (guild == null) {
+			return income;
+		}
+		double multiplier = Math.max(0, 1 + percent(guild) / 100.0);
+		return income * multiplier;
+	}
+
+	public static double percent(Guild guild) {
+		double total = 0;
+		if (guild == null || guild.getPillageHits() == null) {
+			return 0;
+		}
+		for (StabilityModifier modifier : guild.getPillageHits()) {
+			if (modifier != null) {
+				total += modifier.getModifier();
+			}
+		}
+		return total;
+	}
+
+	public static void attach(Guild guild, double percent, double decay) {
+		if (guild == null || guild.getPillageHits() == null) {
+			return;
+		}
+		List<StabilityModifier> hits = guild.getPillageHits();
+		hits.removeIf(modifier -> modifier != null && NAME.equals(modifier.getName()));
+		hits.add(new StabilityModifier(NAME, percent, decay));
+	}
+
+	public static void tick(Guild guild) {
+		if (guild == null || guild.getPillageHits() == null || guild.getPillageHits().isEmpty()) {
+			return;
+		}
+		for (StabilityModifier modifier : new ArrayList<>(guild.getPillageHits())) {
+			if (modifier == null || modifier.tick()) {
+				guild.getPillageHits().remove(modifier);
+			}
+		}
+	}
+}

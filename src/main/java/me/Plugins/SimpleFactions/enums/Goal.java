@@ -1,12 +1,8 @@
 package me.Plugins.SimpleFactions.enums;
 
 /**
- * Legacy war goal types from {@code wargoals.yml}.
- * <p>
- * v2 declare goals are {@link me.Plugins.SimpleFactions.War.enums.WarGoalType}:
- * {@code DE_JURE_ANNEX}, {@code SUBJUGATE}, {@code TRANSFER_SUBJECT}.
- * Values such as {@link #REVOLT}, {@link #USURP}, and {@link #WAR_REPARATIONS}
- * are legacy-only until step 62 or later.
+ * Unused leftover types from the removed YAML war-goal picker.
+ * Declare and resolution use {@link me.Plugins.SimpleFactions.War.enums.WarGoalType}.
  */
 public enum Goal {
 	/** Legacy YAML id {@code annex}; maps to v2 {@code de_jure_annex}. */

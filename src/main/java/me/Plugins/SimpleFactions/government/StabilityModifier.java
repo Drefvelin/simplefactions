@@ -28,7 +28,15 @@ public class StabilityModifier {
     }
 
     public boolean tick() {
-        modifier -= decay;
-        return modifier <= 0;
+        double step = Math.abs(decay);
+        if (modifier > 0) {
+            modifier -= step;
+            return modifier <= 0;
+        }
+        if (modifier < 0) {
+            modifier += step;
+            return modifier >= 0;
+        }
+        return true;
     }
 }

@@ -16,6 +16,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.checkerframework.checker.units.qual.t;
 
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarHostMovementRules;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Database.CauseData;
 import me.Plugins.SimpleFactions.Database.GovernmentData;
@@ -147,6 +148,9 @@ public class Government {
     }
 
     public void startMovement(String leader, Proposal cause) {
+        if (CivilWarHostMovementRules.blocksHostGuildStart(f, leader)) {
+            return;
+        }
         Movement movement = new Movement(f, leader, cause);
         movements.add(movement);
     }
@@ -265,6 +269,9 @@ public class Government {
 
     public void tick() {
         for(Movement movement : new ArrayList<>(movements)) {
+            if (movement.isFrozen()) {
+                continue;
+            }
             movement.tick();
         }
         election.tick();
@@ -449,6 +456,13 @@ public class Government {
     public void spendPower(double amount) {
         power -= amount;
         if(power < 0) power = 0;
+    }
+
+    public void setPower(double amount) {
+        if (amount < 0) {
+            amount = 0;
+        }
+        this.power = Formatter.formatDouble(amount);
     }
 
     private static final double EPSILON = 0.01;
@@ -708,6 +722,7 @@ public class Government {
             if(m.hasLeader()) data.leader = m.getLeader();
             data.organization = m.getOrganization();
             data.phase = m.getPhase().name();
+            data.frozen = m.isFrozen();
             data.id = m.getId();
             // Serialize causes
             for (Cause cause : m.getCauses()) {

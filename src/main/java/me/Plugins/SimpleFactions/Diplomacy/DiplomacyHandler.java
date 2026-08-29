@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
@@ -59,12 +60,20 @@ public class DiplomacyHandler {
 	}
 
     public void setRelation(Faction f, Relation r) {
+		Relation previous = relations.get(f.getId());
 		relations.put(f.getId(), r);
+		LogManager.relations(
+				"SET %s -> %s was=%s now=%s",
+				this.f.getId(),
+				f.getId(),
+				FactionManager.describeRelation(previous),
+				FactionManager.describeRelation(r));
 	}
 	
 	public void updateRelations() {
         for(String s : tradeRelations.keySet()) {
             if(!relations.containsKey(s)) {
+				LogManager.relations("DEFAULT-FILL %s -> %s (trade partner, no diplomatic map entry)", this.f.getId(), s);
                 relations.put(s, new Relation()); //default addition so we can tick it
             }
         }
@@ -74,7 +83,9 @@ public class DiplomacyHandler {
 	}
 
     public void removeRelation(String s) {
-        relations.remove(s);
+		Relation previous = relations.get(s);
+		relations.remove(s);
+		LogManager.relations("REMOVE %s -> %s was=%s", this.f.getId(), s, FactionManager.describeRelation(previous));
     }
 
     public HashMap<String, RelationType> getTradeRelations() {

@@ -9,7 +9,10 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
@@ -23,6 +26,7 @@ import org.mockito.Mockito;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
@@ -34,6 +38,7 @@ import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidState;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
@@ -56,6 +61,7 @@ class VehicleInstallationLockServiceTest {
 	void setUp() {
 		BattleManager.resetForTests();
 		Cache.campaignRaidRepairLockHours = 48;
+		Cache.warVoteCloseHour = 16;
 		Cache.worldName = "world";
 
 		attacker = mock(Faction.class);
@@ -64,9 +70,10 @@ class VehicleInstallationLockServiceTest {
 		when(defender.getId()).thenReturn("def");
 
 		Installation atkPort = new Installation("port-atk", "Atk Port", InstallationKind.PORT, 10, 0, 0, 0L);
+		Installation atkIdle = new Installation("port-atk-idle", "Atk Idle", InstallationKind.PORT, 10, 0, 0, 0L);
 		Installation defPort = new Installation("port-def", "Def Port", InstallationKind.PORT, 20, 100, 100, 0L);
 		Installation fort = new Installation("fort-1", "Fort", InstallationKind.FORT, 18, 50, 50, 0L);
-		mockInstallations(attacker, atkPort);
+		mockInstallations(attacker, atkPort, atkIdle);
 		mockInstallations(defender, defPort, fort);
 		FactionManager.factions.add(attacker);
 		FactionManager.factions.add(defender);
@@ -76,6 +83,8 @@ class VehicleInstallationLockServiceTest {
 		war.setWarType(WarType.SUBJUGATE);
 		war.setBattleDay(BATTLE_DAY);
 		war.setBattleSchedulePhase(BattleSchedulePhase.VOTING);
+		war.setOccupiedByAttacker(new ArrayList<>());
+		war.setOccupiedByDefender(new ArrayList<>());
 		WarManager.addWar(war);
 	}
 
@@ -164,6 +173,60 @@ class VehicleInstallationLockServiceTest {
 		}
 	}
 
+	@Test
+	void pickLock_committedPickUnlockedBeforeVoteClose() {
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			stubProvinceOwnership(titleManager);
+			setPicks(war, "atk", "port-atk");
+			Instant beforeLock = BattleWindowService.atScheduleHour(BATTLE_DAY, 15);
+
+			assertFalse(VehicleInstallationLockService.isVehicleLocked("port-atk", beforeLock));
+			assertFalse(VehicleInstallationLockService.isVehicleLocked("port-atk-idle", beforeLock));
+		}
+	}
+
+	@Test
+	void pickLock_committedPickLockedAfterVoteClose_idlePortStaysOpen() {
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			stubProvinceOwnership(titleManager);
+			setPicks(war, "atk", "port-atk");
+			Instant afterLock = BattleWindowService.atScheduleHour(BATTLE_DAY, 16);
+
+			assertTrue(VehicleInstallationLockService.isVehicleLocked("port-atk", afterLock));
+			assertFalse(VehicleInstallationLockService.isVehicleLocked("port-atk-idle", afterLock));
+		}
+	}
+
+	@Test
+	void pickLock_defenderZocPortLockedAfterVoteClose() {
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			stubProvinceOwnership(titleManager);
+			war.setCampaignBattleSchedule(List.of(
+					new ScheduledCampaignBattle(20, CampaignBattleKind.NAVAL, false, null, "port-def")));
+			war.setCampaignScheduleIndex(0);
+			Instant afterLock = BattleWindowService.atScheduleHour(BATTLE_DAY, 16);
+
+			assertTrue(VehicleInstallationLockService.isVehicleLocked("port-def", afterLock));
+			assertFalse(VehicleInstallationLockService.isVehicleLocked("port-atk", afterLock));
+		}
+	}
+
+	@Test
+	void pickLock_siegeFortLockedAfterVoteClose_withoutPick() {
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			stubProvinceOwnership(titleManager);
+			War siege = siegeWar();
+			siege.setBattleDay(BATTLE_DAY);
+			siege.setOccupiedByAttacker(new ArrayList<>());
+			siege.setOccupiedByDefender(new ArrayList<>());
+			WarManager.addWar(siege);
+			Instant afterLock = BattleWindowService.atScheduleHour(BATTLE_DAY, 16);
+
+			assertTrue(VehicleInstallationLockService.isVehicleLocked("fort-1", afterLock));
+			assertFalse(VehicleInstallationLockService.isVehicleLocked("port-def", afterLock));
+		}
+	}
+
 	private void setActiveRaid(CampaignRaidState state) {
 		CampaignRaid raid = new CampaignRaid();
 		raid.setWarId(war.getId());
@@ -199,5 +262,18 @@ class VehicleInstallationLockServiceTest {
 			when(handler.getById(installation.getId())).thenReturn(installation);
 		}
 		when(handler.getAll()).thenReturn(List.of(installations));
+	}
+
+	private static void setPicks(War war, String factionId, String installationId) {
+		LinkedHashSet<String> picks = new LinkedHashSet<>();
+		picks.add(installationId);
+		war.setBattleInstallationPicks(Map.of(factionId, picks));
+		war.setBattleInstallationPicksBattleDay(BATTLE_DAY);
+	}
+
+	private void stubProvinceOwnership(MockedStatic<TitleManager> titleManager) {
+		titleManager.when(() -> TitleManager.getByProvince(10)).thenReturn(attacker);
+		titleManager.when(() -> TitleManager.getByProvince(18)).thenReturn(defender);
+		titleManager.when(() -> TitleManager.getByProvince(20)).thenReturn(defender);
 	}
 }

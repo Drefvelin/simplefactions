@@ -30,7 +30,6 @@ import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Loaders.InstallationConfigLoader;
 import me.Plugins.SimpleFactions.installation.InstallationProtectionListener;
 import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
-import me.Plugins.SimpleFactions.Loaders.WarGoalLoader;
 import me.Plugins.SimpleFactions.Managers.BankManager;
 import me.Plugins.SimpleFactions.Managers.CommandManager;
 import me.Plugins.SimpleFactions.Managers.LedgerCommandManager;
@@ -50,6 +49,8 @@ import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleTickService;
 import me.Plugins.SimpleFactions.War.campaign.ui.CampaignViewRefreshService;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.core.WarCommandManager;
+import me.Plugins.SimpleFactions.government.movement.admin.MovementCommandManager;
+import me.Plugins.SimpleFactions.government.movement.admin.MovementTabCompletion;
 import me.Plugins.SimpleFactions.War.core.WarTabCompletion;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleOutcomeService;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
@@ -93,7 +94,6 @@ public class SimpleFactions extends JavaPlugin{
 	private final RelationLoader relationLoader = new RelationLoader();
 	private final TierLoader tierLoader = new TierLoader();
 	private static final TitleLoader titleLoader = new TitleLoader();
-	private final WarGoalLoader goalLoader = new WarGoalLoader();
 	private final BranchLoader branchLoader = new BranchLoader();
 	private final UpgradeLoader upgradeLoader = new UpgradeLoader();
 	private final GuildLoader guildLoader = new GuildLoader();
@@ -123,6 +123,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final BattleCommandManager battleCommandManager = new BattleCommandManager();
 	private final RaidCommandManager raidCommandManager = new RaidCommandManager();
 	private final WarCommandManager warCommandManager = new WarCommandManager();
+	private final MovementCommandManager movementCommandManager = new MovementCommandManager();
 	private final WarbandMembershipListener warbandMembershipListener = new WarbandMembershipListener();
 	private final CampaignRaidWarbandListener campaignRaidWarbandListener = new CampaignRaidWarbandListener();
 	private final CampaignRaidIntruderListener campaignRaidIntruderListener = new CampaignRaidIntruderListener();
@@ -235,6 +236,8 @@ public class SimpleFactions extends JavaPlugin{
 		WarTabCompletion warTabCompletion = new WarTabCompletion();
 		getCommand(WarCommandManager.CMD).setExecutor(warCommandManager);
 		getCommand(WarCommandManager.CMD).setTabCompleter(warTabCompletion);
+		getCommand(MovementCommandManager.CMD).setExecutor(movementCommandManager);
+		getCommand(MovementCommandManager.CMD).setTabCompleter(new MovementTabCompletion());
 		RequestManager.start();
 		WarManager.start();
 		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.loadAll();
@@ -266,6 +269,7 @@ public class SimpleFactions extends JavaPlugin{
 	}
 	public void loadConfigs() {
 		configLoader.loadConfig(new File(getDataFolder(), "config.yml"));
+		configLoader.loadWar(new File(getDataFolder(), "war.yml"));
 		VehiclesConfigLoader.load(new File(getDataFolder(), "vehicles.yml"));
 		InstallationConfigLoader.load(new File(getDataFolder(), "installations.yml"));
 		me.Plugins.SimpleFactions.Managers.LogManager.configure(
@@ -280,7 +284,6 @@ public class SimpleFactions extends JavaPlugin{
 		politicalActionLoader.load(new File(getDataFolder(), "political-actions.yml"));
 		lawLoader.load(new File(getDataFolder(), "laws.yml"));
 		tierLoader.load(new File(getDataFolder(), "tiers.yml"));
-		goalLoader.load(new File(getDataFolder(), "wargoals.yml"));
 		battleTemplateLoader.load(new File(getDataFolder(), "battle-templates.yml"));
 		guildLoader.load(new File(getDataFolder(), "Guilds/guild-types.yml"));
 		branchLoader.load(new File(getDataFolder(), "Guilds/branches.yml"));
@@ -338,6 +341,7 @@ public class SimpleFactions extends JavaPlugin{
 				"diplomacy.yml",
 				"ranks.yml",
 				"config.yml",
+				"war.yml",
 				"tiers.yml",
 				"laws.yml",
 				"political-actions.yml",

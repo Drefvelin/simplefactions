@@ -73,6 +73,11 @@ class WarPersistenceFileTest {
 		War war = new War(3, attacker, defender);
 		war.setGoal(WarGoalType.SUBJUGATE);
 		war.setWarType(WarType.SUBJUGATE);
+		war.setRelationTypeId("march");
+		war.setGovernmentLawId("democracy");
+		war.setLeadershipLawId("elected");
+		war.setTargetSettlementId("town_a");
+		war.setMovementId("mov-1");
 		war.setStatus(WarStatus.ACTIVE);
 		war.setTargetTitleId("county_x");
 		war.setObjectiveProvinceId(42);
@@ -113,6 +118,11 @@ class WarPersistenceFileTest {
 		assertEquals(3, restoredData.id);
 		assertEquals("active", restoredData.status);
 		assertEquals("subjugate", restoredData.goal);
+		assertEquals("march", restoredData.relationTypeId);
+		assertEquals("democracy", restoredData.governmentLawId);
+		assertEquals("elected", restoredData.leadershipLawId);
+		assertEquals("town_a", restoredData.targetSettlementId);
+		assertEquals("mov-1", restoredData.movementId);
 		assertEquals("faction_a", restoredData.attackerLeaderId);
 		assertEquals("faction_b", restoredData.defenderLeaderId);
 		assertEquals("county_x", restoredData.targetTitleId);
@@ -138,6 +148,11 @@ class WarPersistenceFileTest {
 		assertNotNull(restored);
 		assertEquals(3, restored.getId());
 		assertEquals(WarGoalType.SUBJUGATE, restored.getGoal());
+		assertEquals("march", restored.getRelationTypeId());
+		assertEquals("democracy", restored.getGovernmentLawId());
+		assertEquals("elected", restored.getLeadershipLawId());
+		assertEquals("town_a", restored.getTargetSettlementId());
+		assertEquals("mov-1", restored.getMovementId());
 		assertEquals(WarStatus.ACTIVE, restored.getStatus());
 		assertEquals("faction_a", restored.getAttackerLeaderId());
 		assertEquals("faction_b", restored.getDefenderLeaderId());

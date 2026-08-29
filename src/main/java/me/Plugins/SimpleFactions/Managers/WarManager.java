@@ -27,6 +27,12 @@ import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignDeclareValidator;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignNavyGate;
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarCopy;
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarSnapshot;
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarUntangleService;
+import me.Plugins.SimpleFactions.War.core.Participant;
+import me.Plugins.SimpleFactions.War.resolution.WarOutcomeService;
+import me.Plugins.SimpleFactions.installation.WartimeInstallationService;
 import me.Plugins.SimpleFactions.War.declare.WarDeclareRequest;
 import me.Plugins.SimpleFactions.War.declare.WarGoalValidator;
 import me.Plugins.SimpleFactions.War.declare.WarValidationResult;
@@ -45,7 +51,46 @@ public class WarManager {
 			WarGoalType goal,
 			String targetTitleId,
 			String subjectFactionId) {
-		WarDeclareRequest request = new WarDeclareRequest(attacker, defender, goal, targetTitleId, subjectFactionId);
+		return declareWar(attacker, defender, goal, targetTitleId, subjectFactionId, null);
+	}
+
+	public static War declareWar(
+			Faction attacker,
+			Faction defender,
+			WarGoalType goal,
+			String targetTitleId,
+			String subjectFactionId,
+			String relationTypeId) {
+		return declareWar(attacker, defender, goal, targetTitleId, subjectFactionId, relationTypeId, null, null);
+	}
+
+	public static War declareWar(
+			Faction attacker,
+			Faction defender,
+			WarGoalType goal,
+			String targetTitleId,
+			String subjectFactionId,
+			String relationTypeId,
+			String governmentLawId,
+			String leadershipLawId) {
+		return declareWar(
+				attacker, defender, goal, targetTitleId, subjectFactionId, relationTypeId,
+				governmentLawId, leadershipLawId, null);
+	}
+
+	public static War declareWar(
+			Faction attacker,
+			Faction defender,
+			WarGoalType goal,
+			String targetTitleId,
+			String subjectFactionId,
+			String relationTypeId,
+			String governmentLawId,
+			String leadershipLawId,
+			String targetSettlementId) {
+		WarDeclareRequest request = new WarDeclareRequest(
+				attacker, defender, goal, targetTitleId, subjectFactionId, relationTypeId,
+				governmentLawId, leadershipLawId, targetSettlementId);
 		WarValidationResult validation = new WarGoalValidator().validate(request);
 		if (!validation.isValid()) {
 			lastDeclareError = validation.getMessage();
@@ -60,7 +105,6 @@ public class WarManager {
 			return null;
 		}
 
-		boolean civilWar = RelationManager.endVassalage(attacker, defender, true);
 		WarType warType = WarDeclareHelper.warTypeForGoal(goal);
 		String storedTitleId = goal == WarGoalType.DE_JURE_ANNEX ? targetTitleId : null;
 		War war = new War(
@@ -75,6 +119,16 @@ public class WarManager {
 		if (goal == WarGoalType.TRANSFER_SUBJECT) {
 			war.setSubjectFactionId(subjectFactionId);
 		}
+		if (goal == WarGoalType.SUBJUGATE) {
+			war.setRelationTypeId(relationTypeId);
+		}
+		if (goal == WarGoalType.CHANGE_GOVERNMENT) {
+			war.setGovernmentLawId(governmentLawId);
+			war.setLeadershipLawId(leadershipLawId);
+		}
+		if (goal == WarGoalType.PILLAGE) {
+			war.setTargetSettlementId(targetSettlementId);
+		}
 		if (!populateCampaignIfNeeded(war)) {
 			lastDeclareError = "§cCould not declare war: no campaign route could be generated.";
 			return null;
@@ -86,11 +140,77 @@ public class WarManager {
 		}
 		WarCommitmentService.commitAllParticipants(war);
 		addWar(war);
-		if (civilWar) {
-			war.getParticipant(attacker).setCivilWar(true);
-			war.getParticipant(defender).setCivilWar(true);
-			persist(war);
+		return war;
+	}
+
+	public static War startCivilWar(
+			Faction attacker,
+			Faction defender,
+			WarGoalType goal,
+			String movementId,
+			List<Faction> extraAttackerMains,
+			List<Faction> foreignBackers,
+			CivilWarSnapshot snapshot) {
+		lastDeclareError = null;
+		if (attacker == null || defender == null || goal == null) {
+			lastDeclareError = CivilWarCopy.COULD_NOT_START;
+			return null;
 		}
+
+		WarType warType = WarDeclareHelper.warTypeForGoal(goal);
+		Side attackers = new Side(attacker);
+		Side defenders = new Side(defender);
+		Participant leaderPart = attackers.getMainParticipants().get(0);
+		if (extraAttackerMains != null) {
+			for (Faction extra : extraAttackerMains) {
+				if (extra == null || extra.getId() == null) {
+					continue;
+				}
+				if (extra.getId().equalsIgnoreCase(attacker.getId())) {
+					continue;
+				}
+				attackers.addNewParticipant(extra, leaderPart);
+			}
+		}
+		if (foreignBackers != null) {
+			for (Faction backer : foreignBackers) {
+				if (backer == null) {
+					continue;
+				}
+				leaderPart.getAllies().put(backer, true);
+			}
+		}
+		for (Participant participant : attackers.getMainParticipants()) {
+			participant.setCivilWar(true);
+		}
+		for (Participant participant : defenders.getMainParticipants()) {
+			participant.setCivilWar(true);
+		}
+
+		War war = new War(
+				newId(),
+				attackers,
+				defenders,
+				goal,
+				warType,
+				null,
+				null,
+				Instant.now());
+		war.setMovementId(movementId);
+		if (snapshot != null) {
+			war.setCivilWarSnapshot(snapshot);
+		}
+		if (!populateCampaignIfNeeded(war)) {
+			lastDeclareError = "§cCould not declare war: no campaign route could be generated.";
+			return null;
+		}
+		WarValidationResult navy = CampaignNavyGate.validateDeclareAfterPopulate(war);
+		if (!navy.isValid()) {
+			lastDeclareError = navy.getMessage();
+			return null;
+		}
+		WarCommitmentService.commitAllParticipants(war);
+		addWar(war);
 		return war;
 	}
 
@@ -208,6 +328,9 @@ public class WarManager {
 		if (w == null || reason == null) {
 			return;
 		}
+		WartimeInstallationService.revert(w);
+		CivilWarUntangleService.restore(w);
+		WarOutcomeService.apply(w, reason);
 		WarCombatTeardownService.teardownCombatForWar(w);
 		w.end(reason);
 		BattleInstallationPickService.clearForNewBattleDay(w);

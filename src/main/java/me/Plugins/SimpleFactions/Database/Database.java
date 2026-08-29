@@ -22,6 +22,7 @@ import me.Plugins.SimpleFactions.Loaders.BranchLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -29,7 +30,9 @@ import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.core.WarMapper;
+import me.Plugins.SimpleFactions.War.resolution.WarReparationsObligation;
 import me.Plugins.SimpleFactions.enums.Stance;
+import me.Plugins.SimpleFactions.government.StabilityModifier;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawGroup;
 
@@ -151,8 +154,13 @@ public class Database {
                 }
 
                 // --- Relations ---
-                for (String r : data.relations) {
-                    FactionManager.addDBRelation(f, r);
+                if (data.relations == null) {
+                    LogManager.relations("JSON %s relations=null", f.getId());
+                } else {
+                    LogManager.relations("JSON %s relations=%s", f.getId(), data.relations);
+                    for (String r : data.relations) {
+                        FactionManager.addDBRelation(f, r);
+                    }
                 }
 
                 if(data.tradeRelations != null) {
@@ -209,6 +217,23 @@ public class Database {
                         }
 
                         f.getGuildHandler().addGuild(g);
+                    }
+                }
+
+                if (data.warReparationsObligations != null) {
+                    for (WarReparationsObligationData obligationData : data.warReparationsObligations) {
+                        if (obligationData == null
+                                || obligationData.payeeFactionId == null
+                                || obligationData.payeeFactionId.isBlank()) {
+                            continue;
+                        }
+                        double percent = obligationData.incomePercent != null ? obligationData.incomePercent : 0.0;
+                        int days = obligationData.daysRemaining != null ? obligationData.daysRemaining : 0;
+                        if (percent <= 0 || days <= 0) {
+                            continue;
+                        }
+                        f.addWarReparationsObligation(new WarReparationsObligation(
+                                obligationData.payeeFactionId, percent, days));
                     }
                 }
 
@@ -275,6 +300,7 @@ public class Database {
             f.getRelations().forEach((id, rel) ->
                     data.relations.add(id + "(" + rel.getType().getId() + "."
                             + rel.getAttitude().getId() + "." + rel.getOpinion() + ")"));
+            LogManager.relations("SAVE %s relations=%s", f.getId(), data.relations);
             // --- Trade Relations ---
             f.getDiplomacyHandler().getTradeRelations().forEach((id, rel) ->
                     data.tradeRelations.add(id + "(" + rel.getId() + ")"));
@@ -317,10 +343,24 @@ public class Database {
                     gd.bank = "false";
                 }
                 // --- Modifiers ---
-                g.getWealthModifiers().forEach(m -> {
+				g.getWealthModifiers().forEach(m -> {
                     if(m.isPersistent())
                         gd.wealthModifiers.add(m.getType() + "(" + m.getAmount() + ")");
                 });
+
+                gd.pillageHits = new ArrayList<>();
+                if (g.getPillageHits() != null) {
+                    for (StabilityModifier modifier : g.getPillageHits()) {
+                        if (modifier == null) {
+                            continue;
+                        }
+                        StabilityModifierData modifierData = new StabilityModifierData();
+                        modifierData.name = modifier.getName();
+                        modifierData.modifier = modifier.getModifier();
+                        modifierData.decay = modifier.getDecay();
+                        gd.pillageHits.add(modifierData);
+                    }
+                }
 
                 for (Map.Entry<Integer, Branch> e : g.getBranches().entrySet()) {
                     Branch b = e.getValue();
@@ -362,6 +402,18 @@ public class Database {
 
             data.overlord = RelationManager.getOverlord(f);
             data.tierIndex = (double) f.getTier().getIndex();
+
+            data.warReparationsObligations = new ArrayList<>();
+            for (WarReparationsObligation obligation : f.getWarReparationsObligations()) {
+                if (obligation == null || !obligation.isActive()) {
+                    continue;
+                }
+                WarReparationsObligationData obligationData = new WarReparationsObligationData();
+                obligationData.payeeFactionId = obligation.getPayeeFactionId();
+                obligationData.incomePercent = obligation.getIncomePercent();
+                obligationData.daysRemaining = obligation.getDaysRemaining();
+                data.warReparationsObligations.add(obligationData);
+            }
 
             JsonUtil.writeJson(file, data);
 

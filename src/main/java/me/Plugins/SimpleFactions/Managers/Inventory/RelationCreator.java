@@ -25,6 +25,8 @@ import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Utils.EconomicImpact;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.OpinionColourMapper;
+import me.Plugins.SimpleFactions.War.resolution.WarReparationsObligation;
+import me.Plugins.SimpleFactions.War.resolution.WarReparationsService;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class RelationCreator {
@@ -89,6 +91,37 @@ public class RelationCreator {
 		lore.add(StringFormatter.formatHex("#a39ba8Their opinion of us: "+OpinionColourMapper.getOpinionColor(ofR.getOpinion())+ofR.getOpinion()));
 		lore.add(StringFormatter.formatHex("#a39ba8Their attitude towards us: "+ofR.getAttitude().getName()));
 		lore.add(" ");
+		m.setLore(lore);
+		i.setItemMeta(m);
+		return i;
+	}
+
+	public ItemStack createWarReparationsItem(Faction origin, Faction target) {
+		ItemStack i = new ItemStack(Material.GOLD_INGOT, 1);
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(StringFormatter.formatHex("#d4bb98§lWar Reparations"));
+		List<String> lore = new ArrayList<>();
+		WarReparationsObligation paying = WarReparationsService.findObligation(origin, target);
+		WarReparationsObligation receiving = WarReparationsService.findObligation(target, origin);
+		if (paying == null && receiving == null) {
+			lore.add(StringFormatter.formatHex("#a89977No active war reparations"));
+		} else {
+			if (paying != null) {
+				lore.add(StringFormatter.formatHex("#c74c3fPaying "+target.getName()));
+				lore.add(StringFormatter.formatHex("#a89977"+Formatter.formatDouble(paying.getIncomePercent())+"% of main guild income"));
+				lore.add(StringFormatter.formatHex("#a89977"+paying.getDaysRemaining()+" day(s) remaining"));
+			}
+			if (receiving != null) {
+				if (paying != null) {
+					lore.add(" ");
+				}
+				lore.add(StringFormatter.formatHex("#87d65cReceiving from "+target.getName()));
+				lore.add(StringFormatter.formatHex("#a89977"+Formatter.formatDouble(receiving.getIncomePercent())+"% of their main guild income"));
+				lore.add(StringFormatter.formatHex("#a89977"+receiving.getDaysRemaining()+" day(s) remaining"));
+			}
+		}
+		lore.add(" ");
+		lore.add(StringFormatter.formatHex("#7a7a7aBased on internal taxable income"));
 		m.setLore(lore);
 		i.setItemMeta(m);
 		return i;

@@ -256,8 +256,21 @@ class WarResolutionServiceTest {
 		assertFalse(WarResolutionService.surrender(war, outsider));
 	}
 
+	@Test
+	void tryEndAfterBattle_pillageAttackerWinAtSettlementEndsWar() {
+		assertVictoryEndsWarOn(pillageWar(20), 20, CampaignCoalition.AGGRESSOR, WarEndReason.ATTACKER_VICTORY);
+	}
+
+	@Test
+	void tryEndAfterBattle_pillageDefenderWinAtSettlementEndsWar() {
+		assertVictoryEndsWarOn(pillageWar(20), 20, CampaignCoalition.DEFENDER, WarEndReason.DEFENDER_VICTORY);
+	}
+
 	private void assertVictoryEndsWar(int provinceId, CampaignCoalition winner, WarEndReason expected) {
-		War war = baseWar();
+		assertVictoryEndsWarOn(baseWar(), provinceId, winner, expected);
+	}
+
+	private void assertVictoryEndsWarOn(War war, int provinceId, CampaignCoalition winner, WarEndReason expected) {
 		try (MockedStatic<WarManager> warManager = mockStatic(WarManager.class)) {
 			ArgumentCaptor<WarEndReason> reasonCaptor = ArgumentCaptor.forClass(WarEndReason.class);
 			warManager.when(() -> WarManager.endWar(any(), reasonCaptor.capture())).then(inv -> null);
@@ -272,6 +285,14 @@ class WarResolutionServiceTest {
 			assertEquals(expected, result.orElse(null));
 			assertEquals(expected, reasonCaptor.getValue());
 		}
+	}
+
+	private War pillageWar(int objective) {
+		War war = baseWar();
+		war.setGoal(WarGoalType.PILLAGE);
+		war.setWarType(WarType.PILLAGE);
+		war.setObjectiveProvinceId(objective);
+		return war;
 	}
 
 	private War baseWar() {

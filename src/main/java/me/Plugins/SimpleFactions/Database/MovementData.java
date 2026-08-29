@@ -12,6 +12,7 @@ public class MovementData {
     public List<CauseData> causes = new ArrayList<>();
     public PoolData supporters = new PoolData();
     public String phase;
+    public boolean frozen;
     
     @SerializedName("foreign backers")
     public List<String> foreignBackers = new ArrayList<>();

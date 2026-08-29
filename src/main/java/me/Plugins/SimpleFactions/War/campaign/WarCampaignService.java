@@ -16,8 +16,10 @@ import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignNavyGate;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
 import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.campaign.ObjectiveProvincePicker;
 import me.Plugins.SimpleFactions.War.pathfinder.BelligerentTerritory;
@@ -141,12 +143,22 @@ public class WarCampaignService {
 		List<ScheduledCampaignBattle> counterNatural = built.counter();
 		CampaignScheduleLogger.logSchedule("Invasion natural", war, axis, invasionNatural);
 		CampaignScheduleLogger.logSchedule("Counter natural", war, ScheduleLeg.COUNTER, axis, counterNatural);
-		int maxPerLeg = CampaignScheduleTrimmer.maxBattlesPerLegForGoal(war.getGoal());
-		LogManager.line("trim maxPerLeg=%d", maxPerLeg);
-		LogManager.section("Trim invasion");
-		List<ScheduledCampaignBattle> invasionTrimmed = CampaignScheduleTrimmer.trimInvasion(invasionNatural, maxPerLeg);
-		LogManager.section("Trim counter");
-		List<ScheduledCampaignBattle> counterTrimmed = CampaignScheduleTrimmer.trimCounter(counterNatural, maxPerLeg);
+		List<ScheduledCampaignBattle> invasionTrimmed;
+		List<ScheduledCampaignBattle> counterTrimmed;
+		if (war.getGoal() == WarGoalType.PILLAGE) {
+			war.setPillageNaturalNavyRequired(CampaignNavyGate.scheduleRequiresNavy(invasionNatural));
+			invasionTrimmed = List.of(new ScheduledCampaignBattle(objective, CampaignBattleKind.FIELD, true, null));
+			counterTrimmed = List.of();
+			LogManager.line("pillage one-battle objective=%d naturalNavy=%s", objective, war.isPillageNaturalNavyRequired());
+		} else {
+			war.setPillageNaturalNavyRequired(false);
+			int maxPerLeg = CampaignScheduleTrimmer.maxBattlesPerLegForGoal(war.getGoal());
+			LogManager.line("trim maxPerLeg=%d", maxPerLeg);
+			LogManager.section("Trim invasion");
+			invasionTrimmed = CampaignScheduleTrimmer.trimInvasion(invasionNatural, maxPerLeg);
+			LogManager.section("Trim counter");
+			counterTrimmed = CampaignScheduleTrimmer.trimCounter(counterNatural, maxPerLeg);
+		}
 		CampaignScheduleLogger.logSchedule("Invasion trimmed", war, axis, invasionTrimmed);
 		CampaignScheduleLogger.logSchedule("Counter trimmed", war, ScheduleLeg.COUNTER, axis, counterTrimmed);
 		war.setCampaignBattleSchedule(invasionTrimmed);
@@ -172,6 +184,9 @@ public class WarCampaignService {
 			int regionalObjective,
 			BelligerentTerritory territory,
 			ProvincePathfinder pathfinder) {
+		if (war != null && war.getGoal() == WarGoalType.PILLAGE) {
+			return regionalObjective;
+		}
 		Faction targetFaction = resolveTargetFaction(war, defender);
 		if (targetFaction == null) {
 			return regionalObjective;

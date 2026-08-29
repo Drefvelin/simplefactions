@@ -94,43 +94,38 @@ class ConfigLoaderBattlePresenceTest {
 	}
 
 	@Test
-	void loadConfig_defaultDevmodePhantomCount() throws IOException {
+	void loadWar_defaultDevmodePhantomCount() throws IOException {
 		Path file = writeConfig("""
-				battle:
-				  province_poll_interval_ticks: 20
+				war: {}
 				""");
 
-		new ConfigLoader().loadConfig(file.toFile());
+		new ConfigLoader().loadWar(file.toFile());
 
 		assertEquals(10, Cache.warDevmodePhantomCount);
 	}
 
 	@Test
-	void loadConfig_customDevmodePhantomCount() throws IOException {
+	void loadWar_customDevmodePhantomCount() throws IOException {
 		Path file = writeConfig("""
 				war:
 				  devmode:
 				    phantom_count: 5
-				battle:
-				  province_poll_interval_ticks: 20
 				""");
 
-		new ConfigLoader().loadConfig(file.toFile());
+		new ConfigLoader().loadWar(file.toFile());
 
 		assertEquals(5, Cache.warDevmodePhantomCount);
 	}
 
 	@Test
-	void loadConfig_invalidDevmodePhantomCountThrows() throws IOException {
+	void loadWar_invalidDevmodePhantomCountThrows() throws IOException {
 		Path file = writeConfig("""
 				war:
 				  devmode:
 				    phantom_count: -1
-				battle:
-				  province_poll_interval_ticks: 20
 				""");
 
-		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadConfig(file.toFile()));
+		assertThrows(IllegalStateException.class, () -> new ConfigLoader().loadWar(file.toFile()));
 	}
 
 	@Test

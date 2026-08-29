@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Database.CivilWarVassalEndData;
 import me.Plugins.SimpleFactions.Database.CommitmentData;
 import me.Plugins.SimpleFactions.Database.CampaignRaidData;
 import me.Plugins.SimpleFactions.Database.ParticipantData;
@@ -40,6 +41,8 @@ import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
 import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarSnapshot;
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarWartimeVassalEnd;
 
 public final class WarMapper {
 	private WarMapper() {}
@@ -59,6 +62,12 @@ public final class WarMapper {
 		data.defenderLeaderId = war.getDefenderLeaderId();
 		data.targetTitleId = war.getTargetTitleId();
 		data.subjectFactionId = war.getSubjectFactionId();
+		data.relationTypeId = war.getRelationTypeId();
+		data.governmentLawId = war.getGovernmentLawId();
+		data.leadershipLawId = war.getLeadershipLawId();
+		data.targetSettlementId = war.getTargetSettlementId();
+		data.movementId = war.getMovementId();
+		writeCivilWarSnapshot(data, war);
 		data.objectiveProvinceId = war.getObjectiveProvinceId();
 		data.campaignStartProvinceId = war.getCampaignStartProvinceId();
 		data.campaignProvinces = war.getCampaignProvinces() == null
@@ -112,6 +121,10 @@ public final class WarMapper {
 		data.campaignCounterSchedule = serializeSchedule(war.getCampaignCounterSchedule());
 		data.campaignCounterScheduleIndex = war.getCampaignCounterScheduleIndex();
 		data.fortControllers = serializeFortControllers(war.getFortControllers());
+		data.wartimeInstallationOwners = war.getWartimeInstallationOwners() == null
+				|| war.getWartimeInstallationOwners().isEmpty()
+				? new LinkedHashMap<>()
+				: new LinkedHashMap<>(war.getWartimeInstallationOwners());
 		if (!war.getConcededScheduleSlots().isEmpty()) {
 			data.concededScheduleSlots = new ArrayList<>(war.getConcededScheduleSlots());
 		}
@@ -185,6 +198,12 @@ public final class WarMapper {
 		}
 		war.setTargetTitleId(data.targetTitleId);
 		war.setSubjectFactionId(data.subjectFactionId);
+		war.setRelationTypeId(data.relationTypeId);
+		war.setGovernmentLawId(data.governmentLawId);
+		war.setLeadershipLawId(data.leadershipLawId);
+		war.setTargetSettlementId(data.targetSettlementId);
+		war.setMovementId(data.movementId);
+		war.setCivilWarSnapshot(readCivilWarSnapshot(data));
 		war.setObjectiveProvinceId(data.objectiveProvinceId);
 		war.setCampaignStartProvinceId(data.campaignStartProvinceId);
 		war.setCampaignProvinces(data.campaignProvinces == null ? null : new ArrayList<>(data.campaignProvinces));
@@ -215,6 +234,10 @@ public final class WarMapper {
 		war.setCampaignCounterScheduleIndex(
 				data.campaignCounterScheduleIndex != null ? data.campaignCounterScheduleIndex : 0);
 		war.setFortControllers(deserializeFortControllers(data.fortControllers));
+		war.setWartimeInstallationOwners(
+				data.wartimeInstallationOwners == null
+						? new LinkedHashMap<>()
+						: new LinkedHashMap<>(data.wartimeInstallationOwners));
 		war.setConcededScheduleSlots(data.concededScheduleSlots);
 		war.setLocationBattleCounts(data.locationBattleCounts);
 		BattleSchedulePhase schedulePhase = BattleSchedulePhase.fromJson(data.battleSchedulePhase);
@@ -570,5 +593,77 @@ public final class WarMapper {
 			}
 		}
 		return deserialized;
+	}
+
+	private static void writeCivilWarSnapshot(WarData data, War war) {
+		CivilWarSnapshot snapshot = war.getCivilWarSnapshot();
+		if (snapshot == null) {
+			return;
+		}
+		data.civilWarHostFactionId = snapshot.getHostFactionId();
+		data.civilWarTempRebelFactionId = snapshot.getTempRebelFactionId();
+		if (snapshot.getTransferredProvinces() != null && !snapshot.getTransferredProvinces().isEmpty()) {
+			data.civilWarTransferredProvinces = new LinkedHashMap<>();
+			for (Map.Entry<Integer, String> entry : snapshot.getTransferredProvinces().entrySet()) {
+				if (entry.getKey() == null) {
+					continue;
+				}
+				data.civilWarTransferredProvinces.put(String.valueOf(entry.getKey()), entry.getValue());
+			}
+		}
+		if (snapshot.getWartimeVassalEnds() != null && !snapshot.getWartimeVassalEnds().isEmpty()) {
+			data.civilWarVassalEnds = new ArrayList<>();
+			for (CivilWarWartimeVassalEnd end : snapshot.getWartimeVassalEnds()) {
+				if (end == null) {
+					continue;
+				}
+				CivilWarVassalEndData row = new CivilWarVassalEndData();
+				row.factionId = end.factionId();
+				row.formerOverlordId = end.formerOverlordId();
+				row.relationTypeId = end.relationTypeId();
+				data.civilWarVassalEnds.add(row);
+			}
+		}
+		data.civilWarHostOldCapitalId = snapshot.getHostOldCapitalId();
+		data.civilWarRebelCapitalId = snapshot.getRebelCapitalId();
+	}
+
+	private static CivilWarSnapshot readCivilWarSnapshot(WarData data) {
+		if (data.civilWarHostFactionId == null
+				&& data.civilWarTempRebelFactionId == null
+				&& (data.civilWarTransferredProvinces == null || data.civilWarTransferredProvinces.isEmpty())
+				&& (data.civilWarVassalEnds == null || data.civilWarVassalEnds.isEmpty())) {
+			return null;
+		}
+		CivilWarSnapshot snapshot = new CivilWarSnapshot();
+		snapshot.setHostFactionId(data.civilWarHostFactionId);
+		snapshot.setTempRebelFactionId(data.civilWarTempRebelFactionId);
+		if (data.civilWarTransferredProvinces != null) {
+			Map<Integer, String> transferred = new LinkedHashMap<>();
+			for (Map.Entry<String, String> entry : data.civilWarTransferredProvinces.entrySet()) {
+				if (entry.getKey() == null || entry.getKey().isBlank()) {
+					continue;
+				}
+				try {
+					transferred.put(Integer.parseInt(entry.getKey()), entry.getValue());
+				} catch (NumberFormatException ignored) {
+					// skip corrupted province keys
+				}
+			}
+			snapshot.setTransferredProvinces(transferred);
+		}
+		if (data.civilWarVassalEnds != null) {
+			List<CivilWarWartimeVassalEnd> ends = new ArrayList<>();
+			for (CivilWarVassalEndData row : data.civilWarVassalEnds) {
+				if (row == null) {
+					continue;
+				}
+				ends.add(new CivilWarWartimeVassalEnd(row.factionId, row.formerOverlordId, row.relationTypeId));
+			}
+			snapshot.setWartimeVassalEnds(ends);
+		}
+		snapshot.setHostOldCapitalId(data.civilWarHostOldCapitalId);
+		snapshot.setRebelCapitalId(data.civilWarRebelCapitalId);
+		return snapshot;
 	}
 }

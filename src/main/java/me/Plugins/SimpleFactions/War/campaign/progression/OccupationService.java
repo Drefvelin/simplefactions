@@ -3,6 +3,7 @@ package me.Plugins.SimpleFactions.War.campaign.progression;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -12,6 +13,7 @@ import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.pathfinder.BelligerentTerritory;
 import me.Plugins.SimpleFactions.War.pathfinder.ProvinceOwnerLookup;
+import me.Plugins.SimpleFactions.installation.WartimeInstallationService;
 
 public class OccupationService {
 	private final ProvinceManager provinceManager;
@@ -58,16 +60,23 @@ public class OccupationService {
 		}
 
 		if (winner == BelligerentRole.ATTACKER) {
-			List<Integer> existing = copyList(war.getOccupiedByAttacker());
-			List<Integer> newlyAdded = mergeOccupation(existing, zone);
-			war.setOccupiedByAttacker(existing);
-			war.setLastBattleOccupied(newlyAdded);
+			List<Integer> winnerList = copyList(war.getOccupiedByAttacker());
+			List<Integer> loserList = copyList(war.getOccupiedByDefender());
+			List<Integer> stripped = stripOccupation(loserList, zone);
+			List<Integer> newlyAdded = mergeOccupation(winnerList, zone);
+			war.setOccupiedByAttacker(winnerList);
+			war.setOccupiedByDefender(loserList);
+			war.setLastBattleOccupied(unionOccupied(stripped, newlyAdded));
 		} else {
-			List<Integer> existing = copyList(war.getOccupiedByDefender());
-			List<Integer> newlyAdded = mergeOccupation(existing, zone);
-			war.setOccupiedByDefender(existing);
-			war.setLastBattleOccupied(newlyAdded);
+			List<Integer> winnerList = copyList(war.getOccupiedByDefender());
+			List<Integer> loserList = copyList(war.getOccupiedByAttacker());
+			List<Integer> stripped = stripOccupation(loserList, zone);
+			List<Integer> newlyAdded = mergeOccupation(winnerList, zone);
+			war.setOccupiedByDefender(winnerList);
+			war.setOccupiedByAttacker(loserList);
+			war.setLastBattleOccupied(unionOccupied(stripped, newlyAdded));
 		}
+		WartimeInstallationService.occupyLastBattle(war, winner);
 		return true;
 	}
 
@@ -102,6 +111,33 @@ public class OccupationService {
 			}
 		}
 		return newlyAdded;
+	}
+
+	static List<Integer> stripOccupation(List<Integer> existing, OccupationZone zone) {
+		if (existing == null || existing.isEmpty() || zone == null) {
+			return List.of();
+		}
+		Set<Integer> zoneIds = new HashSet<>(zone.provinceIds());
+		List<Integer> stripped = new ArrayList<>();
+		existing.removeIf(provinceId -> {
+			if (zoneIds.contains(provinceId)) {
+				stripped.add(provinceId);
+				return true;
+			}
+			return false;
+		});
+		return stripped;
+	}
+
+	private static List<Integer> unionOccupied(List<Integer> stripped, List<Integer> newlyAdded) {
+		LinkedHashSet<Integer> union = new LinkedHashSet<>();
+		if (stripped != null) {
+			union.addAll(stripped);
+		}
+		if (newlyAdded != null) {
+			union.addAll(newlyAdded);
+		}
+		return new ArrayList<>(union);
 	}
 
 	private static boolean isValidInput(War war, int battleProvinceId, BelligerentRole winner) {

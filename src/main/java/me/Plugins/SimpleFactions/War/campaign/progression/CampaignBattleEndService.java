@@ -19,7 +19,14 @@ public final class CampaignBattleEndService {
 		if (war == null) {
 			return;
 		}
-		war.setLastBattleOffensiveCoalition(CampaignCapabilityService.battleOffensiveCoalition(war));
+		snapshotBattleStart(war, CampaignCapabilityService.battleOffensiveCoalition(war));
+	}
+
+	public static void snapshotBattleStart(War war, CampaignCoalition lastBattleOffensive) {
+		if (war == null) {
+			return;
+		}
+		war.setLastBattleOffensiveCoalition(lastBattleOffensive);
 	}
 
 	public static void spendOffensiveFuel(War war) {

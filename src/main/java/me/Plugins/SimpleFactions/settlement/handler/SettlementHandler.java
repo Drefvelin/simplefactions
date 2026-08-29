@@ -203,6 +203,26 @@ public class SettlementHandler {
                 "§aFounded settlement §f" + name + " §7(" + id + ")", settlement);
     }
 
+    public Settlement detachOnProvince(int province) {
+        Settlement settlement = getByProvince(province);
+        if (settlement == null) {
+            return null;
+        }
+        byId.remove(settlement.getId());
+        for (int p : settlement.getProvinces()) {
+            provinceIndex.remove(p, settlement);
+        }
+        rebuildIndex();
+        return settlement;
+    }
+
+    public void acceptTransferred(Settlement settlement) {
+        if (settlement == null) {
+            return;
+        }
+        register(settlement);
+    }
+
     public void onProvinceLost(int province) {
         Settlement settlement = getByProvince(province);
         if (settlement == null) {

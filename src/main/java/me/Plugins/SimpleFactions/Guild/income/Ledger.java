@@ -24,6 +24,8 @@ import me.Plugins.SimpleFactions.Utils.DailyGuildTransfers;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
+import me.Plugins.SimpleFactions.War.resolution.WarReparationsObligation;
+import me.Plugins.SimpleFactions.War.resolution.WarReparationsService;
 
 public class Ledger {
     private Guild guild;
@@ -153,10 +155,16 @@ public class Ledger {
                 }
                 break;
             case WAR_REPARATIONS:
-                //TODO implement
+                if (!guild.isBase()) {
+                    return 0;
+                }
+                amount = getWarReparationsReceived();
                 break;
             case WAR_REPARATIONS_PAYMENT:
-                //TODO implement
+                if (!guild.isBase()) {
+                    return 0;
+                }
+                amount = -getWarReparationsPayment();
                 break;
             case TRADE:
                 amount = guild.getTradeBreakdown().getIncome();
@@ -302,7 +310,7 @@ public class Ledger {
 
     public double getTributeTax() {
         Faction f = guild.getFaction();
-        double base = getGrossTaxableIncome();
+        double base = getInternalTaxableIncome();
         double paid = 0.0;
         for (FactionModifier mod : f.getModifiers()) {
             if (mod.getFrom() == null) continue;
@@ -321,11 +329,86 @@ public class Ledger {
                 if(!mod.getType().equals(FactionModifiers.TRIBUTE)) continue;
                 if(!mod.getFrom().getId().equals(guild.getFaction().getId())) continue;
 
-                double base = f.getOrCreateMainGuild().getLedger().getGrossTaxableIncome();
+                double base = f.getOrCreateMainGuild().getLedger().getInternalTaxableIncome();
                 total += base * (mod.getAmount() / 100.0);
             }
         }
         return total;
+    }
+
+    public double getWarReparationsPayment() {
+        if (!guild.isBase()) {
+            return 0.0;
+        }
+        Faction f = guild.getFaction();
+        double base = getReparationsTaxableIncome();
+        double paid = 0.0;
+        for (WarReparationsObligation obligation : WarReparationsService.activeObligations(f)) {
+            paid += base * (obligation.getIncomePercent() / 100.0);
+        }
+        return paid;
+    }
+
+    public double getWarReparationsReceived() {
+        if (!guild.isBase()) {
+            return 0.0;
+        }
+        Faction self = guild.getFaction();
+        if (self == null || self.getId() == null) {
+            return 0.0;
+        }
+        double total = 0.0;
+        for (Faction f : FactionManager.factions) {
+            if (f == null || f.getId().equals(self.getId())) {
+                continue;
+            }
+            Guild payerGuild = f.getOrCreateMainGuild();
+            if (payerGuild == null || payerGuild.getLedger() == null) {
+                continue;
+            }
+            double base = payerGuild.getLedger().getReparationsTaxableIncome();
+            for (WarReparationsObligation obligation : WarReparationsService.activeObligations(f)) {
+                if (!self.getId().equalsIgnoreCase(obligation.getPayeeFactionId())) {
+                    continue;
+                }
+                total += base * (obligation.getIncomePercent() / 100.0);
+            }
+        }
+        return total;
+    }
+
+    double getReparationsTaxableIncome() {
+        return getInternalTaxableIncome();
+    }
+
+    /**
+     * Positive gross-counted income excluding cross-faction transfers (tribute,
+     * war reparations, vassal guild rollups). Used as the base for tribute and
+     * reparations so ledger queries cannot recurse between factions.
+     */
+    double getInternalTaxableIncome() {
+        if (guild.isBankrupt()) {
+            return 0.0;
+        }
+        double total = 0.0;
+        for (Cashflow cf : Cashflow.values()) {
+            if (!cf.isGrossCounted() || isCrossFactionGrossCashflow(cf)) {
+                continue;
+            }
+            double amount = getIncome(cf);
+            if (amount <= 0) {
+                continue;
+            }
+            total += amount;
+        }
+        return total;
+    }
+
+    private static boolean isCrossFactionGrossCashflow(Cashflow cashflow) {
+        return cashflow == Cashflow.TRIBUTES
+                || cashflow == Cashflow.WAR_REPARATIONS
+                || cashflow == Cashflow.VASSALS
+                || cashflow == Cashflow.GUILDS;
     }
 
     public double getGrossTaxableIncome() {
@@ -397,7 +480,7 @@ public class Ledger {
             case TRIBUTE_PAYMENTS: {
                 if(!guild.isBase()) return; //only base pays
                 Faction f = guild.getFaction();
-                double base = getGrossTaxableIncome();
+                double base = getInternalTaxableIncome();
 
                 for (FactionModifier mod : f.getModifiers()) {
                     if (mod.getFrom() == null) continue;
@@ -409,6 +492,27 @@ public class Ledger {
                     double amount = base * (mod.getAmount() / 100.0);
                     if (amount <= 0) continue;
 
+                    buffer.add(guild, receiverGuild, amount);
+                }
+                return;
+            }
+
+            case WAR_REPARATIONS_PAYMENT: {
+                if (!guild.isBase()) {
+                    return;
+                }
+                Faction f = guild.getFaction();
+                double base = getReparationsTaxableIncome();
+                for (WarReparationsObligation obligation : WarReparationsService.activeObligations(f)) {
+                    Faction receiverFaction = FactionManager.getByString(obligation.getPayeeFactionId());
+                    if (receiverFaction == null) {
+                        continue;
+                    }
+                    Guild receiverGuild = receiverFaction.getOrCreateMainGuild();
+                    double amount = base * (obligation.getIncomePercent() / 100.0);
+                    if (amount <= 0) {
+                        continue;
+                    }
                     buffer.add(guild, receiverGuild, amount);
                 }
                 return;
@@ -462,7 +566,6 @@ public class Ledger {
                 break;
 
             //To be implemented
-            case WAR_REPARATIONS_PAYMENT:
             case DIVIDEND_PAYOUT:
             
             //Display only

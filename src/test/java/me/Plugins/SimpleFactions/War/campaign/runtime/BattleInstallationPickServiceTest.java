@@ -3,6 +3,7 @@ package me.Plugins.SimpleFactions.War.campaign.runtime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -26,8 +28,10 @@ import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.campaign.runtime.InstallationPickResults.InstallationPickToggleResult;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
+import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
+import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
@@ -40,10 +44,12 @@ class BattleInstallationPickServiceTest {
 
 	private Faction attacker;
 	private Faction defender;
+	private final Map<Faction, Map<String, Installation>> installationsByFaction = new HashMap<>();
 
 	@BeforeEach
 	void setUp() {
 		Cache.warVoteCloseHour = 16;
+		installationsByFaction.clear();
 
 		attacker = mock(Faction.class);
 		defender = mock(Faction.class);
@@ -338,6 +344,91 @@ class BattleInstallationPickServiceTest {
 		}
 	}
 
+	@Test
+	void getPicks_seedsDefenderZocPortForNavalSlot() {
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			stubProvinceOwnership(titleManager);
+			War war = navalVotingWar("zoc-port");
+			mockInstallation(defender, "zoc-port", InstallationKind.PORT, DEFENDER_PROVINCE);
+
+			assertEquals(Set.of("zoc-port"), BattleInstallationPickService.getPicks(war, "def"));
+			assertEquals(BATTLE_DAY, war.getBattleInstallationPicksBattleDay());
+		}
+	}
+
+	@Test
+	void togglePick_rejectsUnpickingDefenderZocPort() {
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			stubProvinceOwnership(titleManager);
+			War war = navalVotingWar("zoc-port");
+			mockInstallation(defender, "zoc-port", InstallationKind.PORT, DEFENDER_PROVINCE);
+			Instant beforeLock = BattleWindowService.atScheduleHour(BATTLE_DAY, 15);
+
+			assertEquals(Set.of("zoc-port"), BattleInstallationPickService.getPicks(war, "def"));
+			assertEquals(
+					InstallationPickToggleResult.REJECTED_ZOC_PORT,
+					BattleInstallationPickService.togglePick(war, defender, "leader", "zoc-port", beforeLock));
+			assertEquals(Set.of("zoc-port"), BattleInstallationPickService.getPicks(war, "def"));
+		}
+	}
+
+	@Test
+	void togglePick_defenderCanToggleOtherPortBesideZoc() {
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			stubProvinceOwnership(titleManager);
+			War war = navalVotingWar("zoc-port");
+			mockInstallation(defender, "zoc-port", InstallationKind.PORT, DEFENDER_PROVINCE);
+			mockInstallation(defender, "port-extra", InstallationKind.PORT, DEFENDER_PROVINCE);
+			Instant beforeLock = BattleWindowService.atScheduleHour(BATTLE_DAY, 15);
+
+			assertEquals(
+					InstallationPickToggleResult.ADDED,
+					BattleInstallationPickService.togglePick(war, defender, "leader", "port-extra", beforeLock));
+			assertEquals(Set.of("zoc-port", "port-extra"), BattleInstallationPickService.getPicks(war, "def"));
+			assertEquals(
+					InstallationPickToggleResult.REMOVED,
+					BattleInstallationPickService.togglePick(war, defender, "leader", "port-extra", beforeLock));
+			assertEquals(Set.of("zoc-port"), BattleInstallationPickService.getPicks(war, "def"));
+		}
+	}
+
+	@Test
+	void togglePick_attackerCanStillToggleOwnPortOnNavalDay() {
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			stubProvinceOwnership(titleManager);
+			War war = navalVotingWar("zoc-port");
+			mockInstallation(defender, "zoc-port", InstallationKind.PORT, DEFENDER_PROVINCE);
+			mockInstallation(attacker, "port-1", InstallationKind.PORT, ATTACKER_PROVINCE);
+			Instant beforeLock = BattleWindowService.atScheduleHour(BATTLE_DAY, 15);
+
+			assertEquals(
+					InstallationPickToggleResult.ADDED,
+					BattleInstallationPickService.togglePick(war, attacker, "leader", "port-1", beforeLock));
+			assertEquals(Set.of("port-1"), BattleInstallationPickService.getPicks(war, "atk"));
+			assertEquals(
+					InstallationPickToggleResult.REMOVED,
+					BattleInstallationPickService.togglePick(war, attacker, "leader", "port-1", beforeLock));
+			assertTrue(BattleInstallationPickService.getPicks(war, "atk").isEmpty());
+		}
+	}
+
+	@Test
+	void clearForNewBattleDay_reseedsDefenderZocPort() {
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			stubProvinceOwnership(titleManager);
+			War war = navalVotingWar("zoc-port");
+			mockInstallation(defender, "zoc-port", InstallationKind.PORT, DEFENDER_PROVINCE);
+			mockInstallation(defender, "port-extra", InstallationKind.PORT, DEFENDER_PROVINCE);
+			Instant beforeLock = BattleWindowService.atScheduleHour(BATTLE_DAY, 15);
+			BattleInstallationPickService.togglePick(war, defender, "leader", "port-extra", beforeLock);
+
+			BattleInstallationPickService.clearForNewBattleDay(war);
+
+			assertEquals(Set.of("zoc-port"), BattleInstallationPickService.getPicks(war, "def"));
+			assertEquals(BATTLE_DAY, war.getBattleInstallationPicksBattleDay());
+		}
+	}
+
 	private War votingWar() {
 		War war = new War(1, attacker, defender);
 		war.setGoal(WarGoalType.SUBJUGATE);
@@ -349,7 +440,15 @@ class BattleInstallationPickServiceTest {
 		return war;
 	}
 
-	private static void mockInstallation(
+	private War navalVotingWar(String zocPortId) {
+		War war = votingWar();
+		war.setCampaignBattleSchedule(List.of(
+				new ScheduledCampaignBattle(DEFENDER_PROVINCE, CampaignBattleKind.NAVAL, false, null, zocPortId)));
+		war.setCampaignScheduleIndex(0);
+		return war;
+	}
+
+	private void mockInstallation(
 			Faction faction,
 			String installationId,
 			InstallationKind kind,
@@ -362,9 +461,14 @@ class BattleInstallationPickServiceTest {
 				0,
 				0,
 				0L);
-		InstallationHandler handler = mock(InstallationHandler.class);
-		when(faction.getInstallationHandler()).thenReturn(handler);
-		when(handler.getById(installationId)).thenReturn(installation);
+		Map<String, Installation> byId = installationsByFaction.computeIfAbsent(faction, ignored -> {
+			Map<String, Installation> map = new HashMap<>();
+			InstallationHandler handler = mock(InstallationHandler.class);
+			when(faction.getInstallationHandler()).thenReturn(handler);
+			when(handler.getById(anyString())).thenAnswer(invocation -> map.get(invocation.getArgument(0)));
+			return map;
+		});
+		byId.put(installationId, installation);
 	}
 
 	private void stubProvinceOwnership(MockedStatic<TitleManager> titleManager) {

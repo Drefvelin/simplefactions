@@ -4,6 +4,15 @@ public enum WarType {
 	DE_JURE("de_jure"),
 	SUBJUGATE("subjugate"),
 	TRANSFER_SUBJECT("transfer_subject"),
+	WAR("war"),
+	TRIBUTARY("tributary"),
+	USURP("usurp"),
+	OPEN_MARKET("open_market"),
+	CHANGE_GOVERNMENT("change_government"),
+	PILLAGE("pillage"),
+	OVERTHROW("overthrow"),
+	CHANGE_LAW("change_law"),
+	CHANGE_TAX("change_tax"),
 	RAID("raid");
 
 	private final String jsonId;

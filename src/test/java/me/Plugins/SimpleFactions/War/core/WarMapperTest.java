@@ -121,6 +121,7 @@ class WarMapperTest {
 		when(war.isDefenderChoiceResolved()).thenReturn(true);
 		when(war.isForceQuorumNextClose()).thenReturn(true);
 		when(war.getSubjectFactionId()).thenReturn(null);
+		when(war.getRelationTypeId()).thenReturn("march");
 		when(war.getStartedAt()).thenReturn(Instant.parse("2026-08-19T12:00:00Z"));
 		when(war.getEndedAt()).thenReturn(null);
 		when(war.getEndReason()).thenReturn(null);
@@ -137,6 +138,7 @@ class WarMapperTest {
 		assertEquals("faction_a", data.attackerLeaderId);
 		assertEquals("faction_b", data.defenderLeaderId);
 		assertEquals("county_x", data.targetTitleId);
+		assertEquals("march", data.relationTypeId);
 		assertEquals(Integer.valueOf(42), data.objectiveProvinceId);
 		assertEquals(Integer.valueOf(17), data.campaignStartProvinceId);
 		assertEquals(List.of(17, 23, 42), data.campaignProvinces);
@@ -632,6 +634,29 @@ class WarMapperTest {
 			War restored = WarMapper.fromData(data);
 			assertEquals(Set.of("fort-1", "airport-2"), restored.getBattleInstallationPicks().get("faction_a"));
 			assertEquals(LocalDate.parse("2026-08-21"), restored.getBattleInstallationPicksBattleDay());
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
+	}
+
+	@Test
+	void roundTrip_wartimeInstallationOwners() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			War war = new War(42, attacker, defender);
+			war.putWartimeInstallationOwner("port-1", "faction_b");
+
+			WarData data = WarMapper.toData(war);
+			assertEquals("faction_b", data.wartimeInstallationOwners.get("port-1"));
+
+			War restored = WarMapper.fromData(data);
+			assertEquals("faction_b", restored.getWartimeInstallationOwners().get("port-1"));
 		} finally {
 			FactionManager.factions.remove(attacker);
 			FactionManager.factions.remove(defender);

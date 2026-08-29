@@ -81,8 +81,7 @@ public class Law {
     public List<String> getDescription() { return description; }
     public boolean hasDescription() { return !description.isEmpty(); }
     public boolean isAvailable(Faction f) {
-        if(requirements.isEmpty()) return true;
-        return true; //TODO add requirements
+        return CanHaveLaw.canHave(f, this);
     }
     public boolean affectsEconomy() {
         for(LawEffect effect : scopedEffects.values()) {

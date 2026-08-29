@@ -9,6 +9,7 @@ import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
+import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCapabilityService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPostBattleChoiceService;
@@ -97,6 +98,18 @@ public final class WarResolutionService {
 			return Optional.empty();
 		}
 
+		Integer objectiveProvinceId = war.getObjectiveProvinceId();
+		if (war.getGoal() == WarGoalType.PILLAGE
+				&& objectiveProvinceId != null
+				&& provinceId.equals(objectiveProvinceId)) {
+			if (winner == CampaignCoalition.AGGRESSOR) {
+				return Optional.of(WarEndReason.ATTACKER_VICTORY);
+			}
+			if (winner == CampaignCoalition.DEFENDER) {
+				return Optional.of(WarEndReason.DEFENDER_VICTORY);
+			}
+		}
+
 		int defenderCapital = capitalProvinceId(war.getDefenders().getLeader());
 		int attackerCapital = capitalProvinceId(war.getAttackers().getLeader());
 
@@ -117,11 +130,10 @@ public final class WarResolutionService {
 		ObjectiveHolder objectiveHeldBy = context.preBattleObjectiveHeldBy() != null
 				? context.preBattleObjectiveHeldBy()
 				: war.getObjectiveHeldBy();
-		Integer objectiveProvinceId = war.getObjectiveProvinceId();
 		if (pushTarget == CampaignPushTarget.RETAKE_OBJECTIVE
 				&& objectiveHeldBy == ObjectiveHolder.ATTACKER
 				&& objectiveProvinceId != null
-				&& provinceId == objectiveProvinceId
+				&& provinceId.equals(objectiveProvinceId)
 				&& winner == CampaignCoalition.AGGRESSOR) {
 			return Optional.of(WarEndReason.ATTACKER_VICTORY);
 		}

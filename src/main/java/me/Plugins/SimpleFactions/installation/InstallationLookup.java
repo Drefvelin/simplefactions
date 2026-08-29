@@ -29,6 +29,38 @@ public final class InstallationLookup {
 		return null;
 	}
 
+	public static Faction findHolder(String installationId) {
+		if (installationId == null || installationId.isBlank()) {
+			return null;
+		}
+		for (Faction faction : FactionManager.factions) {
+			if (faction == null || faction.getInstallationHandler() == null) {
+				continue;
+			}
+			if (faction.getInstallationHandler().getById(installationId) != null) {
+				return faction;
+			}
+		}
+		return null;
+	}
+
+	public static Faction findHolderOnProvince(int province) {
+		if (province <= 0) {
+			return null;
+		}
+		for (Faction faction : FactionManager.factions) {
+			if (faction == null || faction.getInstallationHandler() == null) {
+				continue;
+			}
+			for (Installation installation : faction.getInstallationHandler().getAll()) {
+				if (installation.getProvince() == province) {
+					return faction;
+				}
+			}
+		}
+		return null;
+	}
+
 	public static Installation findCovering(Location location) {
 		if (location == null) {
 			return null;

@@ -3,7 +3,11 @@ package me.Plugins.SimpleFactions.vehicles;
 import java.time.Instant;
 
 import me.Plugins.SimpleFactions.Managers.WarManager;
+import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationInPlayService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationPickService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.installation.InstallationVulnerabilityService;
 
@@ -24,6 +28,26 @@ public final class VehicleInstallationLockService {
 		}
 		for (War war : WarManager.getActive()) {
 			if (CampaignRaidService.isRepairLocked(war, installationId, now)) {
+				return true;
+			}
+			if (isPickLockFrozen(war, installationId, now)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static boolean isPickLockFrozen(War war, String installationId, Instant now) {
+		if (war == null || !war.isActive() || !BattleInstallationPickService.isLocked(war, now)) {
+			return false;
+		}
+		for (Faction faction : BattleSideMembers.collectParticipatingFactions(war.getAttackers())) {
+			if (BattleInstallationInPlayService.isInPlay(war, faction.getId(), installationId)) {
+				return true;
+			}
+		}
+		for (Faction faction : BattleSideMembers.collectParticipatingFactions(war.getDefenders())) {
+			if (BattleInstallationInPlayService.isInPlay(war, faction.getId(), installationId)) {
 				return true;
 			}
 		}

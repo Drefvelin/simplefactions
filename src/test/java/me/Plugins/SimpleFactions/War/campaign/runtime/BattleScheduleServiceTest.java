@@ -207,9 +207,11 @@ class BattleScheduleServiceTest {
 	void closeVote_forceImmediateBypassesVoteCloseHour() {
 		War war = defenderChoiceWar();
 
-		assertTrue(BattleScheduleService.applyPostBattleChoiceDeadline(
-				war, BattleWindowService.atScheduleHour(BATTLE_DAY, 12)));
-		assertTrue(war.isPostBattleChoiceResolved());
+		withMockBossBar(() -> {
+			assertTrue(BattleScheduleService.applyPostBattleChoiceDeadline(
+					war, BattleWindowService.atScheduleHour(BATTLE_DAY, 12)));
+			assertTrue(war.isPostBattleChoiceResolved());
+		});
 	}
 
 	@Test

@@ -13,7 +13,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
-import me.Plugins.SimpleFactions.Loaders.WarGoalLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
@@ -21,9 +20,7 @@ import me.Plugins.SimpleFactions.Managers.Holder.SFCombinedInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.Participant;
-import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
-import me.Plugins.SimpleFactions.War.core.WarGoal;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.enums.SFGUI;
@@ -83,24 +80,6 @@ public class WarView {
 			i.setItem(49, creator.createCampaignButton(w));
 		}
 		i.setItem(53, inv.createBackButton(SFGUI.WAR_VIEW));
-		if(open) player.openInventory(i);
-	}
-	
-	public void warGoalView(Inventory i, Player player, War w, Faction target, Faction page, boolean open) {
-		w.update();
-		if(open) {
-			i = SimpleFactions.plugin.getServer().createInventory(new SFCombinedInventoryHolder(w.getId(), page.getId(), SFGUI.WARGOAL_VIEW), 27, w.getName());
-		}
-		Faction from = FactionManager.getByLeader(player.getName());
-		if(from == null) return;
-		int slot = 0;
-		boolean main = w.isMainParticipant(target);
-		for(WarGoal goal : WarGoalLoader.get()) {
-			if(!goal.canTarget(w, from, target)) continue;
-			i.setItem(slot, creator.createWarGoalItem(goal, target, main));
-			slot++;
-		}
-		i.setItem(26, inv.createBackButton(SFGUI.WARGOAL_VIEW));
 		if(open) player.openInventory(i);
 	}
 	
@@ -192,49 +171,7 @@ public class WarView {
 				if(!w.canBeCalled(f)) return;
 				WarManager.sendRequest(p, pf, f, w);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-				return;
 			}
-			if (w.getGoal() == null && !w.getSide(f).equals(w.getSide(pf))) {
-				Faction page = FactionManager.getByString(h.getFactionId());
-				warGoalView(null, p, w, f, page, true);
-				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-			}
-		} else if(inventory.getHolder() instanceof SFCombinedInventoryHolder && ((SFCombinedInventoryHolder) inventory.getHolder()).getType().equals(SFGUI.WARGOAL_VIEW)) {
-			e.setCancelled(true);
-			SFCombinedInventoryHolder h = (SFCombinedInventoryHolder) inventory.getHolder();
-			War w = WarManager.getById(h.getWarId());
-			if (w != null && w.getGoal() != null) {
-				p.sendMessage("§cWar goal was set at declare.");
-				return;
-			}
-			Faction page = FactionManager.getByString(h.getFactionId());
-			if(e.getSlot() == 26) {
-				participantView(null, p, w, w.getParticipant(page), true);
-				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-				return;
-			}
-			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
-			String id = e.getCurrentItem().getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.STRING);
-			if(id == null) return;
-			key = new NamespacedKey(SimpleFactions.plugin, "goal");
-			String goal = e.getCurrentItem().getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.STRING);
-			if(goal == null) return;
-			Faction f = FactionManager.getByString(id);
-			Faction pf = FactionManager.getByLeader(p.getName());
-			if(pf == null) return;
-			Participant par = w.getParticipant(pf);
-			if(par == null) return;
-			Side s = w.getOppositeSide(pf);
-			if(s == null) return;
-			WarGoal warGoal = WarGoalLoader.getByString(goal);
-			if(!warGoal.canTarget(w, pf, f)) return;
-			if(!w.isMainParticipant(f)) {
-				s.addNewParticipant(f, w.getParticipant(page));
-			}
-			par.addWarGoal(f, warGoal);
-			
-			participantView(null, p, w, w.getParticipant(page), true);
-			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 		}
 	}
 

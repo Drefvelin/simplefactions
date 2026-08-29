@@ -11,6 +11,7 @@ import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.pathfinder.TitleManagerProvinceOwnerLookup;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.installation.WartimeInstallationService;
 
 public final class CampaignMilitaryWalkoverService {
 	private static final int MAX_CHAIN = 32;
@@ -69,6 +70,10 @@ public final class CampaignMilitaryWalkoverService {
 				war,
 				battleProvinceId,
 				CampaignCoalitionService.coalitionToBelligerentRole(winner));
+		WartimeInstallationService.occupySiegeFort(
+				war,
+				CampaignCoalitionService.coalitionToBelligerentRole(winner),
+				foughtSlot);
 		CampaignCoalitionService.setInitiativeHolderCoalition(war, winner);
 		war.setCampaignBattlesFought(war.getCampaignBattlesFought() + 1);
 		CampaignBattleEndService.clearHoldPeace(war);

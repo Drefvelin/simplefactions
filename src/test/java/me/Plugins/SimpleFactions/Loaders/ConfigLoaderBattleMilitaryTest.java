@@ -42,7 +42,7 @@ class ConfigLoaderBattleMilitaryTest {
 				    defender_choice_deadline_hour: 12
 				""");
 
-		new ConfigLoader().loadConfig(file.toFile());
+		new ConfigLoader().loadWar(file.toFile());
 
 		assertEquals(5, Cache.warBattleLivesPerRegiment);
 		assertEquals(1, Cache.warBattleMinSideLives);
@@ -64,7 +64,7 @@ class ConfigLoaderBattleMilitaryTest {
 				    min_side_lives: 3
 				""");
 
-		new ConfigLoader().loadConfig(file.toFile());
+		new ConfigLoader().loadWar(file.toFile());
 
 		assertEquals(7, Cache.warBattleLivesPerRegiment);
 		assertEquals(3, Cache.warBattleMinSideLives);

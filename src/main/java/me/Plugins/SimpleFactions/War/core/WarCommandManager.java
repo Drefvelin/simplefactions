@@ -14,6 +14,7 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Utils.Permissions;
 import me.Plugins.SimpleFactions.War.campaign.admin.CampaignTimeCommandService;
 import me.Plugins.SimpleFactions.War.campaign.admin.CampaignTimeResult;
+import me.Plugins.SimpleFactions.War.campaign.admin.WarReparationsAdminService;
 import me.Plugins.SimpleFactions.War.campaign.admin.WarScheduleAdminResult;
 import me.Plugins.SimpleFactions.War.campaign.admin.WarScheduleAdminService;
 import me.Plugins.SimpleFactions.War.campaign.admin.WarScheduleFeedbackFormatter;
@@ -21,6 +22,7 @@ import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
+import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 
 public class WarCommandManager implements CommandExecutor {
 	public static final String CMD = "war";
@@ -33,7 +35,7 @@ public class WarCommandManager implements CommandExecutor {
 		if (args.length < 1) {
 			player.sendMessage("§eUsage: §a/war list");
 			if (Permissions.isAdmin(sender)) {
-				player.sendMessage("§7Staff: §e/war admin end|status|path|time|schedule|devmode|raid §7...");
+				player.sendMessage("§7Staff: §e/war admin end|win|status|path|time|schedule|devmode|raid|reparations §7...");
 			}
 			return true;
 		}
@@ -62,20 +64,22 @@ public class WarCommandManager implements CommandExecutor {
 			return true;
 		}
 		if (args.length < 2) {
-			player.sendMessage("§cUsage: /war admin end|status|path|time|schedule|devmode|raid ...");
+			player.sendMessage("§cUsage: /war admin end|win|status|path|time|schedule|devmode|raid|reparations ...");
 			return true;
 		}
 		String subcommand = args[1].toLowerCase();
 		return switch (subcommand) {
 			case "end" -> handleEnd(player, args);
+			case "win" -> handleWin(player, args);
 			case "status" -> handleStatus(player, args);
 			case "path" -> handlePath(player, args);
 			case "time" -> handleTime(player, args);
 			case "schedule" -> handleSchedule(player, args);
 			case "devmode" -> handleDevmode(player, args);
 			case "raid" -> handleRaid(player, args);
+			case "reparations" -> handleReparations(player, args);
 			default -> {
-				player.sendMessage("§cUnknown admin subcommand. Use: end, status, path, time, schedule, devmode, raid");
+				player.sendMessage("§cUnknown admin subcommand. Use: end, win, status, path, time, schedule, devmode, raid, reparations");
 				yield true;
 			}
 		};
@@ -98,6 +102,38 @@ public class WarCommandManager implements CommandExecutor {
 		}
 		WarManager.endWar(w);
 		player.sendMessage("§aEnded war " + w.getName());
+		return true;
+	}
+
+	private boolean handleWin(Player player, String[] args) {
+		if (args.length != 4) {
+			player.sendMessage("§cUsage: /war admin win <warId> attacker|defender");
+			return true;
+		}
+		var warId = WarCommandHelper.parseWarId(args[2]);
+		if (warId.isEmpty()) {
+			player.sendMessage("§cWar id must be a number");
+			return true;
+		}
+		BelligerentRole winner = WarCommandHelper.parseBelligerentRoleArg(args[3]);
+		if (winner == null) {
+			player.sendMessage("§cWinner must be attacker or defender.");
+			return true;
+		}
+		War w = WarManager.getById(warId.get());
+		if (w == null) {
+			player.sendMessage("§cNo war by that id");
+			return true;
+		}
+		if (!w.isActive()) {
+			player.sendMessage("§cWar is not active");
+			return true;
+		}
+		WarEndReason reason = winner == BelligerentRole.ATTACKER
+				? WarEndReason.ATTACKER_VICTORY
+				: WarEndReason.DEFENDER_VICTORY;
+		WarManager.endWar(w, reason);
+		player.sendMessage("§aEnded war " + w.getId() + " (" + winner.name().toLowerCase() + " victory).");
 		return true;
 	}
 
@@ -268,6 +304,19 @@ public class WarCommandManager implements CommandExecutor {
 				: (coalition == CampaignCoalition.AGGRESSOR ? "aggressor" : "defender");
 		player.sendMessage("§aReset raid quota for war " + war.getId()
 				+ " (" + scope + "): cleared " + cleared + " entr" + (cleared == 1 ? "y" : "ies") + ".");
+		return true;
+	}
+
+	private boolean handleReparations(Player player, String[] args) {
+		if (args.length < 4 || args.length > 6) {
+			player.sendMessage(WarReparationsAdminService.USAGE);
+			return true;
+		}
+		String percentArg = args.length >= 5 ? args[4] : null;
+		String daysArg = args.length >= 6 ? args[5] : null;
+		WarReparationsAdminService.ApplyResult result =
+				WarReparationsAdminService.apply(args[2], args[3], percentArg, daysArg);
+		player.sendMessage(result.message());
 		return true;
 	}
 

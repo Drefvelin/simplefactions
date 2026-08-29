@@ -24,8 +24,9 @@ public final class CampaignUiCopy {
 	public static final String BATTLE_KIND = "#9ec8ff";
 	public static final String FOUGHT_LABEL = "Fought";
 	public static final String RETREATED_LABEL = "Retreated";
+	public static final String REQUIRED_ZOC_PORT = "Required ZOC port";
 	public static final String NAVY_BLOCKADE =
-			"Faction has a navy blockading your approach, and you lack a navy to challenge them";
+			"You need an operational port for a naval path. Source ships before the battle.";
 
 	private CampaignUiCopy() {}
 
@@ -95,5 +96,13 @@ public final class CampaignUiCopy {
 
 	public static String navyBlockadeDeclareMessage() {
 		return "§c" + NAVY_BLOCKADE;
+	}
+
+	public static String navalAutoLossLeaderPing() {
+		return "§cBerth a naval vehicle at a committed port before the naval battle or you will auto-lose.";
+	}
+
+	public static String navalAutoLossBroadcast() {
+		return "§eAttacker had no berthed navy at a committed port. §7Defender wins the naval slot.";
 	}
 }

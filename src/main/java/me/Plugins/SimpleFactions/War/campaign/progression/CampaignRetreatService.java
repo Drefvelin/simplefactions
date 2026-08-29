@@ -16,6 +16,7 @@ import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService.ScheduleLeg;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.campaign.zoc.FortControlService;
+import me.Plugins.SimpleFactions.installation.WartimeInstallationService;
 import me.Plugins.SimpleFactions.War.pathfinder.TitleManagerProvinceOwnerLookup;
 import me.Plugins.SimpleFactions.War.resolution.ResolutionContext;
 import me.Plugins.SimpleFactions.War.resolution.WarResolutionService;
@@ -99,6 +100,7 @@ public final class CampaignRetreatService {
 		}
 
 		occupationService().applyBattleWin(war, provinceId, winnerRole);
+		WartimeInstallationService.occupySiegeFort(war, winnerRole, slot);
 		war.addConcededScheduleSlot(slotKey(leg, index));
 		CampaignScheduleService.advanceIndex(war);
 		CampaignBattleEndService.advanceAlongPushTarget(war);

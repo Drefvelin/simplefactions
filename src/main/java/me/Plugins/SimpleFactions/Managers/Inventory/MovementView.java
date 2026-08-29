@@ -13,6 +13,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.checkerframework.checker.units.qual.C;
 
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarStartService;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
@@ -20,8 +21,9 @@ import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.enums.Member;
 import me.Plugins.SimpleFactions.enums.SFGUI;
-import me.Plugins.SimpleFactions.government.StabilityModifier;
 import me.Plugins.SimpleFactions.government.movement.Movement;
+import me.Plugins.SimpleFactions.government.movement.MovementOutcomeService;
+import me.Plugins.SimpleFactions.government.movement.MovementOutcomeSource;
 import me.Plugins.SimpleFactions.government.movement.Phase;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
@@ -322,7 +324,12 @@ public class MovementView {
             if(!movement.quickJoinCheck(p)) return;
             Object joiningAs = movement.getJoiningAs(p);
             if(joiningAs == null) return;
-            if(!movement.canJoin(joiningAs, null, true)) return;
+            String block = movement.joinBlockReason(joiningAs, null, false);
+            if(block != null) {
+                p.sendMessage(block);
+                p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+                return;
+            }
             FactionManager.requestMovementJoin(p, movement, "supporter", null);
             movementView(p, f, movement, inventory);
             p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
@@ -339,7 +346,12 @@ public class MovementView {
                     }
                     movement.leaveAsForeignBacker(playerFaction);
                 } else {
-                    if(!movement.canForeignBackerJoin(playerFaction, true)) return;
+                    String backerBlock = movement.foreignBackerBlockReason(playerFaction, false);
+                    if(backerBlock != null) {
+                        p.sendMessage(backerBlock);
+                        p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+                        return;
+                    }
                     FactionManager.requestMovementJoin(p, movement, "foreign_backer", null);
                 }
                 movementView(p, f, movement, inventory);
@@ -461,7 +473,12 @@ public class MovementView {
                 return;
             }
             if(!movement.quickJoinCheck(p)) return;
-            if(!movement.canJoin(joiningAs, cause, true)) return;
+            String causeBlock = movement.joinBlockReason(joiningAs, cause, false);
+            if(causeBlock != null) {
+                p.sendMessage(causeBlock);
+                p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+                return;
+            }
             FactionManager.requestMovementJoin(p, movement, "member", null);
             causeView(p, f, movement, cause, inventory);
             p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
@@ -524,25 +541,22 @@ public class MovementView {
                     }
                 }
 
-                StabilityModifier modifier = new StabilityModifier("Caved to Movement", movement.getStabilityEffect(), 1); // stability effect lasts 6 hours
-				f.getGovernment().addStabilityModifier(modifier);
-
-                for(Cause cause : movement.getCauses()) {
-                    Proposal proposal = cause.getProposal();
-                    proposal.apply(null);
-                }
-                
-                // End movement
-                f.getGovernment().endMovement(movement);
+                MovementOutcomeService.apply(movement, MovementOutcomeSource.ACCEPTED);
                 p.closeInventory();
             }
         }
         // Decline button (red concrete)
         else if (slot == 33) {
             if (p.getName().equalsIgnoreCase(f.getLeader())) {
+                String error = CivilWarStartService.start(movement);
+                if (error != null) {
+                    p.sendMessage(error);
+                    p.playSound(p.getLocation(), "entity.villager.no", 1, 1f);
+                    return;
+                }
                 p.sendMessage(StringFormatter.formatHex("§cYou have declined the movement's demands."));
                 p.sendMessage(StringFormatter.formatHex("§7A civil war has begun!"));
-                p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1, 0.8f);
+                p.playSound(p.getLocation(), "entity.ender_dragon.growl", 1, 0.8f);
                 
                 // Notify movement leader if online
                 if (movement.hasLeader()) {
@@ -553,16 +567,13 @@ public class MovementView {
                     }
                 }
 
-                //TODO civil war start
-                
-                // End movement (civil war effects will be added later)
-                f.getGovernment().endMovement(movement);
                 p.closeInventory();
             }
         }
     }
 
     private boolean canPlayerCreateCause(Player p, Movement movement) {
+        if (movement.isFrozen()) return false;
         // Check if player is a supporter
         Object supporter = getSupporterObject(p, movement);
         if (supporter == null) return false;

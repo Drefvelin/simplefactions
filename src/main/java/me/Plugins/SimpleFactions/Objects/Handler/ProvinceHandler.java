@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarBorderLock;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
@@ -117,6 +118,9 @@ public class ProvinceHandler {
 	}
 
     public void provinceCap() {
+		if (CivilWarBorderLock.isLocked(f)) {
+			return;
+		}
 		if(TitleManager.overProvinceCap(f) && provinces.size() > 0) {
 			int toRemove = provinces.get(provinces.size() - 1);
 			if(toRemove == capital && provinces.size() > 1) toRemove = provinces.get(provinces.size() - 2);

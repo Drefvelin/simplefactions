@@ -13,6 +13,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
+import me.Plugins.SimpleFactions.War.declare.PillageEligibility;
 import me.Plugins.SimpleFactions.settlement.Settlement;
 import me.Plugins.SimpleFactions.settlement.handler.SettlementHandler;
 
@@ -30,10 +31,12 @@ public class ObjectiveProvincePicker {
 
 		return switch (war.getGoal()) {
 			case DE_JURE_ANNEX -> pickForDeJure(war, defender);
-			case SUBJUGATE -> pickFromProvinceSet(
+			case SUBJUGATE, WAR, TRIBUTARY, USURP, OPEN_MARKET, CHANGE_GOVERNMENT,
+					OVERTHROW, CHANGE_LAW, CHANGE_TAX -> pickFromProvinceSet(
 					new HashSet<>(TitleManager.getProvinces(defender)),
 					defender);
 			case TRANSFER_SUBJECT -> pickForTransferSubject(war);
+			case PILLAGE -> pickForPillage(war);
 		};
 	}
 
@@ -68,6 +71,14 @@ public class ObjectiveProvincePicker {
 		}
 
 		return pickFromProvinceSet(new HashSet<>(TitleManager.getProvinces(subject)), subject);
+	}
+
+	private OptionalInt pickForPillage(War war) {
+		Settlement settlement = PillageEligibility.findSettlement(war.getTargetSettlementId());
+		if (settlement == null || settlement.getCenterProvince() <= 0) {
+			return OptionalInt.empty();
+		}
+		return OptionalInt.of(settlement.getCenterProvince());
 	}
 
 	private OptionalInt pickFromProvinceSet(Set<Integer> provinceSet, Faction targetFaction) {

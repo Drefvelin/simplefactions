@@ -43,8 +43,17 @@ public class Cache {
 	public static int warDeclareOpinionThreshold;
 	public static double warInitiativeFactor = 1.5;
 	public static int warPortSeaZocRadius = 2;
+	public static double warReparationsIncomePercent = 25;
+	public static int warReparationsDays = 10;
 	public static Map<WarGoalType, Integer> warGoalMaxBattles = new EnumMap<>(WarGoalType.class);
 	public static final int MAX_BATTLES_PER_LEG = 4;
+	public static List<String> openMarketDefenderMustNotHave = List.of();
+	public static List<String> openMarketAttackerMustNotHave = List.of();
+	public static String openMarketApplyDefenderLaw = "";
+	public static int pillageRangeProvinces = 3;
+	public static int pillageLootDays = 10;
+	public static double pillageTradeHitPercent = -100;
+	public static int pillageTradeHitDays = 10;
 	public static int warDeclinedAllyStabilityPenalty;
 	public static boolean warFirstBattleAtBorder;
 	public static int warProvincesBetweenBattles;

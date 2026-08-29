@@ -43,6 +43,13 @@ public class War {
 	private String defenderLeaderId;
 	private String targetTitleId;
 	private String subjectFactionId;
+	private String relationTypeId;
+	private String governmentLawId;
+	private String leadershipLawId;
+	private String targetSettlementId;
+	private String movementId;
+	private me.Plugins.SimpleFactions.War.civilwar.CivilWarSnapshot civilWarSnapshot;
+	private boolean pillageNaturalNavyRequired;
 	private Integer objectiveProvinceId;
 	private Integer campaignStartProvinceId;
 	private List<Integer> campaignProvinces;
@@ -63,6 +70,7 @@ public class War {
 	private List<ScheduledCampaignBattle> campaignCounterSchedule = new ArrayList<>();
 	private int campaignCounterScheduleIndex;
 	private Map<String, CampaignCoalition> fortControllers = new HashMap<>();
+	private Map<String, String> wartimeInstallationOwners = new LinkedHashMap<>();
 	private Set<String> concededScheduleSlots = new LinkedHashSet<>();
 	private Map<String, Integer> locationBattleCounts = new HashMap<>();
 	private BattleSchedulePhase battleSchedulePhase = BattleSchedulePhase.IDLE;
@@ -211,6 +219,62 @@ public class War {
 
 	public void setSubjectFactionId(String subjectFactionId) {
 		this.subjectFactionId = subjectFactionId;
+	}
+
+	public String getRelationTypeId() {
+		return relationTypeId;
+	}
+
+	public void setRelationTypeId(String relationTypeId) {
+		this.relationTypeId = relationTypeId;
+	}
+
+	public String getGovernmentLawId() {
+		return governmentLawId;
+	}
+
+	public void setGovernmentLawId(String governmentLawId) {
+		this.governmentLawId = governmentLawId;
+	}
+
+	public String getLeadershipLawId() {
+		return leadershipLawId;
+	}
+
+	public void setLeadershipLawId(String leadershipLawId) {
+		this.leadershipLawId = leadershipLawId;
+	}
+
+	public String getTargetSettlementId() {
+		return targetSettlementId;
+	}
+
+	public void setTargetSettlementId(String targetSettlementId) {
+		this.targetSettlementId = targetSettlementId;
+	}
+
+	public String getMovementId() {
+		return movementId;
+	}
+
+	public void setMovementId(String movementId) {
+		this.movementId = movementId;
+	}
+
+	public me.Plugins.SimpleFactions.War.civilwar.CivilWarSnapshot getCivilWarSnapshot() {
+		return civilWarSnapshot;
+	}
+
+	public void setCivilWarSnapshot(me.Plugins.SimpleFactions.War.civilwar.CivilWarSnapshot civilWarSnapshot) {
+		this.civilWarSnapshot = civilWarSnapshot;
+	}
+
+	public boolean isPillageNaturalNavyRequired() {
+		return pillageNaturalNavyRequired;
+	}
+
+	public void setPillageNaturalNavyRequired(boolean pillageNaturalNavyRequired) {
+		this.pillageNaturalNavyRequired = pillageNaturalNavyRequired;
 	}
 
 	public Integer getObjectiveProvinceId() {
@@ -393,6 +457,32 @@ public class War {
 			return;
 		}
 		fortControllers.put(fortInstallationId, coalition);
+	}
+
+	public Map<String, String> getWartimeInstallationOwners() {
+		return wartimeInstallationOwners;
+	}
+
+	public void setWartimeInstallationOwners(Map<String, String> wartimeInstallationOwners) {
+		if (wartimeInstallationOwners == null || wartimeInstallationOwners.isEmpty()) {
+			this.wartimeInstallationOwners = new LinkedHashMap<>();
+			return;
+		}
+		this.wartimeInstallationOwners = new LinkedHashMap<>(wartimeInstallationOwners);
+	}
+
+	public void putWartimeInstallationOwner(String installationId, String originalFactionId) {
+		if (installationId == null || installationId.isBlank() || originalFactionId == null || originalFactionId.isBlank()) {
+			return;
+		}
+		if (wartimeInstallationOwners.containsKey(installationId)) {
+			return;
+		}
+		wartimeInstallationOwners.put(installationId, originalFactionId);
+	}
+
+	public void clearWartimeInstallationOwners() {
+		wartimeInstallationOwners.clear();
 	}
 
 	public Set<String> getConcededScheduleSlots() {

@@ -26,6 +26,9 @@ commands:
   war:
       useage: /<command>
       description: War command
+  movement:
+      useage: /<command>
+      description: Movement admin command
   ledger:
       useage: /<command>
       description: View your daily cashflow ledger

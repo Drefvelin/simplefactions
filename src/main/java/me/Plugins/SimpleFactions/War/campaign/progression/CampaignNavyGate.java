@@ -27,6 +27,9 @@ public final class CampaignNavyGate {
 		if (war == null) {
 			return false;
 		}
+		if (war.isPillageNaturalNavyRequired()) {
+			return true;
+		}
 		return scheduleRequiresNavy(war.getCampaignBattleSchedule());
 	}
 
@@ -58,7 +61,7 @@ public final class CampaignNavyGate {
 		return WarValidationResult.fail(CampaignUiCopy.navyBlockadeDeclareMessage());
 	}
 
-	private static boolean scheduleRequiresNavy(List<ScheduledCampaignBattle> schedule) {
+	public static boolean scheduleRequiresNavy(List<ScheduledCampaignBattle> schedule) {
 		if (schedule == null || schedule.isEmpty()) {
 			return false;
 		}

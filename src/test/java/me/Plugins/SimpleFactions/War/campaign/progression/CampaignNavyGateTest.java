@@ -46,7 +46,7 @@ class CampaignNavyGateTest {
 	}
 
 	@Test
-	void validateDeclareAfterPopulate_allowsNavalScheduleWithPort() {
+	void validateDeclareAfterPopulate_allowsNavalScheduleWithEmptyPort() {
 		War war = warWithSchedule(CampaignBattleKind.NAVAL, true);
 		assertTrue(CampaignNavyGate.validateDeclareAfterPopulate(war).isValid());
 	}
@@ -117,6 +117,17 @@ class CampaignNavyGateTest {
 					war, CampaignCoalition.AGGRESSOR));
 			assertEquals(PostBattleChoicePhase.LOSER_ATTACK_PEACE, war.getPostBattleChoicePhase());
 		}
+	}
+
+	@Test
+	void validateDeclareAfterPopulate_pillageNaturalNavyRejectsFieldScheduleWithoutPort() {
+		War war = warWithSchedule(CampaignBattleKind.FIELD, false);
+		war.setGoal(WarGoalType.PILLAGE);
+		war.setWarType(WarType.PILLAGE);
+		war.setPillageNaturalNavyRequired(true);
+		WarValidationResult result = CampaignNavyGate.validateDeclareAfterPopulate(war);
+		assertFalse(result.isValid());
+		assertEquals(CampaignUiCopy.navyBlockadeDeclareMessage(), result.getMessage());
 	}
 
 	@Test

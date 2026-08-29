@@ -101,30 +101,51 @@ public class RelationManager {
 	}
 	
 	public static void setRelation(Player p, RelationType r, Faction target, Faction origin, boolean check) {
+		setRelation(p, r, target, origin, check, false);
+	}
+
+	public static boolean setRelationForced(RelationType r, Faction target, Faction origin) {
+		return setRelation(null, r, target, origin, false, true);
+	}
+
+	public static boolean setRelation(
+			Player p,
+			RelationType r,
+			Faction target,
+			Faction origin,
+			boolean check,
+			boolean forced) {
+		if (r == null || target == null || origin == null) {
+			return false;
+		}
 		Relation relation = new Relation(origin.getRelation(target.getId()));
 		Relation reverse = new Relation(target.getRelation(origin.getId()));
 		boolean reverseChange = reverseChange(target, origin, r);
 		if(r.isVassalage()) {
 			// War levy rows are snapshotted at declare / ally join only (61.01b); no mid-war add here.
+			if(!origin.canHaveVassals()) {
+				if(p != null) p.sendMessage("§cYour faction cannot have vassals!");
+				return false;
+			}
 			if(!vassalCheck(target, origin)) {
 				if(p != null) p.sendMessage("§cThis faction is alredy a subject of someone else");
-				return;
+				return false;
 			}
 			String topLiege = getTopLiege(origin);
 			if(topLiege != null && topLiege.equalsIgnoreCase(target.getId())) {
 				if(p != null) p.sendMessage("§cThis faction is your top overlord");
-				return;
+				return false;
 			}
 			if(isOnOverlordPath(origin, target)){
 				if(p != null) p.sendMessage("§cThis relation would cause a loop");
-				return;
+				return false;
 			}
 		}
 		if(atLimit(origin, r)) {
 			if(p != null) p.sendMessage("§cYou have reached the limit for this relation type");
-			return;
+			return false;
 		}
-		if(r.hasThreshold()) {
+		if(!forced && r.hasThreshold()) {
 			Threshold h = r.getThreshold();
 			int opinion = origin.getRelation(target.getId()).getOpinion();
 			boolean fulfilled = true;
@@ -142,19 +163,21 @@ public class RelationManager {
 				}
 			}
 			if(!fulfilled) {
-				return;
+				return false;
 			}
 		}
-		if(r.isMutual() && check) {
+		if(!forced && r.isMutual() && check) {
 			sendRequest(p, target, r);
-			return;
+			return false;
 		}
 		if(r.shouldUpdateMap() || relation.getType().shouldUpdateMap()) {
-			FactionManager.getMap().enqueue("nation", origin.getRGB());
-			FactionManager.getMap().enqueue("nation", target.getRGB());
+			if (FactionManager.getMap() != null) {
+				FactionManager.getMap().enqueue("nation", origin.getRGB());
+				FactionManager.getMap().enqueue("nation", target.getRGB());
+			}
 		}
 		relation.setType(r);
-		origin.setRelation(target, relation);;
+		origin.setRelation(target, relation);
 		if(reverseChange) {
 			Player l = Bukkit.getPlayerExact(target.getLeader());
 			if(l != null && l.isOnline()) {
@@ -167,6 +190,7 @@ public class RelationManager {
 			target.setRelation(origin, reverse);
 		}
 		if(p != null) p.sendMessage(StringFormatter.formatHex("#a89977Set relation to "+r.getName()));
+		return true;
 	}
 
 	public static void setTradeRelation(Player p, RelationType r, Faction target, Faction origin, boolean check) {
@@ -201,6 +225,16 @@ public class RelationManager {
 		}
 		if(p != null) p.sendMessage(StringFormatter.formatHex("#a89977Set trade to "+r.getName()));
 	}
+
+	public static void setTradeRelationForced(RelationType r, Faction target, Faction origin) {
+		if (r == null || target == null || origin == null) {
+			return;
+		}
+		origin.getDiplomacyHandler().setTradeRelation(target, r);
+		if (r.isMutual() && r.getLink() != null) {
+			target.getDiplomacyHandler().setTradeRelation(origin, r.getLink());
+		}
+	}
 	
 	public static boolean reverseChange(Faction target, Faction origin, RelationType t) {
 		RelationType linked = t.getLink() != null ? t.getLink() : RelationLoader.getDefaultType();
@@ -223,6 +257,21 @@ public class RelationManager {
 		}
 		return allies;
 	}
+
+	public static boolean hasNonAggressionPact(Faction a, Faction b) {
+		return false;
+	}
+
+	public static boolean isTributaryOf(Faction suzerain, Faction tributary) {
+		if (suzerain == null || tributary == null) {
+			return false;
+		}
+		Relation relation = suzerain.getRelation(tributary.getId());
+		if (relation == null || relation.getType() == null) {
+			return false;
+		}
+		return relation.getType().getId().equalsIgnoreCase("tributary");
+	}
 	
 	@SuppressWarnings("unchecked")
 	public static List<Faction> getSubjects(Faction f){
@@ -230,8 +279,20 @@ public class RelationManager {
 		if(f == null) return subjects;
 		for(Map.Entry<String, Relation> entry : ((Map<String, Relation>) f.getRelations().clone()).entrySet()) {
 			Faction potential = FactionManager.getByString(entry.getKey());
-			if(potential == null) f.getRelations().remove(entry.getKey());
-			if(entry.getValue().getType().isVassalage()) subjects.add(potential);
+			if(potential == null) {
+				LogManager.relations(
+						"PRUNE %s dropped %s rel=%s (faction missing)",
+						f.getId(),
+						entry.getKey(),
+						FactionManager.describeRelation(entry.getValue()));
+				f.getRelations().remove(entry.getKey());
+				continue;
+			}
+			if(entry.getValue() != null
+					&& entry.getValue().getType() != null
+					&& entry.getValue().getType().isVassalage()) {
+				subjects.add(potential);
+			}
 		}
 		return subjects;
 	}
@@ -257,11 +318,27 @@ public class RelationManager {
 	}
 
 	public static void transferSubject(Faction subject, Faction reciever) {
+		if (subject == null || reciever == null) {
+			return;
+		}
+		if (!reciever.canHaveVassals()) {
+			return;
+		}
 		String overlord = getOverlord(subject);
+		if (overlord == null) {
+			return;
+		}
 		Faction o = FactionManager.getByString(overlord);
-		RelationType type = o.getRelation(subject.getId()).getType();
+		if (o == null) {
+			return;
+		}
+		Relation relation = o.getRelation(subject.getId());
+		if (relation == null || relation.getType() == null) {
+			return;
+		}
+		RelationType type = relation.getType();
 		endVassalage(o, subject, false);
-		setRelation(null, type, subject, reciever, false);
+		setRelationForced(type, subject, reciever);
 	}
 
 	public static boolean isOnOverlordPath(Faction origin, Faction target) {

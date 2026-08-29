@@ -31,6 +31,7 @@ import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
+import me.Plugins.SimpleFactions.installation.InstallationTransferService;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -43,6 +44,7 @@ import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
 import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Database.GuildBranchData;
 import me.Plugins.SimpleFactions.Database.GuildData;
+import me.Plugins.SimpleFactions.Database.StabilityModifierData;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
@@ -51,6 +53,8 @@ import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Stance;
+import me.Plugins.SimpleFactions.government.StabilityModifier;
+import me.Plugins.SimpleFactions.War.resolution.PillageTradeHit;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class Guild {
@@ -90,6 +94,7 @@ public class Guild {
 
     private boolean favoured = false;
     private boolean repressed = false;
+    private final List<StabilityModifier> pillageHits = new ArrayList<>();
 
     public Guild(Faction f) {
         host = f;
@@ -198,6 +203,14 @@ public class Guild {
         this.loanHandler = new LoanHandler(this, data.creditScore == null ? 50 : data.creditScore);
         if(data.favoured != null) this.favoured = data.favoured;
         if(data.repressed != null) this.repressed = data.repressed;
+        if(data.pillageHits != null) {
+            for (StabilityModifierData smd : data.pillageHits) {
+                if (smd == null || smd.name == null) {
+                    continue;
+                }
+                pillageHits.add(new StabilityModifier(smd.name, smd.modifier, smd.decay));
+            }
+        }
         createBanner();
     }
 
@@ -241,6 +254,14 @@ public class Guild {
             actor.sendMessage(result.getMessage());
         }
         return result;
+    }
+
+    public void tickPillageHits() {
+        PillageTradeHit.tick(this);
+    }
+
+    public List<StabilityModifier> getPillageHits() {
+        return pillageHits;
     }
 
     public void tick() {
@@ -795,12 +816,13 @@ public class Guild {
     public Faction elevate(boolean subjugate) {
         if(!canBeElevated(null)) return null;
         host.getGuildHandler().removeGuild(id);
-        host.getProvinceHandler().removeProvince(capital, false);
         clearFavoursAndRepressions();
         Faction elevated = new Faction(this);
         Faction old = host;
         host = elevated;
         elevated.getProvinceHandler().addProvince(capital);
+        InstallationTransferService.transfer(old, elevated, capital);
+        old.getProvinceHandler().removeProvince(capital, false);
         FactionManager.addFaction(elevated);
         if(subjugate) RelationManager.setRelation(null, RelationLoader.getElevationTarget(), elevated, old, false);
         return elevated;

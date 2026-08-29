@@ -41,6 +41,7 @@ import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
+import me.Plugins.SimpleFactions.settlement.Settlement;
 import me.Plugins.SimpleFactions.settlement.handler.SettlementHandler;
 
 class WarCampaignServiceTest {
@@ -444,6 +445,110 @@ class WarCampaignServiceTest {
 		assertEquals(
 				List.of(5, 10, 20, 30),
 				WarCampaignService.mergeAxisPaths(List.of(5, 10), List.of(10, 20, 30)));
+	}
+
+	@Test
+	void populateCampaign_pillageOneBattleAtSettlementSkipsCapitalRetarget() {
+		Province atkCapital = province(5, Terrain.PLAINS);
+		Province border = province(10, Terrain.PLAINS);
+		Province capital = province(15, Terrain.PLAINS);
+		Province settlementLand = province(30, Terrain.PLAINS);
+		link(atkCapital, border);
+		link(border, capital);
+		link(capital, settlementLand);
+		pm.start(Map.of(5, atkCapital, 10, border, 15, capital, 30, settlementLand));
+
+		when(defender.getCapital()).thenReturn(15);
+		Settlement settlement = new Settlement("town", "Town", 30, 0, 0);
+		when(defender.getSettlementHandler().getById("town")).thenReturn(settlement);
+		InstallationHandler installations = mock(InstallationHandler.class);
+		when(installations.getAll()).thenReturn(List.of());
+		when(defender.getInstallationHandler()).thenReturn(installations);
+		FactionManager.factions.add(defender);
+
+		War war = new War(1, attacker, defender);
+		war.setGoal(WarGoalType.PILLAGE);
+		war.setTargetSettlementId("town");
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			titleManager.when(() -> TitleManager.getProvinces(defender)).thenReturn(List.of(15, 30));
+			titleManager.when(() -> TitleManager.getByProvince(5)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(10)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(15)).thenReturn(defender);
+			titleManager.when(() -> TitleManager.getByProvince(30)).thenReturn(defender);
+
+			assertTrue(service.populateCampaign(war));
+			assertEquals(30, war.getObjectiveProvinceId());
+			assertEquals(1, war.getCampaignBattleSchedule().size());
+			assertEquals(30, war.getCampaignBattleSchedule().get(0).provinceId());
+			assertEquals(CampaignBattleKind.FIELD, war.getCampaignBattleSchedule().get(0).kind());
+			assertTrue(war.getCampaignBattleSchedule().get(0).required());
+			assertTrue(war.getCampaignCounterSchedule().isEmpty());
+			assertFalse(war.isPillageNaturalNavyRequired());
+		}
+	}
+
+	@Test
+	void populateCampaign_pillageKeepsNaturalNavyFlag() {
+		Province atkCapital = province(5, Terrain.PLAINS);
+		Province atkCoast = province(10, Terrain.PLAINS);
+		Province foreignLand = province(12, Terrain.PLAINS);
+		Province sea = province(11, Terrain.SEA);
+		Province defCoast = province(20, Terrain.PLAINS);
+		Province defCapital = province(30, Terrain.PLAINS);
+		link(atkCapital, atkCoast);
+		link(atkCoast, foreignLand);
+		link(foreignLand, defCoast);
+		link(atkCoast, sea);
+		link(sea, defCoast);
+		link(defCoast, defCapital);
+		pm.start(Map.of(
+				5, atkCapital,
+				10, atkCoast,
+				11, sea,
+				12, foreignLand,
+				20, defCoast,
+				30, defCapital));
+
+		InstallationHandler installationHandler = mock(InstallationHandler.class);
+		Installation port = new Installation(
+				"port_a",
+				"Port",
+				InstallationKind.PORT,
+				20,
+				0,
+				0,
+				1_000L);
+		when(installationHandler.getAll()).thenReturn(List.of(port));
+		when(defender.getInstallationHandler()).thenReturn(installationHandler);
+		when(defender.getCapital()).thenReturn(30);
+		Settlement settlement = new Settlement("town", "Town", 30, 0, 0);
+		when(defender.getSettlementHandler().getById("town")).thenReturn(settlement);
+		FactionManager.factions.add(defender);
+
+		Faction foreignFaction = mock(Faction.class);
+		when(foreignFaction.getId()).thenReturn("foreign");
+
+		War war = new War(1, attacker, defender);
+		war.setGoal(WarGoalType.PILLAGE);
+		war.setTargetSettlementId("town");
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			titleManager.when(() -> TitleManager.getProvinces(defender)).thenReturn(List.of(20, 30));
+			titleManager.when(() -> TitleManager.getByProvince(5)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(10)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(11)).thenReturn(null);
+			titleManager.when(() -> TitleManager.getByProvince(12)).thenReturn(foreignFaction);
+			titleManager.when(() -> TitleManager.getByProvince(20)).thenReturn(defender);
+			titleManager.when(() -> TitleManager.getByProvince(30)).thenReturn(defender);
+
+			assertTrue(service.populateCampaign(war));
+			assertEquals(1, war.getCampaignBattleSchedule().size());
+			assertEquals(30, war.getCampaignBattleSchedule().get(0).provinceId());
+			assertEquals(CampaignBattleKind.FIELD, war.getCampaignBattleSchedule().get(0).kind());
+			assertTrue(war.getCampaignCounterSchedule().isEmpty());
+			assertTrue(war.isPillageNaturalNavyRequired());
+		}
 	}
 
 	private void stubOwnership(MockedStatic<TitleManager> titleManager, Province... provinces) {

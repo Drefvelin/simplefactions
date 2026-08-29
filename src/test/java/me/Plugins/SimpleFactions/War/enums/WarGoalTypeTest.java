@@ -1,7 +1,9 @@
 package me.Plugins.SimpleFactions.War.enums;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -12,6 +14,24 @@ class WarGoalTypeTest {
 		assertEquals(WarGoalType.DE_JURE_ANNEX, WarGoalType.fromJson("de_jure_annex"));
 		assertEquals(WarGoalType.SUBJUGATE, WarGoalType.fromJson("subjugate"));
 		assertEquals(WarGoalType.TRANSFER_SUBJECT, WarGoalType.fromJson("transfer_subject"));
+		assertEquals(WarGoalType.WAR, WarGoalType.fromJson("war"));
+		assertEquals(WarGoalType.TRIBUTARY, WarGoalType.fromJson("tributary"));
+		assertEquals(WarGoalType.USURP, WarGoalType.fromJson("usurp"));
+		assertEquals(WarGoalType.OPEN_MARKET, WarGoalType.fromJson("open_market"));
+		assertEquals(WarGoalType.CHANGE_GOVERNMENT, WarGoalType.fromJson("change_government"));
+		assertEquals(WarGoalType.PILLAGE, WarGoalType.fromJson("pillage"));
+		assertEquals(WarGoalType.OVERTHROW, WarGoalType.fromJson("overthrow"));
+		assertEquals(WarGoalType.CHANGE_LAW, WarGoalType.fromJson("change_law"));
+		assertEquals(WarGoalType.CHANGE_TAX, WarGoalType.fromJson("change_tax"));
+	}
+
+	@Test
+	void isMovementOrigin_onlyOverthrowLawAndTax() {
+		assertTrue(WarGoalType.OVERTHROW.isMovementOrigin());
+		assertTrue(WarGoalType.CHANGE_LAW.isMovementOrigin());
+		assertTrue(WarGoalType.CHANGE_TAX.isMovementOrigin());
+		assertFalse(WarGoalType.CHANGE_GOVERNMENT.isMovementOrigin());
+		assertFalse(WarGoalType.PILLAGE.isMovementOrigin());
 	}
 
 	@Test

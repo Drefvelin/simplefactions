@@ -76,4 +76,7 @@ public class FactionData {
     public List<String> factionModifiers = new ArrayList<>();
 
     public List<String> laws = new ArrayList<>();
+
+    @SerializedName("war reparations")
+    public List<WarReparationsObligationData> warReparationsObligations = new ArrayList<>();
 }

@@ -171,6 +171,22 @@ class OccupationServiceTest {
 	}
 
 	@Test
+	void applyBattleWin_recapture_stripsOtherSide() {
+		Province battle = province(10, Terrain.PLAINS);
+		pm.start(Map.of(10, battle));
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			stubOwnership(titleManager, battle);
+			War war = baseWar(List.of(5, 10, 30));
+			war.setOccupiedByDefender(new ArrayList<>(List.of(10)));
+			assertTrue(service.applyBattleWin(war, 10, BelligerentRole.ATTACKER));
+			assertEquals(List.of(10), war.getOccupiedByAttacker());
+			assertTrue(war.getOccupiedByDefender().isEmpty());
+			assertEquals(List.of(10), war.getLastBattleOccupied());
+		}
+	}
+
+	@Test
 	void mergeOccupation_returnsOnlyNewProvinces() {
 		List<Integer> existing = new ArrayList<>(List.of(10));
 		List<Integer> added = OccupationService.mergeOccupation(existing, OccupationZone.of(List.of(10, 20)));

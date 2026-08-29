@@ -11,6 +11,7 @@ import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleLaunchService;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleRosterService;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleSignupReminderService;
+import me.Plugins.SimpleFactions.War.battle.campaign.CampaignNavalAutoLossReminderService;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidFightScheduler;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidMusterScheduler;
@@ -48,6 +49,7 @@ public final class BattleScheduleTickService {
 	public static int tick(Instant now) {
 		for (War war : WarManager.getActive()) {
 			CampaignBattleSignupReminderService.processReminders(war, now);
+			CampaignNavalAutoLossReminderService.processReminders(war, now);
 			CampaignBattleRosterService.tryEnrollWhenSignupOpens(war, now);
 			CampaignBattleLaunchService.tryStartScheduledBattle(war, now);
 			CampaignRaidMusterScheduler.processOverdue(war, now);

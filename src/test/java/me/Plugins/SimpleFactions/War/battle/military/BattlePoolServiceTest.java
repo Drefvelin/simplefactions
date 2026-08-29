@@ -142,6 +142,38 @@ class BattlePoolServiceTest {
 	}
 
 	@Test
+	void civilWar_allTypesBothPools_militiaNotOwnLandGated() {
+		Faction attacker = fighter("atk", Map.of("professional", 10, "militia", 4));
+		Faction defender = fighter("def", Map.of("professional", 8, "militia", 6));
+		War war = baseWar(8, attacker, defender);
+		war.setMovementId("mov-cw");
+		war.setCampaignPhase(CampaignPhase.INVASION);
+		seedLevyRow(war, "atk", "levySource", 3);
+
+		try (MockedStatic<TitleManager> titles = mockStatic(TitleManager.class)) {
+			titles.when(() -> TitleManager.getByProvince(PROVINCE_ID)).thenReturn(defender);
+
+			Map<String, Map<String, Integer>> offensive = BattlePoolService.eligibleRegiments(
+					war,
+					PROVINCE_ID,
+					war.getAttackers(),
+					PoolMode.OFFENSIVE);
+			assertEquals(10, offensive.get("atk").get("professional"));
+			assertEquals(4, offensive.get("atk").get(BattlePoolService.MILITIA_REGIMENT_ID));
+			assertEquals(3, offensive.get("atk").get(WarCommitment.LEVY_REGIMENT_ID));
+
+			Map<String, Map<String, Integer>> defensive = BattlePoolService.eligibleRegiments(
+					war,
+					PROVINCE_ID,
+					war.getAttackers(),
+					PoolMode.DEFENSIVE);
+			assertEquals(10, defensive.get("atk").get("professional"));
+			assertEquals(4, defensive.get("atk").get(BattlePoolService.MILITIA_REGIMENT_ID));
+			assertEquals(3, defensive.get("atk").get(WarCommitment.LEVY_REGIMENT_ID));
+		}
+	}
+
+	@Test
 	void nestedLevy_holderOnSide() {
 		Faction main = fighter("m", Map.of("professional", 1));
 		Faction subject = fighter("v", Map.of("professional", 1));

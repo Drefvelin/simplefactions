@@ -10,6 +10,9 @@ import java.util.Set;
 
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignNavyGate;
+import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
+import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.campaign.runtime.InstallationPickResults.InstallationPickToggleResult;
@@ -53,6 +56,7 @@ public final class BattleInstallationPickService {
 		}
 
 		syncBattleDay(war);
+		ensureDefenderZocPort(war);
 
 		Installation installation = faction.getInstallationHandler().getById(installationId);
 		if (installation == null) {
@@ -63,6 +67,9 @@ public final class BattleInstallationPickService {
 		Map<String, LinkedHashSet<String>> picks = war.getBattleInstallationPicks();
 		LinkedHashSet<String> factionPicks = picks.computeIfAbsent(factionId, ignored -> new LinkedHashSet<>());
 		if (factionPicks.contains(installationId)) {
+			if (isDefenderZocPort(war, faction, installationId)) {
+				return InstallationPickToggleResult.REJECTED_ZOC_PORT;
+			}
 			factionPicks.remove(installationId);
 			if (factionPicks.isEmpty()) {
 				picks.remove(factionId);
@@ -87,6 +94,7 @@ public final class BattleInstallationPickService {
 			return Set.of();
 		}
 		syncBattleDay(war);
+		ensureDefenderZocPort(war);
 		pruneIneligiblePicks(war);
 		LinkedHashSet<String> picks = war.getBattleInstallationPicks().get(factionId);
 		if (picks == null || picks.isEmpty()) {
@@ -100,6 +108,7 @@ public final class BattleInstallationPickService {
 			return Map.of();
 		}
 		syncBattleDay(war);
+		ensureDefenderZocPort(war);
 		pruneIneligiblePicks(war);
 		Map<String, Set<String>> copy = new LinkedHashMap<>();
 		for (Map.Entry<String, LinkedHashSet<String>> entry : war.getBattleInstallationPicks().entrySet()) {
@@ -153,6 +162,54 @@ public final class BattleInstallationPickService {
 		}
 		war.getBattleInstallationPicks().clear();
 		war.setBattleInstallationPicksBattleDay(null);
+		ensureDefenderZocPort(war);
+	}
+
+	public static void ensureDefenderZocPort(War war) {
+		if (war == null) {
+			return;
+		}
+		String portId = defenderZocPortId(war);
+		if (portId == null) {
+			return;
+		}
+		Faction defenderLeader = war.getDefenders() != null ? war.getDefenders().getLeader() : null;
+		if (defenderLeader == null || defenderLeader.getId() == null || defenderLeader.getId().isBlank()) {
+			return;
+		}
+		LinkedHashSet<String> factionPicks = war.getBattleInstallationPicks()
+				.computeIfAbsent(defenderLeader.getId(), ignored -> new LinkedHashSet<>());
+		factionPicks.add(portId);
+		if (war.getBattleDay() != null) {
+			war.setBattleInstallationPicksBattleDay(war.getBattleDay());
+		}
+	}
+
+	public static boolean isDefenderZocPort(War war, Faction faction, String installationId) {
+		if (war == null || faction == null || installationId == null || installationId.isBlank()) {
+			return false;
+		}
+		Side defenders = war.getDefenders();
+		if (defenders == null || war.getSide(faction) != defenders) {
+			return false;
+		}
+		String portId = defenderZocPortId(war);
+		return portId != null && portId.equals(installationId);
+	}
+
+	public static String defenderZocPortId(War war) {
+		if (war == null) {
+			return null;
+		}
+		ScheduledCampaignBattle slot = CampaignScheduleService.slotAtActiveIndex(war).orElse(null);
+		if (slot == null || !CampaignNavyGate.isNavalKind(slot.kind())) {
+			return null;
+		}
+		String portId = slot.portInstallationId();
+		if (portId == null || portId.isBlank()) {
+			return null;
+		}
+		return portId;
 	}
 
 	static void syncBattleDay(War war) {
@@ -182,6 +239,9 @@ public final class BattleInstallationPickService {
 				continue;
 			}
 			factionPicks.removeIf(installationId -> {
+				if (isDefenderZocPort(war, faction, installationId)) {
+					return false;
+				}
 				Installation installation = handler.getById(installationId);
 				return installation == null || !BattleInstallationPickEligibility.isPickable(war, faction, installation);
 			});

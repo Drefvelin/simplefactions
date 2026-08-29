@@ -17,6 +17,7 @@ import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Events.FactionCreateEvent;
 import me.Plugins.SimpleFactions.Events.FactionDeleteEvent;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Loaders.LawLoader;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
@@ -34,6 +35,8 @@ import me.Plugins.SimpleFactions.settlement.handler.CapitalResult;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Permissions;
+import me.Plugins.SimpleFactions.laws.Law;
+import me.Plugins.SimpleFactions.laws.LawGroup;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -1399,6 +1402,10 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cThis transfer would cause a loop");
 					return false;
 				}
+				if(!recieving.canHaveVassals()) {
+					p.sendMessage("§cYour faction cannot have vassals!");
+					return false;
+				}
 				RelationManager.transferSubject(subject, recieving);
 				p.sendMessage("§aTransfered subject");
 				return true;
@@ -1422,7 +1429,82 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cNo relation with the id "+args[3]);
 					return false;
 				}
+				if(type.isTradeAgreement()) {
+					p.sendMessage("§cThat is a treaty. Use /faction settreaty");
+					return false;
+				}
 				RelationManager.setRelation(p, type, recieving, sending, false);
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("settreaty") && args.length == 4) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Faction sending = FactionManager.getByString(args[1]);
+				if(sending == null) {
+					p.sendMessage("§cNo faction by the id "+args[1]);
+					return false;
+				}
+				Faction recieving = FactionManager.getByString(args[2]);
+				if(recieving == null) {
+					p.sendMessage("§cNo faction by the id "+args[2]);
+					return false;
+				}
+				RelationType type = RelationLoader.getType(args[3]);
+				if(type == null || !type.isTradeAgreement()) {
+					p.sendMessage("§cNo treaty with the id "+args[3]+". Use /faction setrelation for diplomatic relations");
+					return false;
+				}
+				RelationManager.setTradeRelationForced(type, recieving, sending);
+				p.sendMessage(StringFormatter.formatHex("#a89977Set treaty to "+type.getName()));
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setpower") && args.length == 3) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Faction faction = FactionManager.getByString(args[1]);
+				if(faction == null) {
+					p.sendMessage("§cNo faction by the id "+args[1]);
+					return false;
+				}
+				double amount;
+				try {
+					amount = Double.parseDouble(args[2]);
+				} catch (NumberFormatException exception) {
+					p.sendMessage("§cAmount must be a number");
+					return false;
+				}
+				faction.getGovernment().setPower(amount);
+				p.sendMessage("§aSet admin power of "+faction.getName()+" §ato "+faction.getGovernment().getPower());
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setlaw") && args.length == 4) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Faction faction = FactionManager.getByString(args[1]);
+				if(faction == null) {
+					p.sendMessage("§cNo faction by the id "+args[1]);
+					return false;
+				}
+				LawGroup template = LawLoader.getByString(args[2]);
+				if(template == null) {
+					p.sendMessage("§cNo law group with the id "+args[2]);
+					return false;
+				}
+				Law law = template.getLaw(args[3]);
+				if(law == null) {
+					p.sendMessage("§cNo law "+args[3]+" in group "+args[2]);
+					return false;
+				}
+				LawGroup factionGroup = faction.getLawHandler().getGroup(template.getId());
+				if(factionGroup == null) {
+					p.sendMessage("§cThat faction has no group "+args[2]);
+					return false;
+				}
+				faction.applyLaw(law, factionGroup);
+				p.sendMessage("§aSet "+faction.getName()+" §alaw "+template.getId()+" to "+law.getId());
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("usurp") && args.length == 3) {
 				if(!Permissions.isAdmin(sender)) {

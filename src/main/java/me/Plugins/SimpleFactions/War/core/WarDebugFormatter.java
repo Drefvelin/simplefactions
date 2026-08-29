@@ -28,6 +28,11 @@ public final class WarDebugFormatter {
 		summary.put("defenderLeaderId", war.getDefenderLeaderId());
 		summary.put("targetTitleId", war.getTargetTitleId());
 		summary.put("subjectFactionId", war.getSubjectFactionId());
+		summary.put("relationTypeId", war.getRelationTypeId());
+		summary.put("governmentLawId", war.getGovernmentLawId());
+		summary.put("leadershipLawId", war.getLeadershipLawId());
+		summary.put("targetSettlementId", war.getTargetSettlementId());
+		summary.put("movementId", war.getMovementId());
 		summary.put("objectiveProvinceId", war.getObjectiveProvinceId());
 		summary.put("campaignStartProvinceId", war.getCampaignStartProvinceId());
 		summary.put("campaignProvinces", war.getCampaignProvinces());

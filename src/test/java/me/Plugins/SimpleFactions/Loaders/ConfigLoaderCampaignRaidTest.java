@@ -46,7 +46,7 @@ class ConfigLoaderCampaignRaidTest {
 				    min_players: 4
 				""");
 
-		new ConfigLoader().loadConfig(file.toFile());
+		new ConfigLoader().loadWar(file.toFile());
 
 		assertEquals(60, Cache.campaignRaidMusterSeconds);
 		assertEquals(600, Cache.campaignRaidDurationSeconds);
@@ -76,7 +76,7 @@ class ConfigLoaderCampaignRaidTest {
 				    min_players: 4
 				""");
 
-		new ConfigLoader().loadConfig(file.toFile());
+		new ConfigLoader().loadWar(file.toFile());
 
 		assertEquals(30, Cache.campaignRaidMusterSeconds);
 		assertEquals(300, Cache.campaignRaidDurationSeconds);
@@ -123,7 +123,7 @@ class ConfigLoaderCampaignRaidTest {
 
 	private void writeAndLoad(String yaml) throws IOException {
 		Path file = writeConfig(yaml);
-		new ConfigLoader().loadConfig(file.toFile());
+		new ConfigLoader().loadWar(file.toFile());
 	}
 
 	private Path writeConfig(String yaml) throws IOException {

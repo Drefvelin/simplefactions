@@ -76,6 +76,6 @@ public class PoliticalAction {
     }
 
     public boolean allowFactions() {
-        return pools.contains("factions");
+        return pools.contains("factions") || pools.contains("vassals");
     }
 }

@@ -10,12 +10,14 @@ Running list of **dev-only config, commented-out checks, and test bypasses** on 
 
 Shipped default: `src/main/resources/config.yml`. Live server merges overrides into `plugins/SimpleFactions/config.yml`.
 
+Campaign keys (`war.*`) are in **`war.yml`** (`src/main/resources/war.yml` → `plugins/SimpleFactions/war.yml`).
+
 | Key | Dev value | Production target | Notes |
 |-----|-----------|-------------------|-------|
 | Header comment | `dev server template` | Remove or relabel | Documents intent only |
 | `map-reference` | `main` on prod file; use `dev` on test | `main` (or live map id) | Drives TFMCWeb upload/regen paths |
-| `war.require_declare_code` | `false` | `true` | See RelationView bypass below |
-| `war.battle_cadence.provinces_between_battles` | `3` | `3` (or higher after playtest) | Field battle cadence |
+| `war.require_declare_code` (`war.yml`) | `false` | `true` | See RelationView bypass below |
+| `war.battle_cadence.provinces_between_battles` (`war.yml`) | `3` | `3` (or higher after playtest) | Field battle cadence |
 | `installations.*.construction-time` | `10` | `432000` fort / `259200` port+airport | Seconds |
 
 **Tick model:** faction `tick()` runs **once per real second** (`FactionManager` timer every 20 ticks). Construction and regiment expansion `timeLeft` decrement **once per second**, so `10` = **10 seconds**, not 10 days.
@@ -62,7 +64,8 @@ All three realm upgrades use `expansion-time: 10` (10 seconds). Production value
 | `/war list` | Open war list GUI |
 | `/war admin status <id>` | JSON war state (campaign, initiative, proposals) |
 | `/war admin path <id>` | Regenerate campaign route |
-| `/war admin end <id>` | Force-end a war |
+| `/war admin end <id>` | Force-end a war (no goal apply, no reparations) |
+| `/war admin win <id> attacker\|defender` | End war with victory outcome (goal apply or reparations) |
 | `/war admin devmode on\|off\|status` | Volatile war devmode (roster fill + unrestricted raid launch) |
 | `/war admin raid resetquota <id> [aggressor\|defender\|both]` | Clear daily raid quota for current battle day |
 | `/faction fullregen <map>` | Trigger map regen via TFMCWeb |

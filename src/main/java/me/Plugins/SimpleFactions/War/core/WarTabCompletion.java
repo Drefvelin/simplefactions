@@ -7,7 +7,9 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
+import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Permissions;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
 
@@ -34,13 +36,21 @@ public class WarTabCompletion implements TabCompleter {
 		if (args.length == 2) {
 			List<String> completions = new ArrayList<>();
 			addIfPrefix(completions, args[1], "end");
+			addIfPrefix(completions, args[1], "win");
 			addIfPrefix(completions, args[1], "status");
 			addIfPrefix(completions, args[1], "path");
 			addIfPrefix(completions, args[1], "time");
 			addIfPrefix(completions, args[1], "schedule");
 			addIfPrefix(completions, args[1], "devmode");
 			addIfPrefix(completions, args[1], "raid");
+			addIfPrefix(completions, args[1], "reparations");
 			return completions;
+		}
+		if (args.length == 3 && args[1].equalsIgnoreCase("reparations")) {
+			return factionIds(args[2]);
+		}
+		if (args.length == 4 && args[1].equalsIgnoreCase("reparations")) {
+			return factionIds(args[3]);
 		}
 		if (args.length == 3 && args[1].equalsIgnoreCase("devmode")) {
 			List<String> completions = new ArrayList<>();
@@ -74,10 +84,17 @@ public class WarTabCompletion implements TabCompleter {
 		}
 		if (args.length == 3
 				&& (args[1].equalsIgnoreCase("end")
+						|| args[1].equalsIgnoreCase("win")
 						|| args[1].equalsIgnoreCase("status")
 						|| args[1].equalsIgnoreCase("path")
 						|| args[1].equalsIgnoreCase("schedule"))) {
 			return activeWarIds(args[2]);
+		}
+		if (args.length == 4 && args[1].equalsIgnoreCase("win")) {
+			List<String> completions = new ArrayList<>();
+			addIfPrefix(completions, args[3], "attacker");
+			addIfPrefix(completions, args[3], "defender");
+			return completions;
 		}
 		if (args.length == 4
 				&& args[1].equalsIgnoreCase("time")
@@ -159,6 +176,21 @@ public class WarTabCompletion implements TabCompleter {
 		for (War war : WarManager.getActive()) {
 			String id = String.valueOf(war.getId());
 			if (id.startsWith(lower)) {
+				completions.add(id);
+			}
+		}
+		return completions;
+	}
+
+	private static List<String> factionIds(String prefix) {
+		List<String> completions = new ArrayList<>();
+		String lower = prefix == null ? "" : prefix.toLowerCase();
+		for (Faction faction : FactionManager.factions) {
+			if (faction == null || faction.getId() == null) {
+				continue;
+			}
+			String id = faction.getId();
+			if (id.toLowerCase().startsWith(lower)) {
 				completions.add(id);
 			}
 		}

@@ -29,6 +29,7 @@ types:
         mutual: true
         vassal: true #A faction can only have one overlord, this is a hardcoded flag, do no use unless you know what you are doing!
         elevation-target: true
+        can-pick-for-war: false
         give-modifiers:
             - tax_multiplier(25.0)
             - levy(50.0)

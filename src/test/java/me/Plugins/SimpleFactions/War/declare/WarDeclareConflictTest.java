@@ -9,12 +9,15 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import me.Plugins.SimpleFactions.Diplomacy.RelationType;
+import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.Participant;
@@ -24,6 +27,7 @@ import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 
 class WarDeclareConflictTest {
 	private final List<War> savedWars = new ArrayList<>();
+	private final List<RelationType> savedRelationTypes = new ArrayList<>();
 	private WarGoalValidator validator;
 
 	@BeforeEach
@@ -32,12 +36,16 @@ class WarDeclareConflictTest {
 		savedWars.clear();
 		savedWars.addAll(activeWars());
 		activeWars().clear();
+		savedRelationTypes.addAll(RelationLoader.types);
+		RelationLoader.types.clear();
 	}
 
 	@AfterEach
 	void tearDown() throws Exception {
 		activeWars().clear();
 		activeWars().addAll(savedWars);
+		RelationLoader.types.clear();
+		RelationLoader.types.addAll(savedRelationTypes);
 	}
 
 	@Test
@@ -114,7 +122,7 @@ class WarDeclareConflictTest {
 			activeWars().add(new War(6, attacker, other));
 
 			WarValidationResult result = validator.validate(
-					WarDeclareRequest.of(attacker, defender, WarGoalType.SUBJUGATE));
+					subjugateRequest(attacker, defender, "subject"));
 
 			assertTrue(result.isValid());
 		} finally {
@@ -132,6 +140,17 @@ class WarDeclareConflictTest {
 	private static Faction faction(String id) {
 		Faction faction = mock(Faction.class);
 		when(faction.getId()).thenReturn(id);
+		when(faction.getRelations()).thenReturn(new HashMap<>());
+		when(faction.canHaveVassals()).thenReturn(true);
 		return faction;
+	}
+
+	private static WarDeclareRequest subjugateRequest(Faction attacker, Faction defender, String typeId) {
+		RelationType type = mock(RelationType.class);
+		when(type.getId()).thenReturn(typeId);
+		when(type.isVassalage()).thenReturn(true);
+		when(type.canPickForWar()).thenReturn(true);
+		RelationLoader.types.add(type);
+		return new WarDeclareRequest(attacker, defender, WarGoalType.SUBJUGATE, null, null, typeId);
 	}
 }

@@ -39,6 +39,7 @@ import me.Plugins.SimpleFactions.Objects.Request.RelocateRequest;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.War.resolution.WarReparationsService;
 import me.Plugins.SimpleFactions.Utils.DailyGuildTransfers;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.Utils.Formatter;
@@ -75,6 +76,7 @@ public class FactionManager implements Listener{
 		}
 		list.add(s);
 		dbRelations.put(f, list);
+		LogManager.relations("QUEUE %s %s", factionId(f), s);
 	}
 
 	public static void addDBTradeRelation(Faction f, String s) {
@@ -84,6 +86,7 @@ public class FactionManager implements Listener{
 		}
 		list.add(s);
 		dbTradeRelations.put(f, list);
+		LogManager.relations("QUEUE trade %s %s", factionId(f), s);
 	}
 
 	public static void addDBLoan(LoanData data) {
@@ -99,39 +102,160 @@ public class FactionManager implements Listener{
 	}
 	
 	public static void loadRelations() {
+		LogManager.relations("loadRelations start factions=%d queued=%d tradeQueued=%d",
+				factions.size(), dbRelations.size(), dbTradeRelations.size());
 		for(Map.Entry<Faction, List<String>> entry : dbRelations.entrySet()) {
 			Faction f = entry.getKey();
 			List<String> relations = entry.getValue();
+			LogManager.relations("load %s rawCount=%d", factionId(f), relations == null ? 0 : relations.size());
+			if (relations == null) {
+				continue;
+			}
 			for(String s : relations) {
-				Faction target = getByString(s.split("\\(")[0]);
-				if(target == null) continue;
-				if(target.getId().equalsIgnoreCase(f.getId())) continue;
-				String info = s.split("\\(")[1].replace(")", "");
-				RelationType r = RelationLoader.getType(info.split("\\.")[0]);
-				Attitude a = RelationLoader.getAttitude(info.split("\\.")[1]);
-				if(r == null || a == null) continue;
-				int opinion = Integer.parseInt(info.split("\\.")[2]);
-				f.setRelation(target, new Relation(r, a, opinion));
-				if(target.getRelation(f.getId()).isDefault() && r.isVassalage()) {
-					target.setRelation(f, new Relation(r.getLink(), RelationLoader.getDefaultAttitude(), 0));
-				}
+				applyStoredRelation(f, s);
 			}
 		}
 		for(Map.Entry<Faction, List<String>> entry : dbTradeRelations.entrySet()) {
 			Faction f = entry.getKey();
 			List<String> relations = entry.getValue();
-			for(String s : relations) {
-				Faction target = getByString(s.split("\\(")[0]);
-				if(target == null) continue;
-				if(target.getId().equalsIgnoreCase(f.getId())) continue;
-				String info = s.split("\\(")[1].replace(")", "");
-				RelationType r = RelationLoader.getType(info);
-				if(r == null) continue;
-				f.getDiplomacyHandler().setTradeRelation(target, r);
+			LogManager.relations("loadTrade %s rawCount=%d", factionId(f), relations == null ? 0 : relations.size());
+			if (relations == null) {
+				continue;
 			}
+			for(String s : relations) {
+				applyStoredTradeRelation(f, s);
+			}
+		}
+		for (Faction f : factions) {
+			logRelationSnapshot("afterLoad", f);
 		}
 		dbRelations.clear();
 		dbTradeRelations.clear();
+		LogManager.relations("loadRelations done");
+	}
+
+	private static void applyStoredRelation(Faction f, String s) {
+		try {
+			if (s == null || !s.contains("(")) {
+				LogManager.relations("SKIP %s malformed '%s'", factionId(f), s);
+				return;
+			}
+			String targetId = s.split("\\(")[0];
+			Faction target = getByString(targetId);
+			if(target == null) {
+				LogManager.relations("SKIP %s -> %s targetMissing raw='%s'", factionId(f), targetId, s);
+				return;
+			}
+			if(target.getId().equalsIgnoreCase(f.getId())) {
+				LogManager.relations("SKIP %s self raw='%s'", factionId(f), s);
+				return;
+			}
+			String info = s.split("\\(")[1].replace(")", "");
+			String[] parts = info.split("\\.");
+			if (parts.length < 3) {
+				LogManager.relations("SKIP %s -> %s badParts '%s'", factionId(f), targetId, s);
+				return;
+			}
+			RelationType r = RelationLoader.getType(parts[0]);
+			Attitude a = RelationLoader.getAttitude(parts[1]);
+			if(r == null || a == null) {
+				LogManager.relations("SKIP %s -> %s type=%s attitude=%s raw='%s'",
+						factionId(f), targetId, parts[0], parts[1], s);
+				return;
+			}
+			int opinion = Integer.parseInt(parts[2]);
+			boolean reverseWasDefault = target.getRelation(f.getId()).isDefault();
+			f.setRelation(target, new Relation(r, a, opinion));
+			LogManager.relations("APPLY %s -> %s %s.%s.%d", factionId(f), target.getId(), r.getId(), a.getId(), opinion);
+			if(reverseWasDefault && r.isVassalage()) {
+				target.setRelation(f, new Relation(r.getLink(), RelationLoader.getDefaultAttitude(), 0));
+				LogManager.relations("REVERSE-FILL %s -> %s %s (was default)",
+						target.getId(), factionId(f), r.getLink() == null ? "null" : r.getLink().getId());
+			} else if (r.isVassalage()) {
+				Relation reverse = target.getRelation(f.getId());
+				LogManager.relations("NO-REVERSE-FILL %s -> %s existing=%s default=%s",
+						target.getId(),
+						factionId(f),
+						describeRelation(reverse),
+						reverse.isDefault());
+			}
+		} catch (Exception exception) {
+			LogManager.relations("ERROR %s raw='%s' %s", factionId(f), s, exception.getMessage());
+		}
+	}
+
+	private static void applyStoredTradeRelation(Faction f, String s) {
+		try {
+			if (s == null || !s.contains("(")) {
+				LogManager.relations("SKIP trade %s malformed '%s'", factionId(f), s);
+				return;
+			}
+			String targetId = s.split("\\(")[0];
+			Faction target = getByString(targetId);
+			if(target == null) {
+				LogManager.relations("SKIP trade %s -> %s targetMissing", factionId(f), targetId);
+				return;
+			}
+			if(target.getId().equalsIgnoreCase(f.getId())) {
+				return;
+			}
+			String info = s.split("\\(")[1].replace(")", "");
+			RelationType r = RelationLoader.getType(info);
+			if(r == null) {
+				LogManager.relations("SKIP trade %s -> %s type=%s", factionId(f), targetId, info);
+				return;
+			}
+			f.getDiplomacyHandler().setTradeRelation(target, r);
+			LogManager.relations("APPLY trade %s -> %s %s", factionId(f), target.getId(), r.getId());
+		} catch (Exception exception) {
+			LogManager.relations("ERROR trade %s raw='%s' %s", factionId(f), s, exception.getMessage());
+		}
+	}
+
+	static void logRelationSnapshot(String reason, Faction f) {
+		if (f == null) {
+			return;
+		}
+		String overlord = RelationManager.getOverlord(f);
+		List<String> subjects = new ArrayList<>();
+		for (Map.Entry<String, Relation> entry : f.getRelations().entrySet()) {
+			Relation rel = entry.getValue();
+			if (rel != null && rel.getType() != null && rel.getType().isVassalage()) {
+				subjects.add(entry.getKey() + "=" + describeRelation(rel));
+			}
+		}
+		LogManager.relations(
+				"SNAPSHOT %s %s overlord=%s subjects=%s map=%s",
+				reason,
+				factionId(f),
+				overlord,
+				subjects,
+				describeRelationMap(f));
+	}
+
+	static String factionId(Faction f) {
+		return f == null ? "null" : f.getId();
+	}
+
+	public static String describeRelation(Relation relation) {
+		if (relation == null || relation.getType() == null) {
+			return "null";
+		}
+		String attitude = relation.getAttitude() == null ? "?" : relation.getAttitude().getId();
+		return relation.getType().getId()
+				+ "."
+				+ attitude
+				+ "."
+				+ relation.getOpinion()
+				+ (relation.isDefault() ? "(default)" : "");
+	}
+
+	private static String describeRelationMap(Faction f) {
+		List<String> parts = new ArrayList<>();
+		for (Map.Entry<String, Relation> entry : f.getRelations().entrySet()) {
+			parts.add(entry.getKey() + "=" + describeRelation(entry.getValue()));
+		}
+		return parts.toString();
 	}
 	
 	public static void reloadTitles() {
@@ -153,6 +277,8 @@ public class FactionManager implements Listener{
 			for(Faction ally : allies) {
 				if(!ally.getRelation(f.getId()).getType().getId().equalsIgnoreCase("ally")) {
 					Relation r = ally.getRelation(f.getId());
+					LogManager.relations("PATCH-ALLY %s -> %s was=%s",
+							ally.getId(), factionId(f), describeRelation(r));
 					r.setType(RelationLoader.getType("ally"));
 					ally.setRelation(f, r);
 				}
@@ -207,7 +333,15 @@ public class FactionManager implements Listener{
 		timer++;
 		if(timer%10 == 0) {
 			for(Faction f : factions) {
-				f.getGovernment().powerTick();
+				if (f.getGovernment() != null) {
+					f.getGovernment().powerTick();
+				}
+				if (f.getGuildHandler() == null) {
+					continue;
+				}
+				for(Guild g : f.getGuildHandler().getGuilds()) {
+					g.tickPillageHits();
+				}
 			}
 		}
 		if(timer%300 == 0) {
@@ -281,6 +415,10 @@ public class FactionManager implements Listener{
 			}
 		}
 
+		for (Faction faction : factions) {
+			WarReparationsService.tickAfterDailySettlement(faction);
+		}
+
 		buffer.clear();
 		SimpleFactions.getInstance().getVehicleUpkeepService().processDailyUpkeep();
 	}
@@ -288,6 +426,7 @@ public class FactionManager implements Listener{
 	
 	public void run() {
 		timer = (new Database()).getTimer();
+		LogManager.relations("FactionManager.run loadRelations");
 		loadRelations();
 		tickCycle();	
 		for(Faction f : factions) {
@@ -557,7 +696,7 @@ public class FactionManager implements Listener{
 			RelationManager.transferSubject(usurping, overlord);
 		}
 		RelationManager.endVassalage(usurping, losing, true);
-		RelationManager.setRelation(p, RelationLoader.getType("subject"), losing, usurping, false);
+		RelationManager.setRelationForced(RelationLoader.getType("subject"), losing, usurping);
 		losing.removeTitle(t);
 		return t;
     }
@@ -686,14 +825,33 @@ public class FactionManager implements Listener{
 				return;
 			}
 		}
+		if ("foreign_backer".equalsIgnoreCase(req.getType())) {
+			Faction fac = getByMember(sender);
+			if (fac == null) {
+				p.sendMessage("§cSender has no faction.");
+				return;
+			}
+			String staffReason = target.foreignBackerBlockReason(fac, true);
+			if (staffReason != null) {
+				p.sendMessage(staffReason);
+				sp.sendMessage(target.foreignBackerBlockReason(fac, false));
+				return;
+			}
+			target.joinAsForeignBacker(fac);
+			p.sendMessage("§a"+sender+" has joined your movement as a "+req.getType()+"!");
+			return;
+		}
 		if(!target.canJoin(o, cause)) {
-			if(o instanceof Faction fac) {
-				if(target.canForeignBackerJoin(fac, false)) {
-					target.joinAsForeignBacker(fac);
-					p.sendMessage("§a"+sender+" has joined your movement as a "+req.getType()+"!");
+			String staffReason = o == null
+					? "§cSender cannot join movement as a "+req.getType()
+					: target.joinBlockReason(o, cause, true);
+			p.sendMessage(staffReason != null ? staffReason : "§cSender cannot join movement as a "+req.getType());
+			if (o != null) {
+				String playerReason = target.joinBlockReason(o, cause, false);
+				if (playerReason != null) {
+					sp.sendMessage(playerReason);
 				}
 			}
-			p.sendMessage("§cSender cannot join movement as a "+req.getType());
 			return;
 		}
 		target.join(o, cause);

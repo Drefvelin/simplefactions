@@ -96,10 +96,16 @@ Trains and non-berthable categories follow `VehicleCategoryRules`. Listener bloc
 
 | Lock | Service |
 |------|---------|
-| Berth embargo | `VehicleInstallationLockService`; uses `CampaignRaidService.isRepairLocked` for raid targets |
+| Berth / unberth embargo | `VehicleInstallationLockService` |
 | Installation damage gating | `InstallationVulnerabilityService` (see [campaign-raids.md](./campaign-raids.md)) |
 
-Vehicle repair is always allowed. Berthed vehicles cannot be newly berthed while their installation is in a battle or raid, or while the raid target is under the post-raid lock (`war.campaign_raid.repair_lock_hours`, default 48h).
+After `BattleInstallationPickService.isLocked` (vote close), berth **and** unberth are blocked on **in-play** installs: committed picks, defender ZOC port, siege fort. Ports not in play stay open for the next battle day.
+
+Vehicle repair is always allowed. Raid **target** keeps the post-raid berth lock (`war.campaign_raid.repair_lock_hours`, default 48h). Raid/battle vulnerability embargo is unchanged.
+
+### Official navy at naval launch
+
+A war attacker contests a naval slot only if some attacker-side participating faction has an in-play **port** with a berthed vehicle whose type maps to category `ships` (`PlayerVehicleRegistry` `INSTALLATION` row). Personal unberthed ships do not count. See [wars.md](./wars.md#attacker-naval-launch).
 
 ---
 

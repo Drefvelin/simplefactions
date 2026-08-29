@@ -3,6 +3,8 @@ package me.Plugins.SimpleFactions.vehicles;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
@@ -97,5 +99,29 @@ class InstallationVehicleUnberthServiceTest {
                 service.unberth(faction, "Leader", port, vehicleUuid);
 
         assertEquals(InstallationVehicleUnberthService.UnberthResult.NOT_BERTHED, result);
+    }
+
+    @Test
+    void unberth_rejectsWhenInstallationLocked() {
+        String vehicleUuid = UUID.randomUUID().toString();
+        registry.register(
+                new PlayerVehicleRecord(
+                        UUID.randomUUID(),
+                        vehicleUuid,
+                        "cloudskimmer",
+                        OwnershipMode.INSTALLATION,
+                        port.getId()));
+
+        try (MockedStatic<VehicleInstallationLockService> lock = mockStatic(VehicleInstallationLockService.class)) {
+            lock.when(() -> VehicleInstallationLockService.isVehicleLocked(eq(port.getId()), any()))
+                    .thenReturn(true);
+
+            InstallationVehicleUnberthService.UnberthResult result =
+                    service.unberth(faction, "Leader", port, vehicleUuid);
+
+            assertEquals(InstallationVehicleUnberthService.UnberthResult.EMBARGO, result);
+            assertTrue(registry.getByVehicleUuid(vehicleUuid).isPresent());
+            assertTrue(cleared.isEmpty());
+        }
     }
 }

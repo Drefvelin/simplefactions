@@ -23,6 +23,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.Participant;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.declare.OpenMarketEligibility;
 import me.Plugins.SimpleFactions.War.core.WarGoal;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
@@ -45,32 +46,6 @@ public class WarCreator {
 		return i;
 	}
 
-	public ItemStack createWarGoalItem(WarGoal goal, Faction target, boolean main) {
-		ItemStack i = new ItemStack(Material.EMERALD, 1);
-		
-		if(IconGetter.hasIcon(goal.getId())) i = IconGetter.getIcon(goal.getId());
-		ItemMeta m = i.getItemMeta();
-		m.setDisplayName(goal.getName());
-		List<String> lore = new ArrayList<>();
-		for(String s : goal.getDescription()) {
-			lore.add(s);
-		}
-		lore.add("");
-		lore.add(StringFormatter.formatHex("#ba4b3aClick to select this war goal"));
-		if(!main) {
-			lore.add("");
-			lore.add(StringFormatter.formatHex(target.getName()+" #a39ba8is a #65e0bbSecondary Participant#a39ba8!"));
-			lore.add(StringFormatter.formatHex("#a39ba8Adding a war goal on them will make them a #f5ef42Main Parcitipant"));
-			lore.add(StringFormatter.formatHex("#a39ba8This means they can call their own allies into the war!"));
-		}
-		m.setLore(lore);
-		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
-		m.getPersistentDataContainer().set(key, PersistentDataType.STRING, target.getId());
-		key = new NamespacedKey(SimpleFactions.plugin, "goal");
-		m.getPersistentDataContainer().set(key, PersistentDataType.STRING, goal.getId());
-		i.setItemMeta(m);
-		return i;
-	}
 	public ItemStack createWarItem(War w, boolean button) {
 		ItemStack i = IconGetter.getIconOrDefault("war", Material.BLAZE_POWDER);
 		ItemMeta m = i.getItemMeta();
@@ -97,6 +72,19 @@ public class WarCreator {
 					lore.add(StringFormatter.formatHex("#a39ba8Title: #d4c9ae" + title.getName()));
 				}
 			}
+			if (w.getGoal() == WarGoalType.CHANGE_GOVERNMENT) {
+				Faction defender = FactionManager.getByString(w.getDefenderLeaderId());
+				if (defender != null) {
+					addWarLawLore(lore, defender, w.getGovernmentLawId(), "Government");
+					addWarLawLore(lore, defender, w.getLeadershipLawId(), "Leadership");
+				}
+			}
+			if (w.getGoal() == WarGoalType.USURP) {
+				Faction defender = FactionManager.getByString(w.getDefenderLeaderId());
+				if (defender != null && defender.getHighestTitle() != null) {
+					lore.add(StringFormatter.formatHex("#a39ba8Primary title: #d4c9ae" + defender.getHighestTitle().getName()));
+				}
+			}
 		}
 		m.setLore(lore);
 		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
@@ -109,6 +97,13 @@ public class WarCreator {
 		if (leaderId == null) return "Unknown";
 		Faction faction = FactionManager.getByString(leaderId);
 		return faction != null ? faction.getName() : leaderId;
+	}
+
+	private static void addWarLawLore(List<String> lore, Faction defender, String lawId, String label) {
+		OpenMarketEligibility.ResolvedLaw resolved = OpenMarketEligibility.resolve(defender, lawId);
+		if (resolved != null && resolved.law() != null && resolved.law().getName() != null) {
+			lore.add(StringFormatter.formatHex("#a39ba8" + label + ": #d4c9ae" + resolved.law().getName()));
+		}
 	}
 	
 	public ItemStack createSecondaryItem(Player p, Participant par, War w, Faction f, boolean subject, boolean called) {

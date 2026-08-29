@@ -23,8 +23,18 @@ class CampaignUiCopyTest {
 	@Test
 	void navyBlockadeDeclareMessage_usesLockedCopy() {
 		assertEquals(
-				"§cFaction has a navy blockading your approach, and you lack a navy to challenge them",
+				"§cYou need an operational port for a naval path. Source ships before the battle.",
 				CampaignUiCopy.navyBlockadeDeclareMessage());
+	}
+
+	@Test
+	void navalAutoLossCopy_usesLockedStrings() {
+		assertEquals(
+				"§cBerth a naval vehicle at a committed port before the naval battle or you will auto-lose.",
+				CampaignUiCopy.navalAutoLossLeaderPing());
+		assertEquals(
+				"§eAttacker had no berthed navy at a committed port. §7Defender wins the naval slot.",
+				CampaignUiCopy.navalAutoLossBroadcast());
 	}
 
 	@Test

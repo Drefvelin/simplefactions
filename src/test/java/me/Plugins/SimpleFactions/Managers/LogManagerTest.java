@@ -50,10 +50,30 @@ class LogManagerTest {
 	@Test
 	void configure_wipeLog_deletesExistingFile() throws Exception {
 		Path logFile = tempDir.resolve("logs").resolve("log.txt");
+		Path relationsFile = tempDir.resolve("logs").resolve("relations.log");
 		Files.createDirectories(logFile.getParent());
 		Files.writeString(logFile, "old content");
+		Files.writeString(relationsFile, "old relations");
 		LogManager.configure(false, true, tempDir.toFile());
 
 		assertEquals(false, Files.exists(logFile));
+		assertEquals(false, Files.exists(relationsFile));
+	}
+
+	@Test
+	void relations_writesImmediatelyWhenEnabled() throws Exception {
+		LogManager.configure(true, false, tempDir.toFile());
+		LogManager.relations("Lantan -> Invaders subject");
+
+		String content = Files.readString(tempDir.resolve("logs").resolve("relations.log"));
+		assertTrue(content.contains("Lantan -> Invaders subject"));
+	}
+
+	@Test
+	void relations_noOpWhenDisabled() throws Exception {
+		LogManager.configure(false, false, tempDir.toFile());
+		LogManager.relations("should-not-write");
+
+		assertEquals(false, Files.exists(tempDir.resolve("logs").resolve("relations.log")));
 	}
 }

@@ -47,6 +47,7 @@ import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.War.resolution.WarReparationsObligation;
 import me.Plugins.SimpleFactions.Utils.BracketToTaxTarget;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.RandomRGB;
@@ -59,6 +60,7 @@ import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.election.Candidate;
 import me.Plugins.SimpleFactions.government.movement.Action;
+import me.Plugins.SimpleFactions.government.movement.CoupService;
 import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
@@ -66,6 +68,7 @@ import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.laws.Law;
 import me.Plugins.SimpleFactions.laws.LawEffect;
 import me.Plugins.SimpleFactions.laws.LawGroup;
+import me.Plugins.SimpleFactions.installation.InstallationTransferService;
 import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
 import me.Plugins.SimpleFactions.settlement.handler.SettlementHandler;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -120,6 +123,8 @@ public class Faction {
 
 	//Installations
 	private final InstallationHandler installationHandler;
+
+	private final List<WarReparationsObligation> warReparationsObligations = new ArrayList<>();
 	
 	public Faction(String id, String leader) {
 		this.id = Formatter.formatId(id);
@@ -989,10 +994,7 @@ public class Faction {
 		Action action = politicalAction.getAction();
 		switch (action) {
 			case CHANGE_LEADER:
-				String target = proposal.getTarget();
-				if(target == null) return;
-				if(!canBecomeLeader(target)) return;
-				promoteToLeader(target);
+				CoupService.apply(this, proposal.getTarget());
 				break;
 			case DISSOLVE:
 				dissolve(getVassals(), getGuildHandler().getGuilds());
@@ -1153,6 +1155,16 @@ public class Faction {
 		if(id == null) return null;
 		return FactionManager.getByString(id);
 	}
+
+	public List<WarReparationsObligation> getWarReparationsObligations() {
+		return warReparationsObligations;
+	}
+
+	public void addWarReparationsObligation(WarReparationsObligation obligation) {
+		if (obligation != null) {
+			warReparationsObligations.add(obligation);
+		}
+	}
 	
 	public Collection<FactionModifier> getModifiers() {
 	    List<FactionModifier> all = new ArrayList<>();
@@ -1308,6 +1320,7 @@ public class Faction {
 		}
 		if(overlord != null) {
 			for(int i : new ArrayList<>(provinceHandler.getProvinces())) {
+				InstallationTransferService.transfer(this, overlord, i);
 				provinceHandler.removeProvince(i, true);
 			}
 			Guild base = getOrCreateMainGuild();

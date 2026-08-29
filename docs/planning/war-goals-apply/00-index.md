@@ -1,7 +1,7 @@
 # War goals, apply, navy gate - lock
 
 **Repo:** `simplefactions`  
-**Status:** navy gate implemented; war-goal apply documented, not implemented  
+**Status:** navy gate implemented; Phase 1 apply spine implemented (generic **War** goal is pickable, no auto-apply). Later phases still documented, not implemented.  
 **Canonical gameplay:** [wars.md](../../wars.md)
 
 This is the implementation lock for (1) navy / sea connectivity gates, (2) war-goal declare + auto-apply, (3) movement outcome apply. **No parallel diplomatic, law, tax, or government engines.** War and movements call existing systems.
@@ -63,7 +63,7 @@ Cannot declare if any of these hold (unless a goal lists an exception):
 3. **Same realm** (`RelationManager.sameRealm`) - not a vassal of them, they are not a vassal of you, not nested under the same path. **Exception:** Usurp may target your **direct** overlord only.
 4. Ally (`RelationManager.getAllies` / ally relation type).
 5. Non-aggression pact (stub: always allowed until NAP exists).
-6. They are your **tributary**, unless the goal is **Subjugate** (or staff-manual **War**, which may target tributaries).
+6. They are your **tributary**, unless the goal is **Subjugate** or **War** (tickets / declare codes will later restrict which goals a player can pick).
 7. Attacker lacks offensive manpower (`CampaignDeclareValidator` as today).
 8. **Navy gate** (below) after campaign populate.
 
@@ -126,9 +126,10 @@ Layer 1: goal type. Layer 2: specific payload when needed (same pattern as title
 | Open market | None (laws from war-goal config) |
 | Change government | Government + optional leadership, pre-filled with target's current laws |
 | Pillage | Settlement |
-| War / Revolt | None (no auto-apply) |
+| War | None (no auto-apply; pickable; ticket codes later) |
+| Revolt | None (no auto-apply; not in player GUI yet) |
 
-Subjugate types come from diplomacy YAML where `vassal: true` and `can-pick-for-war` is not `false`. **Integrated subject** is `can-pick-for-war: false`. March / palatinate still use existing `limit`.
+Subjugate types come from diplomacy YAML where `vassal: true` and `can-pick-for-war` is not `false`. **Integrated subject** is `can-pick-for-war: false`. March / palatinate still use existing `limit`. Query: `RelationLoader.getWarPickableVassalTypes()` (subjugate type picker in declare GUI).
 
 ---
 
@@ -138,6 +139,7 @@ Subjugate types come from diplomacy YAML where `vassal: true` and `can-pick-for-
 
 - Must be able to set tributary/suzerain via diplomacy types (`diplomacy.yml`).
 - Must not already be tributary of the attacker.
+- Defender must be **independent** (no overlord; not another nation's vassal).
 - Shared rules; tributary target is allowed (they are not `sameRealm`).
 - **Apply:** `setRelationForced` tributary type. Not a vassal relation.
 
@@ -237,8 +239,9 @@ Player-facing name **Pillage**. Code ids `pillage` (not `raid`, to avoid campaig
 
 One-battle campaign (existing pillage war-type shape in `wars.md`). Distinct from campaign raids.
 
-### War (staff / open-ended)
+### War (generic / no apply)
 
+- Shown in the player declare picker (same list as Subjugate). Declare-code / ticket filtering is later.
 - Must be allowed to be at war (shared rules). **Allowed against tributaries.**
 - **Apply:** none.
 
@@ -268,7 +271,9 @@ MovementOutcomeService.apply(movement, ACCEPTED | WAR)
 
 ## Reparations (defender win)
 
-Already specified in [wars.md](../../wars.md#war-reparations-attacker-only): % of **main guild** ledger income for X days, via `Cashflow.WAR_REPARATIONS` / `WAR_REPARATIONS_PAYMENT`. Implement applicator on `DEFENDER_VICTORY` only (surrender / capital loss as already listed). Not on white peace.
+Already specified in [wars.md](../../wars.md#war-reparations-attacker-only): % of **main guild** ledger income for X days, via `Cashflow.WAR_REPARATIONS` / `WAR_REPARATIONS_PAYMENT`. Applicator on `DEFENDER_VICTORY` for **external** wars only (surrender / capital loss as already listed). Not on white peace.
+
+**Civil wars** ([naval-installations/02-phase-2.md](../naval-installations/02-phase-2.md)): defender win does **not** auto-apply reparations or imprisonments. Staff `/war admin reparations <from> <to> [percent] [days]` uses the same obligation pipeline when manual terms require it.
 
 ---
 
@@ -276,7 +281,7 @@ Already specified in [wars.md](../../wars.md#war-reparations-attacker-only): % o
 
 - NAP implementation
 - Inter-vassal wars
-- Temporary rebel factions, relation snapshots, civil-war untangle
+- Temporary rebel factions, relation snapshots, civil-war untangle (lock: [naval-installations/02-phase-2.md](../naval-installations/02-phase-2.md); after [naval-installations Phase 1](../naval-installations/01-phase-1.md))
 - Full coup sequencer beyond stub + documented order
 - Airborne pillage
 - Reviving legacy YAML goals as a second runtime (`independence`, `war_reparations` as a **declare** goal, etc.)
@@ -287,7 +292,7 @@ Already specified in [wars.md](../../wars.md#war-reparations-attacker-only): % o
 
 Phased sequence (several batches per phase): [01-phases.md](./01-phases.md).
 
-Do not start Phase 2+ until Phase 1 (apply spine) is done. Civil wars, inter-vassal wars, and NAP are later phases with their own spec.
+Phase 1 (apply spine) is **done**. Civil wars, inter-vassal wars, and NAP are later phases with their own spec.
 
 ---
 

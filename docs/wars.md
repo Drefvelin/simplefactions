@@ -39,7 +39,7 @@ Previous-season wars were informal: players arranged fights in Discord, staff so
 ### Development / testing
 
 - Declare war **directly in-game** from diplomacy GUI (same entry point as today).
-- Config `war.require_declare_code: false` (default until declare codes ship).
+- Config `war.require_declare_code: false` in `war.yml` (default until declare codes ship).
 - All goal validation and FSM rules apply; no code check.
 
 **Code properties:** one-time use, expiry, bound to attacker/defender/goal, audit log.
@@ -58,27 +58,27 @@ Implementation lock: [planning/war-goals-apply/00-index.md](./planning/war-goals
 
 ### Shared declare blocks
 
-Cannot declare (goal exceptions are in the planning lock) if: same realm (vassal / overlord / nested), ally, NAP (stub), or tributary unless the goal is **subjugate** or staff **War**. Usurp may target **direct overlord** only.
+Cannot declare (goal exceptions are in the planning lock) if: same realm (vassal / overlord / nested), ally, NAP (stub), or tributary unless the goal is **subjugate** or **War**. Usurp may target **direct overlord** only.
 
-**Navy (implemented):** if the generated **invasion** schedule includes a naval slot and the attacker has no operational port, declare is rejected (`Faction has a navy blockading your approach, and you lack a navy to challenge them`). If the next battle after a win is naval and that coalition has no port, they cannot **Push** (must **Hold**). See planning lock.
+**Navy (implemented):** if the generated **invasion** schedule includes a naval slot and the attacker has no **operational port**, declare is rejected (`You need an operational port for a naval path. Source ships before the battle.`). Empty port is allowed. Ships are not counted at declare or Push/Hold. If the next battle after a win is naval and that coalition has no port, they cannot **Push** (must **Hold**).
 
 ### Goal list
 
 | Goal | Layer 2 | On attacker win |
 |------|---------|-----------------|
-| **Tributary** | None | Tributary relation |
-| **Subjugate** | Subject type (not Integrated) | Chosen vassal type |
+| **Tributary** | None | `setRelationForced` tributary (not vassal) |
+| **Subjugate** | Subject type (not Integrated; `getWarPickableVassalTypes`) | Chosen vassal type |
 | **De jure annex** | Title (show blocked reasons) | Defender-realm provinces in title transfer; **unowned title is not granted** |
 | **Transfer subject** | Nested realm faction | `transferSubject` |
 | **Usurp** | None | `FactionManager.usurp` (primary title + subjects) |
-| **Overthrow** | Movement / leader | Movement apply gate + coup (stub) |
-| **Change law** | Law GUI (movement) | Law + Civil War stability |
-| **Change tax** | Tax pick + chat (movement) | Rate + Civil War stability |
+| **Overthrow** | Movement / leader | Decline demands starts a civil war; apply gate + coup (stub). Not on the nation declare picker |
+| **Change law** | Law GUI (movement) | Decline demands starts a civil war; law + Civil War stability. Not on the nation declare picker |
+| **Change tax** | Tax pick + chat (movement) | Decline demands starts a civil war; rate + Civil War stability. Not on the nation declare picker |
 | **Open market** | None (law ids in war-goal config) | Configured free-trade law + stability |
 | **Change government** | Gov ± leadership | Laws + stability |
 | **Pillage** | Settlement | Trade-income hit + loot (not a campaign raid) |
-| **War** | None | Staff / manual; no auto-apply |
-| **Revolt** | None | Civil war / manual; no auto-apply in this lock |
+| **War** | None | Pickable; no auto-apply (ticket codes later) |
+| **Revolt** | None | Staff / no-apply label; civil war uses overthrow / change law / change tax |
 
 **De jure:** own the title, **or** title unowned and you own at least one province in it. No settlements in the title. Prestige must cover incoming land. Rank gate: title at or below attacker rank. Victory is still a single **objective province** (see [Objective province](#objective-province)), not 100% occupation.
 
@@ -88,9 +88,9 @@ Cannot declare (goal exceptions are in the planning lock) if: same realm (vassal
 
 | Outcome | Apply |
 |---------|--------|
-| Attacker victory | Goal |
-| Defender victory | Reparations from attacker (no goal) |
-| White peace / admin | Neither |
+| Attacker victory | Goal (civil war: movement apply on the restored host) |
+| Defender victory | **External:** reparations from attacker (no goal). **Civil war** (`movementId` / snapshot): restore, empty movement, **no** auto reparations |
+| White peace / admin | Neither. Civil war: restore, empty movement, **no** auto reparations |
 
 ---
 
@@ -424,6 +424,7 @@ Installation DB ownership does **not** change. `fortControllers` on the war trac
 | `initiativeAttacker` | Starting fuel from invasion leg slot count (persisted at declare) |
 | `initiativeDefender` | Starting fuel from counter leg slot count (persisted at declare) |
 | `fortControllers` | installation id → coalition key |
+| `wartimeInstallationOwners` | installation id → original faction id (snapshot before wartime transfer) |
 
 Slot shape: `provinceId` (axis tile where the battle is fought), `kind`, `required`, optional `fortInstallationId` (siege), optional `portInstallationId` (naval).
 
@@ -625,7 +626,7 @@ Each **won campaign battle** adds explicit province(s) to the occupier's zone (*
 
 > **Shipped:** battle scheduling, voting, raid window, installation pick lock at vote close, and strategic retreat during voting.
 
-All clock times under `war.battle_schedule` use **Europe/Paris** hours in shipped `config.yml` (CET/CEST intent):
+All clock times under `war.battle_schedule` use **Europe/Paris** hours in shipped `war.yml` (CET/CEST intent):
 
 | Key | Default | Role |
 |-----|---------|------|
@@ -701,10 +702,11 @@ Mid-fight surrender during a **started** campaign battle is separate: see **Batt
 | `battleInstallationPicks` | Faction id → installation ids committed for current battle day |
 | `battleInstallationPicksBattleDay` | UTC date the pick set applies to; must match `battleDay` when locked |
 | `concededScheduleSlots` | Leg/index keys for slots conceded via retreat (`invasion:0`, `counter:1`) |
+| `wartimeInstallationOwners` | installation id → original faction id before wartime transfer |
 
 ### Battle day timeline
 
-On each **battle day**, phases run in this order (defaults from `war.battle_schedule` in `config.yml`):
+On each **battle day**, phases run in this order (defaults from `war.battle_schedule` in `war.yml`):
 
 | Phase | Default (Europe/Paris) | Config key |
 |-------|------------------------|------------|
@@ -726,18 +728,21 @@ Faction leaders commit installations for the current battle day from the campaig
 | Pickable kinds | **`port` and `airport` only** |
 | Territory | Province must be under your coalition's **control** (not enemy-occupied; occupation bulge + de jure ownership) |
 | Forts | **Not pickable**; active **siege** schedule slot puts the owning faction's fort emplacements in play without a pick |
-| Lock | Same instant as vote close (`vote_close_hour`) |
+| Defender ZOC port | On a current `NAVAL` / `NAVAL_INVASION` slot, `portInstallationId` is **auto-committed** for the defender war leader and cannot be unpicked (`REJECTED_ZOC_PORT`). Other pickable ports and airports still toggle. |
+| Lock | Same instant as vote close (`vote_close_hour`). After lock: **no berth or unberth** on in-play installs (committed picks, defender ZOC port, siege fort). Ports not in play stay open. |
 | Empty pick | Nothing in play for that faction (no berthable vehicle pool for campaign battles) |
 | Pre-lock enemy view | **Hidden** |
 | Post-lock enemy view | Enemy intel book (slot **34**) shows per-faction committed lists |
 | Reset | Cleared when `battleDay` advances |
 
-**Vehicle in-play:** berthable vehicles at a **committed** port/airport **or** the active siege `fortInstallationId` for the owning faction. Trains and other non-berthable types follow rules. See [installations.md](./installations.md#campaign-battle-vehicle-eligibility).
+**Vehicle in-play:** berthable vehicles at a **committed** port/airport, the defender **ZOC port**, **or** the active siege `fortInstallationId` for the owning faction. Trains and other non-berthable types follow rules. See [installations.md](./installations.md#campaign-battle-vehicle-eligibility).
+
+After vote close, `VehicleInstallationLockService` blocks berth and unberth on those in-play installs. Raid/vulnerability embargo is unchanged.
 
 ### Runtime
 
 - **UTC scheduler:** `BattleScheduleTickService` polls every minute; at `defender_choice_deadline_hour` applies post-battle choice defaults; at `vote_close_hour` runs tally. Persists on change.
-- **Campaign battle launch:** On `SCHEDULED`, `CampaignBattleLaunchService` creates campaign battle, enrolls warbands. On `BattleEndedEvent`, casualties apply, then `CampaignBattleOutcomeService` spends fuel, begins winner Push/Hold choice, and may chain military walkovers after choice resolves.
+- **Campaign battle launch:** On `SCHEDULED`, `CampaignBattleLaunchService` creates campaign battle, enrolls warbands. Naval slots: if the war attacker has no berthed `ships` vehicle at an in-play port, the defender wins the slot without a live battle and attacker fuel is spent (`lastBattleOffensiveCoalition` forced to aggressor). On `BattleEndedEvent`, casualties apply, then `CampaignBattleOutcomeService` spends fuel, begins winner Push/Hold choice, and may chain military walkovers after choice resolves.
 - **Admin dev commands:** `/war admin schedule <warId> choice push|hold|attack|accept` (aliases: `battlechoice`, `defenderchoice`, `pushchoice`, `holdchoice`). Permission `simplefactions.admin`.
 
 ---
@@ -952,10 +957,28 @@ Full rules: [Port sea ZOC](#port-sea-zoc-shipped) under campaign battle schedule
 
 ### Installation picks per battle (shipped )
 
-Leaders commit **ports and airports** each battle day via the campaign GUI; picks lock at vote close. Schedule slots still carry `portInstallationId` / `fortInstallationId` for **blocking** ports and **siege** battles respectively; those are separate from the pick UI.
+Leaders commit **ports and airports** each battle day via the campaign GUI; picks lock at vote close. Schedule slots still carry `portInstallationId` / `fortInstallationId` for **blocking** ports and **siege** battles respectively; those are separate from the pick UI except the defender **ZOC port**, which is auto-committed from `portInstallationId`.
 
 - **Campaign raids**: leaders launch source→target assaults during the raid window; targets are **any operational** enemy port/airport/fort (`CampaignRaidEligibilityService`). See [Campaign raids](#campaign-raids).
 - **Fort raids** in campaign raids use port/airport source → fort target; not chosen via installation picks.
+
+### Attacker naval launch
+
+For `NAVAL` / `NAVAL_INVASION` slots, the **war attacker** needs at least one **in-play port** with a berthed naval vehicle (registry `INSTALLATION` row, category `ships`). Personal unberthed ships do not count. Null registry counts as no navy.
+
+If that check fails at launch (including both sides empty of official navy):
+
+- Unstarted battle is purged; defender wins the slot through the existing battle-end path.
+- Attacker initiative is spent (`lastBattleOffensiveCoalition` = aggressor).
+- Field and siege slots are unchanged.
+
+From battle day through launch, while this would still fire, `CampaignNavalAutoLossReminderService` pings the **attacker war leader** every schedule tick.
+
+### Wartime installations and peace
+
+Occupation (and siege take of the fort's province) **transfers** installations on occupied tiles to the occupying coalition's **war leader**. Snapshot `wartimeInstallationOwners` stores original faction ids. This does **not** change de jure province owner.
+
+**Every** `WarEndReason` (`WarManager.endWar`): revert the snapshot **first**, then `WarOutcomeService.apply`. Land apply that calls `addProvince` can transfer installs again for tiles the winner keeps. White peace and admin end still revert.
 
 Fort ZOC on campaign line → **siege** when line passes through ZOC and fort is enemy-controlled. War-time fort controller may differ from installation owner; see [Campaign battle schedule](#campaign-battle-schedule-locked). Capital inside fort ZOC → siege then objective field battle.
 
@@ -983,16 +1006,20 @@ See [installations.md](./installations.md) for fort/port/airport pipeline. War-a
 
 Opening the campaign view **recalculates** white peace proposal flags only; it does **not** auto-end the war.
 
+`WarManager.endWar` always reverts wartime installation transfers (`WartimeInstallationService.revert`) **before** `WarOutcomeService.apply`. Civil wars also run `CivilWarUntangleService.restore` after that revert and before apply.
+
 ### War reparations (attacker-only)
 
-**Only when attacker loses badly:**
+**Only when attacker loses badly, on an external war:**
 
 - Attacker **surrenders**, or
 - Attacker **loses capital** (defender counter-push and wins there)
 
-**Not when:** defender loses (land/subject loss is enough), any **white peace** (including accepted auto-proposal), initiative exhaustion white peace.
+**Not when:** defender loses (land/subject loss is enough), any **white peace** (including accepted auto-proposal), initiative exhaustion white peace, or a **civil war** defender / white peace / admin end (restore + empty movement; no auto imprison).
 
-**Mechanic:** flat **% of main guild ledger income** for **X days** paid to winner (e.g. 25% tax). Source: **main faction guild ledger only** - not subsidiary guilds. Applied like other taxes via ledger pipeline (`Cashflow.WAR_REPARATIONS` / `WAR_REPARATIONS_PAYMENT`). Not implemented until the war-goals apply batch.
+**Mechanic:** flat **% of main guild ledger income** for **X days** paid to winner. Source: **main faction guild ledger only** - not subsidiary guilds. Applied via ledger pipeline (`Cashflow.WAR_REPARATIONS` / `WAR_REPARATIONS_PAYMENT`). Config: `war.reparations.income_percent` (default **25**) and `war.reparations.days` (default **10**).
+
+Staff can add the same obligation by hand (after a civil war, or any time): `/war admin reparations <fromFaction> <toFaction> [percent] [days]`. Optional args default to the config values. Uses `WarReparationsService.apply`. Permission: existing war admin. Not tied to an active war.
 
 ---
 
@@ -1038,11 +1065,11 @@ Visible on nation, county, duchy, kingdom, empire, and trade map modes (same as 
 
 - Exact **X** provinces for pillage land/sea distance
 - **Occupation bulge** adjacency rule (which extra provinces per battle win)
-- Reparations **%** and **days** defaults
 - When to **recalculate** white peace auto-proposal flags after cursor / phase change
 - NAP relation (stub only in the war-goals lock)
-- Civil war rebel factions and relation snapshots (explicitly later)
+
+Civil wars: [planning/naval-installations/02-phase-2.md](./planning/naval-installations/02-phase-2.md).
 
 War-goal apply and navy gate: [planning/war-goals-apply/00-index.md](./planning/war-goals-apply/00-index.md).
 
-`provinces_between_battles` (default **3**), `max_battles_per_leg`, and `initiative_factor` are locked in config (see `config.yml` war section).
+`provinces_between_battles` (default **3**), `max_battles_per_leg`, and `initiative_factor` are locked in config (see `war.yml`).

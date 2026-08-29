@@ -3,7 +3,16 @@ package me.Plugins.SimpleFactions.War.enums;
 public enum WarGoalType {
 	DE_JURE_ANNEX("de_jure_annex"),
 	SUBJUGATE("subjugate"),
-	TRANSFER_SUBJECT("transfer_subject");
+	TRANSFER_SUBJECT("transfer_subject"),
+	WAR("war"),
+	TRIBUTARY("tributary"),
+	USURP("usurp"),
+	OPEN_MARKET("open_market"),
+	CHANGE_GOVERNMENT("change_government"),
+	PILLAGE("pillage"),
+	OVERTHROW("overthrow"),
+	CHANGE_LAW("change_law"),
+	CHANGE_TAX("change_tax");
 
 	private final String jsonId;
 
@@ -20,7 +29,20 @@ public enum WarGoalType {
 			case DE_JURE_ANNEX -> "De Jure Annex";
 			case SUBJUGATE -> "Subjugate";
 			case TRANSFER_SUBJECT -> "Transfer Subject";
+			case WAR -> "War";
+			case TRIBUTARY -> "Tributary";
+			case USURP -> "Usurp";
+			case OPEN_MARKET -> "Open Market";
+			case CHANGE_GOVERNMENT -> "Change Government";
+			case PILLAGE -> "Pillage";
+			case OVERTHROW -> "Overthrow";
+			case CHANGE_LAW -> "Change Law";
+			case CHANGE_TAX -> "Change Tax";
 		};
+	}
+
+	public boolean isMovementOrigin() {
+		return this == OVERTHROW || this == CHANGE_LAW || this == CHANGE_TAX;
 	}
 
 	public static WarGoalType fromJson(String value) {

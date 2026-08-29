@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
@@ -44,6 +45,42 @@ class ObjectiveProvincePickerTest {
 
 		War war = new War(1, attacker, defender);
 		war.setGoal(WarGoalType.SUBJUGATE);
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			titleManager.when(() -> TitleManager.getProvinces(defender)).thenReturn(List.of(10, 42));
+
+			OptionalInt objective = picker.pickObjective(war, defender);
+			assertTrue(objective.isPresent());
+			assertEquals(42, objective.getAsInt());
+		}
+	}
+
+	@Test
+	void pickObjective_warUsesSameSetAsSubjugate() {
+		Faction attacker = mockFaction("atk");
+		Faction defender = mockFaction("def");
+		when(defender.getCapital()).thenReturn(42);
+
+		War war = new War(1, attacker, defender);
+		war.setGoal(WarGoalType.WAR);
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			titleManager.when(() -> TitleManager.getProvinces(defender)).thenReturn(List.of(10, 42));
+
+			OptionalInt objective = picker.pickObjective(war, defender);
+			assertTrue(objective.isPresent());
+			assertEquals(42, objective.getAsInt());
+		}
+	}
+
+	@Test
+	void pickObjective_usurpUsesDefenderCapitalWhenPresent() {
+		Faction attacker = mockFaction("atk");
+		Faction defender = mockFaction("def");
+		when(defender.getCapital()).thenReturn(42);
+
+		War war = new War(1, attacker, defender);
+		war.setGoal(WarGoalType.USURP);
 
 		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
 			titleManager.when(() -> TitleManager.getProvinces(defender)).thenReturn(List.of(10, 42));
@@ -124,6 +161,28 @@ class ObjectiveProvincePickerTest {
 
 			OptionalInt objective = picker.pickObjective(war, defender);
 			assertEquals(10, objective.getAsInt());
+		}
+	}
+
+	@Test
+	void pickObjective_pillageUsesSettlementCenter() {
+		Faction attacker = mockFaction("atk");
+		Faction defender = mockFaction("def");
+		Settlement settlement = new Settlement("town", "Town", 11, 0, 0);
+		SettlementHandler handler = mock(SettlementHandler.class);
+		when(defender.getSettlementHandler()).thenReturn(handler);
+		when(handler.getById("town")).thenReturn(settlement);
+
+		War war = new War(1, attacker, defender);
+		war.setGoal(WarGoalType.PILLAGE);
+		war.setTargetSettlementId("town");
+
+		FactionManager.factions.add(defender);
+		try {
+			OptionalInt objective = picker.pickObjective(war, defender);
+			assertEquals(11, objective.getAsInt());
+		} finally {
+			FactionManager.factions.remove(defender);
 		}
 	}
 

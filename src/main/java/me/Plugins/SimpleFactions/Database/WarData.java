@@ -16,6 +16,17 @@ public class WarData {
     public String defenderLeaderId;
     public String targetTitleId;
     public String subjectFactionId;
+    public String relationTypeId;
+    public String governmentLawId;
+    public String leadershipLawId;
+    public String targetSettlementId;
+    public String movementId;
+    public String civilWarHostFactionId;
+    public String civilWarTempRebelFactionId;
+    public Map<String, String> civilWarTransferredProvinces;
+    public List<CivilWarVassalEndData> civilWarVassalEnds;
+    public Integer civilWarHostOldCapitalId;
+    public Integer civilWarRebelCapitalId;
     public Integer objectiveProvinceId;
     public Integer campaignStartProvinceId;
     public List<Integer> campaignProvinces;
@@ -36,6 +47,7 @@ public class WarData {
     public List<ScheduledCampaignBattleData> campaignCounterSchedule;
     public Integer campaignCounterScheduleIndex;
     public Map<String, String> fortControllers;
+    public Map<String, String> wartimeInstallationOwners;
     public List<String> concededScheduleSlots;
     public Map<String, Integer> locationBattleCounts;
     public String battleSchedulePhase;
@@ -80,6 +92,7 @@ public class WarData {
         raidRepairLockUntil = new LinkedHashMap<>();
         locationBattleCounts = new HashMap<>();
         fortControllers = new HashMap<>();
+        wartimeInstallationOwners = new LinkedHashMap<>();
         concededScheduleSlots = new ArrayList<>();
         campaignBattleSchedule = new ArrayList<>();
         campaignCounterSchedule = new ArrayList<>();

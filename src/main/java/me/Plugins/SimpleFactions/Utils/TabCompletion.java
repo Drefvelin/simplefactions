@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Loaders.LawLoader;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
@@ -19,6 +20,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
+import me.Plugins.SimpleFactions.laws.LawGroup;
 
 public class TabCompletion implements TabCompleter{
 
@@ -180,6 +182,9 @@ public class TabCompletion implements TabCompleter{
 					completions.add("granttitle");
 					completions.add("transfersubject");
 					completions.add("setrelation");
+					completions.add("settreaty");
+					completions.add("setpower");
+					completions.add("setlaw");
 					completions.add("usurp");
 					completions.add("startelection");
 					completions.add("endelection");
@@ -411,8 +416,21 @@ public class TabCompletion implements TabCompleter{
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("addprestigemodifier")){
 				if(sender instanceof Player){
 					List<String> completions = new ArrayList<String>();
+					for(Faction f : FactionManager.factions) {
+						completions.add(f.getId());
+					}
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("addprestigemodifier")){
+				if(sender instanceof Player){
+					List<String> completions = new ArrayList<String>();
 					completions.add("<type>");
-					
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 4 && args[0].equalsIgnoreCase("addprestigemodifier")){
+				if(sender instanceof Player){
+					List<String> completions = new ArrayList<String>();
+					completions.add("1.0");
 					return completions;
 				}
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("forcedelete")){
@@ -421,13 +439,6 @@ public class TabCompletion implements TabCompleter{
 					for(Faction f : FactionManager.factions) {
 						completions.add(f.getId());
 					}
-					
-					return completions;
-				}
-			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("addprestigemodifier")){
-				if(sender instanceof Player){
-					List<String> completions = new ArrayList<String>();
-					completions.add("<amount>");
 					
 					return completions;
 				}
@@ -507,8 +518,68 @@ public class TabCompletion implements TabCompleter{
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 4 && args[0].equalsIgnoreCase("setrelation")){
 				if(sender instanceof Player){
 					List<String> completions = new ArrayList<String>();
-					for(RelationType type : RelationLoader.getTypes()) {
+					for(RelationType type : RelationLoader.getDiplomaticTypes()) {
 						completions.add(type.getId());
+					}
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("settreaty")){
+				if(sender instanceof Player){
+					List<String> completions = new ArrayList<String>();
+					for(Faction f : FactionManager.factions) {
+						completions.add(f.getId());
+					}
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("settreaty")){
+				if(sender instanceof Player){
+					List<String> completions = new ArrayList<String>();
+					for(Faction f : FactionManager.factions) {
+						if(f.getId().equalsIgnoreCase(args[1])) continue;
+						completions.add(f.getId());
+					}
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 4 && args[0].equalsIgnoreCase("settreaty")){
+				if(sender instanceof Player){
+					List<String> completions = new ArrayList<String>();
+					for(RelationType type : RelationLoader.getTreatyTypes()) {
+						completions.add(type.getId());
+					}
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("setpower")){
+				if(sender instanceof Player){
+					List<String> completions = new ArrayList<String>();
+					for(Faction f : FactionManager.factions) {
+						completions.add(f.getId());
+					}
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 2 && args[0].equalsIgnoreCase("setlaw")){
+				if(sender instanceof Player){
+					List<String> completions = new ArrayList<String>();
+					for(Faction f : FactionManager.factions) {
+						completions.add(f.getId());
+					}
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("setlaw")){
+				if(sender instanceof Player){
+					List<String> completions = new ArrayList<String>();
+					for(LawGroup group : LawLoader.getList()) {
+						completions.add(group.getId());
+					}
+					return completions;
+				}
+			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 4 && args[0].equalsIgnoreCase("setlaw")){
+				if(sender instanceof Player){
+					List<String> completions = new ArrayList<String>();
+					LawGroup group = LawLoader.getByString(args[2]);
+					if(group != null) {
+						for(String lawId : group.getLaws().keySet()) {
+							completions.add(lawId);
+						}
 					}
 					return completions;
 				}

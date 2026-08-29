@@ -14,6 +14,7 @@ import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
+import me.Plugins.SimpleFactions.War.campaign.progression.AttackerNavalContestService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignOffensiveForfeitService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
@@ -51,6 +52,12 @@ public final class CampaignBattleLaunchService {
 			return null;
 		}
 		Battle existing = BattleManager.getByWarId(war.getId());
+		Integer provinceId = BattleScheduleService.resolveScheduledProvinceId(war);
+		if (provinceId != null
+				&& AttackerNavalContestService.applyIfAttackerHasNoBerthedNavy(war, provinceId)) {
+			return null;
+		}
+
 		if (existing != null) {
 			String startError = startPreparedBattle(war, existing);
 			if (startError != null) {
@@ -60,7 +67,6 @@ public final class CampaignBattleLaunchService {
 			return existing;
 		}
 
-		Integer provinceId = BattleScheduleService.resolveScheduledProvinceId(war);
 		if (provinceId == null) {
 			return null;
 		}
@@ -94,6 +100,10 @@ public final class CampaignBattleLaunchService {
 		}
 		if (provinceId != null
 				&& CampaignOffensiveForfeitService.applyIfBattleOffensiveCannotAttack(war, provinceId)) {
+			return true;
+		}
+		if (provinceId != null
+				&& AttackerNavalContestService.applyIfAttackerHasNoBerthedNavy(war, provinceId)) {
 			return true;
 		}
 

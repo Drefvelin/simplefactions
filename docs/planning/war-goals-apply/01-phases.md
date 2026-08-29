@@ -2,7 +2,7 @@
 
 **Gameplay lock:** [00-index.md](./00-index.md)  
 **Canonical spec:** [wars.md](../../wars.md)  
-**Status:** Phase 0 done. Phases 1-6 are the war-goal apply program. Phases 7+ are later systems; spec those when we start them.
+**Status:** Phases 0-6 done. Civil wars: [naval-installations/02-phase-2.md](../naval-installations/02-phase-2.md) after [naval-installations Phase 1](../naval-installations/01-phase-1.md). Phases 8-9 are later.
 
 This is the **implementation sequence**. Batches inside a phase can ship as separate PRs. Do not start the next phase until the current phase's exit criteria are met. Do not add a second diplomacy, law, tax, or government engine.
 
@@ -14,7 +14,7 @@ This is the **implementation sequence**. Batches inside a phase can ship as sepa
 2. **External wars before same-realm cracks.** Tributary / subjugate / transfer only need independent (or tributary) targets. Usurp and later civil/inter-vassal work punch holes in `sameRealm`. Finish the simple declare surface first.
 3. **Call existing engines before rewriting GUIs.** Relation apply and `FactionManager.usurp` are thin. De jure eligibility is a rewrite. Open market / change government are `applyLaw` plus YAML. Pillage is a different campaign shape. Movement goals need a shared apply gate that peace-time cave-in also uses.
 4. **Law-on-target wars do not wait for movements.** Open market and change government are player-declared wars. Overthrow / change law / change tax are movement-origin. Split them so the movement gate is not on the critical path for diplomatic and law wars.
-5. **Staff `War` is a no-op on the spine.** It lets you test end reasons without applying a goal. `Revolt` waits for civil wars.
+5. **Generic `War` is a no-op on the spine.** Players can pick it to run a campaign without an automatic political outcome. `Revolt` waits for civil wars.
 6. **Civil wars, inter-vassal wars, and full movements** share realm/relation problems. They come last and get their own lock when we reach them.
 
 ```mermaid
@@ -55,6 +55,8 @@ Phases 4 and 5 can run after Phase 1 without waiting for titles. Prefer **2 then
 
 Make war end do one thing, and make diplomacy settable without a player clicking Accept. No goal outcomes yet except no-ops and reparations.
 
+**Batch plan:** [02-phase-1.md](./02-phase-1.md)
+
 ### Batches
 
 1. **Forced `setRelation`.** Boolean on the existing setter (default `false`). Forced skips opinion and mutual request; still runs loop, top-overlord, `vassalCheck`, `atLimit`, map, linked reverse. Wrapper `setRelationForced`. Tests: forced vs unforced.
@@ -63,7 +65,9 @@ Make war end do one thing, and make diplomacy settable without a player clicking
    - `ATTACKER_VICTORY` → goal dispatcher (empty / no-op per type until later phases)
    - `DEFENDER_VICTORY` → reparations from attacker (ledger cashflows already exist)
    - `WHITE_PEACE` / `ADMIN_END` → neither
-4. **Staff goal `War`.** Declare under shared rules, including vs tributaries. Apply: none. Useful to run campaigns while other goals are still no-ops.
+4. **Generic goal `War`.** Shown in the player declare picker. Shared rules, including vs tributaries. Apply: none.
+
+**Done.** Forced `setRelation`, declare no longer dissolves realms, end applicator + reparations, pickable **War** with no apply.
 
 ### Exit
 
@@ -78,12 +82,16 @@ Make war end do one thing, and make diplomacy settable without a player clicking
 
 Independent (or tributary) targets. Campaign shape unchanged. All apply goes through Phase 1 forced diplomacy / `transferSubject`.
 
+**Batch plan:** [03-phase-2.md](./03-phase-2.md)
+
 ### Batches
 
 1. **YAML picker rules.** `can-pick-for-war` on relation types. Integrated subject not pickable. March / palatinate still use existing `limit`.
 2. **Tributary.** Declare checks + apply `setRelationForced` tributary/suzerain types. Not a vassal relation.
 3. **Subjugate.** Type picker (Subject, Mercantile, March, Palatinate). Tributary of attacker allowed. Apply chosen type forced.
 4. **Transfer subject.** Layer 2: any faction in defender nested realm. War defender stays top liege. Apply `RelationManager.transferSubject` (keep type).
+
+**Done.** Tributary, subjugate (chosen type), and transfer subject declare and apply. Generic **War** stays no-op.
 
 ### Exit
 
@@ -96,12 +104,14 @@ Independent (or tributary) targets. Campaign shape unchanged. All apply goes thr
 
 First controlled exception to "never same realm": **Usurp vs direct overlord only**. De jure stays external (you do not take the title from your liege this way).
 
+**Batch plan:** [04-phase-3.md](./04-phase-3.md)
+
 ### Batches
 
-1. **Usurp declare.** Rank same or lower than target. Direct overlord allowed; other same-realm still blocked. Layer 2 none (`getHighestTitle()`).
-2. **Usurp apply.** `FactionManager.usurp` only (title, subjects, target becomes subject, overlord slot). War path uses forced / no-player usurp. Do not reimplement.
-3. **De jure eligibility rewrite.** Own the title, **or** unowned title and attacker owns at least one province in it. No settlements (or faction capitals) in the area. Prestige headroom. Rank gate. Layer 2 lists blocked titles with reasons (including "use subjugate instead" only when that declare would be valid).
-4. **De jure apply.** Provinces in the title owned by the **defender's realm** transfer to the attacker. **Unowned title is not granted.** Forming titles stays the existing title menu.
+1. **Usurp declare.** **Done.** Rank same or lower than target. Direct overlord allowed; other same-realm still blocked. Layer 2 none (`getHighestTitle()`). Apply is still no-op until batch 2.
+2. **Usurp apply.** **Done.** `FactionManager.usurp` only (title, subjects, target becomes subject, overlord slot). War path uses forced / no-player usurp. Do not reimplement.
+3. **De jure eligibility rewrite.** **Done.** Own the title, **or** unowned title and attacker owns at least one province in it. No settlements (or faction capitals) in the area. Prestige headroom. Rank gate. Layer 2 lists blocked titles with reasons (including "use subjugate instead" only when that declare would be valid).
+4. **De jure apply.** **Done.** Provinces in the title owned by the **defender's realm** transfer to the attacker. **Unowned title is not granted.** Forming titles stays the existing title menu.
 
 ### Exit
 
@@ -115,11 +125,13 @@ First controlled exception to "never same realm": **Usurp vs direct overlord onl
 
 Player-declared wars that only change laws on the defender. Stability modifiers as locked. No `CanHaveLaw` project required yet if these laws already exist and are selectable.
 
+**Batch plan:** [05-phase-4.md](./05-phase-4.md)
+
 ### Batches
 
-1. **War-goal YAML law ids** for open market (`defender_must_not_have`, `attacker_must_not_have`, `apply_defender_law`). Ids not hardcoded in Java.
-2. **Open market.** Declare checks + apply `applyLaw` + **Forced Market Open -25%** decaying.
-3. **Change government.** Layer 2: government ± leadership, pre-filled with target's current laws. Apply changed groups + **Forced Government Change -50%** decaying.
+1. **War-goal YAML law ids** for open market (`defender_must_not_have`, `attacker_must_not_have`, `apply_defender_law`). **Done.** Ids not hardcoded in Java.
+2. **Open market.** **Done.** Declare checks + apply `applyLaw` + **Forced Market Open -25%** decaying.
+3. **Change government.** **Done.** Layer 2: government ± leadership, pre-filled with target's current laws. Apply changed groups + **Forced Government Change -50%** decaying.
 
 ### Exit
 
@@ -132,11 +144,13 @@ Player-declared wars that only change laws on the defender. Stability modifiers 
 
 Different war type / campaign: one settlement, one battle, then apply and end. Uses `hasSeaConnection` from Phase 0. Distinct from campaign raids.
 
+**Batch plan:** [06-phase-5.md](./06-phase-5.md)
+
 ### Batches
 
-1. **Range queries.** Settlement within X of attacker land borders, **or** within X of sea **and** `hasSeaConnection`. Landlocked / disconnected oceans fail seaborne pillage.
-2. **Declare + populate.** Picker is a settlement. Navy gate still applies if the generated path has a naval slot. Short campaign (existing pillage shape in wars.md).
-3. **Apply.** Snapshot 10 days of trade income for guilds with capital in that settlement. Attacker paid that gold. Those guilds get **-100% trade income** decaying over 10 days. Query existing ledgers.
+1. **Range queries.** **Done.** Settlement within X of attacker land borders, **or** within X of sea **and** `hasSeaConnection`. X is YAML `range_provinces` (default 3).
+2. **Declare + populate.** **Done.** Picker is a settlement. One battle at the settlement, empty counter. Navy gate still applies if the **natural** path has a naval slot. Ids `pillage`, not `raid`.
+3. **Apply.** **Done.** Snapshot 10 days of trade income for guilds with capital in that settlement. Attacker paid that gold. Those guilds get **-100% trade income** decaying over 10 days. Query existing ledgers.
 
 ### Exit
 
@@ -149,13 +163,15 @@ Different war type / campaign: one settlement, one battle, then apply and end. U
 
 One apply path for "caved in" and "won a movement war". Coup is a stub with documented order, not a full civil-war sequencer.
 
+**Batch plan:** [07-phase-6.md](./07-phase-6.md)
+
 ### Batches
 
-1. **`CanHaveLaw` / `Law.isAvailable`.** Requirements + compatibility for change-law (today a stub). Needed before that goal is honest.
-2. **`MovementOutcomeService.apply(movement, ACCEPTED | WAR)`.** Cause order: coup / leader first, then other causes. Stability name and size from source. Then apply causes, then end movement.
-3. **Coup stub.** Always change leader (wanted leader must pass `canBecomeLeader`). Council: autocracy or community unchanged; oligarchy emptied; plutocracy/democracy switch to oligarchy and empty council. Called from the gate, not copied in war code.
-4. **Migrate accept-demands.** `MovementView` uses the service (`ACCEPTED`) instead of ad hoc `proposal.apply`.
-5. **Movement-origin war goals.** Overthrow, change law, change tax: declare only from a movement. Apply is the gate with source `WAR`. Stability: coup **-75%** vs Civil War **-75%** as locked.
+1. **`CanHaveLaw` / `Law.isAvailable`.** **Done.** Requirements + compatibility for change-law. Needed before that goal is honest.
+2. **`MovementOutcomeService.apply(movement, ACCEPTED | WAR)`.** **Done.** Cause order: coup / leader first, then other causes. Stability name and size from source. Then apply causes, then end movement.
+3. **Coup stub.** **Done.** Always change leader (wanted leader must pass `canBecomeLeader`). Council: autocracy or community unchanged; oligarchy emptied; plutocracy/democracy switch to oligarchy and empty council. Called from the gate, not copied in war code.
+4. **Migrate accept-demands.** **Done.** `MovementView` uses the service (`ACCEPTED`) instead of ad hoc `proposal.apply`.
+5. **Movement-origin war goals.** **Done.** Overthrow, change law, change tax exist for apply only. Declare is blocked until Phase 7. Attacker victory calls the gate with source `WAR`. Stability: coup **-75%** vs Civil War **-75%** as locked.
 
 ### Exit
 
@@ -166,11 +182,9 @@ One apply path for "caved in" and "won a movement war". Coup is a stub with docu
 
 ## Phase 7 - Civil wars
 
-**Spec later.** Do not implement from this file.
+**Lock:** [naval-installations/02-phase-2.md](../naval-installations/02-phase-2.md). Phase 1 transfer/navy is shipped. Do not implement from this file.
 
-Intended problem (for when we write the lock): rebel factions, relation snapshots, who the defender is, how occupation and war GUI work inside a dissolving realm, `Revolt` as a real type, full coup sequencer beyond the stub, stability and "untangle" when the war ends. Movement-driven revolts should call Phase 6's gate rather than a third apply path.
-
-`Revolt` as a staff/no-apply label can exist as a tiny batch at the start of this phase if we need it for testing before the full system.
+Dedicated start/teardown (temp rebels, snapshots, restore then Phase 6 gate). Civil-war defender win: **no** auto reparations and **no** auto imprison. Staff `/war admin reparations <from> <to>` for manual terms. `Revolt` stays a staff/no-apply label if needed for tests.
 
 ---
 

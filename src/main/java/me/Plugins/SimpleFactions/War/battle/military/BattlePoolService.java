@@ -9,6 +9,7 @@ import java.util.Set;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarBorderLock;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.core.WarCommitment;
@@ -57,7 +58,7 @@ public final class BattlePoolService {
 		Map<String, Map<String, Integer>> eligible = new LinkedHashMap<>();
 
 		for (Faction fighter : fighters) {
-			Map<String, Integer> regimentCounts = collectOwnRegiments(fighter, battleProvinceId, mode);
+			Map<String, Integer> regimentCounts = collectOwnRegiments(war, fighter, battleProvinceId, mode);
 			addLevyRows(war, fighter.getId(), fighterIds, mode, regimentCounts);
 			if (!regimentCounts.isEmpty()) {
 				eligible.put(fighter.getId(), regimentCounts);
@@ -86,6 +87,7 @@ public final class BattlePoolService {
 	}
 
 	private static Map<String, Integer> collectOwnRegiments(
+			War war,
 			Faction faction,
 			int battleProvinceId,
 			PoolMode mode) {
@@ -97,7 +99,7 @@ public final class BattlePoolService {
 			if (regiment.isLevy()) {
 				continue;
 			}
-			if (!isRegimentEligible(regiment, faction, battleProvinceId, mode)) {
+			if (!isRegimentEligible(war, regiment, faction, battleProvinceId, mode)) {
 				continue;
 			}
 			int count = regiment.getCurrentSlots();
@@ -110,10 +112,14 @@ public final class BattlePoolService {
 	}
 
 	private static boolean isRegimentEligible(
+			War war,
 			Regiment regiment,
 			Faction faction,
 			int battleProvinceId,
 			PoolMode mode) {
+		if (CivilWarBorderLock.isCivilWar(war)) {
+			return true;
+		}
 		if (MILITIA_REGIMENT_ID.equalsIgnoreCase(regiment.getId())) {
 			return mode == PoolMode.DEFENSIVE && isMilitiaEligible(faction, battleProvinceId);
 		}
@@ -129,7 +135,10 @@ public final class BattlePoolService {
 			Set<String> fighterIds,
 			PoolMode mode,
 			Map<String, Integer> regimentCounts) {
-		if (mode != PoolMode.OFFENSIVE || holderFactionId == null || !fighterIds.contains(holderFactionId.toLowerCase())) {
+		if (holderFactionId == null || !fighterIds.contains(holderFactionId.toLowerCase())) {
+			return;
+		}
+		if (mode != PoolMode.OFFENSIVE && !CivilWarBorderLock.isCivilWar(war)) {
 			return;
 		}
 		int levyTotal = 0;
