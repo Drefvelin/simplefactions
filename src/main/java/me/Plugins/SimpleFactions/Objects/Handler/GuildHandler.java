@@ -34,13 +34,23 @@ public class GuildHandler {
     }
 
     public void removeGuild(String id) {
+        removeGuild(id, true, true);
+    }
+
+    public void removeGuild(String id, boolean dissolveEmptySettlement) {
+        removeGuild(id, dissolveEmptySettlement, true);
+    }
+
+    public void removeGuild(String id, boolean dissolveEmptySettlement, boolean revalidateClaims) {
         Guild g = guilds.get(id);
         int cap = (g != null && !g.isBase() && g.hasCapital()) ? g.getCapital() : -1;
         guilds.remove(id);
-        if (cap != -1) {
+        if (dissolveEmptySettlement && cap != -1 && f.getSettlementHandler() != null) {
             f.getSettlementHandler().onGuildDepartedCapital(cap);
         }
-        f.getProvinceHandler().revalidateClaims();
+        if (revalidateClaims && f.getProvinceHandler() != null) {
+            f.getProvinceHandler().revalidateClaims();
+        }
     }
 
     public Guild getGuildByMember(String member) {

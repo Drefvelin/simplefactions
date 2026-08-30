@@ -107,6 +107,17 @@ public class WarCreator {
 	}
 	
 	public ItemStack createSecondaryItem(Player p, Participant par, War w, Faction f, boolean subject, boolean called) {
+		return createSecondaryItem(p, par, w, f, subject, called, false);
+	}
+
+	public ItemStack createSecondaryItem(
+			Player p,
+			Participant par,
+			War w,
+			Faction f,
+			boolean subject,
+			boolean called,
+			boolean backer) {
 		Faction pf = FactionManager.getByLeader(p.getName());
 		ItemStack i = new ItemStack(f.getBanner());
 		ItemMeta m = i.getItemMeta();
@@ -132,6 +143,10 @@ public class WarCreator {
 			lore.add(StringFormatter.formatHex("#d4c9aeThis nation is a subject"));
 			lore.add(StringFormatter.formatHex("#d4c9aeand is therefore automatically called"));
 			
+		}
+		if (backer) {
+			lore.add(" ");
+			lore.add(StringFormatter.formatHex("#c2bea7Backer"));
 		}
 		lore.add(" ");
 		if(called) {
@@ -183,10 +198,11 @@ public class WarCreator {
 			else lore.add(StringFormatter.formatHex("#a39ba8Soldiers: #28ed70"+f.getMilitary().getManpower(offensive)));
 		}
 		if(full && !type.equalsIgnoreCase("secondary_participant")) {
-			if(par.getAllies().size() > 0 || par.getSubjects().size() > 0) {
+			if(par.getAllies().size() > 0 || par.getSubjects().size() > 0 || !par.getBackers().isEmpty()) {
 				lore.add(" ");
 				lore.add(StringFormatter.formatHex("#65e0bbSecondary Participants:"));
 				if(par.getAllies().size() > 0) lore.add(StringFormatter.formatHex("§7- #975bbdAllies: #bea1d1"+par.getAllies().size()));
+				if(!par.getBackers().isEmpty()) lore.add(StringFormatter.formatHex("§7- #c2bea7Backers: #d4c9ae"+par.getBackers().size()));
 				if(par.getSubjects().size() > 0) lore.add(StringFormatter.formatHex("§7- #768fccSubjects: #a3afcc"+par.getSubjects().size()));
 				lore.add(" ");
 				lore.add(StringFormatter.formatHex("#28ed70Click to view"));

@@ -17,6 +17,7 @@ import org.mockito.MockedStatic;
 import org.bukkit.Bukkit;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.ProvinceHandler;
@@ -41,6 +42,36 @@ class SettlementCapitalDepartureTest {
 			handler.onGuildDepartedCapital(100);
 		}
 
+		assertNull(handler.getByProvince(100));
+	}
+
+	@Test
+	void dissolve_clearsOtherFactionGuildCapitalPointer() {
+		Faction host = mock(Faction.class);
+		Faction rebels = mock(Faction.class);
+		SettlementHandler handler = new SettlementHandler(host);
+		when(host.getGuildHandler()).thenReturn(mock(me.Plugins.SimpleFactions.Objects.Handler.GuildHandler.class));
+		when(host.getCapital()).thenReturn(-1);
+		when(host.getGuildHandler().getGuilds()).thenReturn(List.of());
+		when(host.getLeader()).thenReturn("leader");
+
+		Guild rebelGuild = mock(Guild.class);
+		when(rebelGuild.isBase()).thenReturn(false);
+		when(rebelGuild.getCapital()).thenReturn(100);
+		when(rebels.getGuildHandler()).thenReturn(mock(me.Plugins.SimpleFactions.Objects.Handler.GuildHandler.class));
+		when(rebels.getGuildHandler().getGuilds()).thenReturn(List.of(rebelGuild));
+		when(rebels.getCapital()).thenReturn(-1);
+
+		handler.found("Gaba Gaba", 100, 0, 0);
+		FactionManager.factions.add(rebels);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayerExact("leader")).thenReturn(null);
+			handler.onGuildDepartedCapital(100);
+		} finally {
+			FactionManager.factions.remove(rebels);
+		}
+
+		verify(rebelGuild).setCapital(-1, false);
 		assertNull(handler.getByProvince(100));
 	}
 

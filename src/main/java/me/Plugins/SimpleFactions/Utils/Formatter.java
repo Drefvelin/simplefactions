@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.Utils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Locale;
 
 public class Formatter {
     static String[] codes = {
@@ -55,6 +56,10 @@ public class Formatter {
             return 0.0; // or any default value you'd prefer
         }
         return round(d, 2);
+    }
+
+    public static String formatMoney(double d) {
+        return String.format(Locale.US, "%.2f", formatDouble(d));
     }
 
     private static double round(double value, int places) {

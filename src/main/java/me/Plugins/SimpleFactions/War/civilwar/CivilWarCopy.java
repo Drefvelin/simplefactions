@@ -18,4 +18,6 @@ public final class CivilWarCopy {
 	public static final String CANNOT_STEAL = "§cCannot take land from a faction during a civil war.";
 	public static final String DECLARE_VS_CIVIL_WAR =
 			"§cCannot pick this war goal against a faction in a civil war.";
+	public static final String VASSALAGE_LAW_MISSING =
+			"§cCivil war vassalage law is missing or invalid in war.yml.";
 }

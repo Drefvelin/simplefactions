@@ -836,7 +836,13 @@ public class Faction {
 		titles.add(t);
 		updateTier();
 	}
-	
+
+	public void stripTitle(Title t) {
+		if(!hasTitle(t)) return;
+		titles.remove(t);
+		updateTier();
+	}
+
 	public void removeTitle(Title t) {
 		if(!hasTitle(t)) return;
 		titles.remove(t);

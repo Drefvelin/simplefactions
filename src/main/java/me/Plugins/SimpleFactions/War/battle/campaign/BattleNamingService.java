@@ -198,11 +198,6 @@ public final class BattleNamingService {
 			logLocation(provinceId, "settlement-exact", exact.getName(), null);
 			return new LocationInfo("settlement:" + exact.getName(), exact.getName());
 		}
-		Settlement countySettlement = findSettlementInCounty(provinceId);
-		if (countySettlement != null && countySettlement.getName() != null && !countySettlement.getName().isBlank()) {
-			logLocation(provinceId, "settlement-county", countySettlement.getName(), null);
-			return new LocationInfo("settlement:" + countySettlement.getName(), countySettlement.getName());
-		}
 		Installation fort = findInstallation(provinceId, InstallationKind.FORT);
 		if (fort != null && fort.getName() != null && !fort.getName().isBlank()) {
 			logLocation(provinceId, "fort", fort.getName(), null);
@@ -224,29 +219,6 @@ public final class BattleNamingService {
 				path,
 				display,
 				titleId != null ? titleId : "-");
-	}
-
-	static Settlement findSettlementInCounty(int provinceId) {
-		Title title = TitleLoader.getByProvince(provinceId);
-		if (title == null || title.isComposite() || title.getProvinces() == null || title.getProvinces().isEmpty()) {
-			return null;
-		}
-		for (Faction faction : FactionManager.getCopy()) {
-			if (faction == null || faction.getSettlementHandler() == null) {
-				continue;
-			}
-			for (Settlement settlement : faction.getSettlementHandler().getAll()) {
-				if (settlement == null) {
-					continue;
-				}
-				if (title.getProvinces().contains(settlement.getCenterProvince())
-						&& settlement.getName() != null
-						&& !settlement.getName().isBlank()) {
-					return settlement;
-				}
-			}
-		}
-		return null;
 	}
 
 	private static Settlement findSettlement(int provinceId) {

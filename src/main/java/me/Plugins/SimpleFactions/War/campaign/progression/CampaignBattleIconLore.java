@@ -107,12 +107,8 @@ final class CampaignBattleIconLore {
 					total += countMilitary(subject);
 				}
 			}
-			if (participant.getAllies() != null) {
-				for (Map.Entry<Faction, Boolean> ally : participant.getAllies().entrySet()) {
-					if (Boolean.TRUE.equals(ally.getValue())) {
-						total += countMilitary(ally.getKey());
-					}
-				}
+			for (Faction secondary : participant.getJoinedSecondaries()) {
+				total += countMilitary(secondary);
 			}
 		}
 		return total;

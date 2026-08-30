@@ -390,6 +390,13 @@ public final class WarMapper {
 		for (Map.Entry<Faction, Boolean> entry : participant.getAllies().entrySet()) {
 			data.allies.put(entry.getKey().getId(), entry.getValue());
 		}
+		if (participant.getBackers() != null) {
+			for (Faction backer : participant.getBackers()) {
+				if (backer != null && backer.getId() != null) {
+					data.backers.add(backer.getId());
+				}
+			}
+		}
 		return data;
 	}
 
@@ -410,7 +417,18 @@ public final class WarMapper {
 				if (faction != null) allies.put(faction, entry.getValue());
 			}
 
-			Participant participant = new Participant(leader, subjects, allies, new HashMap<>(), participantData.civilWar);
+			List<Faction> backers = new ArrayList<>();
+			if (participantData.backers != null) {
+				for (String id : participantData.backers) {
+					Faction faction = FactionManager.getByString(id);
+					if (faction != null) {
+						backers.add(faction);
+					}
+				}
+			}
+
+			Participant participant = new Participant(
+					leader, subjects, allies, backers, new HashMap<>(), participantData.civilWar);
 			side.getMainParticipants().add(participant);
 		}
 	}
@@ -629,6 +647,8 @@ public final class WarMapper {
 		data.civilWarHostOldCapitalId = snapshot.getHostOldCapitalId();
 		data.civilWarRebelCapitalId = snapshot.getRebelCapitalId();
 		data.civilWarWantedLeaderName = snapshot.getWantedLeaderName();
+		data.civilWarRebelMainGuildOwnName = snapshot.getRebelMainGuildOwnName();
+		data.civilWarMovedTitleId = snapshot.getMovedTitleId();
 		if (snapshot.getMemberMoves() != null && !snapshot.getMemberMoves().isEmpty()) {
 			data.civilWarMemberMoves = new ArrayList<>();
 			for (CivilWarMemberMove move : snapshot.getMemberMoves()) {
@@ -650,7 +670,9 @@ public final class WarMapper {
 				&& (data.civilWarTransferredProvinces == null || data.civilWarTransferredProvinces.isEmpty())
 				&& (data.civilWarVassalEnds == null || data.civilWarVassalEnds.isEmpty())
 				&& (data.civilWarMemberMoves == null || data.civilWarMemberMoves.isEmpty())
-				&& data.civilWarWantedLeaderName == null) {
+				&& data.civilWarWantedLeaderName == null
+				&& data.civilWarRebelMainGuildOwnName == null
+				&& data.civilWarMovedTitleId == null) {
 			return null;
 		}
 		CivilWarSnapshot snapshot = new CivilWarSnapshot();
@@ -683,6 +705,8 @@ public final class WarMapper {
 		snapshot.setHostOldCapitalId(data.civilWarHostOldCapitalId);
 		snapshot.setRebelCapitalId(data.civilWarRebelCapitalId);
 		snapshot.setWantedLeaderName(data.civilWarWantedLeaderName);
+		snapshot.setRebelMainGuildOwnName(data.civilWarRebelMainGuildOwnName);
+		snapshot.setMovedTitleId(data.civilWarMovedTitleId);
 		if (data.civilWarMemberMoves != null) {
 			List<CivilWarMemberMove> moves = new ArrayList<>();
 			for (CivilWarMemberMoveData row : data.civilWarMemberMoves) {

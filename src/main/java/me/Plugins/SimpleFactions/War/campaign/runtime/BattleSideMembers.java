@@ -3,7 +3,6 @@ package me.Plugins.SimpleFactions.War.campaign.runtime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -26,10 +25,8 @@ public final class BattleSideMembers {
 			for (Faction subject : participant.getSubjects()) {
 				addFaction(subject, factions, seenIds);
 			}
-			for (Map.Entry<Faction, Boolean> allyEntry : participant.getAllies().entrySet()) {
-				if (Boolean.TRUE.equals(allyEntry.getValue())) {
-					addFaction(allyEntry.getKey(), factions, seenIds);
-				}
+			for (Faction secondary : participant.getJoinedSecondaries()) {
+				addFaction(secondary, factions, seenIds);
 			}
 		}
 		return List.copyOf(factions);

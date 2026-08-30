@@ -65,12 +65,14 @@ class WarMapperTest {
 		when(attackerParticipant.getLeader()).thenReturn(attacker);
 		when(attackerParticipant.getSubjects()).thenReturn(List.of());
 		when(attackerParticipant.getAllies()).thenReturn(new HashMap<>());
+		when(attackerParticipant.getBackers()).thenReturn(List.of());
 		when(attackerParticipant.isCivilWar()).thenReturn(false);
 
 		Participant defenderParticipant = mock(Participant.class);
 		when(defenderParticipant.getLeader()).thenReturn(defender);
 		when(defenderParticipant.getSubjects()).thenReturn(List.of());
 		when(defenderParticipant.getAllies()).thenReturn(new HashMap<>());
+		when(defenderParticipant.getBackers()).thenReturn(List.of());
 		when(defenderParticipant.isCivilWar()).thenReturn(false);
 
 		Side attackers = mock(Side.class);
@@ -163,6 +165,65 @@ class WarMapperTest {
 		assertEquals("2026-08-19T12:00:00Z", data.startedAt);
 		assertNull(data.endReason);
 		assertTrue(data.attackers.participants.get(0).warGoals.isEmpty());
+		assertTrue(data.attackers.participants.get(0).backers.isEmpty());
+	}
+
+	@Test
+	void roundTrip_participantBackers() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		Faction backer = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		when(backer.getId()).thenReturn("brume");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		FactionManager.factions.add(backer);
+		try {
+			War war = new War(42, attacker, defender);
+			war.getAttackers().getMainParticipants().get(0).addBacker(backer);
+
+			WarData data = WarMapper.toData(war);
+			assertEquals(List.of("brume"), data.attackers.participants.get(0).backers);
+
+			War restored = WarMapper.fromData(data);
+			boolean foundBacker = false;
+			for (Participant participant : restored.getAttackers().getMainParticipants()) {
+				for (Faction loaded : participant.getBackers()) {
+					if (loaded != null && "brume".equalsIgnoreCase(loaded.getId())) {
+						foundBacker = true;
+					}
+				}
+			}
+			assertTrue(foundBacker);
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+			FactionManager.factions.remove(backer);
+		}
+	}
+
+	@Test
+	void fromData_missingBackersDefaultsEmpty() {
+		Faction attacker = mock(Faction.class);
+		Faction defender = mock(Faction.class);
+		when(attacker.getId()).thenReturn("faction_a");
+		when(defender.getId()).thenReturn("faction_b");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+		try {
+			WarData data = minimalWarData();
+			data.attackers.participants.get(0).backers = null;
+
+			War war = WarMapper.fromData(data);
+			for (Participant participant : war.getAttackers().getMainParticipants()) {
+				assertNotNull(participant.getBackers());
+				assertTrue(participant.getBackers().isEmpty());
+			}
+		} finally {
+			FactionManager.factions.remove(attacker);
+			FactionManager.factions.remove(defender);
+		}
 	}
 
 	@Test

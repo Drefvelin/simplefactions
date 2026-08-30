@@ -175,10 +175,27 @@ public class WarManager {
 		}
 		if (foreignBackers != null) {
 			for (Faction backer : foreignBackers) {
-				if (backer == null) {
+				if (backer == null || backer.getId() == null) {
 					continue;
 				}
-				leaderPart.getAllies().put(backer, true);
+				if (backer.getId().equalsIgnoreCase(attacker.getId())) {
+					continue;
+				}
+				boolean extraMain = false;
+				if (extraAttackerMains != null) {
+					for (Faction extra : extraAttackerMains) {
+						if (extra != null
+								&& extra.getId() != null
+								&& extra.getId().equalsIgnoreCase(backer.getId())) {
+							extraMain = true;
+							break;
+						}
+					}
+				}
+				if (extraMain) {
+					continue;
+				}
+				leaderPart.addBacker(backer);
 			}
 		}
 		for (Participant participant : attackers.getMainParticipants()) {

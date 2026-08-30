@@ -316,7 +316,7 @@ public class Database {
 
                 GuildData gd = new GuildData();
                 gd.id = g.getId();
-                gd.name = g.getName();
+                gd.name = g.getOwnName();
                 gd.leader = g.getLeader();
                 gd.rgb = g.getRGB();
                 gd.type = g.getType().getId();

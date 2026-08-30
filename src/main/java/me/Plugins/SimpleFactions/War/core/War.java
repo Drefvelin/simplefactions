@@ -836,12 +836,12 @@ public class War {
 		for (Participant p : attackers.getMainParticipants()) {
 			if (p.getLeader().getId().equalsIgnoreCase(f.getId())) return attackers;
 			if (p.getSubjects().contains(f)) return attackers;
-			if (p.getAllies().containsKey(f) && p.getAllies().get(f)) return attackers;
+			if (p.isJoinedSecondary(f)) return attackers;
 		}
 		for (Participant p : defenders.getMainParticipants()) {
 			if (p.getLeader().getId().equalsIgnoreCase(f.getId())) return defenders;
 			if (p.getSubjects().contains(f)) return defenders;
-			if (p.getAllies().containsKey(f) && p.getAllies().get(f)) return defenders;
+			if (p.isJoinedSecondary(f)) return defenders;
 		}
 		return null;
 	}

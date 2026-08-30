@@ -261,15 +261,7 @@ public class SettlementHandler {
 
     void dissolve(Settlement s) {
         String settlementName = s.getName();
-
-        for (Guild g : faction.getGuildHandler().getGuilds()) {
-            if (s.contains(g.getCapital())) {
-                g.setCapital(-1, false);
-            }
-        }
-        if (s.contains(faction.getCapital())) {
-            faction.setCapital(-1, true, false);
-        }
+        clearCapitalsPointingAt(faction, s);
 
         byId.remove(s.getId());
         for (int p : s.getProvinces()) {
@@ -284,7 +276,53 @@ public class SettlementHandler {
         }
     }
 
+    static void clearCapitalsPointingAt(Faction owner, Settlement destroyed) {
+        if (destroyed == null) {
+            return;
+        }
+        int center = destroyed.getCenterProvince();
+        clearFactionCapitals(owner, destroyed, center);
+        if (FactionManager.factions == null) {
+            return;
+        }
+        for (Faction other : FactionManager.getCopy()) {
+            if (other == owner) {
+                continue;
+            }
+            clearFactionCapitals(other, destroyed, center);
+        }
+    }
+
+    private static void clearFactionCapitals(Faction other, Settlement destroyed, int center) {
+        if (other == null) {
+            return;
+        }
+        if (other.getGuildHandler() != null) {
+            for (Guild g : other.getGuildHandler().getGuilds()) {
+                if (g == null || g.isBase()) {
+                    continue;
+                }
+                if (pointsAtDestroyed(g.getCapital(), destroyed, center)) {
+                    g.setCapital(-1, false);
+                }
+            }
+        }
+        if (pointsAtDestroyed(other.getCapital(), destroyed, center)) {
+            other.setCapital(-1, true, false);
+        }
+    }
+
+    private static boolean pointsAtDestroyed(int capital, Settlement destroyed, int center) {
+        if (capital <= 0) {
+            return false;
+        }
+        return capital == center || destroyed.contains(capital);
+    }
+
     private void enqueueMapUpdate() {
+        if (FactionManager.getMap() == null || faction.getRGB() == null) {
+            return;
+        }
         FactionManager.getMap().enqueue("nation", faction.getRGB());
     }
 

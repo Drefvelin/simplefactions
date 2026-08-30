@@ -10,6 +10,7 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
@@ -18,6 +19,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import net.tfminecraft.VehicleFramework.Events.VFExplosionEvent;
@@ -243,7 +245,9 @@ public class BattleManager implements Listener{
 		}
 	}
 	
-	@EventHandler
+	public static final String KEEP_POUCH_METADATA = "simplefactions.keep-pouch";
+
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void playerDeath(PlayerDeathEvent e) {
 		Player p = e.getEntity();
 		if (CampaignRaidIntruderService.consumeIntruderDeath(p.getUniqueId())) {
@@ -254,6 +258,11 @@ public class BattleManager implements Listener{
 		if(!b.hasStarted()) return;
 		BattleSide s = getBySidePlayer(p);
 		if(s == null) return;
+		e.setKeepInventory(b.hasKeepInventory());
+		if (b.hasKeepInventory()) {
+			e.getDrops().clear();
+		}
+		markKeepPouch(p);
 		if (b.getBattleType() == BattleType.RAID) {
 			if (BattleTemplate.ATTACKER_SIDE.equalsIgnoreCase(s.getId())) {
 				RaidAttackerEliminationService.markOut(b, p.getUniqueId());
@@ -268,8 +277,20 @@ public class BattleManager implements Listener{
 					p.getUniqueId(), s.applyDeathAndNeedsJailRespawn());
 			BattleCasualtyLedger.recordSideCasualty(b, s);
 		}
-		e.setKeepInventory(b.hasKeepInventory());
-		e.getDrops().clear();
+	}
+
+	private static void markKeepPouch(Player player) {
+		SimpleFactions plugin = SimpleFactions.plugin;
+		if (plugin == null) {
+			return;
+		}
+		player.setMetadata(KEEP_POUCH_METADATA, new FixedMetadataValue(plugin, true));
+		new BukkitRunnable() {
+			@Override
+			public void run() {
+				player.removeMetadata(KEEP_POUCH_METADATA, plugin);
+			}
+		}.runTask(plugin);
 	}
 	
 	@EventHandler

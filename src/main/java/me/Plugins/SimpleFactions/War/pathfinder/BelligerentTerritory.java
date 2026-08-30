@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
@@ -90,10 +89,8 @@ public class BelligerentTerritory {
 		for (Faction subject : participant.getSubjects()) {
 			ids.add(normalizeId(subject.getId()));
 		}
-		for (Map.Entry<Faction, Boolean> ally : participant.getAllies().entrySet()) {
-			if (Boolean.TRUE.equals(ally.getValue())) {
-				ids.add(normalizeId(ally.getKey().getId()));
-			}
+		for (Faction secondary : participant.getJoinedSecondaries()) {
+			ids.add(normalizeId(secondary.getId()));
 		}
 	}
 

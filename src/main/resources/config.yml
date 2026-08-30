@@ -34,6 +34,7 @@ battle:
   province_leave_countdown_seconds: 10
   province_block_protection_enabled: false
   capture_min_players: 1
+  item_durability_multiplier: 0.2
   retreat_min_elapsed_seconds: 1200
   signup_reminder_seconds_before:
     - 1800

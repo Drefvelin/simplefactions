@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.HashMap;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -34,7 +33,7 @@ class CampaignBattleIconLoreTest {
 		Participant participant = mock(Participant.class);
 		when(participant.getLeader()).thenReturn(leader);
 		when(participant.getSubjects()).thenReturn(List.of());
-		when(participant.getAllies()).thenReturn(new HashMap<>());
+		when(participant.getJoinedSecondaries()).thenReturn(List.of());
 
 		Side side = mock(Side.class);
 		when(side.getMainParticipants()).thenReturn(List.of(participant));

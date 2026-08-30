@@ -10,9 +10,11 @@ import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
+import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarLandSplitService.LandSplitPlan;
@@ -49,7 +51,8 @@ public final class CivilWarUntangleService {
 		CivilWarRegimentSplitService.mergeRemaining(rebels, host);
 		relocateNonBaseGuilds(rebels, host);
 		restoreLand(host, rebels, snapshot);
-		absorbRebelMainGuild(rebels, host);
+		restoreMovedTitle(host, rebels, snapshot);
+		absorbRebelMainGuild(rebels, host, snapshot);
 		Integer oldCapital = snapshot.getHostOldCapitalId();
 		if (oldCapital != null && oldCapital > 0) {
 			host.setCapital(oldCapital, true, false);
@@ -91,7 +94,20 @@ public final class CivilWarUntangleService {
 				new LandSplitPlan(new ArrayList<>(tiles), List.of()));
 	}
 
-	private static void absorbRebelMainGuild(Faction rebels, Faction host) {
+	private static void restoreMovedTitle(Faction host, Faction rebels, CivilWarSnapshot snapshot) {
+		if (snapshot.getMovedTitleId() == null || snapshot.getMovedTitleId().isBlank()) {
+			return;
+		}
+		Title title = TitleLoader.getById(snapshot.getMovedTitleId());
+		if (title == null) {
+			return;
+		}
+		if (rebels.hasTitle(title)) {
+			CivilWarTitleMove.transfer(rebels, host, title);
+		}
+	}
+
+	private static void absorbRebelMainGuild(Faction rebels, Faction host, CivilWarSnapshot snapshot) {
 		if (rebels.getGuildHandler() == null || host.getGuildHandler() == null) {
 			return;
 		}
@@ -99,10 +115,10 @@ public final class CivilWarUntangleService {
 		if (base == null) {
 			return;
 		}
-		String ownName = base.getOwnName();
 		if (GuildLoader.getDefaultType() != null) {
 			base.convert(GuildLoader.getDefaultType());
 		}
+		String ownName = snapshot == null ? null : snapshot.getRebelMainGuildOwnName();
 		if (ownName != null && !ownName.isBlank()) {
 			base.setName(ownName);
 		}

@@ -115,6 +115,13 @@ public class WarView {
 			i.setItem(slot, creator.createSecondaryItem(player, p, w, allies.get(x), false, p.getAllies().get(allies.get(x))));
 			slots++;
 		}
+		offset += allies.size();
+		List<Faction> backers = p.getBackers();
+		for(int x = 0; x < backers.size(); x++) {
+			int slot = x+offset;
+			i.setItem(slot, creator.createSecondaryItem(player, p, w, backers.get(x), false, true, true));
+			slots++;
+		}
 		for(int x : gray) {
 			i.setItem(x, inv.getFiller(Material.GRAY_STAINED_GLASS_PANE));
 		}

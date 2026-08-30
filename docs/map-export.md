@@ -28,6 +28,7 @@ SimpleFactions exports political map data to **ProvinceSystem** via the **TFMCWe
 | `province_data` | `MapAPI/province_data.json` | Per-province trade/prosperity |
 | `guilds` | `MapAPI/guilds.json` | Guild markers |
 | `map_markers` | `MapAPI/map_markers.json` | Settlements, installations, forts, wars |
+| `infestation_data` | Infestations plugin `MapAPI/infestation_data.json` | Per-province infestation severity/group (uploaded by Infestations via `RestServer.upload`) |
 | `county` / `duchy` / `kingdom` / `empire` | `Input/*.json` | De jure title trees |
 | `queue` | `MapAPI/queue.json` | Incremental province/border change list |
 

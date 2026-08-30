@@ -50,6 +50,8 @@ public class Cache {
 	public static List<String> openMarketDefenderMustNotHave = List.of();
 	public static List<String> openMarketAttackerMustNotHave = List.of();
 	public static String openMarketApplyDefenderLaw = "";
+	public static String civilWarVassalageGroup = "vassalage";
+	public static String civilWarVassalageLaw = "inclusive";
 	public static int pillageRangeProvinces = 3;
 	public static int pillageLootDays = 10;
 	public static double pillageTradeHitPercent = -100;
@@ -100,6 +102,8 @@ public class Cache {
 	public static String battleCampaignTemplateField;
 	public static String battleCampaignTemplateSiege;
 	public static String battleCampaignTemplateRaid;
+
+	public static double battleItemDurabilityMultiplier;
 
 	public static HashMap<String, String> icons = new HashMap<>();
 

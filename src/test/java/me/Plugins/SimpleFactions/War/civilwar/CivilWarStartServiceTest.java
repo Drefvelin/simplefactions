@@ -33,6 +33,9 @@ import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Map.MapSystem;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.GuildHandler;
+import me.Plugins.SimpleFactions.Objects.Handler.LawHandler;
+import me.Plugins.SimpleFactions.laws.Law;
+import me.Plugins.SimpleFactions.laws.LawGroup;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.enums.Member;
@@ -112,6 +115,7 @@ class CivilWarStartServiceTest {
 		when(host.getInstallationHandler()).thenReturn(hostHandler);
 		when(rebels.getInstallationHandler()).thenReturn(rebelHandler);
 		when(rebels.getOrCreateMainGuild()).thenReturn(mock(Guild.class));
+		stubRebelVassalage(rebels);
 		hostHandler.acceptTransferred(new Installation("port-1", "Harbour", InstallationKind.PORT, 2, 0, 0, 1L));
 
 		War war = mock(War.class);
@@ -127,7 +131,7 @@ class CivilWarStartServiceTest {
 			gate.when(() -> CivilWarSeaPortGate.rebelsWouldHaveRequiredPort(eq(host), any()))
 					.thenReturn(true);
 			factory.when(() -> CivilWarTempRebelFactory.createFromMainGuild(eq(host), eq(rebelGuild), eq("Alice")))
-					.thenReturn(rebels);
+					.thenReturn(new Guild.RebelNation(rebels, "Gaba Gaba"));
 			wars.when(() -> WarManager.startCivilWar(
 					eq(rebels),
 					eq(host),
@@ -188,6 +192,7 @@ class CivilWarStartServiceTest {
 		when(host.getInstallationHandler()).thenReturn(hostHandler);
 		when(rebels.getInstallationHandler()).thenReturn(rebelHandler);
 		when(rebels.getOrCreateMainGuild()).thenReturn(mock(Guild.class));
+		stubRebelVassalage(rebels);
 		hostHandler.acceptTransferred(new Installation("port-1", "Harbour", InstallationKind.PORT, 2, 0, 0, 1L));
 
 		War war = mock(War.class);
@@ -205,7 +210,7 @@ class CivilWarStartServiceTest {
 			gate.when(() -> CivilWarSeaPortGate.rebelsWouldHaveRequiredPort(eq(host), any()))
 					.thenReturn(true);
 			factory.when(() -> CivilWarTempRebelFactory.createFromMainGuild(eq(host), eq(rebelGuild), eq("Alice")))
-					.thenReturn(rebels);
+					.thenReturn(new Guild.RebelNation(rebels, "Gaba Gaba"));
 			relations.when(() -> RelationManager.getOverlord(vassal)).thenReturn("host");
 			relations.when(() -> RelationManager.getOverlord(nested)).thenReturn("vassal");
 			relations.when(() -> RelationManager.endVassalage(eq(vassal), eq(host), eq(false))).thenReturn(true);
@@ -322,6 +327,7 @@ class CivilWarStartServiceTest {
 		when(host.getInstallationHandler()).thenReturn(hostHandler);
 		when(rebels.getInstallationHandler()).thenReturn(rebelHandler);
 		when(rebels.getOrCreateMainGuild()).thenReturn(mock(Guild.class));
+		stubRebelVassalage(rebels);
 
 		try (MockedStatic<CivilWarSeaPortGate> gate = mockStatic(CivilWarSeaPortGate.class);
 				MockedStatic<CivilWarTempRebelFactory> factory = mockStatic(CivilWarTempRebelFactory.class);
@@ -333,7 +339,7 @@ class CivilWarStartServiceTest {
 			gate.when(() -> CivilWarSeaPortGate.rebelsWouldHaveRequiredPort(eq(host), any()))
 					.thenReturn(true);
 			factory.when(() -> CivilWarTempRebelFactory.createFromMainGuild(eq(host), eq(rebelGuild), eq("Alice")))
-					.thenReturn(rebels);
+					.thenReturn(new Guild.RebelNation(rebels, "Gaba Gaba"));
 			wars.when(() -> WarManager.startCivilWar(
 					eq(rebels),
 					eq(host),
@@ -380,6 +386,14 @@ class CivilWarStartServiceTest {
 			assertEquals(CivilWarCopy.HOST_IS_WAR_PAYLOAD, error);
 			verify(movement, never()).setFrozen(true);
 		}
+	}
+
+	@Test
+	void applyConfiguredVassalage_setsLawFromCacheIds() {
+		Faction rebels = mock(Faction.class);
+		stubRebelVassalage(rebels);
+		assertNull(CivilWarStartService.applyConfiguredVassalage(rebels));
+		verify(rebels.getLawHandler().getGroup("vassalage")).setCurrent(org.mockito.ArgumentMatchers.any());
 	}
 
 	private static Movement baseMovement(Action action, Member leaderRelation) {
@@ -441,5 +455,15 @@ class CivilWarStartServiceTest {
 		when(type.isOverlord()).thenReturn(overlord);
 		when(relation.getType()).thenReturn(type);
 		return relation;
+	}
+
+	private static void stubRebelVassalage(Faction rebels) {
+		LawGroup group = mock(LawGroup.class);
+		Law law = mock(Law.class);
+		when(law.getScopedEffects()).thenReturn(java.util.Map.of());
+		when(group.getLaw("inclusive")).thenReturn(law);
+		LawHandler handler = mock(LawHandler.class);
+		when(handler.getGroup("vassalage")).thenReturn(group);
+		when(rebels.getLawHandler()).thenReturn(handler);
 	}
 }

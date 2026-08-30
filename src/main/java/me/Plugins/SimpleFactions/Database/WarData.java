@@ -29,6 +29,8 @@ public class WarData {
     public Integer civilWarRebelCapitalId;
     public String civilWarWantedLeaderName;
     public List<CivilWarMemberMoveData> civilWarMemberMoves;
+    public String civilWarRebelMainGuildOwnName;
+    public String civilWarMovedTitleId;
     public Integer objectiveProvinceId;
     public Integer campaignStartProvinceId;
     public List<Integer> campaignProvinces;

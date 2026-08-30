@@ -34,7 +34,7 @@ public class Side {
 		for(Participant p : participants) {
 			if(p.getLeader().getId().equalsIgnoreCase(f.getId())) return true;
 			if(p.getSubjects().contains(f)) return true;
-			if(p.getAllies().containsKey(f) && p.getAllies().get(f) == true) return true;
+			if(p.isJoinedSecondary(f)) return true;
 		}
 		return false;
 	}

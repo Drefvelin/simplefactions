@@ -24,18 +24,18 @@ public final class CivilWarTempRebelFactory {
 		return rebels;
 	}
 
-	public static Faction createFromMainGuild(Faction host, Guild main, String fallbackLeader) {
+	public static Guild.RebelNation createFromMainGuild(Faction host, Guild main, String fallbackLeader) {
 		if (main == null) {
-			return create(host, fallbackLeader);
+			Faction rebels = create(host, fallbackLeader);
+			return rebels == null ? null : new Guild.RebelNation(rebels, null);
 		}
-		Faction oldHost = main.getFaction();
-		if (oldHost != null && oldHost.getGuildHandler() != null) {
-			oldHost.getGuildHandler().removeGuild(main.getId());
+		Guild.RebelNation nation = main.rebel();
+		if (nation == null || nation.faction() == null) {
+			Faction rebels = create(host, fallbackLeader);
+			return rebels == null ? null : new Guild.RebelNation(rebels, null);
 		}
-		Faction rebels = new Faction(main);
-		applyRebelIdentity(rebels, host);
-		FactionManager.addFaction(rebels);
-		return rebels;
+		applyRebelIdentity(nation.faction(), host);
+		return nation;
 	}
 
 	static void applyRebelIdentity(Faction rebels, Faction host) {

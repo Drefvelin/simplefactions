@@ -53,6 +53,7 @@ import me.Plugins.SimpleFactions.government.movement.admin.MovementCommandManage
 import me.Plugins.SimpleFactions.government.movement.admin.MovementTabCompletion;
 import me.Plugins.SimpleFactions.War.core.WarTabCompletion;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleOutcomeService;
+import me.Plugins.SimpleFactions.War.battle.engine.core.BattleItemDurabilityListener;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleProvinceBlockProtectionListener;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleCommandManager;
@@ -117,6 +118,8 @@ public class SimpleFactions extends JavaPlugin{
 	private final CapitalMovePrompt capitalMovePrompt = new CapitalMovePrompt();
 	private final ProvincePresenceListener provincePresenceListener = new ProvincePresenceListener();
 	private final BattleManager battleManager = new BattleManager();
+	private final BattleItemDurabilityListener battleItemDurabilityListener =
+			new BattleItemDurabilityListener();
 	private final BattleProvinceBlockProtectionListener battleProvinceBlockProtectionListener =
 			new BattleProvinceBlockProtectionListener();
 	private final WarbandManager warbandManager = new WarbandManager();
@@ -302,6 +305,7 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(factionManager, this);
 		getServer().getPluginManager().registerEvents(provincePresenceListener, this);
 		getServer().getPluginManager().registerEvents(battleManager, this);
+		getServer().getPluginManager().registerEvents(battleItemDurabilityListener, this);
 		getServer().getPluginManager().registerEvents(battleProvinceBlockProtectionListener, this);
 		getServer().getPluginManager().registerEvents(warbandManager, this);
 		getServer().getPluginManager().registerEvents(warbandMembershipListener, this);

@@ -42,7 +42,7 @@
   "postBattleChoiceResolved": true,
   "holdPeaceProposalActive": false,
   "forceQuorumNextClose": false,
-  "startedAt": "2026-08-29T23:02:26.196547700Z",
+  "startedAt": "2026-08-30T09:47:00.735218200Z",
   "attackers": {
     "leader": "rebels",
     "participants": [
@@ -50,6 +50,7 @@
         "leader": "rebels",
         "subjects": [],
         "allies": {},
+        "backers": [],
         "warGoals": {},
         "civilWar": true
       }
@@ -62,6 +63,7 @@
         "leader": "host",
         "subjects": [],
         "allies": {},
+        "backers": [],
         "warGoals": {},
         "civilWar": true
       }

@@ -15,6 +15,7 @@ import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
 import me.Plugins.TLibs.TLibs;
 import me.Plugins.TLibs.Enums.APIType;
@@ -30,8 +31,8 @@ public class MilitaryCreator {
 		meta.setDisplayName(f.getName()+" §eMilitary");
 		List<String> lore = new ArrayList<String>();
 		lore.add("§7Total Soldiers: §e"+m.getManpower(true)+"/"+m.getManpower(false)+" §8(Offense/Defense)");
-		if(m.getRawTotalUpkeep() != m.getTotalUpkeep()) lore.add("§7Total Upkeep: §e"+m.getTotalUpkeep()+"d "+"§8(From §7"+m.getRawTotalUpkeep()+"§8)");
-		else lore.add("§7Total Upkeep: §e"+m.getTotalUpkeep()+"d");
+		if(m.getRawTotalUpkeep() != m.getTotalUpkeep()) lore.add("§7Total Upkeep: §e"+Formatter.formatMoney(m.getTotalUpkeep())+"d "+"§8(From §7"+Formatter.formatMoney(m.getRawTotalUpkeep())+"§8)");
+		else lore.add("§7Total Upkeep: §e"+Formatter.formatMoney(m.getTotalUpkeep())+"d");
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;
@@ -68,9 +69,9 @@ public class MilitaryCreator {
 			}
 			if(f.getModifier(FactionModifiers.MILITARY_UPKEEP) != null){
 				double mod = 1.0 + f.getModifier(FactionModifiers.MILITARY_UPKEEP).getAmount()/100.0;
-				lore.add("§7Current Upkeep: §e"+r.getTotalUpkeep()*mod+"d §7("+r.getUpkeep()*mod+"d per slot)");
+				lore.add("§7Current Upkeep: §e"+Formatter.formatMoney(r.getTotalUpkeep()*mod)+"d §7("+Formatter.formatMoney(r.getUpkeep()*mod)+"d per slot)");
 			} else {
-				lore.add("§7Current Upkeep: §e"+r.getTotalUpkeep()+"d §7("+r.getUpkeep()+"d per slot)");
+				lore.add("§7Current Upkeep: §e"+Formatter.formatMoney(r.getTotalUpkeep())+"d §7("+Formatter.formatMoney(r.getUpkeep())+"d per slot)");
 			}
 		} else {
 			int total = 0;

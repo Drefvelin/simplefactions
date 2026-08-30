@@ -106,7 +106,7 @@ class BattleNamingServiceTest {
 	}
 
 	@Test
-	void resolveLocation_countySettlementWhenExactProvinceMisses() {
+	void resolveLocation_usesCountyTitleWhenExactProvinceMisses() {
 		Settlement city = mock(Settlement.class);
 		when(city.getName()).thenReturn("Lanbury");
 		when(city.getCenterProvince()).thenReturn(41);
@@ -134,8 +134,8 @@ class BattleNamingServiceTest {
 			titles.when(() -> me.Plugins.SimpleFactions.Loaders.TitleLoader.getByProvince(44)).thenReturn(county);
 
 			BattleNamingService.LocationInfo info = BattleNamingService.resolveLocation(44);
-			assertEquals("Lanbury", info.displayName());
-			assertEquals("settlement:Lanbury", info.key());
+			assertEquals("county_44", info.displayName());
+			assertEquals("county:county_44", info.key());
 		}
 	}
 

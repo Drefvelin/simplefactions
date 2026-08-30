@@ -215,22 +215,39 @@ public class Guild {
     }
 
     public void relocate(Faction f, int newCapital) {
-        relocate(f, newCapital, null, null);
+        relocate(f, newCapital, null, null, false);
+    }
+
+    public void relocateKeepingSettlements(Faction newFaction, int newCapital) {
+        relocate(newFaction, newCapital, null, null, true);
     }
 
     public void relocate(Faction newFaction, int newCapital, Player actor, String settlementNameOpt) {
+        relocate(newFaction, newCapital, actor, settlementNameOpt, false);
+    }
+
+    public void relocate(
+            Faction newFaction,
+            int newCapital,
+            Player actor,
+            String settlementNameOpt,
+            boolean keepSettlements) {
         if(isBase()) return;
         if(newFaction.getId().equalsIgnoreCase(host.getId())) return;
         Faction oldFaction = host;
 
-        oldFaction.getGuildHandler().removeGuild(id);
+        if (keepSettlements) {
+            oldFaction.getGuildHandler().removeGuild(id, false, false);
+        } else {
+            oldFaction.getGuildHandler().removeGuild(id);
+        }
         newFaction.getGuildHandler().addGuild(this);
         this.host = newFaction;
 
         if(newCapital != -1) {
-            setCapital(newCapital);
+            setCapital(newCapital, !keepSettlements);
         } else {
-            setCapital(-1);
+            setCapital(-1, !keepSettlements);
         }
 
         if(newCapital != -1 && actor != null) {
@@ -825,6 +842,27 @@ public class Guild {
         FactionManager.addFaction(landless);
         if(subjugate) RelationManager.setRelation(null, RelationLoader.getElevationTarget(), landless, old, false);
         return landless;
+    }
+
+    public record RebelNation(Faction faction, String ownName) {}
+
+    /**
+     * Turns this guild into a new faction's main guild without dissolving its capital settlement.
+     * Land is not moved here.
+     */
+    public RebelNation rebel() {
+        if (host == null || host.getGuildHandler() == null) {
+            return null;
+        }
+        String ownName = getOwnName();
+        if (ownName == null || ownName.isBlank()) {
+            ownName = format.formatName(id);
+        }
+        host.getGuildHandler().removeGuild(id, false, false);
+        clearFavoursAndRepressions();
+        Faction rebels = new Faction(this);
+        FactionManager.addFaction(rebels);
+        return new RebelNation(rebels, ownName);
     }
 
     public Faction elevate(boolean subjugate) {

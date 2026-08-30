@@ -15,6 +15,7 @@ public class Participant {
 	private Faction leader;
 	private HashMap<Faction, Boolean> allies = new HashMap<>();
 	private List<Faction> subjects = new ArrayList<>();
+	private List<Faction> backers = new ArrayList<>();
 	
 	private HashMap<Faction, WarGoal> warGoals = new HashMap<>();
 
@@ -43,10 +44,21 @@ public class Participant {
 	}
 
 	public Participant(Faction leader, List<Faction> subjects, Map<Faction, Boolean> allies, Map<Faction, WarGoal> warGoals, boolean civilWar) {
+		this(leader, subjects, allies, List.of(), warGoals, civilWar);
+	}
+
+	public Participant(
+			Faction leader,
+			List<Faction> subjects,
+			Map<Faction, Boolean> allies,
+			List<Faction> backers,
+			Map<Faction, WarGoal> warGoals,
+			boolean civilWar) {
 		this.leader = leader;
-		this.subjects = new ArrayList<>(subjects);
-		this.allies = new HashMap<>(allies);
-		this.warGoals = new HashMap<>(warGoals);
+		this.subjects = subjects == null ? new ArrayList<>() : new ArrayList<>(subjects);
+		this.allies = allies == null ? new HashMap<>() : new HashMap<>(allies);
+		this.backers = backers == null ? new ArrayList<>() : new ArrayList<>(backers);
+		this.warGoals = warGoals == null ? new HashMap<>() : new HashMap<>(warGoals);
 		this.civilWar = civilWar;
 	}
 
@@ -100,9 +112,88 @@ public class Participant {
 		return subjects;
 	}
 	
+	public List<Faction> getBackers() {
+		return backers;
+	}
+
+	public boolean isJoinedSecondary(Faction faction) {
+		if (faction == null || faction.getId() == null) {
+			return false;
+		}
+		String id = faction.getId();
+		Boolean joinedAlly = allies.get(faction);
+		if (Boolean.TRUE.equals(joinedAlly)) {
+			return true;
+		}
+		for (Map.Entry<Faction, Boolean> entry : allies.entrySet()) {
+			if (entry.getKey() != null
+					&& entry.getKey().getId() != null
+					&& entry.getKey().getId().equalsIgnoreCase(id)
+					&& Boolean.TRUE.equals(entry.getValue())) {
+				return true;
+			}
+		}
+		return containsBacker(id);
+	}
+
+	public List<Faction> getJoinedSecondaries() {
+		List<Faction> joined = new ArrayList<>();
+		for (Map.Entry<Faction, Boolean> entry : allies.entrySet()) {
+			if (Boolean.TRUE.equals(entry.getValue()) && entry.getKey() != null) {
+				joined.add(entry.getKey());
+			}
+		}
+		for (Faction backer : backers) {
+			if (backer == null || backer.getId() == null) {
+				continue;
+			}
+			boolean already = false;
+			for (Faction existing : joined) {
+				if (existing.getId() != null && existing.getId().equalsIgnoreCase(backer.getId())) {
+					already = true;
+					break;
+				}
+			}
+			if (!already) {
+				joined.add(backer);
+			}
+		}
+		return joined;
+	}
+
+	public boolean addBacker(Faction backer) {
+		if (backer == null || backer.getId() == null) {
+			return false;
+		}
+		if (leader != null && leader.getId() != null && leader.getId().equalsIgnoreCase(backer.getId())) {
+			return false;
+		}
+		if (containsBacker(backer.getId())) {
+			return false;
+		}
+		backers.add(backer);
+		return true;
+	}
+
+	private boolean containsBacker(String factionId) {
+		if (factionId == null) {
+			return false;
+		}
+		for (Faction backer : backers) {
+			if (backer != null && backer.getId() != null && backer.getId().equalsIgnoreCase(factionId)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public void clean(Faction f) {
 		if(subjects.contains(f)) subjects.remove(f);
 		if(allies.containsKey(f)) allies.remove(f);
+		backers.remove(f);
+		if (f != null && f.getId() != null) {
+			backers.removeIf(backer -> backer != null && backer.getId() != null && backer.getId().equalsIgnoreCase(f.getId()));
+		}
 	}
 	
 	public boolean hasWarGoal(Faction f) {
@@ -130,9 +221,7 @@ public class Participant {
 		List<Faction> list = new ArrayList<>();
 		list.add(leader);
 		list.addAll(subjects);
-		for(Map.Entry<Faction, Boolean> entry : allies.entrySet()) {
-			if(entry.getValue()) list.add(entry.getKey());
-		}
+		list.addAll(getJoinedSecondaries());
 		return list;
 	}
 }

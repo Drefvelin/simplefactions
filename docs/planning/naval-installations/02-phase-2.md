@@ -58,6 +58,10 @@ Per-province trade presence of supporting **host** guilds vs loyal **host** guil
 - Rebels and loyalists each need at least one province. One-province host: block **host guilds** from starting or joining movements. Vassals may still start independence.
 - Sea crossing between capitals: dry-run the split. If rebels would get **no port on that water**, **refuse**. No gifted coastal tile, no fake port.
 
+Host rebel guilds become a temp nation via `Guild.rebel()`: detach without dissolving the capital settlement, then land split transfers the city. Snapshot the guild's own name at rebel time; restore uses that field only. Temp rebels get vassalage law from `war.yml` (`civil_war.vassalage_group` / `vassalage_law`). After the split, move (do not copy) the highest holdable title the rebel capital sits in, except the loyalists' primary title; restore moves it back.
+
+Campaign field names use a settlement only when the fight province **is** that city's center. Neighbor cities in the same county are not used.
+
 Camps and capital moves (settlement / fort / port / airport / generated camp) are snapshotted and reverted. Details when implementing, not a second settlement engine.
 
 ---

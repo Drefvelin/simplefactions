@@ -141,6 +141,44 @@ class ConfigLoaderBattlePresenceTest {
 		assertTrue(Cache.battleProvinceBlockProtectionEnabled);
 	}
 
+	@Test
+	void loadConfig_defaultItemDurabilityMultiplier() throws IOException {
+		Path file = writeConfig("""
+				battle:
+				  province_poll_interval_ticks: 20
+				""");
+
+		new ConfigLoader().loadConfig(file.toFile());
+
+		assertEquals(0.2, Cache.battleItemDurabilityMultiplier);
+	}
+
+	@Test
+	void loadConfig_clampsItemDurabilityMultiplier() throws IOException {
+		Path file = writeConfig("""
+				battle:
+				  province_poll_interval_ticks: 20
+				  item_durability_multiplier: 1.8
+				""");
+
+		new ConfigLoader().loadConfig(file.toFile());
+
+		assertEquals(1.0, Cache.battleItemDurabilityMultiplier);
+	}
+
+	@Test
+	void loadConfig_clampsNegativeItemDurabilityMultiplier() throws IOException {
+		Path file = writeConfig("""
+				battle:
+				  province_poll_interval_ticks: 20
+				  item_durability_multiplier: -0.5
+				""");
+
+		new ConfigLoader().loadConfig(file.toFile());
+
+		assertEquals(0.0, Cache.battleItemDurabilityMultiplier);
+	}
+
 	private Path writeConfig(String yaml) throws IOException {
 		Path file = tempDir.resolve("config.yml");
 		Files.writeString(file, yaml);

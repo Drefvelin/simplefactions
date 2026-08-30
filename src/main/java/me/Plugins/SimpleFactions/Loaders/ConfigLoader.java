@@ -62,6 +62,8 @@ public class ConfigLoader {
 		Cache.battleCampaignTemplateField = config.getString("battle.campaign_template.field", "field_default");
 		Cache.battleCampaignTemplateSiege = config.getString("battle.campaign_template.siege", "siege_default");
 		Cache.battleCampaignTemplateRaid = config.getString("battle.campaign_template.raid", "raid_template");
+		Cache.battleItemDurabilityMultiplier = clampUnit(
+				config.getDouble("battle.item_durability_multiplier", 0.2));
 		validateBattlePresenceConfig();
 		validateBattleTemplateDefaultsConfig();
 
@@ -143,6 +145,8 @@ public class ConfigLoader {
 		Cache.openMarketDefenderMustNotHave = warGoalStringList(config, "defender_must_not_have");
 		Cache.openMarketAttackerMustNotHave = warGoalStringList(config, "attacker_must_not_have");
 		Cache.openMarketApplyDefenderLaw = warGoalString(config, "apply_defender_law");
+		Cache.civilWarVassalageGroup = config.getString("war.civil_war.vassalage_group", "vassalage");
+		Cache.civilWarVassalageLaw = config.getString("war.civil_war.vassalage_law", "inclusive");
 		Cache.pillageRangeProvinces = pillageInt(config, "range_provinces", 3);
 		Cache.pillageLootDays = pillageInt(config, "loot_days", 10);
 		Cache.pillageTradeHitPercent = pillageDouble(config, "trade_hit_percent", -100);
@@ -315,6 +319,16 @@ public class ConfigLoader {
 		}
 		offsets.sort(Collections.reverseOrder());
 		return offsets;
+	}
+
+	static double clampUnit(double value) {
+		if (value < 0.0) {
+			return 0.0;
+		}
+		if (value > 1.0) {
+			return 1.0;
+		}
+		return value;
 	}
 
 	private static int pillageInt(FileConfiguration config, String key, int defaultValue) {
