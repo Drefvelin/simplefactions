@@ -76,12 +76,19 @@ import me.Plugins.SimpleFactions.vehicles.VehicleIntegrationListener;
 import me.Plugins.SimpleFactions.vehicles.VehicleRegistryClaimListener;
 import me.Plugins.SimpleFactions.vehicles.VehicleRegistryClaimService;
 import me.Plugins.SimpleFactions.vehicles.VehicleRegistryPersistence;
+import me.Plugins.SimpleFactions.vehicles.VehicleMaintenanceDecayTask;
+import me.Plugins.SimpleFactions.vehicles.VehicleMaintenancePayListener;
+import me.Plugins.SimpleFactions.vehicles.VehicleMaintenancePayService;
+import me.Plugins.SimpleFactions.vehicles.VehicleMaintenancePaySessionManager;
+import me.Plugins.SimpleFactions.vehicles.VehicleMaintenancePersistence;
+import me.Plugins.SimpleFactions.vehicles.VehicleMaintenanceRepairListener;
+import me.Plugins.SimpleFactions.vehicles.VehicleMaintenanceStore;
 import me.Plugins.SimpleFactions.vehicles.VehicleSpawnListener;
 import me.Plugins.SimpleFactions.vehicles.VehicleTransferConsentService;
 import me.Plugins.SimpleFactions.vehicles.VehicleTransferListener;
-import me.Plugins.SimpleFactions.vehicles.VehicleTransferSession;
 import me.Plugins.SimpleFactions.vehicles.VehicleTransferSessionManager;
 import me.Plugins.SimpleFactions.vehicles.VehicleUpkeepService;
+import me.Plugins.SimpleFactions.vehicles.DenarEconomyPlayerBank;
 import me.Plugins.SimpleFactions.player.PlayerEconomyManager;
 
 public class SimpleFactions extends JavaPlugin{
@@ -146,6 +153,10 @@ public class SimpleFactions extends JavaPlugin{
 			new InstallationVehicleUnberthService(vehicleRegistry);
 	private final VehicleTransferSessionManager vehicleTransferSessionManager =
 			new VehicleTransferSessionManager();
+	private final VehicleMaintenancePaySessionManager vehicleMaintenancePaySessionManager =
+			new VehicleMaintenancePaySessionManager();
+	private final VehicleMaintenanceStore vehicleMaintenanceStore = new VehicleMaintenanceStore();
+	private VehicleMaintenancePersistence vehicleMaintenancePersistence;
 	private final VehicleTransferConsentService vehicleTransferConsentService =
 			new VehicleTransferConsentService(
 					installationVehicleService,
@@ -165,11 +176,24 @@ public class SimpleFactions extends JavaPlugin{
 			new VehicleSpawnListener(installationVehicleOwnerSync);
 	private final BattleVehicleEligibilityListener battleVehicleEligibilityListener =
 			new BattleVehicleEligibilityListener(vehicleRegistry);
+	private final VehicleMaintenancePayService vehicleMaintenancePayService =
+			new VehicleMaintenancePayService(vehicleMaintenanceStore, DenarEconomyPlayerBank.INSTANCE);
+	private final VehicleMaintenanceRepairListener vehicleMaintenanceRepairListener =
+			new VehicleMaintenanceRepairListener(vehicleMaintenanceStore);
+	private final VehicleMaintenancePayListener vehicleMaintenancePayListener =
+			new VehicleMaintenancePayListener(
+					vehicleMaintenancePaySessionManager,
+					vehicleMaintenancePayService);
 	private boolean vehicleIntegrationRegistered = false;
 	private final PlayerEconomyManager playerEconomyManager = new PlayerEconomyManager();
 	private final VehicleUpkeepService vehicleUpkeepService = new VehicleUpkeepService(
 		vehicleRegistry,
-		playerEconomyManager);
+		playerEconomyManager,
+		DenarEconomyPlayerBank.INSTANCE,
+		vehicleMaintenanceStore,
+		me.Plugins.SimpleFactions.vehicles.VehicleFrameworkDecayApi.INSTANCE);
+	private final VehicleMaintenanceDecayTask vehicleMaintenanceDecayTask =
+			new VehicleMaintenanceDecayTask();
 	
 	@Override
 	public void onEnable() {
@@ -184,6 +208,10 @@ public class SimpleFactions extends JavaPlugin{
 			new File(getDataFolder(), "Cache"),
 			vehicleRegistry);
 		vehicleRegistryPersistence.load();
+		vehicleMaintenancePersistence = new VehicleMaintenancePersistence(
+			new File(getDataFolder(), "Cache"),
+			vehicleMaintenanceStore);
+		vehicleMaintenancePersistence.load();
 		registerVehicleIntegrationHooks();
 		if (Cache.mapEnabled && !getServer().getPluginManager().isPluginEnabled("TFMCWeb")) {
 			getLogger().severe(
@@ -251,9 +279,11 @@ public class SimpleFactions extends JavaPlugin{
 		provinceSnapshot = provinceManager.createSnapshotShell();
 		provinceManager.recalculate();
 		inventoryManager.start();
+		vehicleMaintenanceDecayTask.start();
 	}
 	@Override
 	public void onDisable() {
+		vehicleMaintenanceDecayTask.stop();
 		CampaignViewRefreshService.stop();
 		BattleManager.shutdown();
 		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.stopAutosave();
@@ -268,6 +298,9 @@ public class SimpleFactions extends JavaPlugin{
 		}
 		if (vehicleRegistryPersistence != null) {
 			vehicleRegistryPersistence.save();
+		}
+		if (vehicleMaintenancePersistence != null) {
+			vehicleMaintenancePersistence.save();
 		}
 	}
 	public void loadConfigs() {
@@ -405,6 +438,14 @@ public class SimpleFactions extends JavaPlugin{
 		return vehicleTransferSessionManager;
 	}
 
+	public VehicleMaintenancePaySessionManager getVehicleMaintenancePaySessionManager() {
+		return vehicleMaintenancePaySessionManager;
+	}
+
+	public VehicleMaintenanceStore getVehicleMaintenanceStore() {
+		return vehicleMaintenanceStore;
+	}
+
 	public VehicleTransferConsentService getVehicleTransferConsentService() {
 		return vehicleTransferConsentService;
 	}
@@ -424,6 +465,9 @@ public class SimpleFactions extends JavaPlugin{
 	public void saveVehicleRegistry() {
 		if (vehicleRegistryPersistence != null) {
 			vehicleRegistryPersistence.save();
+		}
+		if (vehicleMaintenancePersistence != null) {
+			vehicleMaintenancePersistence.save();
 		}
 	}
 
@@ -450,6 +494,8 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(vehicleIntegrationListener, this);
 		getServer().getPluginManager().registerEvents(vehicleRegistryClaimListener, this);
 		getServer().getPluginManager().registerEvents(vehicleTransferListener, this);
+		getServer().getPluginManager().registerEvents(vehicleMaintenancePayListener, this);
+		getServer().getPluginManager().registerEvents(vehicleMaintenanceRepairListener, this);
 		getServer().getPluginManager().registerEvents(vehicleSpawnListener, this);
 		getServer().getPluginManager().registerEvents(battleVehicleEligibilityListener, this);
 		vehicleIntegrationRegistered = true;

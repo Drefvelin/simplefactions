@@ -187,7 +187,7 @@ class VehicleTransferMessagesTest {
     void noPendingSession_usesLockedCopy() {
         String message = VehicleTransferMessages.noPendingSession();
         assertEquals(
-                "§cYou are not transferring a vehicle. Use /faction transfervehicle <id>.",
+                "§cYou are not transferring a vehicle. Use /faction vehicle transfer <id>.",
                 message);
         assertFalse(message.contains("—"));
     }

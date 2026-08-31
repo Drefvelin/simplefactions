@@ -1,5 +1,4 @@
 package me.Plugins.SimpleFactions.Managers;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 
@@ -42,6 +41,7 @@ import me.Plugins.SimpleFactions.laws.LawGroup;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
+import me.Plugins.SimpleFactions.vehicles.VehicleCommandRoute;
 import net.tfminecraft.DenarEconomy.Data.Account;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
 
@@ -542,36 +542,27 @@ public class CommandManager implements Listener, CommandExecutor{
 				inv.confirmView(p, f, "installation", id);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("vehicle")) {
+				if(VehicleCommandRoute.isMaintenancePay(args)) {
+					me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.armMaintenancePay(p);
+					return true;
+				}
+				String transferId = me.Plugins.SimpleFactions.vehicles.VehicleCommandRoute.transferInstallationId(args);
+				if(transferId != null) {
+					me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.armTransfer(
+							p, transferId.isBlank() ? null : transferId);
+					return true;
+				}
+				if(args.length >= 2 && args[1].equalsIgnoreCase("maintenance")) {
+					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleMaintenanceMessages.payUsage());
+					return true;
+				}
+				p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleMaintenanceMessages.vehicleUsage());
+				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("transfervehicle")) {
-				Faction f = FactionManager.getByLeader(p.getName());
-				if(f == null) {
-					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleTransferMessages.notLeader());
-					return true;
-				}
-				if(args.length < 2) {
-					p.sendMessage("§cUsage: §e/faction transfervehicle <installation id>");
-					return true;
-				}
-				String id = args[1];
-				var installation = f.getInstallationHandler().getById(id);
-				if(installation == null) {
-					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleTransferMessages.unknownInstallation());
-					return true;
-				}
-				if(!Permissions.isAdmin(p)
-						&& me.Plugins.SimpleFactions.vehicles.VehicleInstallationLockService.isVehicleLocked(
-								installation.getId(), Instant.now())) {
-					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleInstallationLockService.BERTH_BLOCKED);
-					return true;
-				}
-				long timeoutMillis = me.Plugins.SimpleFactions.Loaders.InstallationConfigLoader
-						.getTransferRequestTimeoutSeconds() * 1000L;
-				SimpleFactions.getInstance().getVehicleTransferSessionManager().put(
-						p.getUniqueId(),
-						new me.Plugins.SimpleFactions.vehicles.VehicleTransferSession(
-								installation.getId(),
-								System.currentTimeMillis() + timeoutMillis));
-				p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleTransferMessages.commandArmed(installation));
+				String transferId = me.Plugins.SimpleFactions.vehicles.VehicleCommandRoute.transferInstallationId(args);
+				me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.armTransfer(
+						p, transferId == null || transferId.isBlank() ? null : transferId);
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("findvehicles")) {
 				Faction f = FactionManager.getByLeader(p.getName());

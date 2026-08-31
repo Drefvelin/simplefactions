@@ -15,23 +15,35 @@ public final class VehicleUpkeepService {
     private final PlayerVehicleRegistry registry;
     private final PlayerEconomyManager economyManager;
     private final PlayerBank playerBank;
+    private final VehicleMaintenanceStore maintenanceStore;
+    private final VehicleHealthDecayApi decayApi;
 
     public VehicleUpkeepService(
             PlayerVehicleRegistry registry,
             PlayerEconomyManager economyManager) {
-        this(registry, economyManager, DenarEconomyPlayerBank.INSTANCE);
+        this(
+                registry,
+                economyManager,
+                DenarEconomyPlayerBank.INSTANCE,
+                new VehicleMaintenanceStore(),
+                VehicleFrameworkDecayApi.INSTANCE);
     }
 
     public VehicleUpkeepService(
             PlayerVehicleRegistry registry,
             PlayerEconomyManager economyManager,
-            PlayerBank playerBank) {
+            PlayerBank playerBank,
+            VehicleMaintenanceStore maintenanceStore,
+            VehicleHealthDecayApi decayApi) {
         this.registry = registry;
         this.economyManager = economyManager;
         this.playerBank = playerBank;
+        this.maintenanceStore = maintenanceStore;
+        this.decayApi = decayApi;
     }
 
     public void processDailyUpkeep() {
+        long now = System.currentTimeMillis();
         for (OwnedVehicleSummary vehicle : VehicleOwnershipQueries.allPersonalVehicles(registry)) {
             double upkeep = VehiclesConfigLoader.getUpkeep(vehicle.getTypeId());
             if (upkeep <= 0.0) {
@@ -42,15 +54,30 @@ public final class VehicleUpkeepService {
             if (playerUuid == null) {
                 continue;
             }
-            chargePlayer(playerUuid, upkeep, vehicle.getTypeId());
+            chargePlayer(playerUuid, upkeep, vehicle.getTypeId(), vehicle.getUuid(), now);
         }
     }
 
-    private void chargePlayer(UUID playerUuid, double upkeep, String vehicleTypeId) {
+    public void tickHourlyDecay() {
+        double fraction = VehiclesConfigLoader.getMaintenanceHourlyDamageFraction();
+        double minHealth = VehiclesConfigLoader.getMaintenanceMinHealthFraction();
+        for (String uuid : maintenanceStore.unpaidUuids()) {
+            decayApi.unloadedDamage(uuid, fraction, minHealth);
+        }
+    }
+
+    private void chargePlayer(
+            UUID playerUuid,
+            double upkeep,
+            String vehicleTypeId,
+            String vehicleUuid,
+            long nowMillis) {
         if (playerUuid == null || upkeep <= 0.0) {
             return;
         }
         if (!playerBank.withdrawFromBank(playerUuid, upkeep)) {
+            maintenanceStore.markUnpaid(vehicleUuid, nowMillis);
+            persistMaintenance();
             SimpleFactions plugin = SimpleFactions.getInstance();
             if (plugin != null) {
                 plugin.getLogger().info(
@@ -76,5 +103,14 @@ public final class VehicleUpkeepService {
             return;
         }
         economyManager.getLedger(playerUuid).add(PlayerCashflow.VEHICLE_UPKEEP, -upkeep);
+        maintenanceStore.clearUnpaid(vehicleUuid);
+        persistMaintenance();
+    }
+
+    private void persistMaintenance() {
+        SimpleFactions plugin = SimpleFactions.getInstance();
+        if (plugin != null) {
+            plugin.saveVehicleRegistry();
+        }
     }
 }

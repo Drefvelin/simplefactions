@@ -45,7 +45,7 @@ public final class VehicleTransferMessages {
     }
 
     public static String noPendingSession() {
-        return "§cYou are not transferring a vehicle. Use /faction transfervehicle <id>.";
+        return "§cYou are not transferring a vehicle. Use /faction vehicle transfer <id>.";
     }
 
     public static String berthSuccess(Installation installation) {

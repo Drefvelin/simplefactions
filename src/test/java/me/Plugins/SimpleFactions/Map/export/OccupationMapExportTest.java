@@ -49,6 +49,19 @@ class OccupationMapExportTest {
 	}
 
 	@Test
+	void occupierByProvince_skipsWhenOccupierIsDeJureOwner() {
+		War war = campaignWar(1);
+		war.setOccupiedByAttacker(new ArrayList<>(List.of(10, 20)));
+
+		Map<Integer, String> occupiers = OccupationMapExport.occupierByProvince(
+				List.of(war),
+				pid -> pid == 10 ? attacker : defender);
+
+		assertFalse(occupiers.containsKey(10));
+		assertEquals("atk", occupiers.get(20));
+	}
+
+	@Test
 	void occupierByProvince_skipsRaids() {
 		War raid = campaignWar(1);
 		raid.setWarType(WarType.RAID);

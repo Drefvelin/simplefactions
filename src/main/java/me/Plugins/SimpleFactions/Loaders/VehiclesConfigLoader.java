@@ -20,6 +20,9 @@ import me.Plugins.SimpleFactions.vehicles.VehicleTypeConfig;
 public final class VehiclesConfigLoader {
     private static int personalSlotLimit = 1;
     private static int defaultPerPerson = 1;
+    private static int maintenanceHourlyDamagePercent = 20;
+    private static int maintenanceMinHealthPercent = 3;
+    private static long maintenanceIntervalTicks = 72000L;
     private static Set<String> categoryIds = Set.of();
     private static Map<String, Map<String, VehicleTypeConfig>> typesByCategory = Map.of();
     private static Map<String, String> categoryByVehicleTypeId = Map.of();
@@ -49,6 +52,19 @@ public final class VehiclesConfigLoader {
         double defaultUpkeep = hasDefaultUpkeep ? config.getDouble("default-upkeep") : 0.0;
         if (hasDefaultUpkeep && defaultUpkeep < 0) {
             fail("vehicles.yml default-upkeep must be >= 0");
+        }
+
+        maintenanceHourlyDamagePercent = config.getInt("maintenance-hourly-damage-percent", 20);
+        if (maintenanceHourlyDamagePercent < 0 || maintenanceHourlyDamagePercent > 100) {
+            fail("vehicles.yml maintenance-hourly-damage-percent must be between 0 and 100");
+        }
+        maintenanceMinHealthPercent = config.getInt("maintenance-min-health-percent", 3);
+        if (maintenanceMinHealthPercent < 0 || maintenanceMinHealthPercent > 100) {
+            fail("vehicles.yml maintenance-min-health-percent must be between 0 and 100");
+        }
+        maintenanceIntervalTicks = config.getLong("maintenance-interval-ticks", 72000L);
+        if (maintenanceIntervalTicks < 1L) {
+            fail("vehicles.yml maintenance-interval-ticks must be >= 1");
         }
 
         if (config.isConfigurationSection("upkeep")) {
@@ -129,6 +145,26 @@ public final class VehiclesConfigLoader {
 
     public static int getPersonalSlotLimit() {
         return personalSlotLimit;
+    }
+
+    public static int getMaintenanceHourlyDamagePercent() {
+        return maintenanceHourlyDamagePercent;
+    }
+
+    public static int getMaintenanceMinHealthPercent() {
+        return maintenanceMinHealthPercent;
+    }
+
+    public static long getMaintenanceIntervalTicks() {
+        return maintenanceIntervalTicks;
+    }
+
+    public static double getMaintenanceHourlyDamageFraction() {
+        return maintenanceHourlyDamagePercent / 100.0;
+    }
+
+    public static double getMaintenanceMinHealthFraction() {
+        return maintenanceMinHealthPercent / 100.0;
     }
 
     public static int getDefaultPerPerson() {

@@ -44,14 +44,14 @@ public class TabCompletion implements TabCompleter{
 	}
 
 	private List<String> completeDeconstructIds(Player p, String[] args) {
-		return completeInstallationIds(p, args, true);
+		return completeInstallationIds(p, args.length >= 2 ? args[1] : "", true);
 	}
 
 	private List<String> completeTransferVehicleIds(Player p, String[] args) {
-		return completeInstallationIds(p, args, false);
+		return completeInstallationIds(p, args.length >= 2 ? args[1] : "", false);
 	}
 
-	private List<String> completeInstallationIds(Player p, String[] args, boolean includePendingConstruction) {
+	private List<String> completeInstallationIds(Player p, String prefix, boolean includePendingConstruction) {
 		List<String> completions = new ArrayList<>();
 		Faction f = FactionManager.getByLeader(p.getName());
 		if (f == null) {
@@ -63,11 +63,7 @@ public class TabCompletion implements TabCompleter{
 		if (includePendingConstruction && f.getInstallationHandler().getPendingConstruction() != null) {
 			completions.add(f.getInstallationHandler().getPendingConstruction().getId());
 		}
-		if (args.length >= 2) {
-			String prefix = args[1].toLowerCase();
-			completions.removeIf(id -> !id.toLowerCase().startsWith(prefix));
-		}
-		return completions;
+		return me.Plugins.SimpleFactions.vehicles.VehicleTabCompletions.filter(completions, prefix);
 	}
 
     @Override
@@ -120,6 +116,23 @@ public class TabCompletion implements TabCompleter{
 		}
 		else if(cmd.getName().equalsIgnoreCase("faction")
 				&& args.length >= 1
+				&& args[0].equalsIgnoreCase("vehicle")) {
+			if(sender instanceof Player) {
+				Player p = (Player) sender;
+				if(args.length <= 2) {
+					return me.Plugins.SimpleFactions.vehicles.VehicleTabCompletions.subcommands(
+							args.length >= 2 ? args[1] : "");
+				}
+				if(args.length == 3 && args[1].equalsIgnoreCase("transfer")) {
+					return completeInstallationIds(p, args[2], false);
+				}
+				if(args.length == 3 && args[1].equalsIgnoreCase("maintenance")) {
+					return me.Plugins.SimpleFactions.vehicles.VehicleTabCompletions.maintenanceActions(args[2]);
+				}
+			}
+		}
+		else if(cmd.getName().equalsIgnoreCase("faction")
+				&& args.length >= 1
 				&& args.length <= 2
 				&& args[0].equalsIgnoreCase("transfervehicle")) {
 			if(sender instanceof Player) {
@@ -150,6 +163,7 @@ public class TabCompletion implements TabCompleter{
 					completions.add("claim");
 					completions.add("construct");
 					completions.add("deconstruct");
+					completions.add("vehicle");
 					completions.add("transfervehicle");
 					completions.add("findvehicles");
 					completions.add("unclaim");

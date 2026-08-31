@@ -1,6 +1,8 @@
 package me.Plugins.SimpleFactions.vehicles;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -8,7 +10,9 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -29,6 +33,8 @@ class VehicleUpkeepServiceTest {
     private PlayerVehicleRegistry registry;
     private PlayerEconomyManager economyManager;
     private TestPlayerBank bank;
+    private VehicleMaintenanceStore store;
+    private RecordingDecayApi decayApi;
     private VehicleUpkeepService service;
 
     @BeforeEach
@@ -51,7 +57,9 @@ class VehicleUpkeepServiceTest {
         registry = new PlayerVehicleRegistry();
         economyManager = new PlayerEconomyManager();
         bank = new TestPlayerBank();
-        service = new VehicleUpkeepService(registry, economyManager, bank);
+        store = new VehicleMaintenanceStore();
+        decayApi = new RecordingDecayApi();
+        service = new VehicleUpkeepService(registry, economyManager, bank, store, decayApi);
         VehicleOwnershipQueries.setSourceForTests(new FakeOwnedInventory());
     }
 
@@ -78,6 +86,7 @@ class VehicleUpkeepServiceTest {
 
         assertEquals(80.0, bank.getBankBalance(playerUuid));
         assertEquals(-20.0, economyManager.getLedger(playerUuid).getAmount(PlayerCashflow.VEHICLE_UPKEEP));
+        assertFalse(store.isUnpaid("vehicle-1"));
     }
 
     @Test
@@ -93,6 +102,32 @@ class VehicleUpkeepServiceTest {
 
         assertEquals(10.0, bank.getBankBalance(playerUuid));
         assertEquals(0.0, economyManager.getLedger(playerUuid).getAmount(PlayerCashflow.VEHICLE_UPKEEP));
+        assertTrue(store.isUnpaid("vehicle-1"));
+    }
+
+    @Test
+    void successfulUpkeepClearsExistingUnpaid() {
+        UUID playerUuid = UUID.randomUUID();
+        bank.setBalance(playerUuid, 100.0);
+        store.markUnpaid("vehicle-1", 1L);
+        VehicleOwnershipQueries.setSourceForTests(
+                new FakeOwnedInventory().add("vehicle-1", "ironclad", "player_Alice"));
+
+        try (MockedStatic<Bukkit> bukkit = mockBukkit("Alice", playerUuid)) {
+            service.processDailyUpkeep();
+        }
+
+        assertFalse(store.isUnpaid("vehicle-1"));
+    }
+
+    @Test
+    void hourlyDecayDamagesUnpaidVehicles() {
+        store.markUnpaid("vehicle-1", 1L);
+        service.tickHourlyDecay();
+        assertEquals(1, decayApi.calls.size());
+        assertEquals("vehicle-1", decayApi.calls.get(0).uuid);
+        assertEquals(0.20, decayApi.calls.get(0).fractionOfMax);
+        assertEquals(0.03, decayApi.calls.get(0).minHealthFraction);
     }
 
     @Test
@@ -115,6 +150,7 @@ class VehicleUpkeepServiceTest {
 
         assertEquals(100.0, bank.getBankBalance(playerUuid));
         assertEquals(0.0, economyManager.getLedger(playerUuid).getNetDaily());
+        assertFalse(store.isUnpaid("vehicle-1"));
     }
 
     private static MockedStatic<Bukkit> mockBukkit(String playerName, UUID playerUuid) {
@@ -127,6 +163,28 @@ class VehicleUpkeepServiceTest {
         bukkit.when(() -> Bukkit.getOfflinePlayer(playerName)).thenReturn(offline);
         bukkit.when(() -> Bukkit.getPlayer(playerUuid)).thenReturn(null);
         return bukkit;
+    }
+
+    private static final class RecordingDecayApi implements VehicleHealthDecayApi {
+        private final List<DecayCall> calls = new ArrayList<>();
+
+        @Override
+        public boolean unloadedDamage(String vehicleUuid, double fractionOfMax, double minHealthFraction) {
+            calls.add(new DecayCall(vehicleUuid, fractionOfMax, minHealthFraction));
+            return true;
+        }
+    }
+
+    private static final class DecayCall {
+        private final String uuid;
+        private final double fractionOfMax;
+        private final double minHealthFraction;
+
+        private DecayCall(String uuid, double fractionOfMax, double minHealthFraction) {
+            this.uuid = uuid;
+            this.fractionOfMax = fractionOfMax;
+            this.minHealthFraction = minHealthFraction;
+        }
     }
 
     private static final class TestPlayerBank implements PlayerBank {

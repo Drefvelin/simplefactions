@@ -86,6 +86,23 @@ class OccupationServiceTest {
 	}
 
 	@Test
+	void computeOccupationZone_skipsOwnCampaignLineNeighbor() {
+		Province battle = province(20, Terrain.PLAINS);
+		Province ownOnLine = province(10, Terrain.PLAINS);
+		link(battle, ownOnLine);
+		pm.start(Map.of(10, ownOnLine, 20, battle));
+
+		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+			titleManager.when(() -> TitleManager.getByProvince(10)).thenReturn(attacker);
+			titleManager.when(() -> TitleManager.getByProvince(20)).thenReturn(defender);
+			War war = baseWar(List.of(5, 10, 20, 30));
+			assertEquals(
+					List.of(20),
+					service.computeOccupationZone(war, 20, BelligerentRole.ATTACKER).provinceIds());
+		}
+	}
+
+	@Test
 	void computeOccupationZone_includesExistingOccupationNeighbor() {
 		Province battle = province(10, Terrain.PLAINS);
 		Province occupiedNeighbor = province(99, Terrain.PLAINS);
@@ -143,38 +160,38 @@ class OccupationServiceTest {
 			stubOwnership(titleManager, battle, onLine);
 			War war = baseWar(List.of(5, 10, 20, 30));
 			assertTrue(service.applyBattleWin(war, 10, BelligerentRole.ATTACKER));
-			assertEquals(List.of(10, 20), war.getOccupiedByAttacker());
-			assertEquals(List.of(10, 20), war.getLastBattleOccupied());
+			assertEquals(List.of(20), war.getOccupiedByAttacker());
+			assertEquals(List.of(20), war.getLastBattleOccupied());
 			assertTrue(war.getOccupiedByDefender().isEmpty());
 		}
 	}
 
 	@Test
 	void applyBattleWin_defender_mergesIntoDefenderOccupation() {
-		Province battle = province(20, Terrain.PLAINS);
-		pm.start(Map.of(20, battle));
+		Province battle = province(10, Terrain.PLAINS);
+		pm.start(Map.of(10, battle));
 
 		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
 			stubOwnership(titleManager, battle);
 			War war = baseWar(List.of(5, 10, 20, 30));
-			assertTrue(service.applyBattleWin(war, 20, BelligerentRole.DEFENDER));
-			assertEquals(List.of(20), war.getOccupiedByDefender());
-			assertEquals(List.of(20), war.getLastBattleOccupied());
+			assertTrue(service.applyBattleWin(war, 10, BelligerentRole.DEFENDER));
+			assertEquals(List.of(10), war.getOccupiedByDefender());
+			assertEquals(List.of(10), war.getLastBattleOccupied());
 			assertTrue(war.getOccupiedByAttacker().isEmpty());
 		}
 	}
 
 	@Test
 	void applyBattleWin_deduplicatesExistingOccupation() {
-		Province battle = province(10, Terrain.PLAINS);
-		pm.start(Map.of(10, battle));
+		Province battle = province(20, Terrain.PLAINS);
+		pm.start(Map.of(20, battle));
 
 		try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
 			stubOwnership(titleManager, battle);
-			War war = baseWar(List.of(5, 10, 30));
-			war.setOccupiedByAttacker(new ArrayList<>(List.of(10)));
-			assertTrue(service.applyBattleWin(war, 10, BelligerentRole.ATTACKER));
-			assertEquals(List.of(10), war.getOccupiedByAttacker());
+			War war = baseWar(List.of(5, 10, 20, 30));
+			war.setOccupiedByAttacker(new ArrayList<>(List.of(20)));
+			assertTrue(service.applyBattleWin(war, 20, BelligerentRole.ATTACKER));
+			assertEquals(List.of(20), war.getOccupiedByAttacker());
 			assertTrue(war.getLastBattleOccupied().isEmpty());
 		}
 	}
@@ -189,7 +206,7 @@ class OccupationServiceTest {
 			War war = baseWar(List.of(5, 10, 30));
 			war.setOccupiedByDefender(new ArrayList<>(List.of(10)));
 			assertTrue(service.applyBattleWin(war, 10, BelligerentRole.ATTACKER));
-			assertEquals(List.of(10), war.getOccupiedByAttacker());
+			assertTrue(war.getOccupiedByAttacker().isEmpty());
 			assertTrue(war.getOccupiedByDefender().isEmpty());
 			assertEquals(List.of(10), war.getLastBattleOccupied());
 		}

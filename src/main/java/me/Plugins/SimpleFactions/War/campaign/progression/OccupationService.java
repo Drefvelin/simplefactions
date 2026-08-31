@@ -75,16 +75,20 @@ public class OccupationService {
 			return false;
 		}
 
+		BelligerentTerritory territory = BelligerentTerritory.fromWar(war, owners);
 		OccupationZone zone = computeOccupationZone(war, battleProvinceId, winner);
 		if (zone.provinceIds().isEmpty()) {
 			return false;
 		}
 
+		OccupationZone enemyZone = enemyOwnedZone(zone, winner, territory);
+
 		if (winner == BelligerentRole.ATTACKER) {
 			List<Integer> winnerList = copyList(war.getOccupiedByAttacker());
 			List<Integer> loserList = copyList(war.getOccupiedByDefender());
 			List<Integer> stripped = stripOccupation(loserList, zone);
-			List<Integer> newlyAdded = mergeOccupation(winnerList, zone);
+			List<Integer> newlyAdded = mergeOccupation(winnerList, enemyZone);
+			pruneNonEnemyOccupation(winnerList, winner, territory);
 			war.setOccupiedByAttacker(winnerList);
 			war.setOccupiedByDefender(loserList);
 			war.setLastBattleOccupied(unionOccupied(stripped, newlyAdded));
@@ -92,7 +96,8 @@ public class OccupationService {
 			List<Integer> winnerList = copyList(war.getOccupiedByDefender());
 			List<Integer> loserList = copyList(war.getOccupiedByAttacker());
 			List<Integer> stripped = stripOccupation(loserList, zone);
-			List<Integer> newlyAdded = mergeOccupation(winnerList, zone);
+			List<Integer> newlyAdded = mergeOccupation(winnerList, enemyZone);
+			pruneNonEnemyOccupation(winnerList, winner, territory);
 			war.setOccupiedByDefender(winnerList);
 			war.setOccupiedByAttacker(loserList);
 			war.setLastBattleOccupied(unionOccupied(stripped, newlyAdded));
@@ -131,6 +136,9 @@ public class OccupationService {
 			return false;
 		}
 		if (blockedByUntakenEnemyFortZoc(war, neighborId, battleProvinceId, winner, forts)) {
+			return false;
+		}
+		if (!isEnemyOwned(neighborId, winner, territory)) {
 			return false;
 		}
 		if (isOnCampaignLine(war, neighborId)) {
@@ -219,6 +227,29 @@ public class OccupationService {
 			return false;
 		});
 		return stripped;
+	}
+
+	private static OccupationZone enemyOwnedZone(
+			OccupationZone zone,
+			BelligerentRole winner,
+			BelligerentTerritory territory) {
+		List<Integer> enemyIds = new ArrayList<>();
+		for (int provinceId : zone.provinceIds()) {
+			if (isEnemyOwned(provinceId, winner, territory)) {
+				enemyIds.add(provinceId);
+			}
+		}
+		return OccupationZone.of(enemyIds);
+	}
+
+	private static void pruneNonEnemyOccupation(
+			List<Integer> occupied,
+			BelligerentRole winner,
+			BelligerentTerritory territory) {
+		if (occupied == null || occupied.isEmpty()) {
+			return;
+		}
+		occupied.removeIf(provinceId -> !isEnemyOwned(provinceId, winner, territory));
 	}
 
 	private static List<Integer> unionOccupied(List<Integer> stripped, List<Integer> newlyAdded) {

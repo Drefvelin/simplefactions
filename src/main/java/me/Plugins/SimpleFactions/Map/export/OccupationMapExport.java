@@ -22,6 +22,12 @@ public final class OccupationMapExport {
 	}
 
 	public static Map<Integer, String> occupierByProvince(List<War> wars) {
+		return occupierByProvince(wars, null);
+	}
+
+	public static Map<Integer, String> occupierByProvince(
+			List<War> wars,
+			IntFunction<Faction> deJureByProvince) {
 		Map<Integer, String> occupiers = new LinkedHashMap<>();
 		if (wars == null) {
 			return occupiers;
@@ -30,8 +36,8 @@ public final class OccupationMapExport {
 			if (!WarMapExporter.shouldExport(war)) {
 				continue;
 			}
-			putAll(occupiers, war.getOccupiedByAttacker(), war.getAttackerLeaderId());
-			putAll(occupiers, war.getOccupiedByDefender(), war.getDefenderLeaderId());
+			putAll(occupiers, war.getOccupiedByAttacker(), war.getAttackerLeaderId(), deJureByProvince);
+			putAll(occupiers, war.getOccupiedByDefender(), war.getDefenderLeaderId(), deJureByProvince);
 		}
 		return occupiers;
 	}
@@ -75,14 +81,25 @@ public final class OccupationMapExport {
 		return array;
 	}
 
-	private static void putAll(Map<Integer, String> occupiers, List<Integer> provinceIds, String occupierId) {
+	private static void putAll(
+			Map<Integer, String> occupiers,
+			List<Integer> provinceIds,
+			String occupierId,
+			IntFunction<Faction> deJureByProvince) {
 		if (occupierId == null || occupierId.isEmpty() || provinceIds == null) {
 			return;
 		}
 		for (Integer provinceId : provinceIds) {
-			if (provinceId != null) {
-				occupiers.put(provinceId, occupierId);
+			if (provinceId == null) {
+				continue;
 			}
+			if (deJureByProvince != null) {
+				Faction owner = deJureByProvince.apply(provinceId);
+				if (owner != null && occupierId.equalsIgnoreCase(owner.getId())) {
+					continue;
+				}
+			}
+			occupiers.put(provinceId, occupierId);
 		}
 	}
 
