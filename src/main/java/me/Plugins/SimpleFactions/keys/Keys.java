@@ -11,4 +11,11 @@ public class Keys {
     public static final NamespacedKey SECONDARY_STRING_KEY = new NamespacedKey(SimpleFactions.plugin, "secondary_string_key");
     public static final NamespacedKey INT = new NamespacedKey(SimpleFactions.plugin, "int_key");
     public static final NamespacedKey LONG = new NamespacedKey(SimpleFactions.plugin, "long_key");
+    /**
+     * Marks a book as a mercenary contract and carries its negotiation stage. Kept
+     * off {@link #INT} so a signed book is never mistaken for a loan stage.
+     */
+    public static final NamespacedKey CONTRACT_STAGE = new NamespacedKey(SimpleFactions.plugin, "contract_stage");
+    /** The offered contract a stage 3 agreement book belongs to. */
+    public static final NamespacedKey CONTRACT_ID = new NamespacedKey(SimpleFactions.plugin, "contract_id");
 }

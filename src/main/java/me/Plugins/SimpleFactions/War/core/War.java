@@ -1,5 +1,8 @@
 package me.Plugins.SimpleFactions.War.core;
 
+
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarSnapshot;
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -16,6 +19,7 @@ import java.util.UUID;
 
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.declare.InterVassalQueries;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
@@ -24,9 +28,9 @@ import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarStatus;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
-import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService.PostBattleChoicePhase;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
@@ -44,6 +48,8 @@ public class War {
 	private String targetTitleId;
 	private String subjectFactionId;
 	private String relationTypeId;
+	private boolean internalWar;
+	private String internalTopLiegeId;
 	private String governmentLawId;
 	private String leadershipLawId;
 	private String targetSettlementId;
@@ -64,6 +70,8 @@ public class War {
 	private ObjectiveHolder objectiveHeldBy = ObjectiveHolder.DEFENDER;
 	private boolean whitePeaceProposedByAttacker;
 	private boolean whitePeaceProposedByDefender;
+	private boolean forcedWhitePeaceByAttacker;
+	private boolean forcedWhitePeaceByDefender;
 	private int campaignBattlesFought;
 	private List<ScheduledCampaignBattle> campaignBattleSchedule = new ArrayList<>();
 	private int campaignScheduleIndex;
@@ -114,6 +122,7 @@ public class War {
 		status = WarStatus.ACTIVE;
 		startedAt = Instant.now();
 		schemaVersion = 2;
+		snapshotInternalWar(attacker, defender);
 	}
 
 	public War(
@@ -138,6 +147,9 @@ public class War {
 		this.status = WarStatus.ACTIVE;
 		this.startedAt = startedAt != null ? startedAt : Instant.now();
 		this.schemaVersion = 2;
+		if (attackers != null && defenders != null) {
+			snapshotInternalWar(attackers.getLeader(), defenders.getLeader());
+		}
 	}
 
 	public int getId() {
@@ -227,6 +239,30 @@ public class War {
 
 	public void setRelationTypeId(String relationTypeId) {
 		this.relationTypeId = relationTypeId;
+	}
+
+	public boolean isInternalWar() {
+		return internalWar;
+	}
+
+	public void setInternalWar(boolean internalWar) {
+		this.internalWar = internalWar;
+	}
+
+	public String getInternalTopLiegeId() {
+		return internalTopLiegeId;
+	}
+
+	public void setInternalTopLiegeId(String internalTopLiegeId) {
+		this.internalTopLiegeId = internalTopLiegeId;
+	}
+
+	private void snapshotInternalWar(Faction attacker, Faction defender) {
+		if (!InterVassalQueries.isInternalPeer(attacker, defender)) {
+			return;
+		}
+		this.internalWar = true;
+		this.internalTopLiegeId = InterVassalQueries.topLiegeId(attacker);
 	}
 
 	public String getGovernmentLawId() {
@@ -390,6 +426,22 @@ public class War {
 
 	public void setWhitePeaceProposedByDefender(boolean whitePeaceProposedByDefender) {
 		this.whitePeaceProposedByDefender = whitePeaceProposedByDefender;
+	}
+
+	public boolean isForcedWhitePeaceByAttacker() {
+		return forcedWhitePeaceByAttacker;
+	}
+
+	public void setForcedWhitePeaceByAttacker(boolean forcedWhitePeaceByAttacker) {
+		this.forcedWhitePeaceByAttacker = forcedWhitePeaceByAttacker;
+	}
+
+	public boolean isForcedWhitePeaceByDefender() {
+		return forcedWhitePeaceByDefender;
+	}
+
+	public void setForcedWhitePeaceByDefender(boolean forcedWhitePeaceByDefender) {
+		this.forcedWhitePeaceByDefender = forcedWhitePeaceByDefender;
 	}
 
 	public int getCampaignBattlesFought() {
@@ -895,8 +947,8 @@ public class War {
 		return "secondary_participant";
 	}
 
-	public boolean canBeCalled(Faction f) {
-		return !attackers.isParticipating(f) || !defenders.isParticipating(f);
+	public boolean canBeCalled(Faction caller, Faction target) {
+		return CallToArmsEligibility.canCall(this, caller, target).allowed();
 	}
 
 	public Faction getEnemy(Faction f) {

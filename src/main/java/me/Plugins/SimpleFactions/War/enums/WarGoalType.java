@@ -12,7 +12,8 @@ public enum WarGoalType {
 	PILLAGE("pillage"),
 	OVERTHROW("overthrow"),
 	CHANGE_LAW("change_law"),
-	CHANGE_TAX("change_tax");
+	CHANGE_TAX("change_tax"),
+	FORCE_PEACE("force_peace");
 
 	private final String jsonId;
 
@@ -38,11 +39,12 @@ public enum WarGoalType {
 			case OVERTHROW -> "Overthrow";
 			case CHANGE_LAW -> "Change Law";
 			case CHANGE_TAX -> "Change Tax";
+			case FORCE_PEACE -> "Force Peace";
 		};
 	}
 
 	public boolean isMovementOrigin() {
-		return this == OVERTHROW || this == CHANGE_LAW || this == CHANGE_TAX;
+		return this == OVERTHROW || this == CHANGE_LAW || this == CHANGE_TAX || this == FORCE_PEACE;
 	}
 
 	public static WarGoalType fromJson(String value) {

@@ -4,6 +4,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
@@ -13,7 +14,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.ProvinceHandler;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.War.core.War;
-import me.Plugins.SimpleFactions.War.civilwar.CivilWarBorderLock;
+import me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarBorderLock;
 import me.Plugins.SimpleFactions.War.declare.DeJureAnnexEligibility;
 import me.Plugins.SimpleFactions.War.declare.OpenMarketEligibility;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
@@ -63,7 +64,7 @@ public final class WarOutcomeService {
 			case OPEN_MARKET -> applyOpenMarket(war);
 			case CHANGE_GOVERNMENT -> applyChangeGovernment(war);
 			case PILLAGE -> PillageApplyService.apply(war);
-			case OVERTHROW, CHANGE_LAW, CHANGE_TAX -> applyMovementWar(war);
+			case OVERTHROW, CHANGE_LAW, CHANGE_TAX, FORCE_PEACE -> applyMovementWar(war);
 			case WAR -> {
 			}
 		}
@@ -126,7 +127,25 @@ public final class WarOutcomeService {
 		if (!RelationLoader.isWarPickableVassal(type)) {
 			return;
 		}
+		if (war.isInternalWar()) {
+			RelationManager.transferSubject(defender, attacker);
+			if (!chosenTypeAlreadySet(attacker, defender, type)) {
+				RelationManager.setRelationForced(type, defender, attacker);
+			}
+			return;
+		}
 		RelationManager.setRelationForced(type, defender, attacker);
+	}
+
+	private static boolean chosenTypeAlreadySet(Faction attacker, Faction defender, RelationType type) {
+		if (attacker == null || defender == null || type == null || type.getId() == null) {
+			return false;
+		}
+		Relation relation = attacker.getRelation(defender.getId());
+		if (relation == null || relation.getType() == null || relation.getType().getId() == null) {
+			return false;
+		}
+		return type.getId().equalsIgnoreCase(relation.getType().getId());
 	}
 
 	private static void applyTransferSubject(War war) {

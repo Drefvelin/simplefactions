@@ -17,6 +17,8 @@ public class WarData {
     public String targetTitleId;
     public String subjectFactionId;
     public String relationTypeId;
+    public Boolean internalWar;
+    public String internalTopLiegeId;
     public String governmentLawId;
     public String leadershipLawId;
     public String targetSettlementId;
@@ -45,6 +47,8 @@ public class WarData {
     public String objectiveHeldBy;
     public boolean whitePeaceProposedByAttacker;
     public boolean whitePeaceProposedByDefender;
+    public boolean forcedWhitePeaceByAttacker;
+    public boolean forcedWhitePeaceByDefender;
     public Integer campaignBattlesFought;
     public List<ScheduledCampaignBattleData> campaignBattleSchedule;
     public Integer campaignScheduleIndex;

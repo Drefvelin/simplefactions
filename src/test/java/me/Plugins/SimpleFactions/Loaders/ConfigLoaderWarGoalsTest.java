@@ -59,6 +59,7 @@ class ConfigLoaderWarGoalsTest {
 		assertEquals(4, Cache.warGoalMaxBattles.get(WarGoalType.OVERTHROW));
 		assertEquals(4, Cache.warGoalMaxBattles.get(WarGoalType.CHANGE_LAW));
 		assertEquals(4, Cache.warGoalMaxBattles.get(WarGoalType.CHANGE_TAX));
+		assertEquals(4, Cache.warGoalMaxBattles.get(WarGoalType.FORCE_PEACE));
 	}
 
 	@Test

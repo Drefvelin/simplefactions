@@ -2,7 +2,7 @@
 
 **Gameplay lock:** [00-index.md](./00-index.md)  
 **Canonical spec:** [wars.md](../../wars.md)  
-**Status:** Phases 0-6 done. Civil wars: [naval-installations/02-phase-2.md](../naval-installations/02-phase-2.md) after [naval-installations Phase 1](../naval-installations/01-phase-1.md). Phases 8-9 are later.
+**Status:** Phases 0-8 done. Civil wars: [naval-installations/02-phase-2.md](../naval-installations/02-phase-2.md) (Done). Inter-vassal: [inter-vassal-wars/00-index.md](../inter-vassal-wars/00-index.md) (Done). Phase 9 is later.
 
 This is the **implementation sequence**. Batches inside a phase can ship as separate PRs. Do not start the next phase until the current phase's exit criteria are met. Do not add a second diplomacy, law, tax, or government engine.
 
@@ -15,7 +15,7 @@ This is the **implementation sequence**. Batches inside a phase can ship as sepa
 3. **Call existing engines before rewriting GUIs.** Relation apply and `FactionManager.usurp` are thin. De jure eligibility is a rewrite. Open market / change government are `applyLaw` plus YAML. Pillage is a different campaign shape. Movement goals need a shared apply gate that peace-time cave-in also uses.
 4. **Law-on-target wars do not wait for movements.** Open market and change government are player-declared wars. Overthrow / change law / change tax are movement-origin. Split them so the movement gate is not on the critical path for diplomatic and law wars.
 5. **Generic `War` is a no-op on the spine.** Players can pick it to run a campaign without an automatic political outcome. `Revolt` waits for civil wars.
-6. **Civil wars, inter-vassal wars, and full movements** share realm/relation problems. They come last and get their own lock when we reach them.
+6. **Civil wars, inter-vassal wars, and full movements** share realm/relation problems. Civil wars shipped as Phase 7. Inter-vassal shipped as Phase 8.
 
 ```mermaid
 flowchart LR
@@ -182,7 +182,7 @@ One apply path for "caved in" and "won a movement war". Coup is a stub with docu
 
 ## Phase 7 - Civil wars
 
-**Lock:** [naval-installations/02-phase-2.md](../naval-installations/02-phase-2.md). Phase 1 transfer/navy is shipped. Do not implement from this file.
+**Done.** **Lock:** [naval-installations/02-phase-2.md](../naval-installations/02-phase-2.md). Do not implement from this file.
 
 Dedicated start/teardown (temp rebels, snapshots, restore then Phase 6 gate). Civil-war defender win: **no** auto reparations and **no** auto imprison. Staff `/war admin reparations <from> <to>` for manual terms. `Revolt` stays a staff/no-apply label if needed for tests.
 
@@ -190,20 +190,15 @@ Dedicated start/teardown (temp rebels, snapshots, restore then Phase 6 gate). Ci
 
 ## Phase 8 - Inter-vassal wars
 
-**Spec later.** Do not implement from this file.
+**Done.** **Lock:** [inter-vassal-wars/00-index.md](../inter-vassal-wars/00-index.md). Batches: [01-batches.md](../inter-vassal-wars/01-batches.md). Do not implement from this file.
 
-Intended problem: two vassals (or nested realms) at war **without** it being usurp-overlord or a full civil war. Declare exceptions to `sameRealm`, allies/call-to-arms inside the same overlord, whether the liege is dragged in, and how land/occupation works when both sides still share a top liege.
+Peer/cousin vassals under the same top liege. Liege is not a participant. CTA rules apply to **all** wars. Pathfinder: liege land is transit. `sameRealm` stays vertical-only.
 
 ---
 
 ## Phase 9 - Leftovers
 
-**Spec later** as small follow-ups, not a war-goal rewrite.
-
-- NAP as a real declare block (today stub: always allowed)
-- Airborne pillage
-- Production declare codes / Discord ticket gate (already on the roadmap; not a goal)
-- Website occupation export (roadmap; not a goal)
+NAP and occupation overlay **shipped**. Airborne pillage is **not a feature**. Chronicle is owned elsewhere. Remaining war-adjacent work is on [roadmap.md](../../roadmap.md) (diplomacy, companies, declare codes last), not a war-goal rewrite.
 
 ---
 
@@ -212,8 +207,8 @@ Intended problem: two vassals (or nested realms) at war **without** it being usu
 | Item | When |
 |------|------|
 | Ally / NAP as implemented diplomacy | NAP: Phase 9. Allies already block declare. |
-| Inter-vassal wars | Phase 8 |
-| Temporary rebels, relation snapshots | Phase 7 |
+| Inter-vassal wars | Phase 8 (done) |
+| Temporary rebels, relation snapshots | Phase 7 (done) |
 | Full coup sequencer | Phase 7 (stub is Phase 6) |
 | `endVassalage` as a declare side effect | Never; Phase 1 removes it |
 | Legacy YAML goals as a second runtime | Never |

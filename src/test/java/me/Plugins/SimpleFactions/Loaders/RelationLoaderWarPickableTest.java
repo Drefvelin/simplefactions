@@ -124,6 +124,14 @@ class RelationLoaderWarPickableTest {
 				  embargo:
 				    name: Embargo
 				    trade-agreement: true
+				  nap:
+				    name: Non-Aggression Pact
+				    treaty: true
+				    blocks-war: true
+				  none_treaty:
+				    name: No Treaty
+				    treaty: true
+				    clear: true
 				""");
 
 		new RelationLoader().loadRelationTypes(file.toFile());
@@ -134,8 +142,31 @@ class RelationLoaderWarPickableTest {
 		Set<String> treaties = RelationLoader.getTreatyTypes().stream()
 				.map(RelationType::getId)
 				.collect(Collectors.toSet());
+		Set<String> politicalTreaties = RelationLoader.getPoliticalTreatyTypes().stream()
+				.map(RelationType::getId)
+				.collect(Collectors.toSet());
 
 		assertEquals(Set.of("ally", "tributary"), diplomatic);
 		assertEquals(Set.of("trade_agreement", "embargo"), treaties);
+		assertEquals(Set.of("nap", "none_treaty"), politicalTreaties);
+		assertFalse(treaties.contains("nap"));
+	}
+
+	@Test
+	void blocksShops_defaultsFalse_andReadsYaml() throws Exception {
+		YamlConfiguration missing = new YamlConfiguration();
+		missing.loadFromString("""
+				name: Trade
+				trade-agreement: true
+				""");
+		assertFalse(new RelationType("trade_agreement", missing).blocksShops());
+
+		YamlConfiguration embargo = new YamlConfiguration();
+		embargo.loadFromString("""
+				name: Embargo
+				trade-agreement: true
+				blocks-shops: true
+				""");
+		assertTrue(new RelationType("embargo", embargo).blocksShops());
 	}
 }

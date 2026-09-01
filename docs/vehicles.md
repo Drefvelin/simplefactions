@@ -1,6 +1,6 @@
 # Vehicles
 
-Player-owned **VehicleFramework** entities integrate with SimpleFactions through the `vehicles/` package: personal slot limits, installation berths, transfer consent, construction guards, upkeep, and campaign battle eligibility.
+Player-owned **VehicleFramework** entities integrate with SimpleFactions through `vehicles/` subpackages: `registry/` (berthed records), `berth/` (slots, transfer, category rules), `maintenance/` (upkeep, unpaid decay, pouch pay), and `battle/` (campaign eligibility).
 
 **Installations:** berth radius, operational state, and campaign picks are in [installations.md](./installations.md).
 
@@ -34,17 +34,17 @@ Categories in shipped config: `land_vehicles`, `train`, `ships`, `static_emplace
 
 | Class | Role |
 |-------|------|
-| `PlayerVehicleRegistry` / `VehicleRegistryPersistence` | Berthed (`INSTALLATION`) vehicle records only |
-| `VehicleOwnershipQueries` | Personal vehicles from VF owner minus berthed UUIDs |
-| `VehicleSlotGuard` | Personal limit + `ignore-limit` checks at claim/build |
-| `InstallationVehicleService` | Berth at port/airport/fort installations |
-| `VehicleTransferConsentService` / `VehicleTransferListener` | Two-party transfer flow |
+| `registry/PlayerVehicleRegistry` / `VehicleRegistryPersistence` | Berthed (`INSTALLATION`) vehicle records only |
+| `registry/VehicleOwnershipQueries` | Personal vehicles from VF owner minus berthed UUIDs |
+| `berth/VehicleSlotGuard` | Personal limit + `ignore-limit` checks at claim/build |
+| `berth/InstallationVehicleService` | Berth at port/airport/fort installations |
+| `berth/VehicleTransferConsentService` / `VehicleTransferListener` | Two-party transfer flow |
 | `VehicleSpawnListener` | Re-apply faction-leader VF owner on spawn for berthed vehicles |
 | `VehicleIntegrationListener` | VF construction events (sets VF owner; no personal registry row) |
-| `VehicleUpkeepService` | Periodic denar upkeep for unberthed VF-owned vehicles |
-| `BattleVehicleEligibilityService` | Campaign battle in-play checks |
-| `VehicleInstallationLockService` | Berth embargo during battles and raids |
-| `VehicleCategoryRules` | Berthable vs train/static categories |
+| `maintenance/VehicleUpkeepService` | Periodic denar upkeep for unberthed VF-owned vehicles |
+| `battle/BattleVehicleEligibilityService` | Campaign battle in-play checks |
+| `berth/VehicleInstallationLockService` | Berth embargo during battles and raids |
+| `berth/VehicleCategoryRules` | Berthable vs train/static categories |
 
 VF-specific logic stays in `vehicles/`; installation bounds and handler state stay in `installation/`.
 

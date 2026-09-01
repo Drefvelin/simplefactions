@@ -39,18 +39,19 @@ me.Plugins.SimpleFactions/
 │   ├── campaign/
 │   │   ├── schedule/     # Campaign battle list build (FB legs, placer)
 │   │   ├── zoc/          # Fort/port ZOC indexes
-│   │   ├── runtime/      # Hourly battle window, tick, autoresolve
+│   │   ├── runtime/      # Hourly battle window, tick, autoresolve; pick/ for installation picks
 │   │   ├── vote/         # Battle hour voting, quorum
 │   │   ├── admin/        # Staff warschedule tools
-│   │   ├── ui/           # Schedule copy/formatting/logging
-│   │   └── progression/  # Cursor, occupation, peace, post-battle choices
+│   │   ├── ui/           # Schedule copy, route lore, push projection
+│   │   ├── progression/  # Cursor, occupation, peace; postbattle/ for choice/retreat
+│   │   └── raid/         # Campaign raids; fight/ + intruder/
 │   └── battle/
-│       ├── engine/core|capture|win|raid/
-│       ├── campaign/     # Launch scheduled campaign battles; BattleNamingService (75.04)
+│       ├── engine/core|capture|win|raid|rules/
+│       ├── campaign/     # Launch scheduled campaign battles; warband/ signup/retreat
 │       ├── warband/, military/, template/, persistence/, ui/
 │       └── …
 ├── installation/         # Installations, bounds, handler
-├── vehicles/             # Registry, berth, transfer, construction guard, category rules, VF integration
+├── vehicles/             # Root listeners/commands; registry/, berth/, maintenance/, battle/
 └── SimpleFactions.java   # Bootstrap, listener registration
 ```
 
@@ -75,44 +76,46 @@ Use this table before creating a file.
 | GUI lore / schedule debug lines | `War/campaign/ui` | `Managers` unless it is pure inventory layout |
 | Path B, axis, dijkstra | `War/pathfinder` | Schedule package |
 | Occupation, white peace, push/hold | `War/campaign/progression` | Flat `War/` root |
+| Post-battle choice / retreat / walkover | `War/campaign/progression/postbattle` | Mixing into live `engine/core` |
 | Live battle instance, sides, join | `War/battle/engine/core` | Flat `engine/` |
+| Item durability / province block protection | `War/battle/engine/rules` | Installation protection or raid logic |
 | Capture points, markers | `War/battle/engine/capture` | Template package |
 | Field/siege/raid win checks | `War/battle/engine/win` or `raid` | One new `*Service` per if-branch |
 | Campaign battle display names | `War/battle/campaign` | New `battle/naming` package |
-| Warband signup for campaign battle | `War/battle/campaign` | `engine/core` |
+| Warband signup for campaign battle | `War/battle/campaign/warband` | `engine/core` |
 | War domain types (War, Side, WarMapper) | `War/core` | `War/` root |
 | Lives, pool, casualties | `War/battle/military` | Battle engine |
 | YAML battle templates | `War/battle/template` | Hard-coded in engine |
 | Faction ledger / war declare GUI | `Managers/Inventory` | War package UI for non-war commands |
 | General file logging | `Managers/LogManager` (`logs/log.txt`, `relations.log`, `movement.log`, `civilwar.log`, `war.log`; all wiped by `wipe-log`) | Mixing domain events into chat |
 | REST/export shape | Keep stable; change mappers + PS docs together | Renaming JSON fields casually |
-| Installation berth / transfer / consent | `vehicles/` | `Managers` or `installation/handler` |
-| Personal slot / construction limits | `vehicles/VehicleSlotGuard.java`, `vehicles/VehicleConstructionMessages.java` | Inline checks in listeners |
+| Installation berth / transfer / consent | `vehicles/berth` | `Managers` or `installation/handler` |
+| Personal slot / construction limits | `vehicles/berth/VehicleSlotGuard.java`, `vehicles/berth/VehicleConstructionMessages.java` | Inline checks in listeners |
 | Vehicle config keys (`per-person`, `ignore-limit`) | `Loaders/VehiclesConfigLoader.java`, `vehicles/VehicleTypeConfig.java` | Hard-coded limits in services |
-| Berthable category helper (battle prep) | `vehicles/VehicleCategoryRules.java` | Battle engine importing installation loaders |
+| Berthable category helper (battle prep) | `vehicles/berth/VehicleCategoryRules.java` | Battle engine importing installation loaders |
 | VF construction listener | `vehicles/VehicleIntegrationListener.java` | `installation/handler` |
 | Installation radius / bounds helpers | `installation/InstallationBounds.java` + `Loaders/InstallationConfigLoader` | Hard-coded radius in services |
-| VF event listeners (berth only) | `vehicles/VehicleTransferListener`, `vehicles/VehicleSpawnListener` | VehicleFramework imports in `installation/` |
-| Installation pick persistence / toggle | `War/campaign/runtime/BattleInstallationPickService` | Mixing with vote tally |
-| Pick eligibility (kind + control) | `War/campaign/runtime/BattleInstallationPickEligibility` | GUI-only checks |
-| In-play union (picks + siege fort) | `War/campaign/runtime/BattleInstallationInPlayService` | Duplicating OR in vehicle service |
-| Siege fort from active schedule slot | `War/campaign/runtime/BattleSiegeFortService` | Schedule builder |
+| VF event listeners (berth only) | `vehicles/berth/VehicleTransferListener`, `vehicles/VehicleSpawnListener` | VehicleFramework imports in `installation/` |
+| Installation pick persistence / toggle | `War/campaign/runtime/pick/BattleInstallationPickService` | Mixing with vote tally |
+| Pick eligibility (kind + control) | `War/campaign/runtime/pick/BattleInstallationPickEligibility` | GUI-only checks |
+| In-play union (picks + siege fort) | `War/campaign/runtime/pick/BattleInstallationInPlayService` | Duplicating OR in vehicle service |
+| Siege fort from active schedule slot | `War/campaign/runtime/pick/BattleSiegeFortService` | Schedule builder |
 | Campaign raid launch GUI | `Managers/Inventory/CampaignRaidLaunchView` | Eligibility or muster logic in view |
-| Campaign raid join / muster | `War/campaign/raid/CampaignRaidJoinService`, `CampaignRaidMusterScheduler` | `/raid` command or warband logic in join service |
-| Campaign raid warbands | `War/campaign/raid/CampaignRaidWarbandService`, `CampaignRaidWarbandListener` | Battle runtime in warband service (71.07) |
+| Campaign raid join / muster | `War/campaign/raid/CampaignRaidJoinService`, `raid/fight/CampaignRaidMusterScheduler` | `/raid` command or warband logic in join service |
+| Campaign raid warbands | `War/campaign/raid/CampaignRaidWarbandService` (listener nested) | Battle runtime in warband service (71.07) |
 | Campaign raid `/raid` command | `War/campaign/raid/RaidCommandManager` | Join validation in command class |
-| Campaign raid fight start | `War/campaign/raid/CampaignRaidLaunchService`, `CampaignRaidBattleService`, `CampaignRaidFightScheduler` | Battle runtime in launch service |
-| Campaign raid battle end | `War/campaign/raid/CampaignRaidBattleEndService` | Campaign battle outcome side effects |
-| Campaign warband signup lock | `War/battle/campaign/CampaignWarbandSignupService.isSignupOpen` | Raid launch or `/raid join` logic in signup service |
+| Campaign raid fight start | `War/campaign/raid/fight/CampaignRaidLaunchService`, `CampaignRaidBattleService`, `CampaignRaidFightScheduler` | Battle runtime in launch service |
+| Campaign raid battle end | `War/campaign/raid/fight/CampaignRaidBattleEndService` | Campaign battle outcome side effects |
+| Campaign warband signup lock | `War/battle/campaign/warband/CampaignWarbandSignupService.isSignupOpen` | Raid launch or `/raid join` logic in signup service |
 | Installation vulnerability gating | `installation/InstallationVulnerabilityService`, `InstallationProtectionListener` | Raid state or repair embargo logic in vulnerability service |
 | Installation repair embargo | `installation/InstallationRepairEmbargoService` | Fight-start lock writes (already in `CampaignRaidLaunchService`) |
-| Vehicle berth embargo | `vehicles/VehicleInstallationLockService` | Place/break embargo or VF `RepairManager` internals |
-| Campaign raid intruder province penalty | `War/campaign/raid/CampaignRaidIntruderService`, `CampaignRaidIntruderListener`, `CampaignRaidIntruderTickService` | Raid eligibility or warband signup logic |
+| Vehicle berth embargo | `vehicles/berth/VehicleInstallationLockService` | Place/break embargo or VF `RepairManager` internals |
+| Campaign raid intruder province penalty | `War/campaign/raid/intruder/CampaignRaidIntruderService` | Raid eligibility or warband signup logic |
 | Campaign raid source/target eligibility | `War/campaign/raid/CampaignRaidEligibilityService` | Raid launch GUI or `CampaignRaidService` |
-| Raid target listing (legacy; prefer eligibility) | `War/campaign/runtime/RaidTargetService` | New campaign raid flows |
+| Raid target listing (legacy; prefer eligibility) | `War/campaign/raid/RaidTargetService` | New campaign raid flows |
 | Campaign raid state / quota / mutex | `War/campaign/raid/CampaignRaidService` | GUI or battle launch in same class |
-| Campaign battle vehicle eligibility | `vehicles/BattleVehicleEligibilityService` | Battle engine core |
-| Battle province block protection | `War/battle/engine/core/BattleProvinceBlockProtectionService`, `BattleProvinceBlockProtectionListener` | Installation protection or raid logic |
+| Campaign battle vehicle eligibility | `vehicles/battle/BattleVehicleEligibilityService` | Battle engine core |
+| Battle province block protection | `War/battle/engine/rules/BattleProvinceBlockProtectionService` | Installation protection or raid logic |
 | Campaign installation pick GUI | `Managers/Inventory/CampaignInstallationPickView` | Pick logic in view |
 
 ---
@@ -186,6 +189,8 @@ For schedule/pathfinder work, confirm tests include:
 - `ProvincePathfinderTest`
 - `CampaignScheduleValidator` / Brume-shaped cases
 
+**GUI tests:** test the service and the text builders behind a button, never `ItemStack` construction. `ItemStack.getItemMeta()` needs a live `Bukkit.getItemFactory()`, so a `*Creator` must expose its player-facing text as plain `List<String>` or `String` methods and the tests call those. See `CompanyCreator.buildUpgradeLore` and `PlayerLedgerCreator.buildLore`. Click routing is covered by testing the service the click delegates to; the icons themselves are checked in game.
+
 ---
 
 ## Related docs
@@ -199,4 +204,6 @@ For schedule/pathfinder work, confirm tests include:
 - [docs/planning/campaign-time-dev/](docs/planning/campaign-time-dev/00-index.md) - campaign clock dev batches
 - [docs/planning/campaign-retreat/](docs/planning/campaign-retreat/00-index.md) - strategic retreat batches
 - [docs/planning/battle-retreat/](docs/planning/battle-retreat/00-index.md) - mid-fight battle retreat batches
+- [docs/planning/inter-vassal-wars/](docs/planning/inter-vassal-wars/00-index.md) - Phase 8 internal wars lock
+- [docs/planning/chronicle-export/](docs/planning/chronicle-export/00-index.md) - chronicle snapshot batches
 - [docs/roadmap.md](docs/roadmap.md) - shipped vs planned features

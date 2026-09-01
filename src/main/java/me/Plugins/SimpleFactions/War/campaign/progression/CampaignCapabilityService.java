@@ -1,5 +1,11 @@
 package me.Plugins.SimpleFactions.War.campaign.progression;
 
+
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushProjection;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget;
 import java.util.OptionalInt;
 
 import me.Plugins.SimpleFactions.Cache;

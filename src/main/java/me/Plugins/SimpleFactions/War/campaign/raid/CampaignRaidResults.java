@@ -1,6 +1,6 @@
 package me.Plugins.SimpleFactions.War.campaign.raid;
 
-import me.Plugins.SimpleFactions.War.campaign.runtime.RaidKind;
+import me.Plugins.SimpleFactions.War.campaign.raid.RaidTargetService.RaidKind;
 
 public final class CampaignRaidResults {
 	private CampaignRaidResults() {

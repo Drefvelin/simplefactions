@@ -24,6 +24,7 @@ public class Regiment {
 	
 	private boolean levy;
 	private boolean offense;
+	private boolean mercenary;
 	
 	private ItemStack icon;
 	
@@ -52,6 +53,7 @@ public class Regiment {
 		}
 		levy = config.getBoolean("levy", false);
 		offense = config.getBoolean("offense", false);
+		mercenary = config.getBoolean("mercenary", false);
 		toOverlord = 0;
 	}
 	
@@ -67,6 +69,7 @@ public class Regiment {
 		levy = another.isLevy();
 		toOverlord = another.sentToOverlord();
 		offense = another.isOffensive();
+		mercenary = another.isMercenary();
 	}
 	
 	public void setLevyEntries(List<LevyEntry> entries) {
@@ -102,6 +105,11 @@ public class Regiment {
 	
 	public boolean isLevy() {
 		return levy;
+	}
+
+	/** Mercenary regiments belong to a company, never to a faction military. */
+	public boolean isMercenary() {
+		return mercenary;
 	}
 
 	public String getId() {

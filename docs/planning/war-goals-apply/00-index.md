@@ -1,12 +1,12 @@
 # War goals, apply, navy gate - lock
 
 **Repo:** `simplefactions`  
-**Status:** navy gate implemented; Phase 1 apply spine implemented (generic **War** goal is pickable, no auto-apply). Later phases still documented, not implemented.  
+**Status:** Phases 0-8 **done** (navy, apply spine, relation/title/law/pillage goals, movement gate, civil wars, inter-vassal). Generic **War** remains pickable with no auto-apply. Next: Phase 9 leftovers.  
 **Canonical gameplay:** [wars.md](../../wars.md)
 
 This is the implementation lock for (1) navy / sea connectivity gates, (2) war-goal declare + auto-apply, (3) movement outcome apply. **No parallel diplomatic, law, tax, or government engines.** War and movements call existing systems.
 
-Navy gate is **done** (Phase 0). Implementation sequence: [01-phases.md](./01-phases.md). Do not start a later phase until the current phase's exit criteria are met.
+Implementation sequence: [01-phases.md](./01-phases.md). Do not start a later phase until the current phase's exit criteria are met.
 
 ---
 
@@ -48,7 +48,8 @@ War apply and `usurp` (when called with no player / war path) use forced.
 
 ### Targeting
 
-- **War defender** is the **top liege** of the clicked faction (`RelationManager.getTopLiege`), or the faction itself if independent.
+- **Internal peer war:** defender is the **clicked** faction. See [inter-vassal-wars/00-index.md](../inter-vassal-wars/00-index.md).
+- **External (this lock, not yet wired):** war defender is the **top liege** of the clicked faction (`RelationManager.getTopLiege`), or the faction itself if independent. Do not mix retarget into Phase 8.
 - **Goal payload** may be a nested vassal, title, settlement, law, etc.
 - Campaign path / objective may still resolve to the payload faction (already true for transfer subject).
 
@@ -67,7 +68,7 @@ Cannot declare if any of these hold (unless a goal lists an exception):
 7. Attacker lacks offensive manpower (`CampaignDeclareValidator` as today).
 8. **Navy gate** (below) after campaign populate.
 
-Inter-vassal wars and full civil wars are **out of scope** for this lock. Stop using `endVassalage` as a side effect of every same-realm declare; that is civil-war work.
+Full civil wars are **out of scope** for this lock (shipped: [naval-installations/02-phase-2.md](../naval-installations/02-phase-2.md)). Inter-vassal wars: [inter-vassal-wars/00-index.md](../inter-vassal-wars/00-index.md). Stop using `endVassalage` as a side effect of every same-realm declare.
 
 ---
 
@@ -279,11 +280,9 @@ Already specified in [wars.md](../../wars.md#war-reparations-attacker-only): % o
 
 ## Out of scope (later)
 
-- NAP implementation
-- Inter-vassal wars
-- Temporary rebel factions, relation snapshots, civil-war untangle (lock: [naval-installations/02-phase-2.md](../naval-installations/02-phase-2.md); after [naval-installations Phase 1](../naval-installations/01-phase-1.md))
-- Full coup sequencer beyond stub + documented order
-- Airborne pillage
+- Full coup sequencer beyond the Phase 6 stub + documented order (civil-war start/untangle is shipped: [naval-installations/02-phase-2.md](../naval-installations/02-phase-2.md))
+- Airborne pillage (not a feature)
+- Production declare codes / Discord ticket gate (last; see [roadmap.md](../../roadmap.md))
 - Reviving legacy YAML goals as a second runtime (`independence`, `war_reparations` as a **declare** goal, etc.)
 
 ---
@@ -292,7 +291,7 @@ Already specified in [wars.md](../../wars.md#war-reparations-attacker-only): % o
 
 Phased sequence (several batches per phase): [01-phases.md](./01-phases.md).
 
-Phase 1 (apply spine) is **done**. Civil wars, inter-vassal wars, and NAP are later phases with their own spec.
+Phases 0-8 are **done**. Inter-vassal wars: [inter-vassal-wars/00-index.md](../inter-vassal-wars/00-index.md) (shipped). NAP is shipped. Remaining follow-ups: [roadmap.md](../../roadmap.md).
 
 ---
 
@@ -301,7 +300,7 @@ Phase 1 (apply spine) is **done**. Civil wars, inter-vassal wars, and NAP are la
 | Area | Today |
 |------|--------|
 | Declare | `WarManager.declareWar`, `WarGoalValidator`, `DeclareWarView`, `WarDeclareHelper`, `CampaignDeclareValidator` |
-| End | `WarManager.endWar` (no goal apply) |
+| End | `WarManager.endWar` → installation revert, civil-war untangle, `WarOutcomeService` |
 | Push | `CampaignPushProjection.canMountOffensiveAfterPush`, `CampaignPostBattleChoiceService`, `CampaignCreator` Push button |
 | Schedule | `CampaignScheduleService.currentSlot` after `advanceIndex` |
 | Usurp | `FactionManager.usurp` |

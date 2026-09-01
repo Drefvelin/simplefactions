@@ -31,6 +31,7 @@ import me.Plugins.SimpleFactions.Objects.PrestigeRank;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.FactionRanker;
+import me.Plugins.SimpleFactions.Utils.HomeSettlementNames;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.SimpleFactions.Utils.Formatter;
@@ -59,6 +60,7 @@ public class FactionCreator {
 		lore.add(f.getRank().getName());
 		if(f.getTitles().size() > 0) lore.add(StringFormatter.formatHex("#b84c44§lPrimary Title: #7a706a"+f.getHighestTitle().getName()));
 		lore.add(StringFormatter.formatHex("#c45749§lTier: "+f.getTier().getFormattedName()));
+		lore.add(StringFormatter.formatHex("#b8ae61Based in: #d4c9ae" + HomeSettlementNames.of(f)));
 		int realmSize = TitleManager.getRealmSize(f);
 		if(realmSize > 0 && realmSize-f.getProvinces().size() > 0) lore.add(StringFormatter.formatHex("#d4c9aeRealm Size: #7a706a"+realmSize+" #a39ba8("+(realmSize-f.getProvinces().size())+" from subjects)"));
 		else if(realmSize > 0) lore.add(StringFormatter.formatHex("#d4c9aeRealm Size: #7a706a"+realmSize));
@@ -365,6 +367,18 @@ public class FactionCreator {
 				}
 				m.setLore(lore);
 				i.setItemMeta(m);	
+		} else if(t.equals(MenuItemType.GUILDS)) {
+				i = new ItemStack(Material.SHIELD, 1);
+				ItemMeta m = i.getItemMeta();
+				m.setDisplayName(StringFormatter.formatHex("#b8ae61Guilds"));
+				List<String> lore = new ArrayList<String>();
+				int guildCount = f.getGuildHandler().getGuilds().size();
+				lore.add(StringFormatter.formatHex("#7fbd73"+guildCount+" #d4c9aeguild"+(guildCount == 1 ? "" : "s")));
+				lore.add(StringFormatter.formatHex("#28ed70Click to view"));
+				m.setLore(lore);
+				NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
+				m.getPersistentDataContainer().set(key, PersistentDataType.STRING, f.getId());
+				i.setItemMeta(m);
 		} else if(t.equals(MenuItemType.MILITARY)) {
 				i = new ItemStack(Material.IRON_SWORD, 1);
 				ItemMeta m = i.getItemMeta();

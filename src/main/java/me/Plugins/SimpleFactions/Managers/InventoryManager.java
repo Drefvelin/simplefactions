@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.Managers;
 
+
+import me.Plugins.SimpleFactions.War.civilwar.CivilWarCopy;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,6 +22,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.Plugins.SimpleFactions.Army.Regiment;
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.loans.Loan;
 import me.Plugins.SimpleFactions.Managers.Holder.CampaignInventoryHolder;
@@ -31,7 +34,11 @@ import me.Plugins.SimpleFactions.Managers.Holder.WarInventoryHolder;
 import me.Plugins.SimpleFactions.Managers.Inventory.CampaignInstallationPickView;
 import me.Plugins.SimpleFactions.Managers.Inventory.CampaignRaidLaunchView;
 import me.Plugins.SimpleFactions.Managers.Inventory.CampaignView;
+import me.Plugins.SimpleFactions.Managers.Inventory.CompanyView;
+import me.Plugins.SimpleFactions.Managers.Inventory.ContractView;
+import me.Plugins.SimpleFactions.Managers.Inventory.MercenaryMarketView;
 import me.Plugins.SimpleFactions.Managers.Inventory.DeclareWarView;
+import me.Plugins.SimpleFactions.Managers.Inventory.DividendChange;
 import me.Plugins.SimpleFactions.Managers.Inventory.ElectionView;
 import me.Plugins.SimpleFactions.Managers.Inventory.FactionView;
 import me.Plugins.SimpleFactions.Managers.Inventory.GovernmentView;
@@ -49,7 +56,7 @@ import me.Plugins.SimpleFactions.Managers.Inventory.TaxChange;
 import me.Plugins.SimpleFactions.Managers.Inventory.TaxView;
 import me.Plugins.SimpleFactions.Managers.Inventory.TierTitleView;
 import me.Plugins.SimpleFactions.Managers.Inventory.WarView;
-import me.Plugins.SimpleFactions.War.battle.campaign.BattleWarbandRetreatConfirmHandler;
+import me.Plugins.SimpleFactions.War.battle.campaign.warband.BattleWarbandRetreatService.ConfirmHandler;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
 import me.Plugins.SimpleFactions.SimpleFactions;
@@ -76,6 +83,7 @@ public class InventoryManager implements Listener{
 	public HashMap<Player, Boolean> installationConfirmFromCommand = new HashMap<>();
 	public HashMap<Player, TaxChange> taxChange = new HashMap<>();
 	public HashMap<Player, LoanPayment> loanPayments = new HashMap<>();
+	public HashMap<Player, DividendChange> dividendChange = new HashMap<>();
 	
 	InventoryUpdater updater = new InventoryUpdater(this);
 	
@@ -101,6 +109,12 @@ public class InventoryManager implements Listener{
 					if(entry.getValue().tick()) {
 						loanPayments.remove(entry.getKey());
 						entry.getKey().sendMessage("§cLoan payment timed out.");
+					}
+				}
+				for(Map.Entry<Player, DividendChange> entry : ((HashMap<Player, DividendChange>) dividendChange.clone()).entrySet()) {
+					if(entry.getValue().tick()) {
+						dividendChange.remove(entry.getKey());
+						entry.getKey().sendMessage("§cDividend change timed out.");
 					}
 				}
 			}
@@ -186,6 +200,47 @@ public class InventoryManager implements Listener{
 		guildView.ledgerView(p, guild, i);
 	}
 
+	//Mercenary companies
+	public CompanyView companyView = new CompanyView(this);
+	public void companyView(Player player, Guild guild) {
+		companyView.companyView(player, guild);
+	}
+	public void companyView(Player player, Guild guild, Inventory i) {
+		companyView.companyView(player, guild, i);
+	}
+	public void companySlotsView(Player player, Guild guild, Inventory i) {
+		companyView.slotsView(player, guild, i);
+	}
+	public void companyRosterView(Player player, Guild guild, Inventory i) {
+		companyView.rosterView(player, guild, i);
+	}
+	public void companyUpgradeView(Player player, Guild guild, Inventory i) {
+		companyView.companyUpgradeView(player, guild, i);
+	}
+
+	//Mercenary contracts
+	public ContractView contractView = new ContractView(this);
+	public void contractListView(Player player, Guild guild) {
+		contractView.listView(player, guild);
+	}
+	public void contractListView(Player player, Guild guild, Inventory i) {
+		contractView.listView(player, guild, i);
+	}
+	public void contractDetailView(Player player, Guild guild, String contractId) {
+		contractView.detailView(player, guild, contractId);
+	}
+	public void contractDetailView(Player player, Guild guild, Inventory i, String contractId) {
+		contractView.detailView(player, guild, i, contractId);
+	}
+
+	public MercenaryMarketView mercenaryMarketView = new MercenaryMarketView(this);
+	public void mercenaryMarketList(Player player) {
+		mercenaryMarketView.marketList(player);
+	}
+	public void mercenaryMarketList(Player player, Inventory i) {
+		mercenaryMarketView.marketList(player, i);
+	}
+
 	//Laws
 	public LawView lawView = new LawView(this);
 	public void lawView(Player player, Faction f, Inventory i) {
@@ -258,6 +313,9 @@ public class InventoryManager implements Listener{
 	public void diplomacyView(Inventory i, Player player, Faction f, boolean open) {
 		relationView.diplomacyView(i, player, f, open);
 	}
+	public void diplomacyListView(Inventory i, Player player, Faction f, boolean open) {
+		relationView.diplomacyListView(i, player, f, open);
+	}
 	public void attitudeView(Inventory i, Player player, Faction f, boolean open) {
 		relationView.attitudeView(i, player, f, open);
 	}
@@ -311,7 +369,7 @@ public class InventoryManager implements Listener{
 	}
 
 	public boolean chatTrigger(Player p) {
-		return taxChange.containsKey(p) || loanPayments.containsKey(p);
+		return taxChange.containsKey(p) || loanPayments.containsKey(p) || dividendChange.containsKey(p);
 	}
 
 	public void setChanging(Faction faction, Player p, TaxTarget target, String id) {
@@ -332,6 +390,18 @@ public class InventoryManager implements Listener{
 			String.format("%.2f", loan.getTotalOwed()) + "d#d6cf69):"));
 	}
 
+	public void setChangingDividend(Player p, Guild guild) {
+		if (guild == null || p == null) {
+			return;
+		}
+		dividendChange.put(p, new DividendChange(guild));
+		p.closeInventory();
+		p.sendMessage(StringFormatter.formatHex(
+				"#d6cf69Enter the dividend percentage (currently #87d65c"
+				+ String.format("%.2f", guild.getDividendPercent())
+				+ "%#d6cf69). Type #c74d32cancel #d6cf69to abort."));
+	}
+
 	@EventHandler
 	public void setRate(AsyncPlayerChatEvent e) {
 		Player p = e.getPlayer();
@@ -342,6 +412,7 @@ public class InventoryManager implements Listener{
 			public void run() {
 				if(taxChange.containsKey(p)) taxChat(p, e);;
 				if(loanPayments.containsKey(p)) loanPaymentChat(p, e);
+				if(dividendChange.containsKey(p)) dividendChat(p, e);
 			}
 		}.runTask(SimpleFactions.plugin);
 	}
@@ -486,6 +557,46 @@ public class InventoryManager implements Listener{
 		p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 		loanPayments.remove(p);
 	}
+
+	public void dividendChat(Player p, AsyncPlayerChatEvent e) {
+		DividendChange change = dividendChange.get(p);
+		Guild guild = change == null ? null : change.getGuild();
+		if (guild == null) {
+			dividendChange.remove(p);
+			return;
+		}
+		if (e.getMessage().equalsIgnoreCase("cancel")) {
+			p.sendMessage("§cDividend change cancelled.");
+			dividendChange.remove(p);
+			guildView(p, guild);
+			return;
+		}
+		if (!guild.isLeader(p)) {
+			p.sendMessage("§cOnly the guild leader can set dividends.");
+			dividendChange.remove(p);
+			return;
+		}
+		double amount;
+		try {
+			amount = Double.parseDouble(e.getMessage());
+		} catch (Exception ex) {
+			p.sendMessage("§cError inputting the amount, use the format §e20 §cfor 20% (example)");
+			p.sendMessage("§4Type 'cancel' to cancel.");
+			return;
+		}
+		amount = Math.round(amount * 100.0) / 100.0;
+		if (amount < 0 || amount > 100) {
+			p.sendMessage("§cDividend percentage must be between §e0 §cand §e100§c.");
+			p.sendMessage("§4Type 'cancel' to cancel.");
+			return;
+		}
+		guild.setDividendPercent(amount);
+		p.sendMessage(StringFormatter.formatHex(
+				"#d6cf69Dividend rate set to #87d65c" + String.format("%.2f", guild.getDividendPercent()) + "%"));
+		p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+		dividendChange.remove(p);
+		guildView(p, guild);
+	}
 	
 	//Confirm
 	public void confirmView(Player player, Faction f, String key, String data) {
@@ -621,7 +732,7 @@ public class InventoryManager implements Listener{
 			// Determine faction, guild, and movement based on GUI type
 			if (h.getType() == SFGUI.MOVEMENT_VIEW || h.getType() == SFGUI.CAUSES_VIEW || 
 			    h.getType() == SFGUI.CAUSE_VIEW || h.getType() == SFGUI.TARGET_SELECT || 
-			    h.getType() == SFGUI.MOVEMENT_DEMANDS) {
+			    h.getType() == SFGUI.MOVEMENT_DEMANDS || h.getType() == SFGUI.MOVEMENT_CRACKDOWN) {
 				// These GUIs store movement ID in holder
 				movement = FactionManager.getMovementById(h.getId());
 				if (movement != null) {
@@ -642,14 +753,29 @@ public class InventoryManager implements Listener{
 					case ATTITUDE_VIEW:
 						diplomacyView(null, p, f, true);
 						break;
-					case DIPLOMACY_VIEW:
+					case DIPLOMACY_LIST:
 						factionView(p, f);
+						break;
+					case DIPLOMACY_VIEW:
+						Faction viewer = FactionManager.getByMember(p.getName());
+						if (viewer != null) {
+							diplomacyListView(null, p, viewer, true);
+						} else {
+							factionView(p, f);
+						}
 						break;
 					case FACTION_VIEW:
 						factionList(p);
 						break;
+					case FACTION_GUILDS:
+						factionView(p, f);
+						break;
 					case GUILD_VIEW:
-						guildList(p);
+						if (h.getFlag() && g != null && g.getFaction() != null) {
+							factionView.factionGuildsView(p, g.getFaction(), null);
+						} else {
+							guildList(p);
+						}
 						break;
 					case MILITARY_VIEW:
 						factionView(p, f);
@@ -664,6 +790,9 @@ public class InventoryManager implements Listener{
 						diplomacyView(null, p, f, true);
 						break;
 					case TRADE_AGREEMENT_VIEW:
+						diplomacyView(null, p, f, true);
+						break;
+					case TREATY_VIEW:
 						diplomacyView(null, p, f, true);
 						break;
 					case TIER_VIEW:
@@ -689,6 +818,18 @@ public class InventoryManager implements Listener{
 						break;
 					case POLITICAL_PROPOSAL_VIEW:
 						governmentView.proposalView(p, f, null);
+						break;
+					case WAR_PEACE_SELECT:
+						if (h.getFlag()) {
+							Movement causeMovement = f.getGovernment().getMovementByMember(p.getName());
+							if (causeMovement != null && h.getPage() >= 0 && h.getPage() < causeMovement.getCauses().size()) {
+								movementView.causeView(p, f, causeMovement, causeMovement.getCauses().get(h.getPage()), null);
+							} else {
+								governmentView(p, f, null);
+							}
+						} else {
+							governmentView.politicalProposalView(p, f, null);
+						}
 						break;
 					case LAW_PROPOSAL_VIEW:
 						governmentView.proposalView(p, f, null);
@@ -751,6 +892,18 @@ public class InventoryManager implements Listener{
 					case UPGRADE_VIEW:
 						guildView(p, g);
 						break;
+					case COMPANY_VIEW:
+						guildView(p, g);
+						break;
+					case COMPANY_SLOTS_VIEW:
+					case COMPANY_ROSTER_VIEW:
+					case COMPANY_UPGRADE_VIEW:
+					case CONTRACT_LIST_VIEW:
+						companyView(p, g);
+						break;
+					case CONTRACT_DETAIL_VIEW:
+						contractListView(p, g);
+						break;
 					case LOAN_MAIN_VIEW:
 						guildView(p, g);
 						break;
@@ -779,10 +932,20 @@ public class InventoryManager implements Listener{
 						break;
 				}
 			}
-			if(h.getType() == SFGUI.FACTION_LIST || h.getType() == SFGUI.FACTION_VIEW) {
+			if(h.getType() == SFGUI.FACTION_LIST || h.getType() == SFGUI.FACTION_VIEW || h.getType() == SFGUI.FACTION_GUILDS) {
 				factionView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.GUILD_LIST || h.getType() == SFGUI.GUILD_VIEW || h.getType() == SFGUI.UPGRADE_VIEW) {
 				guildView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.COMPANY_VIEW
+				|| h.getType() == SFGUI.COMPANY_SLOTS_VIEW
+				|| h.getType() == SFGUI.COMPANY_ROSTER_VIEW
+				|| h.getType() == SFGUI.COMPANY_UPGRADE_VIEW) {
+				companyView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.CONTRACT_LIST_VIEW
+				|| h.getType() == SFGUI.CONTRACT_DETAIL_VIEW) {
+				contractView.click(e, inv, p);
+			} else if(h.getType() == SFGUI.MERCENARY_MARKET_LIST) {
+				mercenaryMarketView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.LOAN_MAIN_VIEW 
 				|| h.getType() == SFGUI.LOANS_GIVEN_VIEW 
 				|| h.getType() == SFGUI.LOANS_TAKEN_VIEW
@@ -804,6 +967,7 @@ public class InventoryManager implements Listener{
 				|| h.getType() == SFGUI.TAX_PROPOSAL_VIEW
 				|| h.getType() == SFGUI.SPECIFIC_TAX_PROPOSAL_VIEW
 				|| h.getType() == SFGUI.POLITICAL_PROPOSAL_VIEW
+				|| h.getType() == SFGUI.WAR_PEACE_SELECT
 				|| h.getType() == SFGUI.COUNCIL_VIEW
 				|| h.getType() == SFGUI.COUNCIL_SELECT
 				|| h.getType() == SFGUI.FAVOUR_REPRESS_MAIN
@@ -815,12 +979,15 @@ public class InventoryManager implements Listener{
 				|| h.getType() == SFGUI.CAUSES_VIEW
 				|| h.getType() == SFGUI.CAUSE_VIEW
 				|| h.getType() == SFGUI.MOVEMENT_DEMANDS
+				|| h.getType() == SFGUI.MOVEMENT_CRACKDOWN
 				|| h.getType() == SFGUI.TARGET_SELECT) {
 				movementView.click(e, inv, p);
-			} else if(h.getType() == SFGUI.DIPLOMACY_VIEW 
+			} else if(h.getType() == SFGUI.DIPLOMACY_VIEW
+					|| h.getType() == SFGUI.DIPLOMACY_LIST
 					|| h.getType() == SFGUI.ATTITUDE_VIEW 
 					|| h.getType() == SFGUI.RELATION_VIEW
-					|| h.getType() == SFGUI.TRADE_AGREEMENT_VIEW) {
+					|| h.getType() == SFGUI.TRADE_AGREEMENT_VIEW
+					|| h.getType() == SFGUI.TREATY_VIEW) {
 				relationView.click(e, inv, p);
 			} else if(h.getType() == SFGUI.ELECTION_VIEW || h.getType() == SFGUI.ELECTION_VOTING_VIEW) {
 				electionView.click(e, inv, p);
@@ -853,7 +1020,8 @@ public class InventoryManager implements Listener{
 		} else if (inv.getHolder() instanceof SFCombinedInventoryHolder combinedHolder) {
 			e.setCancelled(true);
 			SFGUI combinedType = combinedHolder.getType();
-			if (combinedType == SFGUI.PARTICIPANT_VIEW) {
+			if (combinedType == SFGUI.PARTICIPANT_VIEW
+					|| combinedType == SFGUI.MERCENARY_ENGAGEMENT_LIST) {
 				warView.click(e, inv, p);
 			}
 		} else if (inv.getHolder() instanceof DeclareWarHolder) {
@@ -959,7 +1127,7 @@ public class InventoryManager implements Listener{
 			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 			if (data != null) {
 				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
-				BattleWarbandRetreatConfirmHandler.handleConfirm(p, confirmed);
+				ConfirmHandler.handleConfirm(p, confirmed);
 				return;
 			}
 			key = new NamespacedKey(SimpleFactions.plugin, "campaign_retreat");
@@ -986,6 +1154,10 @@ public class InventoryManager implements Listener{
 			key = new NamespacedKey(SimpleFactions.plugin, "setcapital");
 			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 			if (data != null) {
+				if(!Cache.requireProvinces(p)) {
+					p.closeInventory();
+					return;
+				}
 				boolean confirmed = item.getType().equals(Material.GREEN_CONCRETE);
 				CapitalMovePrompt.handleConfirm(p, confirmed);
 				return;

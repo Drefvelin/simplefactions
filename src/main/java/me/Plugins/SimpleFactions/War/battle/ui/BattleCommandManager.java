@@ -12,12 +12,12 @@ import java.time.Instant;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Cache;
-import me.Plugins.SimpleFactions.War.battle.campaign.BattleWarbandRetreatMessages;
-import me.Plugins.SimpleFactions.War.battle.campaign.BattleWarbandRetreatService;
-import me.Plugins.SimpleFactions.War.battle.campaign.BattleWarbandRetreatService.RetreatResult;
+import me.Plugins.SimpleFactions.War.battle.campaign.warband.BattleWarbandRetreatService.Messages;
+import me.Plugins.SimpleFactions.War.battle.campaign.warband.BattleWarbandRetreatService;
+import me.Plugins.SimpleFactions.War.battle.campaign.warband.BattleWarbandRetreatService.RetreatResult;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService;
-import me.Plugins.SimpleFactions.War.battle.campaign.CampaignWarbandBattleService;
-import me.Plugins.SimpleFactions.War.battle.campaign.CampaignWarbandSignupService;
+import me.Plugins.SimpleFactions.War.battle.campaign.warband.CampaignWarbandBattleService;
+import me.Plugins.SimpleFactions.War.battle.campaign.warband.CampaignWarbandSignupService;
 import me.Plugins.SimpleFactions.War.core.WarDevMode;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.capture.BattleCapturePoints;
@@ -258,7 +258,7 @@ public class BattleCommandManager implements CommandExecutor{
 				Instant now = Instant.now();
 				RetreatResult rejection = BattleWarbandRetreatService.retreatRejection(p, now);
 				if (rejection != null) {
-					String message = BattleWarbandRetreatMessages.messageForResult(rejection, p, now);
+					String message = Messages.messageForResult(rejection, p, now);
 					if (message != null) {
 						p.sendMessage(message);
 					}

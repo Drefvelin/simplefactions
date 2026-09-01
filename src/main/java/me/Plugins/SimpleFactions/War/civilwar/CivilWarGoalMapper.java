@@ -27,6 +27,7 @@ public final class CivilWarGoalMapper {
 			case CHANGE_LEADER -> WarGoalType.OVERTHROW;
 			case LAW_CHANGE -> WarGoalType.CHANGE_LAW;
 			case TAX_CHANGE -> WarGoalType.CHANGE_TAX;
+			case WHITE_PEACE, SURRENDER -> WarGoalType.FORCE_PEACE;
 			default -> null;
 		};
 	}

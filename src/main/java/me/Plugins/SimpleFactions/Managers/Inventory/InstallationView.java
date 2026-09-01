@@ -25,8 +25,8 @@ import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationConstruction;
 import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
 import me.Plugins.SimpleFactions.keys.Keys;
-import me.Plugins.SimpleFactions.vehicles.InstallationVehicleUnberthService;
-import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRecord;
+import me.Plugins.SimpleFactions.vehicles.berth.InstallationVehicleUnberthService;
+import me.Plugins.SimpleFactions.vehicles.registry.PlayerVehicleRecord;
 import net.tfminecraft.VehicleFramework.VehicleFramework;
 
 public class InstallationView {

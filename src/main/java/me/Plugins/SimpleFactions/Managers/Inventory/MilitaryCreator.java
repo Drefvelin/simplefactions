@@ -10,6 +10,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Army.ExpandResult;
 import me.Plugins.SimpleFactions.Army.LevyEntry;
 import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
@@ -99,17 +100,29 @@ public class MilitaryCreator {
 				lore.add(s);
 			}
 		}
+		ExpandResult expand = f.getMilitary().canExpand(r);
+		if (!expand.allowed()) {
+			lore.add(" ");
+			lore.add(StringFormatter.formatHex("#c74d32Blocked"));
+			lore.add(StringFormatter.formatHex("#877e7c" + expand.reason()));
+		}
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;
 	}
 	public ItemStack createRegimentIncreaseButton(Faction f, Regiment r) {
 		ItemAPI api = (ItemAPI) TLibs.getApiInstance(APIType.ITEM_API);
+		ExpandResult expand = f.getMilitary().canExpand(r);
 		ItemStack i = api.getCreator().getItemsAdderItem("mcicons:icon_up_blue");
 		ItemMeta meta = i.getItemMeta();
-		meta.setDisplayName(StringFormatter.formatHex("#baa875Increase "+r.getName()));
+		meta.setDisplayName(StringFormatter.formatHex(
+				expand.allowed() ? "#baa875Increase "+r.getName() : "#7a706aIncrease "+r.getName()));
 		List<String> lore = new ArrayList<String>();
 		lore.add("§7Time: §e"+TimeFormatter.formatTime(r.getExpansionTime()));
+		if (!expand.allowed()) {
+			lore.add(" ");
+			lore.add(StringFormatter.formatHex("#c74d32" + expand.reason()));
+		}
 		meta.setLore(lore);
 		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
 		meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, f.getId());

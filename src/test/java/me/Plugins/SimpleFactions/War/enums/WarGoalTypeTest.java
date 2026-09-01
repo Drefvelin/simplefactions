@@ -23,13 +23,15 @@ class WarGoalTypeTest {
 		assertEquals(WarGoalType.OVERTHROW, WarGoalType.fromJson("overthrow"));
 		assertEquals(WarGoalType.CHANGE_LAW, WarGoalType.fromJson("change_law"));
 		assertEquals(WarGoalType.CHANGE_TAX, WarGoalType.fromJson("change_tax"));
+		assertEquals(WarGoalType.FORCE_PEACE, WarGoalType.fromJson("force_peace"));
 	}
 
 	@Test
-	void isMovementOrigin_onlyOverthrowLawAndTax() {
+	void isMovementOrigin_overthrowLawTaxAndForcePeace() {
 		assertTrue(WarGoalType.OVERTHROW.isMovementOrigin());
 		assertTrue(WarGoalType.CHANGE_LAW.isMovementOrigin());
 		assertTrue(WarGoalType.CHANGE_TAX.isMovementOrigin());
+		assertTrue(WarGoalType.FORCE_PEACE.isMovementOrigin());
 		assertFalse(WarGoalType.CHANGE_GOVERNMENT.isMovementOrigin());
 		assertFalse(WarGoalType.PILLAGE.isMovementOrigin());
 	}

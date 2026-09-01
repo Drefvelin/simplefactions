@@ -1,26 +1,14 @@
-## Economy
-- Embargo blocks sign shops
-
-## Politics
-- crush movement (or civil war)
-- voting booth persistence
-
-## Diplomacy
-- Federations (Law?)
-- connect diplomacy view to your own tab
-- attitude diplo cost
-
 ## War
-- War System
-- Civil Wars
-- Mercenaries (and companies)
-- army recruitment rule
-- forts of different sizes (limits emplacement amounts)
+- War companies: army recruitment rule, dividends, mercenary companies, contracts, wages, reputation. Locked and batched in [docs/planning/war-companies/00-index.md](./docs/planning/war-companies/00-index.md)
+- Assassins (after war companies; reuses the same contract object)
 
-## Other
-- Connect guilds to faction view
-- Go to faction from guild view
-- guild upgrades for pvp stats
+## Deferred (do not lose)
+- Character-trait gate for creating and joining a mercenary company - enable after the player to character migration (that migration is last)
+- Decide whether mercenary wages are taxable as citizen income (default: not taxable)
+
+## Later
+- Map chronicle events (other member; return later)
+- Declare codes + Discord ticket gate (last)
 
 ## Launch Day Checks
 - Settlement timer

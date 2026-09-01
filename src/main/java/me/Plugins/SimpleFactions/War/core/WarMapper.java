@@ -36,15 +36,15 @@ import me.Plugins.SimpleFactions.War.enums.WarStatus;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
-import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService.PostBattleChoicePhase;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
-import me.Plugins.SimpleFactions.War.civilwar.CivilWarMemberMove;
+import me.Plugins.SimpleFactions.War.civilwar.split.CivilWarMemberMove;
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarSnapshot;
-import me.Plugins.SimpleFactions.War.civilwar.CivilWarWartimeVassalEnd;
+import me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarWartimeVassalEnd;
 
 public final class WarMapper {
 	private WarMapper() {}
@@ -65,6 +65,8 @@ public final class WarMapper {
 		data.targetTitleId = war.getTargetTitleId();
 		data.subjectFactionId = war.getSubjectFactionId();
 		data.relationTypeId = war.getRelationTypeId();
+		data.internalWar = war.isInternalWar();
+		data.internalTopLiegeId = war.getInternalTopLiegeId();
 		data.governmentLawId = war.getGovernmentLawId();
 		data.leadershipLawId = war.getLeadershipLawId();
 		data.targetSettlementId = war.getTargetSettlementId();
@@ -117,6 +119,8 @@ public final class WarMapper {
 		data.objectiveHeldBy = war.getObjectiveHeldBy() != null ? war.getObjectiveHeldBy().toJson() : ObjectiveHolder.DEFENDER.toJson();
 		data.whitePeaceProposedByAttacker = war.isWhitePeaceProposedByAttacker();
 		data.whitePeaceProposedByDefender = war.isWhitePeaceProposedByDefender();
+		data.forcedWhitePeaceByAttacker = war.isForcedWhitePeaceByAttacker();
+		data.forcedWhitePeaceByDefender = war.isForcedWhitePeaceByDefender();
 		data.campaignBattlesFought = war.getCampaignBattlesFought();
 		data.campaignBattleSchedule = serializeSchedule(war.getCampaignBattleSchedule());
 		data.campaignScheduleIndex = war.getCampaignScheduleIndex();
@@ -201,6 +205,10 @@ public final class WarMapper {
 		war.setTargetTitleId(data.targetTitleId);
 		war.setSubjectFactionId(data.subjectFactionId);
 		war.setRelationTypeId(data.relationTypeId);
+		if (data.internalWar != null) {
+			war.setInternalWar(data.internalWar);
+			war.setInternalTopLiegeId(data.internalTopLiegeId);
+		}
 		war.setGovernmentLawId(data.governmentLawId);
 		war.setLeadershipLawId(data.leadershipLawId);
 		war.setTargetSettlementId(data.targetSettlementId);
@@ -229,6 +237,8 @@ public final class WarMapper {
 		applyCampaignRuntimeFields(war, data);
 		war.setWhitePeaceProposedByAttacker(data.whitePeaceProposedByAttacker);
 		war.setWhitePeaceProposedByDefender(data.whitePeaceProposedByDefender);
+		war.setForcedWhitePeaceByAttacker(data.forcedWhitePeaceByAttacker);
+		war.setForcedWhitePeaceByDefender(data.forcedWhitePeaceByDefender);
 		war.setCampaignBattlesFought(data.campaignBattlesFought != null ? data.campaignBattlesFought : 0);
 		war.setCampaignBattleSchedule(campaignSchedule);
 		war.setCampaignScheduleIndex(data.campaignScheduleIndex != null ? data.campaignScheduleIndex : 0);

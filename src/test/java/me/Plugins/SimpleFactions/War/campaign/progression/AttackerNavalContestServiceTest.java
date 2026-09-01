@@ -1,5 +1,10 @@
 package me.Plugins.SimpleFactions.War.campaign.progression;
 
+
+
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,9 +49,9 @@ import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
-import me.Plugins.SimpleFactions.vehicles.OwnershipMode;
-import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRecord;
-import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRegistry;
+import me.Plugins.SimpleFactions.vehicles.registry.OwnershipMode;
+import me.Plugins.SimpleFactions.vehicles.registry.PlayerVehicleRecord;
+import me.Plugins.SimpleFactions.vehicles.registry.PlayerVehicleRegistry;
 
 class AttackerNavalContestServiceTest {
 	private Faction attacker;

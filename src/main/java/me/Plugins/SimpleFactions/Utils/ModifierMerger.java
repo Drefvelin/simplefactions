@@ -19,6 +19,10 @@ public class ModifierMerger {
      * appears at most once, with amounts summed.
      */
     public static List<FactionModifier> merge(List<FactionModifier> modifiers) {
+        return merge(null, modifiers);
+    }
+
+    public static List<FactionModifier> merge(me.Plugins.SimpleFactions.Objects.Faction owner, List<FactionModifier> modifiers) {
 
         Map<FactionModifiers, Double> totals = new LinkedHashMap<>();
 
@@ -27,7 +31,7 @@ public class ModifierMerger {
 
             totals.merge(
                 mod.getType(),
-                mod.getAmount(),
+                mod.resolve(owner),
                 Double::sum
             );
         }

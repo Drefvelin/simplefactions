@@ -34,6 +34,10 @@ public class RelationType {
 	private List<FactionModifier> recieveModifiers = new ArrayList<>();
 
 	private boolean isTradeAgreement;
+	private boolean treaty;
+	private boolean blocksWar;
+	private boolean blocksShops;
+	private boolean clearTreaty;
 	private List<FactionModifier> tradeEffectsUs = new ArrayList<>();
 	private List<FactionModifier> tradeEffectsThem = new ArrayList<>();
 	
@@ -60,33 +64,45 @@ public class RelationType {
 		elevationTarget = config.getBoolean("elevation-target", false);
 		canPickForWar = config.getBoolean("can-pick-for-war", true);
 		isTradeAgreement = config.getBoolean("trade-agreement", false);
+		treaty = config.getBoolean("treaty", false);
+		blocksWar = config.getBoolean("blocks-war", false);
+		blocksShops = config.getBoolean("blocks-shops", false);
+		clearTreaty = config.getBoolean("clear", false);
 		if(config.isConfigurationSection("threshold")) {
 			threshold = new Threshold(config.getConfigurationSection("threshold"));
 		}
 		if(config.contains("give-modifiers")) {
-			for(String s : config.getStringList("give-modifiers")) {
-				giveModifiers.add(new FactionModifier(s));
-			}
+			FactionModifier.addFromConfig(config, "give-modifiers", giveModifiers);
 		}
 		if(config.contains("recieve-modifiers")) {
-			for(String s : config.getStringList("recieve-modifiers")) {
-				recieveModifiers.add(new FactionModifier(s));
-			}
+			FactionModifier.addFromConfig(config, "recieve-modifiers", recieveModifiers);
 		}
 		if(config.contains("trade-effects-us")) {
-			for(String s : config.getStringList("trade-effects-us")) {
-				tradeEffectsUs.add(new FactionModifier(s));
-			}
+			FactionModifier.addFromConfig(config, "trade-effects-us", tradeEffectsUs);
 		}
 		if(config.contains("trade-effects-them")) {
-			for(String s : config.getStringList("trade-effects-them")) {
-				tradeEffectsThem.add(new FactionModifier(s));
-			}
+			FactionModifier.addFromConfig(config, "trade-effects-them", tradeEffectsThem);
 		}
 	}
 
 	public boolean isTradeAgreement() {
 		return isTradeAgreement;
+	}
+
+	public boolean isTreaty() {
+		return treaty;
+	}
+
+	public boolean blocksWar() {
+		return blocksWar;
+	}
+
+	public boolean blocksShops() {
+		return blocksShops;
+	}
+
+	public boolean isClearTreaty() {
+		return clearTreaty;
 	}
 
 	public boolean isElevationTarget() {

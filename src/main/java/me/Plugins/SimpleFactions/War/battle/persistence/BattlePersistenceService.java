@@ -27,9 +27,9 @@ import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBattleService;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBossBarService;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResumeService;
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidBattleService;
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidBossBarService;
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidResumeService;
 
 public final class BattlePersistenceService {
 	private static final Database DATABASE = new Database();

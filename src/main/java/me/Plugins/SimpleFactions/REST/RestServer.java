@@ -10,6 +10,7 @@ import java.util.List;
 import org.bukkit.entity.Player;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
@@ -40,7 +41,7 @@ public class RestServer {
 	}
 
 	public static int getProvince(Player p) {
-		if (!Cache.mapEnabled) return -2;
+		if (!Cache.provincesEnabled || !Cache.mapEnabled) return -2;
 		SimpleFactions plugin = SimpleFactions.getInstance();
 		if (plugin == null) return -2;
 		ProvinceGrid grid = plugin.getProvinceGrid();
@@ -50,28 +51,12 @@ public class RestServer {
 
 	public static void upload(String mode, File file) {
 		if (!Cache.mapEnabled) return;
+		if (mode.equals("chronicle") && !Cache.chronicleEnabled) return;
 
 		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
 			var payload = JsonParser.parseReader(reader);
 
-			if (mode.equals("nation") && !payload.isJsonObject())
-				throw new IllegalStateException("nation upload must be JSON object");
-
-			if ((mode.equals("provinces") || mode.equals("guilds")) && !payload.isJsonArray())
-				throw new IllegalStateException(mode + " upload must be JSON array");
-
-			if (mode.equals("map_markers") && !payload.isJsonObject())
-				throw new IllegalStateException("map_markers upload must be JSON object");
-
-			if (mode.equals("map_markers")) {
-				var obj = payload.getAsJsonObject();
-				if (!obj.has("settlements") || !obj.get("settlements").isJsonArray())
-					throw new IllegalStateException("map_markers upload must include settlements array");
-				if (obj.has("installations") && !obj.get("installations").isJsonArray())
-					throw new IllegalStateException("map_markers installations must be a JSON array");
-				if (obj.has("forts") && !obj.get("forts").isJsonArray())
-					throw new IllegalStateException("map_markers forts must be a JSON array");
-			}
+			validate(mode, payload);
 
 			String path = "/" + Cache.mapRef + "/data/upload/" + mode;
 			GatewayClient.Result result = GatewayClient.request(
@@ -87,6 +72,37 @@ public class RestServer {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}
+
+	static void validate(String mode, JsonElement payload) {
+		if (mode.equals("nation") && !payload.isJsonObject())
+			throw new IllegalStateException("nation upload must be JSON object");
+
+		if ((mode.equals("provinces") || mode.equals("guilds")) && !payload.isJsonArray())
+			throw new IllegalStateException(mode + " upload must be JSON array");
+
+		if (mode.equals("map_markers") && !payload.isJsonObject())
+			throw new IllegalStateException("map_markers upload must be JSON object");
+
+		if (mode.equals("map_markers")) {
+			var obj = payload.getAsJsonObject();
+			if (!obj.has("settlements") || !obj.get("settlements").isJsonArray())
+				throw new IllegalStateException("map_markers upload must include settlements array");
+			if (obj.has("installations") && !obj.get("installations").isJsonArray())
+				throw new IllegalStateException("map_markers installations must be a JSON array");
+			if (obj.has("forts") && !obj.get("forts").isJsonArray())
+				throw new IllegalStateException("map_markers forts must be a JSON array");
+		}
+
+		if (mode.equals("chronicle")) {
+			if (!payload.isJsonObject())
+				throw new IllegalStateException("chronicle upload must be JSON object");
+			var obj = payload.getAsJsonObject();
+			if (!obj.has("captured_at"))
+				throw new IllegalStateException("chronicle upload must include captured_at");
+			if (!obj.has("factions") || !obj.get("factions").isJsonArray())
+				throw new IllegalStateException("chronicle upload must include factions array");
 		}
 	}
 

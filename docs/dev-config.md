@@ -16,6 +16,7 @@ Campaign keys (`war.*`) are in **`war.yml`** (`src/main/resources/war.yml` → `
 |-----|-----------|-------------------|-------|
 | Header comment | `dev server template` | Remove or relabel | Documents intent only |
 | `map-reference` | `main` on prod file; use `dev` on test | `main` (or live map id) | Drives TFMCWeb upload/regen paths |
+| `enable-chronicle` | `true` | `true` | Chronicle snapshot upload. Set `false` to stop the chronicle without taking the map down; `enable-map` still gates it |
 | `war.require_declare_code` (`war.yml`) | `false` | `true` | See RelationView bypass below |
 | `war.battle_cadence.provinces_between_battles` (`war.yml`) | `3` | `3` (or higher after playtest) | Field battle cadence |
 | `installations.*.construction-time` | `10` | `432000` fort / `259200` port+airport | Seconds |

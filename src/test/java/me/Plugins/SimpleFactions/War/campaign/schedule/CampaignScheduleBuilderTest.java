@@ -24,7 +24,7 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.zoc.FortZocIndex;
 import me.Plugins.SimpleFactions.War.campaign.zoc.FortZocIndex.OperationalFort;
 import me.Plugins.SimpleFactions.War.campaign.zoc.PortSeaZocIndex.OperationalPort;

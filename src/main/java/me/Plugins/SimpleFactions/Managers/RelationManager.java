@@ -13,6 +13,7 @@ import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
 import me.Plugins.SimpleFactions.Utils.OpinionColourMapper;
+import me.Plugins.SimpleFactions.mercenary.contract.MercenaryLoyaltyWatcher;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public class RelationManager {
@@ -49,6 +50,7 @@ public class RelationManager {
 		if(isOverlord(origin, target) || isOverlord(target, origin)) {
 			reset(origin, target, hostile);
 			me.Plugins.SimpleFactions.War.commitment.WarCommitmentService.onVassalageEnded(origin, target);
+			MercenaryLoyaltyWatcher.onRelationChanged(origin, target);
 			return true;
 		}
 		return false;
@@ -61,13 +63,32 @@ public class RelationManager {
 	}
 
 	public static double getDiplomaticCost(Faction from, Faction to, RelationType r) {
+		if (r == null || from == null || to == null) {
+			return 0;
+		}
 		double cost = r.getBaseCost();
 		if(!r.isSettable()) cost = 0;
-		cost*=to.getPrestige()/10.0;
+		cost*=prestigeOf(to)/10.0;
 		if(r.isVassalage()) {
 			cost/=3.0;
 		}
 		return cost;
+	}
+
+	public static double getDiplomaticCost(Faction from, Faction to, Attitude a) {
+		if (a == null || from == null || to == null) {
+			return 0;
+		}
+		double cost = a.getBaseCost();
+		if (cost == 0) {
+			return 0;
+		}
+		return cost * prestigeOf(to) / 10.0;
+	}
+
+	private static double prestigeOf(Faction faction) {
+		Double prestige = faction.getPrestige();
+		return prestige == null ? 0 : prestige;
 	}
 
 	public static boolean sameRealm(Faction a, Faction b) {
@@ -190,6 +211,8 @@ public class RelationManager {
 			target.setRelation(origin, reverse);
 		}
 		if(p != null) p.sendMessage(StringFormatter.formatHex("#a89977Set relation to "+r.getName()));
+		//An alliance or vassalage can make a signed mercenary contract treachery
+		MercenaryLoyaltyWatcher.onRelationChanged(origin, target);
 		return true;
 	}
 
@@ -226,6 +249,60 @@ public class RelationManager {
 		if(p != null) p.sendMessage(StringFormatter.formatHex("#a89977Set trade to "+r.getName()));
 	}
 
+	public static void setTreatyRelation(Player p, RelationType r, Faction target, Faction origin, boolean check) {
+		if(r.hasThreshold()) {
+			Threshold h = r.getThreshold();
+			int opinion = origin.getRelation(target.getId()).getOpinion();
+			boolean fulfilled = true;
+			String plus = "";
+			if(h.getOpinion() > 0) plus = "+";
+			if(!h.fulfilled(opinion)) {
+				if(p != null) p.sendMessage(StringFormatter.formatHex("§cYou need an opinion "+h.getFormattedType()+" "+OpinionColourMapper.getOpinionColor(h.getOpinion())+plus+h.getOpinion()+ "§c of them §7(currently "+opinion+")"));
+				fulfilled = false;
+			}
+			if(h.isMutual()) {
+				int reverseOpinion = target.getRelation(origin.getId()).getOpinion();
+				if(!h.fulfilled(reverseOpinion)) {
+					if(p != null) p.sendMessage(StringFormatter.formatHex("§cThey need an opinion "+h.getFormattedType()+" "+OpinionColourMapper.getOpinionColor(h.getOpinion())+plus+h.getOpinion()+ "§c of us §7(currently "+reverseOpinion+")"));
+					fulfilled = false;
+				}
+			}
+			if(!fulfilled) {
+				return;
+			}
+		}
+		if(r.isClearTreaty()) {
+			origin.getDiplomacyHandler().removeTreatyRelation(target.getId());
+			target.getDiplomacyHandler().removeTreatyRelation(origin.getId());
+			if(p != null) p.sendMessage(StringFormatter.formatHex("#a89977Cleared treaty"));
+			return;
+		}
+		if(r.isMutual() && check) {
+			sendTreatyRequest(p, target, r);
+			return;
+		}
+		origin.getDiplomacyHandler().setTreatyRelation(target, r);
+		if(r.isMutual()) {
+			target.getDiplomacyHandler().setTreatyRelation(origin, r.getLink());
+		}
+		if(p != null) p.sendMessage(StringFormatter.formatHex("#a89977Set treaty to "+r.getName()));
+	}
+
+	public static void setTreatyRelationForced(RelationType r, Faction target, Faction origin) {
+		if (r == null || target == null || origin == null) {
+			return;
+		}
+		if (r.isClearTreaty()) {
+			origin.getDiplomacyHandler().removeTreatyRelation(target.getId());
+			target.getDiplomacyHandler().removeTreatyRelation(origin.getId());
+			return;
+		}
+		origin.getDiplomacyHandler().setTreatyRelation(target, r);
+		if (r.isMutual() && r.getLink() != null) {
+			target.getDiplomacyHandler().setTreatyRelation(origin, r.getLink());
+		}
+	}
+
 	public static void setTradeRelationForced(RelationType r, Faction target, Faction origin) {
 		if (r == null || target == null || origin == null) {
 			return;
@@ -258,8 +335,27 @@ public class RelationManager {
 		return allies;
 	}
 
+	public static boolean hasTradeEmbargo(Faction origin, Faction target) {
+		if (origin == null || target == null || origin.getDiplomacyHandler() == null) {
+			return false;
+		}
+		RelationType trade = origin.getDiplomacyHandler().getTradeRelation(target.getId());
+		return trade != null && trade.blocksShops();
+	}
+
 	public static boolean hasNonAggressionPact(Faction a, Faction b) {
-		return false;
+		if (a == null || b == null) {
+			return false;
+		}
+		return treatyBlocksWar(a, b) || treatyBlocksWar(b, a);
+	}
+
+	private static boolean treatyBlocksWar(Faction from, Faction to) {
+		if (from.getDiplomacyHandler() == null) {
+			return false;
+		}
+		RelationType treaty = from.getDiplomacyHandler().getTreatyRelation(to.getId());
+		return treaty != null && treaty.blocksWar();
 	}
 
 	public static boolean isTributaryOf(Faction suzerain, Faction tributary) {
@@ -369,11 +465,26 @@ public class RelationManager {
 		return false;
 	}
 	
-	public static void setAttitude(Player p, Attitude a, Faction target, Faction origin) {
+	public static boolean setAttitude(Player p, Attitude a, Faction target, Faction origin) {
+		if (p == null || a == null || target == null || origin == null) {
+			return false;
+		}
 		Relation r = origin.getRelation(target.getId());
+		Attitude current = r.getAttitude();
+		if (current != null && current.getId().equalsIgnoreCase(a.getId())) {
+			p.sendMessage(StringFormatter.formatHex("#a89977Set attitude to "+a.getName()));
+			return true;
+		}
+		double oldCost = getDiplomaticCost(origin, target, current);
+		double newCost = getDiplomaticCost(origin, target, a);
+		if (origin.getDiplomacyHandler().getAvailableCapacity() < newCost - oldCost) {
+			p.sendMessage("§cYou lack diplomatic capacity for this attitude!");
+			return false;
+		}
 		r.setAttitude(a);
 		origin.setRelation(target, r);
 		p.sendMessage(StringFormatter.formatHex("#a89977Set attitude to "+a.getName()));
+		return true;
 	}
 	
 	private static void sendRequest(Player sender, Faction f, RelationType type) {
@@ -426,5 +537,31 @@ public class RelationManager {
 		Player sp = Bukkit.getPlayerExact(sender.getLeader());
 		if(sp != null && sp.isOnline()) sp.sendMessage(reciever.getName()+" §aaccepted your request and set trade to "+req.getType().getName());
 		setRelation(p, req.getType(), reciever, sender, false);
+	}
+
+	private static void sendTreatyRequest(Player sender, Faction f, RelationType type) {
+		Player p = Bukkit.getPlayerExact(f.getLeader());
+		if(p == null || !p.isOnline()) {
+			sender.sendMessage("§cCannot send request, target faction leader is not online!");
+			return;
+		}
+		sender.sendMessage("§aSent a request to "+f.getName()+" §ato set treaty to "+type.getName());
+		p.sendMessage(FactionManager.getByLeader(sender.getName()).getName()+" §7is requesting that you set treaty to "+type.getName());
+		p.sendMessage("§7Type §a/faction accept §7to accept");
+		p.sendMessage("§7Request will time out in 60 seconds");
+		RequestManager.addRequest(sender, p, new RelationRequest(FactionManager.getByLeader(sender.getName()).getOrCreateMainGuild(), type, false, true));
+	}
+
+	public static void acceptTreatyRequest(Player p) {
+		RelationRequest req = (RelationRequest) RequestManager.getRequest(p);
+		Faction reciever = FactionManager.getByLeader(p.getName());
+		if(reciever == null) {
+			p.sendMessage("§cYou do not have a faction");
+			return;
+		}
+		Faction sender = req.getFaction();
+		Player sp = Bukkit.getPlayerExact(sender.getLeader());
+		if(sp != null && sp.isOnline()) sp.sendMessage(reciever.getName()+" §aaccepted your request and set treaty to "+req.getType().getName());
+		setTreatyRelation(p, req.getType(), reciever, sender, false);
 	}
 }

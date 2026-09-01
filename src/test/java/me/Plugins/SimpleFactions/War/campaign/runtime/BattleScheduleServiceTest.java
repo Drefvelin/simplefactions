@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.War.campaign.runtime;
 
+
+import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -35,8 +37,8 @@ import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
-import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService.PostBattleChoicePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;

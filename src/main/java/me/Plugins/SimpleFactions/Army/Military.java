@@ -8,6 +8,7 @@ import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
+import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 
 public class Military {
@@ -19,6 +20,7 @@ public class Military {
 	public Military(Faction f) {
 		this.f = f;
 		for(Regiment r : RegimentLoader.getRegiments()) {
+			if(r.isMercenary()) continue;
 			regiments.add(new Regiment(r));
 		}
 	}
@@ -72,10 +74,27 @@ public class Military {
 	public List<MilitaryExpansion> getQueue(){
 		return queue;
 	}
+
+	public ExpandResult canExpand(Regiment r) {
+		if (r == null) {
+			return ExpandResult.deny("Unknown regiment.");
+		}
+		if (r.isLevy()) {
+			return ExpandResult.ok();
+		}
+		if (f != null && f.hasFactionRule(Rules.CAN_RECRUIT_PROFESSIONAL_ARMY)) {
+			return ExpandResult.ok();
+		}
+		return ExpandResult.deny("Your laws do not allow recruiting a professional army.");
+	}
 	
-	public void enqueue(Regiment r) {
-		if(queue.size() == 3) return;
+	public boolean enqueue(Regiment r) {
+		if(queue.size() == 3) return false;
+		if (!canExpand(r).allowed()) {
+			return false;
+		}
 		queue.add(new MilitaryExpansion(r));
+		return true;
 	}
 
 	public void addQueueItem(Regiment r, int time){

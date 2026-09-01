@@ -8,7 +8,11 @@ public enum GuildModifier {
     TRADE_CARRY("#86d1b0Trade Carry", true),
     DIPLOMATIC_CAPACITY("#56ccf2Diplomatic Capacity", true),
     ADMIN_POWER("#ebde54Administrative Power", true),
-    ADMIN_POWER_GAIN("#d1b347Administrative Power Gain", true);
+    ADMIN_POWER_GAIN("#d1b347Administrative Power Gain", true),
+    AUTO_DEALER_TABLES("#76ad9dAuto Dealer Tables", true),
+    MAX_HEALTH("#e06c75Max Health", true),
+    MAX_MANA("#61afefMax Mana", true),
+    MANA_REGEN("#56b6c2Mana Regen", true);
 
     private final String name;
     private final boolean positive;

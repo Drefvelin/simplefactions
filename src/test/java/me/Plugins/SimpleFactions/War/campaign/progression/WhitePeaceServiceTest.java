@@ -1,5 +1,10 @@
 package me.Plugins.SimpleFactions.War.campaign.progression;
 
+
+
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -129,6 +134,22 @@ class WhitePeaceServiceTest {
 		war.setWhitePeaceProposedByAttacker(true);
 		war.setWhitePeaceProposedByDefender(true);
 		assertTrue(WhitePeaceService.shouldAutoEnd(war));
+	}
+
+	@Test
+	void recalculateProposals_keepsForcedOfferWhenReachable() {
+		War war = baseWar();
+		war.setForcedWhitePeaceByAttacker(true);
+		try (MockedStatic<CampaignCapabilityService> capability = mockStatic(CampaignCapabilityService.class)) {
+			capability.when(() -> CampaignCapabilityService.canReachTarget(war, CampaignCoalition.AGGRESSOR))
+					.thenReturn(true);
+			capability.when(() -> CampaignCapabilityService.canReachTarget(war, CampaignCoalition.DEFENDER))
+					.thenReturn(true);
+
+			WhitePeaceService.recalculateProposals(war);
+			assertTrue(war.isWhitePeaceProposedByAttacker());
+			assertFalse(war.isWhitePeaceProposedByDefender());
+		}
 	}
 
 	private War baseWar() {

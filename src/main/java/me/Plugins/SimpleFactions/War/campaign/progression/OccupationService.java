@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.War.campaign.progression;
 
+
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -294,5 +296,24 @@ public class OccupationService {
 
 	private static List<Integer> copyList(List<Integer> source) {
 		return source == null ? new ArrayList<>() : new ArrayList<>(source);
+	}
+
+	public static final class OccupationZone {
+		private final List<Integer> provinceIds;
+
+		private OccupationZone(List<Integer> provinceIds) {
+			this.provinceIds = List.copyOf(provinceIds);
+		}
+
+		public static OccupationZone of(List<Integer> provinceIds) {
+			if (provinceIds == null || provinceIds.isEmpty()) {
+				return new OccupationZone(List.of());
+			}
+			return new OccupationZone(new ArrayList<>(provinceIds));
+		}
+
+		public List<Integer> provinceIds() {
+			return provinceIds;
+		}
 	}
 }

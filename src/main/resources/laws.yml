@@ -809,3 +809,44 @@ favouring:
         faction:
           rules:
             - can_favour true
+
+assembly:
+  name: "#c9c99bAssembly"
+  description:
+    - "#c9c99bAssembly laws #d4c9aedetermine"
+    - "#d4c9aewhen the government may demand"
+    - "#d4c9aea movement disband."
+  laws:
+    none:
+      name: "#bdaea8None"
+      description:
+        - "#bdaea8None #d4c9aemeans the government"
+        - "#d4c9aemay demand a disband when a"
+        - "#d4c9aemovement is agitated or rebellious."
+      cost: 15
+      upkeep: 0
+      compatibility:
+        - right_to_assembly 3
+        - state_crackdowns 3
+    right_to_assembly:
+      name: "#7bc767Right to Assembly"
+      description:
+        - "#7bc767Right to Assembly #d4c9aemeans"
+        - "#d4c9aethe government may demand a"
+        - "#d4c9aedisband only when rebellious."
+      cost: 20
+      upkeep: 2
+      compatibility:
+        - none 3
+        - state_crackdowns 3
+    state_crackdowns:
+      name: "#d1775eState Crackdowns"
+      description:
+        - "#d1775eState Crackdowns #d4c9aemeans"
+        - "#d4c9aethe government may demand a"
+        - "#d4c9aedisband at any movement phase."
+      cost: 25
+      upkeep: 4
+      compatibility:
+        - none 3
+        - right_to_assembly 3

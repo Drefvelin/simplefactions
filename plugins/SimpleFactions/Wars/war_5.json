@@ -6,6 +6,7 @@
   "warType": "subjugate",
   "attackerLeaderId": "atk",
   "defenderLeaderId": "def",
+  "internalWar": false,
   "objectiveProvinceId": 30,
   "campaignStartProvinceId": 20,
   "campaignProvinces": [
@@ -25,6 +26,8 @@
   "objectiveHeldBy": "defender",
   "whitePeaceProposedByAttacker": false,
   "whitePeaceProposedByDefender": false,
+  "forcedWhitePeaceByAttacker": false,
+  "forcedWhitePeaceByDefender": false,
   "campaignBattlesFought": 0,
   "campaignBattleSchedule": [
     {
@@ -57,7 +60,7 @@
   "concededScheduleSlots": [],
   "locationBattleCounts": {},
   "battleSchedulePhase": "voting",
-  "battleDay": "2026-09-01",
+  "battleDay": "2026-09-02",
   "battleVotes": {},
   "battleInstallationPicks": {},
   "campaignRaidsUsed": {},
@@ -72,7 +75,7 @@
   "postBattleChoiceResolved": true,
   "holdPeaceProposalActive": false,
   "forceQuorumNextClose": false,
-  "startedAt": "2026-08-31T07:34:18.925531200Z",
+  "startedAt": "2026-09-01T11:41:09.477485800Z",
   "attackers": {
     "leader": "atk",
     "participants": [

@@ -45,6 +45,23 @@ public final class PillageTradeHit {
 		return total;
 	}
 
+	public static String breakdownLine(Guild guild) {
+		double p = percent(guild);
+		if (p == 0) {
+			return null;
+		}
+		long rounded = Math.round(p);
+		String signed = rounded > 0 ? "+" + rounded : Long.toString(rounded);
+		return "#d4c9aePillage: #c45749" + signed + "%";
+	}
+
+	public static String ledgerSuffix(Guild guild) {
+		if (percent(guild) == 0) {
+			return "";
+		}
+		return " §7(§cPillaged§7)";
+	}
+
 	public static void attach(Guild guild, double percent, double decay) {
 		if (guild == null || guild.getPillageHits() == null) {
 			return;

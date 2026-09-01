@@ -13,9 +13,9 @@ import com.google.gson.Gson;
 import me.Plugins.SimpleFactions.Database.CivilWarMemberMoveData;
 import me.Plugins.SimpleFactions.Database.CommitmentData;
 import me.Plugins.SimpleFactions.Database.WarData;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
-import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService.PostBattleChoicePhase;
 
 class WarDataRoundTripTest {
 	private static final Gson GSON = new Gson();

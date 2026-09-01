@@ -34,8 +34,23 @@ public class ConfigLoader {
 		Cache.maxUntitledProvinces = config.getInt("max-untitled-provinces", 5);
 		Cache.maxFreeTitles = config.getInt("max-free-titles", 3);
 		Cache.mapEnabled = config.getBoolean("enable-map", false);
+		Cache.provincesEnabled = config.getBoolean("enable-provinces", true);
+		Cache.chronicleEnabled = config.getBoolean("enable-chronicle", true);
+		if (!Cache.provincesEnabled) {
+			Cache.mapEnabled = false;
+		}
 
 		Cache.provinceCost = config.getInt("province-cost", 50);
+		Cache.dividendRequirePreviousTickMembership =
+				config.getBoolean("dividend-require-previous-tick-membership", true);
+
+		Cache.mercenaryFormationCost = config.getDouble("mercenary-formation-cost", 100.0);
+		Cache.mercenaryFormationSeconds = config.getInt("mercenary-formation-seconds", 86400);
+		Cache.mercenarySlotUpkeep = config.getDouble("mercenary-slot-upkeep", 8.0);
+		Cache.mercenaryMinPricePerBattle = config.getDouble("mercenary-min-price-per-battle", 50.0);
+		Cache.mercenaryMinPricePerDay = config.getDouble("mercenary-min-price-per-day", 10.0);
+		Cache.mercenaryMaxContractDays = config.getInt("mercenary-max-contract-days", 14);
+		Cache.mercenaryDefaultBreachRefund = config.getDouble("mercenary-default-breach-refund", 500.0);
 
 		Cache.settlementLargePopulationThreshold = config.getInt("settlement-large-population-threshold", 8);
 		Cache.portSeaProximityBlocks = config.getInt("port-sea-proximity-blocks", 20);

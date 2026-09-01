@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.War.campaign.progression;
 
+
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 import java.util.Optional;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
@@ -18,6 +20,10 @@ public final class WhitePeaceService {
 			boolean propose = !CampaignCapabilityService.canReachTarget(war, coalition);
 			if (war.isHoldPeaceProposalActive()
 					&& war.getPostBattleWinnerCoalition() == coalition) {
+				propose = true;
+			}
+			if ((coalition == CampaignCoalition.AGGRESSOR && war.isForcedWhitePeaceByAttacker())
+					|| (coalition == CampaignCoalition.DEFENDER && war.isForcedWhitePeaceByDefender())) {
 				propose = true;
 			}
 			CampaignCoalitionService.setWhitePeaceProposed(war, coalition, propose);

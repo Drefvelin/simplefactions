@@ -15,6 +15,7 @@ import me.Plugins.SimpleFactions.Map.Provinces.ProvinceDataEntry;
 import me.Plugins.SimpleFactions.Objects.Bracket;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.TaxHandler;
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
@@ -63,6 +64,9 @@ public class ProvinceManager {
     }
 
     public void recalculate() {
+        if (!Cache.provincesEnabled) {
+            return;
+        }
         for(Guild g : FactionManager.getAllGuilds()) {
             if (!g.hasCapital()) continue;
             recalculateGuild(g);
@@ -76,6 +80,9 @@ public class ProvinceManager {
     }
 
     public void recalculateForSingleGuild(Guild g, boolean save) {
+        if (!Cache.provincesEnabled) {
+            return;
+        }
         if (!g.hasCapital()) return;
         recalculateGuild(g);
         recalculateProduction(g);
@@ -116,6 +123,12 @@ public class ProvinceManager {
     }
 
     public double getIncome(Guild guild, boolean save) {
+        if (!Cache.provincesEnabled) {
+            if (save) {
+                guild.getTradeBreakdown().clear();
+            }
+            return 0;
+        }
         if(save) guild.getTradeBreakdown().clear();
         double income = 0;
         double upkeep = 0;

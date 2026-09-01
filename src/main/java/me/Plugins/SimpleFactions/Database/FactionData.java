@@ -47,6 +47,8 @@ public class FactionData {
     public List<String> relations = new ArrayList<>();
     @SerializedName("trade relation")
     public List<String> tradeRelations = new ArrayList<>();
+    @SerializedName("treaty relation")
+    public List<String> treatyRelations = new ArrayList<>();
 
     @SerializedName("tier index")
     public Double tierIndex;
@@ -58,6 +60,11 @@ public class FactionData {
 
     @SerializedName("prestige modifiers")
     public List<String> prestigeModifiers = new ArrayList<>();
+
+    public String rank;
+
+    @SerializedName("founded at")
+    public Long foundedAt;
 
     public String overlord;
 

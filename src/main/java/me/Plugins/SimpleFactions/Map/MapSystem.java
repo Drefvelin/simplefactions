@@ -16,10 +16,11 @@ import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
+import me.Plugins.SimpleFactions.Map.export.ChronicleExport;
 import me.Plugins.SimpleFactions.Map.export.OccupationMapExport;
 import me.Plugins.SimpleFactions.Map.export.Markers;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.civilwar.CivilWarBorderLock;
+import me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarBorderLock;
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarCopy;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.installation.InstallationTransferService;
@@ -37,12 +38,26 @@ public class MapSystem {
 	private HashMap<String, List<String>> queues = new HashMap<>();
 	
 	public void tick() {
+		if (!Cache.provincesEnabled) {
+			return;
+		}
 		lastUpdate++;
 		fullUpdate++;
-		if(lastUpdate > 300 && !queues.isEmpty()) {
-			updateMap();
-		} else if(fullUpdate > 3600) {
+		// Checked first and unconditionally. As an else-branch it could be starved
+		// indefinitely by a queue that happened to be non-empty on the crossing tick.
+		if(fullUpdate > 3600) {
 			queueAllNations();
+			return;
+		}
+		if(lastUpdate > 300) {
+			// Trade and chronicle move continuously with no map queue involvement, so the
+			// quiet path still ships them. Gating everything on the queue left a silent
+			// server with no data at all.
+			if(!queues.isEmpty()) {
+				updateMap();
+			} else {
+				updateLiveData();
+			}
 		}
 	}
 	
@@ -61,22 +76,38 @@ public class MapSystem {
 
 	/** Export JSON payloads to MapAPI / Input (main thread). */
 	public void prepareUploadFiles() {
+		prepareLiveFiles();
+		prepareMapFiles();
+	}
+
+	/** Cheap payloads that change continuously and ship on every cycle (main thread). */
+	public void prepareLiveFiles() {
 		exportProvinces();
 		exportGuilds();
+		exportChronicle();
+	}
+
+	/** Nation geometry and markers, only worth regenerating when the map queue has work. */
+	public void prepareMapFiles() {
 		exportMarkers();
 		compiler.exportAllFactionsToNationJson();
 	}
 
 	/** POST exported files to ProvinceSystem (safe off main thread). */
 	public void uploadPreparedFiles() {
+		uploadLiveFiles();
 		RestServer.upload("nation", new File("plugins/SimpleFactions/MapAPI/nation.json"));
-		RestServer.upload("province_data", new File("plugins/SimpleFactions/MapAPI/province_data.json"));
-		RestServer.upload("guilds", new File("plugins/SimpleFactions/MapAPI/guilds.json"));
 		RestServer.upload("map_markers", new File("plugins/SimpleFactions/MapAPI/map_markers.json"));
 		RestServer.upload("county", new File("plugins/SimpleFactions/Input/county.json"));
 		RestServer.upload("duchy", new File("plugins/SimpleFactions/Input/duchy.json"));
 		RestServer.upload("kingdom", new File("plugins/SimpleFactions/Input/kingdom.json"));
 		RestServer.upload("empire", new File("plugins/SimpleFactions/Input/empire.json"));
+	}
+
+	public void uploadLiveFiles() {
+		RestServer.upload("province_data", new File("plugins/SimpleFactions/MapAPI/province_data.json"));
+		RestServer.upload("guilds", new File("plugins/SimpleFactions/MapAPI/guilds.json"));
+		RestServer.upload("chronicle", new File("plugins/SimpleFactions/MapAPI/chronicle.json"));
 	}
 	
 	public void updateMap() {
@@ -94,6 +125,20 @@ public class MapSystem {
 			uploadPreparedFiles();
 			RestServer.commenceRegen("queued");
 			Bukkit.getScheduler().runTask(plugin, this::clear);
+		});
+	}
+
+	/**
+	 * Quiet path: no queued map work, so ship only the continuously changing payloads.
+	 * Skips the per-faction save loop because nothing here reads Data/*.json.
+	 */
+	public void updateLiveData() {
+		lastUpdate = 0;
+		prepareLiveFiles();
+		SimpleFactions plugin = SimpleFactions.getInstance();
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+			uploadLiveFiles();
+			RestServer.commenceRegen("trade");
 		});
 	}
 	
@@ -274,6 +319,17 @@ public class MapSystem {
 			Markers.export(out);
 		} catch (Exception e) {
 			Bukkit.getLogger().severe("[SimpleFactions] Failed to export map_markers.json");
+			e.printStackTrace();
+		}
+	}
+
+	public void exportChronicle() {
+		if (!Cache.chronicleEnabled) return;
+		try {
+			File out = new File("plugins/SimpleFactions/MapAPI/chronicle.json");
+			ChronicleExport.export(out);
+		} catch (Exception e) {
+			Bukkit.getLogger().severe("[SimpleFactions] Failed to export chronicle.json");
 			e.printStackTrace();
 		}
 	}

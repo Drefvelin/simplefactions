@@ -1,5 +1,9 @@
 package me.Plugins.SimpleFactions.War.campaign.progression;
 
+
+
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService;
 import java.util.Optional;
 
 import org.bukkit.Bukkit;
@@ -12,7 +16,7 @@ import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleOutcomeServic
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService;
-import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationInPlayService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.pick.BattleInstallationInPlayService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.ui.CampaignUiCopy;
@@ -20,8 +24,8 @@ import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
-import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRecord;
-import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRegistry;
+import me.Plugins.SimpleFactions.vehicles.registry.PlayerVehicleRecord;
+import me.Plugins.SimpleFactions.vehicles.registry.PlayerVehicleRegistry;
 
 public final class AttackerNavalContestService {
 	private static final String SHIPS_CATEGORY = "ships";

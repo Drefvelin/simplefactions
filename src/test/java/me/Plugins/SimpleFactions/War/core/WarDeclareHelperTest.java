@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.War.core;
 
+
+import me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarBorderLock;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,6 +56,7 @@ class WarDeclareHelperTest {
 		assertEquals(WarType.OVERTHROW, WarDeclareHelper.warTypeForGoal(WarGoalType.OVERTHROW));
 		assertEquals(WarType.CHANGE_LAW, WarDeclareHelper.warTypeForGoal(WarGoalType.CHANGE_LAW));
 		assertEquals(WarType.CHANGE_TAX, WarDeclareHelper.warTypeForGoal(WarGoalType.CHANGE_TAX));
+		assertEquals(WarType.WAR, WarDeclareHelper.warTypeForGoal(WarGoalType.FORCE_PEACE));
 	}
 
 	@Test
@@ -88,9 +91,9 @@ class WarDeclareHelperTest {
 	void deJureAndSubjects_emptyWhenDefenderLocked() {
 		Faction attacker = mockFaction("attacker");
 		Faction defender = mockFaction("defender");
-		try (org.mockito.MockedStatic<me.Plugins.SimpleFactions.War.civilwar.CivilWarBorderLock> lock =
-				org.mockito.Mockito.mockStatic(me.Plugins.SimpleFactions.War.civilwar.CivilWarBorderLock.class)) {
-			lock.when(() -> me.Plugins.SimpleFactions.War.civilwar.CivilWarBorderLock.isLocked(defender))
+		try (org.mockito.MockedStatic<me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarBorderLock> lock =
+				org.mockito.Mockito.mockStatic(me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarBorderLock.class)) {
+			lock.when(() -> me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarBorderLock.isLocked(defender))
 					.thenReturn(true);
 			assertTrue(WarDeclareHelper.deJureTitleOptions(attacker, defender).isEmpty());
 			assertTrue(WarDeclareHelper.defenderSubjects(defender).isEmpty());
@@ -140,6 +143,23 @@ class WarDeclareHelperTest {
 		FactionManager.factions.add(defender);
 
 		assertTrue(WarDeclareHelper.canDeclareUsurp(attacker, defender));
+	}
+
+	@Test
+	void canDeclareUsurp_rejectsInternalPeer() {
+		Faction king = mockRankedFaction("king", 5);
+		Faction dukeA = mockSubject("dukeA", "king");
+		Tier attackerTier = mockTier(3);
+		when(dukeA.getTier()).thenReturn(attackerTier);
+		Faction dukeB = mockSubject("dukeB", "king");
+		Tier defenderTier = mockTier(3);
+		when(dukeB.getTier()).thenReturn(defenderTier);
+		withTitle(dukeB);
+		FactionManager.factions.add(king);
+		FactionManager.factions.add(dukeA);
+		FactionManager.factions.add(dukeB);
+
+		assertFalse(WarDeclareHelper.canDeclareUsurp(dukeA, dukeB));
 	}
 
 	@Test

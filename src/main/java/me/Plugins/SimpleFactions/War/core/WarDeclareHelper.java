@@ -6,9 +6,10 @@ import java.util.List;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.civilwar.CivilWarBorderLock;
+import me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarBorderLock;
 import me.Plugins.SimpleFactions.War.declare.DeJureAnnexEligibility;
 import me.Plugins.SimpleFactions.War.declare.DeJureAnnexEligibility.DeJureTitleOption;
+import me.Plugins.SimpleFactions.War.declare.InterVassalQueries;
 import me.Plugins.SimpleFactions.War.declare.WarGoalValidator;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
@@ -30,6 +31,7 @@ public final class WarDeclareHelper {
 			case OVERTHROW -> WarType.OVERTHROW;
 			case CHANGE_LAW -> WarType.CHANGE_LAW;
 			case CHANGE_TAX -> WarType.CHANGE_TAX;
+			case FORCE_PEACE -> WarType.WAR;
 		};
 	}
 
@@ -74,6 +76,9 @@ public final class WarDeclareHelper {
 		}
 		if (RelationManager.sameRealm(attacker, defender)
 				&& !RelationManager.isOverlord(attacker, defender)) {
+			return false;
+		}
+		if (InterVassalQueries.isInternalPeer(attacker, defender)) {
 			return false;
 		}
 		return true;

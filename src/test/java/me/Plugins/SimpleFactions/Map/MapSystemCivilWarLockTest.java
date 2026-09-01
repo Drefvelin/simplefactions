@@ -19,7 +19,7 @@ import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Handler.ProvinceHandler;
 import me.Plugins.SimpleFactions.SimpleFactions;
-import me.Plugins.SimpleFactions.War.civilwar.CivilWarBorderLock;
+import me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarBorderLock;
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarCopy;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;

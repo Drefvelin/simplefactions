@@ -32,6 +32,19 @@ public class Cache {
 	public static int maxFreeTitles;
 	public static double deJureRequirement;
 	public static boolean mapEnabled;
+	public static boolean provincesEnabled = true;
+	public static boolean chronicleEnabled = true;
+	public static final String PROVINCES_DISABLED_MESSAGE = "§cProvinces are disabled on this server";
+
+	public static boolean requireProvinces(org.bukkit.command.CommandSender sender) {
+		if (provincesEnabled) {
+			return true;
+		}
+		sender.sendMessage(PROVINCES_DISABLED_MESSAGE);
+		return false;
+	}
+
+	public static boolean dividendRequirePreviousTickMembership = true;
 
 	public static int provinceCost;
 
@@ -109,6 +122,14 @@ public class Cache {
 
 	public static double branchUpgradeCost;
 	public static double branchUpgradeExponent;
+
+	public static double mercenaryFormationCost = 100.0;
+	public static int mercenaryFormationSeconds = 86400;
+	public static double mercenarySlotUpkeep = 8.0;
+	public static double mercenaryMinPricePerBattle = 50.0;
+	public static double mercenaryMinPricePerDay = 10.0;
+	public static int mercenaryMaxContractDays = 14;
+	public static double mercenaryDefaultBreachRefund = 500.0;
 
 	public static Map<Scope, LawEffect> baseEffects = new HashMap<>();
 

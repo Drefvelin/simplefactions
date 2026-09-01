@@ -25,6 +25,7 @@ import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.LoreWriter;
 import me.Plugins.SimpleFactions.Utils.Represents;
 import me.Plugins.SimpleFactions.Utils.Wealth;
+import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Stance;
@@ -594,6 +595,19 @@ public class GovernmentCreator {
         lore.addAll(politicalAction.getDescription());
         m.setLore(lore);
         m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, action.name());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createWarPeaceSelectItem(War war, Action action) {
+        ItemStack item = new ItemStack(Material.IRON_SWORD, 1);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(war.getName());
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#b8ae61" + action.getDisplay()));
+        lore.add(StringFormatter.formatHex("#50e846Click to select this war"));
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, String.valueOf(war.getId()));
         item.setItemMeta(m);
         return item;
     }

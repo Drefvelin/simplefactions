@@ -22,3 +22,12 @@ admin_power_gain:
     - realm
   modifiers:
     - admin_power_gain 0 0.5
+auto_dealer_tables:
+  name: "#76ad9dAuto Dealer Tables"
+  icon: "writable_book.0"
+  expansion-time: 10
+  allowed-types:
+    - guild
+    - realm
+  modifiers:
+    - auto_dealer_tables 1

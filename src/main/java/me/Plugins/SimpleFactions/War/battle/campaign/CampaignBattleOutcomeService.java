@@ -22,13 +22,13 @@ import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignBattleEndService;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignBattleEndService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignChoiceService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignMilitaryWalkoverService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPostBattleChoiceService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignMilitaryWalkoverService;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget;
 import me.Plugins.SimpleFactions.War.campaign.progression.OccupationService;
 import me.Plugins.SimpleFactions.War.pathfinder.TitleManagerProvinceOwnerLookup;
 import me.Plugins.SimpleFactions.War.resolution.ResolutionContext;
@@ -38,7 +38,7 @@ import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.zoc.FortControlService;
 import me.Plugins.SimpleFactions.installation.WartimeInstallationService;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBattleService;
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidBattleService;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 
 public class CampaignBattleOutcomeService implements Listener {

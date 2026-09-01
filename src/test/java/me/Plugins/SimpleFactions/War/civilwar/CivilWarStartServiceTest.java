@@ -1,6 +1,10 @@
 package me.Plugins.SimpleFactions.War.civilwar;
 
+
+import me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarBorderLock;
+import me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarSeaPortGate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -60,6 +64,20 @@ class CivilWarStartServiceTest {
 
 		assertEquals(CivilWarCopy.UNMAPPABLE_CAUSE, error);
 		verify(movement, never()).setFrozen(true);
+	}
+
+	@Test
+	void whitePeaceCause_isNotUnmappable() {
+		Movement movement = baseMovement(Action.WHITE_PEACE, Member.GUILD_LEADER);
+		String error = CivilWarStartService.start(movement);
+		assertNotEquals(CivilWarCopy.UNMAPPABLE_CAUSE, error);
+	}
+
+	@Test
+	void surrenderCause_isNotUnmappable() {
+		Movement movement = baseMovement(Action.SURRENDER, Member.GUILD_LEADER);
+		String error = CivilWarStartService.start(movement);
+		assertNotEquals(CivilWarCopy.UNMAPPABLE_CAUSE, error);
 	}
 
 	@Test

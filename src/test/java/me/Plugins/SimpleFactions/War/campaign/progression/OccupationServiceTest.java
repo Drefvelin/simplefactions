@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.War.campaign.progression;
 
+
+import me.Plugins.SimpleFactions.War.campaign.progression.OccupationService.OccupationZone;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -8,6 +10,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,12 +19,15 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Diplomacy.Relation;
+import me.Plugins.SimpleFactions.Diplomacy.RelationType;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 import me.Plugins.SimpleFactions.War.campaign.zoc.FortZocIndex;
 import me.Plugins.SimpleFactions.War.campaign.zoc.FortZocIndex.OperationalFort;
@@ -348,6 +354,53 @@ class OccupationServiceTest {
 		}
 	}
 
+	@Test
+	void applyBattleWin_doesNotOccupyKingLiegeTransit() {
+		List<Faction> saved = new ArrayList<>(FactionManager.factions);
+		FactionManager.factions.clear();
+		try {
+			Faction king = mockIndependent("king");
+			Faction dukeA = mockSubject("dukeA", "king");
+			Faction dukeB = mockSubject("dukeB", "king");
+			FactionManager.factions.add(king);
+			FactionManager.factions.add(dukeA);
+			FactionManager.factions.add(dukeB);
+
+			Province battle = province(10, Terrain.PLAINS);
+			Province kingLand = province(21, Terrain.PLAINS);
+			link(battle, kingLand);
+			pm.start(Map.of(10, battle, 21, kingLand));
+
+			try (MockedStatic<TitleManager> titleManager = mockStatic(TitleManager.class)) {
+				titleManager.when(() -> TitleManager.getByProvince(10)).thenReturn(dukeB);
+				titleManager.when(() -> TitleManager.getByProvince(21)).thenReturn(king);
+				War war = new War(1, dukeA, dukeB);
+				war.setGoal(WarGoalType.SUBJUGATE);
+				war.setWarType(WarType.SUBJUGATE);
+				war.setObjectiveProvinceId(30);
+				war.setCampaignStartProvinceId(10);
+				war.setCampaignProvinces(List.of(5, 10, 30));
+				war.setCursorIndex(1);
+				war.setCampaignPhase(CampaignPhase.INVASION);
+				war.setObjectiveHeldBy(ObjectiveHolder.DEFENDER);
+				war.setOccupiedByAttacker(new ArrayList<>());
+				war.setOccupiedByDefender(new ArrayList<>());
+				war.setLastBattleOccupied(new ArrayList<>());
+
+				assertTrue(service.applyBattleWin(war, 10, BelligerentRole.ATTACKER));
+				assertTrue(war.getOccupiedByAttacker().contains(10));
+				assertFalse(war.getOccupiedByAttacker().contains(21));
+				assertFalse(war.getLastBattleOccupied().contains(21));
+				BelligerentTerritory territory = BelligerentTerritory.fromWar(
+						war, new TitleManagerProvinceOwnerLookup());
+				assertTrue(territory.isLiegeTransit(21));
+			}
+		} finally {
+			FactionManager.factions.clear();
+			FactionManager.factions.addAll(saved);
+		}
+	}
+
 	private War baseWar(List<Integer> axis) {
 		War war = new War(1, attacker, defender);
 		war.setGoal(WarGoalType.SUBJUGATE);
@@ -381,5 +434,27 @@ class OccupationServiceTest {
 	private void link(Province a, Province b) {
 		a.addNeighbour(b.getId());
 		b.addNeighbour(a.getId());
+	}
+
+	private static Faction mockIndependent(String id) {
+		Faction faction = mock(Faction.class);
+		when(faction.getId()).thenReturn(id);
+		when(faction.getRelations()).thenReturn(new HashMap<>());
+		when(faction.getMembers()).thenReturn(new ArrayList<>());
+		return faction;
+	}
+
+	private static Faction mockSubject(String id, String overlordId) {
+		Faction faction = mockIndependent(id);
+		Relation relation = mock(Relation.class);
+		RelationType type = mock(RelationType.class);
+		when(type.isOverlord()).thenReturn(true);
+		when(type.getId()).thenReturn("subject");
+		when(relation.getType()).thenReturn(type);
+		HashMap<String, Relation> relations = new HashMap<>();
+		relations.put(overlordId, relation);
+		when(faction.getRelations()).thenReturn(relations);
+		when(faction.getRelation(overlordId)).thenReturn(relation);
+		return faction;
 	}
 }

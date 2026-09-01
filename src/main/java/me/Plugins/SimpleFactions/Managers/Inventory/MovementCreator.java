@@ -15,7 +15,9 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.LoreWriter;
+import me.Plugins.SimpleFactions.War.resolution.CouncilPeaceQueries;
 import me.Plugins.SimpleFactions.government.movement.Movement;
+import me.Plugins.SimpleFactions.government.movement.MovementCrackdownQueries;
 import me.Plugins.SimpleFactions.government.movement.Phase;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
 import me.Plugins.SimpleFactions.government.proposal.Proposal;
@@ -361,6 +363,71 @@ public class MovementCreator {
         return item;
     }
 
+    public ItemStack createDemandDisbandItem(Faction f, Movement movement) {
+        ItemStack item = new ItemStack(Material.IRON_AXE, 1);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#d1775eDemand Disband"));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#7a7a7aDemand that this movement disband."));
+        lore.add(StringFormatter.formatHex("#7a7a7aIf they refuse, a civil war begins."));
+        lore.add(" ");
+        if (MovementCrackdownQueries.canCrush(f, movement)) {
+            lore.add(StringFormatter.formatHex("#50e846Click to demand a disband"));
+        } else {
+            lore.add(StringFormatter.formatHex("#d4bb98" + MovementCrackdownQueries.denyReason(f, movement)));
+            lore.add(StringFormatter.formatHex("#c74d32Unavailable"));
+        }
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createRefuseDisbandWarningItem() {
+        ItemStack item = new ItemStack(Material.BARRIER);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#d65c5cWarning"));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#c74d32Refusing to disband will"));
+        lore.add(StringFormatter.formatHex("#c74d32trigger a Civil War!"));
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#7a7a7aThe movement will rise up against"));
+        lore.add(StringFormatter.formatHex("#7a7a7athe faction leadership."));
+        m.setLore(lore);
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createAcceptDisbandButton(Movement movement) {
+        ItemStack item = new ItemStack(Material.GREEN_CONCRETE);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#50e846Disband Movement"));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#7a7a7aAccept the demand and disband"));
+        lore.add(StringFormatter.formatHex("#7a7a7athis movement. Causes are not applied."));
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#45afc4Click to Disband"));
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
+        item.setItemMeta(m);
+        return item;
+    }
+
+    public ItemStack createRefuseDisbandButton(Movement movement) {
+        ItemStack item = new ItemStack(Material.RED_CONCRETE);
+        ItemMeta m = item.getItemMeta();
+        m.setDisplayName(StringFormatter.formatHex("#c74d32Refuse to Disband"));
+        List<String> lore = new ArrayList<>();
+        lore.add(StringFormatter.formatHex("#7a7a7aRefuse the demand and"));
+        lore.add(StringFormatter.formatHex("#7a7a7aface a civil war."));
+        lore.add(" ");
+        lore.add(StringFormatter.formatHex("#d65c5cClick to Refuse"));
+        m.setLore(lore);
+        m.getPersistentDataContainer().set(Keys.STRING_KEY, PersistentDataType.STRING, movement.getId());
+        item.setItemMeta(m);
+        return item;
+    }
+
     public ItemStack createEmptyCauseSlot(int index) {
         ItemStack item = new ItemStack(Material.GRAY_CONCRETE);
         ItemMeta m = item.getItemMeta();
@@ -492,7 +559,10 @@ public class MovementCreator {
         if (item.getType() == Material.PLAYER_HEAD) {
             m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
         }
-        m.setDisplayName(StringFormatter.formatHex("#c5e0e3Change Leader Target"));
+        m.setDisplayName(StringFormatter.formatHex(
+                CouncilPeaceQueries.isWarEndAction(proposal.getPoliticalAction().getAction())
+                        ? "#c5e0e3Choose War"
+                        : "#c5e0e3Change Leader Target"));
         List<String> lore = new ArrayList<>();
         
         if (proposal.hasTarget()) {
@@ -503,8 +573,12 @@ public class MovementCreator {
         }
         
         lore.add(" ");
-        lore.add(StringFormatter.formatHex("#7a7a7aThe player who will become"));
-        lore.add(StringFormatter.formatHex("#7a7a7athe new faction leader."));
+        if (CouncilPeaceQueries.isWarEndAction(proposal.getPoliticalAction().getAction())) {
+            lore.add(StringFormatter.formatHex("#7a7a7aThe war this action applies to."));
+        } else {
+            lore.add(StringFormatter.formatHex("#7a7a7aThe player who will become"));
+            lore.add(StringFormatter.formatHex("#7a7a7athe new faction leader."));
+        }
         
         if (cause.hasLeader() && cause.getLeader().equals(p.getName())) {
             lore.add(" ");

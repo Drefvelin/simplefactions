@@ -13,6 +13,8 @@ import org.checkerframework.checker.units.qual.g;
 
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarCopy;
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarHostMovementRules;
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.resolution.CouncilPeaceQueries;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
@@ -123,8 +125,9 @@ public class GovernmentView {
 		i.clear();
 		i.setItem(0, creator.createProposalTypeItem("law"));
 		i.setItem(1, creator.createProposalTypeItem("tax"));
-		if(!f.getGovernment().canPropose(player) && f.getGovernment().canProposeOrStartMovement(player))
-			i.setItem(2, creator.createProposalTypeItem("political")); //only for movements
+		if((!f.getGovernment().canPropose(player) && f.getGovernment().canProposeOrStartMovement(player))
+				|| (f.getGovernment().canPropose(player) && CouncilPeaceQueries.isParticipatingInAny(f)))
+			i.setItem(2, creator.createProposalTypeItem("political"));
 		i.setItem(8, inv.createBackButton(SFGUI.PROPOSAL_VIEW));
 		if(open) player.openInventory(i);
 	}
@@ -142,6 +145,29 @@ public class GovernmentView {
 		}
 		i.setItem(26, inv.createBackButton(SFGUI.POLITICAL_PROPOSAL_VIEW));
 		if(open) player.openInventory(i);
+	}
+
+	public void warPeaceSelectView(Player player, Faction f, Action action, boolean fromCause, int causeIndex, Inventory i) {
+		boolean open = i == null;
+		if (i == null) {
+			i = SimpleFactions.plugin.getServer().createInventory(
+					new SFInventoryHolder(f.getId(), SFGUI.WAR_PEACE_SELECT, causeIndex, fromCause, action.name()),
+					54,
+					"§7Select War");
+		}
+		i.clear();
+		int x = 0;
+		for (War war : CouncilPeaceQueries.warsFor(f)) {
+			i.setItem(x, creator.createWarPeaceSelectItem(war, action));
+			x++;
+			if (x >= 53) {
+				break;
+			}
+		}
+		i.setItem(53, inv.createBackButton(SFGUI.WAR_PEACE_SELECT));
+		if (open) {
+			player.openInventory(i);
+		}
 	}
 
 	public void taxProposalView(Player player, Faction f, Inventory i) {
@@ -489,6 +515,11 @@ public class GovernmentView {
 					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
 					return;
 				}
+				if (CouncilPeaceQueries.isWarEndAction(action)) {
+					warPeaceSelectView(p, f, action, false, 0, null);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					return;
+				}
 				
 				Proposal proposal = new Proposal(p.getName(), gov);
 				PoliticalAction politicalAction = PoliticalActionLoader.getByAction(action);
@@ -524,6 +555,31 @@ public class GovernmentView {
 				p.sendMessage("§cInvalid action.");
 				p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
 			}
+		} else if (h.getType() == SFGUI.WAR_PEACE_SELECT) {
+			e.setCancelled(true);
+			ItemStack item = e.getCurrentItem();
+			if (item == null) {
+				return;
+			}
+			ItemMeta meta = item.getItemMeta();
+			if (meta == null) {
+				return;
+			}
+			String warId = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
+			if (warId == null) {
+				return;
+			}
+			Faction faction = FactionManager.getByString(h.getId());
+			if (faction == null) {
+				return;
+			}
+			Action action;
+			try {
+				action = Action.valueOf(h.getSecondaryId());
+			} catch (RuntimeException ex) {
+				return;
+			}
+			submitWarEnd(p, faction, action, warId, h.getFlag(), h.getPage());
 		} else if (h.getType() == SFGUI.PROPOSALS) {
 			e.setCancelled(true);
 		} else if (h.getType() == SFGUI.COUNCIL_VIEW) {
@@ -680,5 +736,81 @@ public class GovernmentView {
 				}
 			}
 		}
+	}
+
+	private void submitWarEnd(Player p, Faction f, Action action, String warId, boolean fromCause, int causeIndex) {
+		Government gov = f.getGovernment();
+		if (!gov.canProposePolitical(p, action) && !fromCause) {
+			p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+			return;
+		}
+		if (!CouncilPeaceQueries.isValidTarget(f, warId)) {
+			p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+			p.sendMessage("§cThat war is no longer valid.");
+			return;
+		}
+		if (fromCause) {
+			Movement movement = gov.getMovementByMember(p.getName());
+			if (movement == null || causeIndex < 0 || causeIndex >= movement.getCauses().size()) {
+				p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				return;
+			}
+			me.Plugins.SimpleFactions.government.movement.cause.Cause cause = movement.getCauses().get(causeIndex);
+			if (!cause.hasLeader() || !cause.getLeader().equals(p.getName())) {
+				p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				return;
+			}
+			cause.getProposal().setTarget(warId);
+			inv.movementView.causeView(p, f, movement, cause, null);
+			p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+			return;
+		}
+		Proposal proposal = new Proposal(p.getName(), gov);
+		PoliticalAction politicalAction = PoliticalActionLoader.getByAction(action);
+		proposal.setPoliticalActionProposal(politicalAction);
+		proposal.setTarget(warId);
+		if (!gov.hasCouncil() && f.isLeader(p.getName())) {
+			proposal.apply(null);
+			p.sendMessage("§aChange applied!");
+			governmentView(p, f, null);
+			p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+			return;
+		}
+		if (gov.canPropose(p)) {
+			if (!gov.canBeProposed(proposal)) {
+				p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				return;
+			}
+			gov.propose(proposal);
+			governmentView(p, f, null);
+			p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+			return;
+		}
+		if (gov.canProposeOrStartMovement(p)) {
+			Movement movement = gov.getMovementByMember(p.getName());
+			if (movement != null) {
+				if (!gov.canBeProposed(proposal)) {
+					p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+					return;
+				}
+				movement.createCause(p.getName(), proposal);
+				p.sendMessage("§aProposal added to your movement! Rally support for your proposal by sharing it with your faction and allies!");
+				p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				governmentView(p, f, null);
+				return;
+			}
+			if (CivilWarHostMovementRules.blocksHostGuildStart(f, p.getName())) {
+				p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+				p.sendMessage(CivilWarCopy.ONE_PROVINCE_HOST_GUILD);
+				return;
+			}
+			gov.startMovement(p.getName(), proposal);
+			p.sendMessage("§aMovement started! Rally support for your proposal by sharing it with your faction and allies!");
+			p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+			governmentView(p, f, null);
+			return;
+		}
+		p.sendMessage("§cYou cannot start a movement for this action.");
+		p.playSound(p, Sound.ENTITY_VILLAGER_NO, 1f, 1f);
 	}
 }

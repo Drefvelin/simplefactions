@@ -24,6 +24,7 @@ public class Upgrade {
     private String name;
     private String icon;
     private int level;
+    private int maxLevel;
     private double upkeep;
     private int expansionTime;
     private List<GuildType> allowedTypes = new ArrayList<>();
@@ -37,6 +38,7 @@ public class Upgrade {
         icon = config.getString("icon", "black_dye.10");
         upkeep = config.getDouble("upkeep", 10);
         level = 0;
+        maxLevel = config.getInt("max-level", Integer.MAX_VALUE);
         expansionTime = config.getInt("expansion-time", 21600);
         for(String s : config.getStringList("allowed-types")) {
             GuildType type = GuildLoader.getByString(s);
@@ -74,8 +76,9 @@ public class Upgrade {
         allowedTypes = b.allowedTypes;
         modifiers = b.modifiers;
         expansionTime = b.expansionTime;
+        maxLevel = b.maxLevel;
         this.description = b.description;
-        this.level = level;
+        this.level = Math.min(level, maxLevel);
     }
 
 
@@ -89,9 +92,14 @@ public class Upgrade {
         return allowedTypes.contains(type);
     }
     public int getLevel() { return level; }
-    public void setLevel(int level) { this.level = level; }
+    public void setLevel(int level) { this.level = Math.min(level, maxLevel); }
     public int getExpansionTime() { return expansionTime; }
+    public int getMaxLevel() { return maxLevel; }
+    /** Guild upgrades leave max-level unset, so they are unbounded. */
+    public boolean hasMaxLevel() { return maxLevel != Integer.MAX_VALUE; }
+    public boolean isMaxed() { return level >= maxLevel; }
     public void levelUp() {
+        if(isMaxed()) return;
         level++;
     }
     public void levelDown() {

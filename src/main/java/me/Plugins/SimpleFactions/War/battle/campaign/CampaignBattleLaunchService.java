@@ -15,7 +15,7 @@ import me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.campaign.progression.AttackerNavalContestService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignOffensiveForfeitService;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignOffensiveForfeitService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;

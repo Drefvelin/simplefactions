@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.War.campaign.raid;
 
+
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidMusterScheduler;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,7 +27,7 @@ import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.JoinResult;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.LaunchResult;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;

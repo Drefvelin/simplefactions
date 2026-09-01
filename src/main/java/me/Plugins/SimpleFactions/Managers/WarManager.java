@@ -9,15 +9,17 @@ import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Request.WarRequest;
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.War.core.CallToArmsEligibility;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.core.WarCommitment;
 import me.Plugins.SimpleFactions.War.core.WarDeclareHelper;
-import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationPickService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.pick.BattleInstallationPickService;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
 import me.Plugins.SimpleFactions.War.combat.WarCombatTeardownService;
 import me.Plugins.SimpleFactions.War.campaign.WarCampaignService;
@@ -29,7 +31,7 @@ import me.Plugins.SimpleFactions.War.campaign.progression.CampaignDeclareValidat
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignNavyGate;
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarCopy;
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarSnapshot;
-import me.Plugins.SimpleFactions.War.civilwar.CivilWarUntangleService;
+import me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarUntangleService;
 import me.Plugins.SimpleFactions.War.core.Participant;
 import me.Plugins.SimpleFactions.War.resolution.WarOutcomeService;
 import me.Plugins.SimpleFactions.installation.WartimeInstallationService;
@@ -88,6 +90,10 @@ public class WarManager {
 			String governmentLawId,
 			String leadershipLawId,
 			String targetSettlementId) {
+		if (!Cache.provincesEnabled) {
+			lastDeclareError = Cache.PROVINCES_DISABLED_MESSAGE;
+			return null;
+		}
 		WarDeclareRequest request = new WarDeclareRequest(
 				attacker, defender, goal, targetTitleId, subjectFactionId, relationTypeId,
 				governmentLawId, leadershipLawId, targetSettlementId);
@@ -153,6 +159,10 @@ public class WarManager {
 			List<Faction> foreignBackers,
 			CivilWarSnapshot snapshot) {
 		lastDeclareError = null;
+		if (!Cache.provincesEnabled) {
+			lastDeclareError = Cache.PROVINCES_DISABLED_MESSAGE;
+			return null;
+		}
 		if (attacker == null || defender == null || goal == null) {
 			lastDeclareError = CivilWarCopy.COULD_NOT_START;
 			return null;
@@ -434,8 +444,9 @@ public class WarManager {
 	}
 	
 	public static void sendRequest(Player sender, Faction origin, Faction target, War w) {
-		if(!w.canBeCalled(target)) {
-			sender.sendMessage("§cTarget faction is already part of the war");
+		CallToArmsEligibility.Result result = CallToArmsEligibility.canCall(w, origin, target);
+		if(!result.allowed()) {
+			sender.sendMessage(result.message());
 			return;
 		}
 		Player p = Bukkit.getPlayerExact(target.getLeader());
@@ -465,6 +476,8 @@ public class WarManager {
 		}
 		WarCommitmentService.commitFaction(war, reciever);
 		WarCommitmentService.snapshotLevyForFighter(war, reciever);
+		//A secondary only counts as a participant once it has joined, so contracts are re-checked here
+		me.Plugins.SimpleFactions.mercenary.contract.MercenaryLoyaltyWatcher.onWarJoined(reciever);
 		Player sp = Bukkit.getPlayerExact(origin.getLeader());
 		if(sp != null && sp.isOnline()) sp.sendMessage(reciever.getName()+" §aaccepted your call to arms");
 		p.sendMessage("§aYour faction has joined the "+war.getName());

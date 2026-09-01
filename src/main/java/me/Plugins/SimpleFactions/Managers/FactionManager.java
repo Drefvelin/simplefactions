@@ -26,6 +26,7 @@ import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.loans.Loan;
+import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Map.MapSystem;
@@ -44,7 +45,9 @@ import me.Plugins.SimpleFactions.War.resolution.WarReparationsService;
 import me.Plugins.SimpleFactions.Utils.DailyGuildTransfers;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.Utils.PostSettlementPayouts;
 import me.Plugins.SimpleFactions.player.PlayerEconomyManager;
+import me.Plugins.SimpleFactions.vehicles.maintenance.DenarEconomyPlayerBank;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.movement.Movement;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
@@ -54,7 +57,11 @@ import net.tfminecraft.DenarEconomy.Enum.Accounts;
 
 public class FactionManager implements Listener{
 	public static int timer = 0;
+	/** Completed day rollovers. Counts server uptime, not calendar days. */
+	public static int day = 0;
 	private static boolean loaded = false;
+	/** True while Database.loadFactions is populating the list. See updateAllPrestige. */
+	public static boolean loading = false;
 
 	public static boolean isLoaded() {
 		return loaded;
@@ -64,10 +71,15 @@ public class FactionManager implements Listener{
 	
 	private static HashMap<Faction, List<String>> dbRelations = new HashMap<>();
 	private static HashMap<Faction, List<String>> dbTradeRelations = new HashMap<>();
+	private static HashMap<Faction, List<String>> dbTreatyRelations = new HashMap<>();
 	private static List<LoanData> loans = new ArrayList<>();
 
 	public static int getTimer(){
 		return timer;
+	}
+
+	public static int getDay(){
+		return day;
 	}
 	
 	public static void addDBRelation(Faction f, String s) {
@@ -90,6 +102,16 @@ public class FactionManager implements Listener{
 		LogManager.relations("QUEUE trade %s %s", factionId(f), s);
 	}
 
+	public static void addDBTreatyRelation(Faction f, String s) {
+		List<String> list = new ArrayList<>();
+		if(dbTreatyRelations.containsKey(f)) {
+			list = dbTreatyRelations.get(f);
+		}
+		list.add(s);
+		dbTreatyRelations.put(f, list);
+		LogManager.relations("QUEUE treaty %s %s", factionId(f), s);
+	}
+
 	public static void addDBLoan(LoanData data) {
 		loans.add(data);
 	}
@@ -103,8 +125,8 @@ public class FactionManager implements Listener{
 	}
 	
 	public static void loadRelations() {
-		LogManager.relations("loadRelations start factions=%d queued=%d tradeQueued=%d",
-				factions.size(), dbRelations.size(), dbTradeRelations.size());
+		LogManager.relations("loadRelations start factions=%d queued=%d tradeQueued=%d treatyQueued=%d",
+				factions.size(), dbRelations.size(), dbTradeRelations.size(), dbTreatyRelations.size());
 		for(Map.Entry<Faction, List<String>> entry : dbRelations.entrySet()) {
 			Faction f = entry.getKey();
 			List<String> relations = entry.getValue();
@@ -127,11 +149,23 @@ public class FactionManager implements Listener{
 				applyStoredTradeRelation(f, s);
 			}
 		}
+		for(Map.Entry<Faction, List<String>> entry : dbTreatyRelations.entrySet()) {
+			Faction f = entry.getKey();
+			List<String> relations = entry.getValue();
+			LogManager.relations("loadTreaty %s rawCount=%d", factionId(f), relations == null ? 0 : relations.size());
+			if (relations == null) {
+				continue;
+			}
+			for(String s : relations) {
+				applyStoredTreatyRelation(f, s);
+			}
+		}
 		for (Faction f : factions) {
 			logRelationSnapshot("afterLoad", f);
 		}
 		dbRelations.clear();
 		dbTradeRelations.clear();
+		dbTreatyRelations.clear();
 		LogManager.relations("loadRelations done");
 	}
 
@@ -210,6 +244,34 @@ public class FactionManager implements Listener{
 			LogManager.relations("APPLY trade %s -> %s %s", factionId(f), target.getId(), r.getId());
 		} catch (Exception exception) {
 			LogManager.relations("ERROR trade %s raw='%s' %s", factionId(f), s, exception.getMessage());
+		}
+	}
+
+	private static void applyStoredTreatyRelation(Faction f, String s) {
+		try {
+			if (s == null || !s.contains("(")) {
+				LogManager.relations("SKIP treaty %s malformed '%s'", factionId(f), s);
+				return;
+			}
+			String targetId = s.split("\\(")[0];
+			Faction target = getByString(targetId);
+			if(target == null) {
+				LogManager.relations("SKIP treaty %s -> %s targetMissing", factionId(f), targetId);
+				return;
+			}
+			if(target.getId().equalsIgnoreCase(f.getId())) {
+				return;
+			}
+			String info = s.split("\\(")[1].replace(")", "");
+			RelationType r = RelationLoader.getType(info);
+			if(r == null || !r.isTreaty() || r.isClearTreaty()) {
+				LogManager.relations("SKIP treaty %s -> %s type=%s", factionId(f), targetId, info);
+				return;
+			}
+			f.getDiplomacyHandler().setTreatyRelation(target, r);
+			LogManager.relations("APPLY treaty %s -> %s %s", factionId(f), target.getId(), r.getId());
+		} catch (Exception exception) {
+			LogManager.relations("ERROR treaty %s raw='%s' %s", factionId(f), s, exception.getMessage());
 		}
 	}
 
@@ -364,6 +426,7 @@ public class FactionManager implements Listener{
 			FactionCleanup.kickInactiveMembers(factions);
 			settleIncome();
 			timer = 0;
+			day++;
 		}
 	}
 
@@ -410,11 +473,23 @@ public class FactionManager implements Listener{
 			} 
 		}
 
+		PostSettlementPayouts.apply(
+				buffer,
+				DenarEconomyPlayerBank.INSTANCE,
+				PlayerEconomyManager.get(),
+				name -> Bukkit.getOfflinePlayer(name).getUniqueId());
+		for (Guild g : getAllGuilds()) {
+			g.refreshDividendEligibility();
+		}
+
 		for(Guild g : getAllGuilds()) {
 			for(Loan loan : g.getLoanHandler().getLoansGiven()) {
 				loan.tickDay();
 			}
 		}
+
+		//Contracts age a day, then elapsed and bankrupt ones are closed out
+		me.Plugins.SimpleFactions.mercenary.contract.ContractTerminationService.tickDay();
 
 		for (Faction faction : factions) {
 			WarReparationsService.tickAfterDailySettlement(faction);
@@ -426,17 +501,19 @@ public class FactionManager implements Listener{
 
 	
 	public void run() {
-		timer = (new Database()).getTimer();
+		Database database = new Database();
+		timer = database.getTimer();
+		day = database.getDay();
 		LogManager.relations("FactionManager.run loadRelations");
 		loadRelations();
 		tickCycle();	
 		for(Faction f : factions) {
 			f.getLawHandler().apply();
-			f.updatePrestige();
 			f.countyCheck();
 			f.getGovernment().loadMovements();
 			f.ping();
 		}
+		updateAllPrestigeConverged();
 		fixRelations();
 		loadDBLoans();
 		loaded = true;
@@ -520,8 +597,35 @@ public class FactionManager implements Listener{
 		db.deleteFaction(f);
 	}
 	public static void updateAllPrestige() {
+		// Every Faction.updateWealth ends here, and loadFactions calls updateWealth per faction
+		// and per guild. Without this guard a load is O(n^2) prestige passes over a partial
+		// faction set, which also lets the rank-down branch demote against a half-built ladder.
+		if(loading) return;
 		for(Faction f : factions) {
 			f.updatePrestige();
+		}
+	}
+	/**
+	 * Rank moves at most one level per updatePrestige, and getRankUpAmount is competitive:
+	 * it reads the top holder of the target rank. After a cold start nobody holds the upper
+	 * ranks, so the ladder needs repeated passes to settle.
+	 */
+	public static void updateAllPrestigeConverged() {
+		int maxPasses = Math.max(1, RankLoader.getRanks().size());
+		for(int i = 0; i < maxPasses; i++) {
+			Map<String, PrestigeRank> before = new HashMap<>();
+			for(Faction f : factions) {
+				before.put(f.getId(), f.getRank());
+			}
+			updateAllPrestige();
+			boolean changed = false;
+			for(Faction f : factions) {
+				if(before.get(f.getId()) != f.getRank()) {
+					changed = true;
+					break;
+				}
+			}
+			if(!changed) return;
 		}
 	}
 	public static Double getRankUpAmount(PrestigeRank rank) {
@@ -954,6 +1058,11 @@ public class FactionManager implements Listener{
 		Faction f = getByVotingBooth(b);
 		if(f == null) return;
 		e.setCancelled(true);
+		if(!f.getGovernment().hasElections()) {
+			p.sendMessage("§cThis faction has no elections");
+			p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+			return;
+		}
 		if(!f.canVote(p.getName())) {
 			p.sendMessage("§cYou have no voting rights in this faction");
 			p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);

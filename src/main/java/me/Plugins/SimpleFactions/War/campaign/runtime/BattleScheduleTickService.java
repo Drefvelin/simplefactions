@@ -13,9 +13,9 @@ import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleRosterService
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleSignupReminderService;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignNavalAutoLossReminderService;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidFightScheduler;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidMusterScheduler;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResumeService;
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidFightScheduler;
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidMusterScheduler;
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidResumeService;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.BattleScheduleCloseResult;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.CloseVoteOptions;
 

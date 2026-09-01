@@ -13,7 +13,7 @@ import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Title;
-import me.Plugins.SimpleFactions.War.civilwar.CivilWarBorderLock;
+import me.Plugins.SimpleFactions.War.civilwar.wartime.CivilWarBorderLock;
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarCopy;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
@@ -41,6 +41,11 @@ public class WarGoalValidator {
 			return shared;
 		}
 
+		WarValidationResult internalGoals = validateInternalPeerGoals(request);
+		if (!internalGoals.isValid()) {
+			return internalGoals;
+		}
+
 		return switch (request.getGoal()) {
 			case DE_JURE_ANNEX -> validateDeJureAnnex(request);
 			case SUBJUGATE -> validateSubjugate(request);
@@ -51,7 +56,7 @@ public class WarGoalValidator {
 			case OPEN_MARKET -> validateOpenMarket(request);
 			case CHANGE_GOVERNMENT -> validateChangeGovernment(request);
 			case PILLAGE -> validatePillage(request);
-			case OVERTHROW, CHANGE_LAW, CHANGE_TAX ->
+			case OVERTHROW, CHANGE_LAW, CHANGE_TAX, FORCE_PEACE ->
 					WarValidationResult.fail("§cThis war goal cannot be declared yet.");
 		};
 	}
@@ -71,7 +76,8 @@ public class WarGoalValidator {
 			}
 			return WarValidationResult.fail("§cYou are already at war with that faction.");
 		}
-		if (RelationManager.sameRealm(attacker, defender)) {
+		if (RelationManager.sameRealm(attacker, defender)
+				&& !InterVassalQueries.isInternalPeer(attacker, defender)) {
 			boolean usurpOverlord = request.getGoal() == WarGoalType.USURP
 					&& RelationManager.isOverlord(attacker, defender);
 			if (!usurpOverlord) {
@@ -92,6 +98,18 @@ public class WarGoalValidator {
 			return WarValidationResult.fail("§cYou cannot declare war on your tributary.");
 		}
 		return WarValidationResult.ok();
+	}
+
+	private WarValidationResult validateInternalPeerGoals(WarDeclareRequest request) {
+		if (!InterVassalQueries.isInternalPeer(request.getAttacker(), request.getDefender())) {
+			return WarValidationResult.ok();
+		}
+		return switch (request.getGoal()) {
+			case USURP -> WarValidationResult.fail("§cUsurp can only target your direct overlord.");
+			case OVERTHROW, CHANGE_LAW, CHANGE_TAX, FORCE_PEACE ->
+					WarValidationResult.fail("§cThis war goal cannot be declared yet.");
+			default -> WarValidationResult.ok();
+		};
 	}
 
 	private WarValidationResult validateDeJureAnnex(WarDeclareRequest request) {
@@ -216,7 +234,7 @@ public class WarGoalValidator {
 		if (overlord != null && overlord.equalsIgnoreCase(attacker.getId())) {
 			return WarValidationResult.fail("§cThat faction is already your subject.");
 		}
-		if (overlord != null) {
+		if (overlord != null && !InterVassalQueries.isInternalPeer(attacker, defender)) {
 			return WarValidationResult.fail("§cThat faction is already a subject of someone else.");
 		}
 

@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import me.Plugins.SimpleFactions.Objects.Faction;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.LaunchResult;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
 import me.Plugins.SimpleFactions.War.core.Side;

@@ -14,8 +14,8 @@ import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.ValidateL
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults.ValidateLaunchResult;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleSideMembers;
-import me.Plugins.SimpleFactions.War.campaign.runtime.RaidKind;
-import me.Plugins.SimpleFactions.War.campaign.runtime.RaidTargetCandidate;
+import me.Plugins.SimpleFactions.War.campaign.raid.RaidTargetService.RaidKind;
+import me.Plugins.SimpleFactions.War.campaign.raid.RaidTargetService.RaidTargetCandidate;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.core.WarDevMode;

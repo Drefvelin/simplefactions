@@ -21,7 +21,9 @@ import org.mockito.MockedStatic;
 
 import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.Regiment;
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.War.core.WarDevMode;
 import me.Plugins.SimpleFactions.War.core.Participant;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
@@ -44,6 +46,9 @@ class CampaignBattleRosterServiceTest {
 	void setUp() {
 		BattleManager.resetForTests();
 		WarbandManager.resetForTests();
+		WarDevMode.resetForTests();
+		Cache.warRaidWindowStartHour = 19;
+		Cache.warRaidWindowEndHour = 20;
 
 		attacker = mock(Faction.class);
 		defender = mock(Faction.class);

@@ -38,13 +38,13 @@ import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarStatus;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
-import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService.PostBattleChoicePhase;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidState;
-import me.Plugins.SimpleFactions.War.campaign.runtime.RaidKind;
+import me.Plugins.SimpleFactions.War.campaign.raid.RaidTargetService.RaidKind;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 
 class WarMapperTest {

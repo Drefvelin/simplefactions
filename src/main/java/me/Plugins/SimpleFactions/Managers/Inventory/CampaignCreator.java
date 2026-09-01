@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.Managers.Inventory;
 
+
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -30,11 +32,11 @@ import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.pathfinder.TitleManagerProvinceOwnerLookup;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignNavyGate;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteEntry;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteRenderer;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignRouteEntry;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignRouteRenderer;
 import me.Plugins.SimpleFactions.War.campaign.vote.VoteResults.BattleHourTally;
 import me.Plugins.SimpleFactions.War.campaign.vote.BattleQuorumService;
-import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationPickService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.pick.BattleInstallationPickService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleLookups;
 import me.Plugins.SimpleFactions.War.campaign.vote.BattleVoteService;

@@ -1,4 +1,8 @@
 package me.Plugins.SimpleFactions.Managers;
+
+import me.Plugins.SimpleFactions.vehicles.berth.VehicleFindMessages;
+import me.Plugins.SimpleFactions.vehicles.maintenance.VehicleMaintenanceMessages;
+import me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands;
 import java.util.Arrays;
 import java.util.List;
 
@@ -41,7 +45,7 @@ import me.Plugins.SimpleFactions.laws.LawGroup;
 import me.Plugins.SimpleFactions.enums.Rules;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
-import me.Plugins.SimpleFactions.vehicles.VehicleCommandRoute;
+import me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.VehicleCommandRoute;
 import net.tfminecraft.DenarEconomy.Data.Account;
 import net.tfminecraft.DenarEconomy.DenarEconomy;
 
@@ -363,6 +367,9 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("setcapital") && (args.length == 1 || args.length == 2)) {
+				if(!Cache.requireProvinces(p)) {
+					return true;
+				}
 				Guild g = FactionManager.getGuildByLeader(p.getName());
 				if(g == null) {
 					p.sendMessage("§cYou must be the leader of a guild to set the capital");
@@ -456,10 +463,15 @@ public class CommandManager implements Listener, CommandExecutor{
 				if(!factionCreateEvent.isCancelled()) {
 					FactionManager.addFaction(f);
 					p.sendMessage("§aFaction "+f.getName()+" §acreated!");
-					p.sendMessage("§7Use §e/faction setcapital <name> §7to claim your first province and found your capital.");
+					if(Cache.provincesEnabled) {
+						p.sendMessage("§7Use §e/faction setcapital <name> §7to claim your first province and found your capital.");
+					}
 				}
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("claim") && args.length == 1) {
+				if(!Cache.requireProvinces(p)) {
+					return true;
+				}
 				if(FactionManager.getByLeader(p.getName()) != null) {
 					Faction f = FactionManager.getByMember(p.getName());
 					if(f.getProvinces().isEmpty()) {
@@ -477,6 +489,9 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("construct")) {
+				if(!Cache.requireProvinces(p)) {
+					return true;
+				}
 				Faction f = FactionManager.getByLeader(p.getName());
 				if(f == null) {
 					p.sendMessage("§cYou need to be a faction leader to construct installations");
@@ -517,6 +532,9 @@ public class CommandManager implements Listener, CommandExecutor{
 				}
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("deconstruct")) {
+				if(!Cache.requireProvinces(p)) {
+					return true;
+				}
 				Faction f = FactionManager.getByLeader(p.getName());
 				if(f == null) {
 					p.sendMessage("§cYou need to be a faction leader to deconstruct installations");
@@ -547,45 +565,48 @@ public class CommandManager implements Listener, CommandExecutor{
 					me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.armMaintenancePay(p);
 					return true;
 				}
-				String transferId = me.Plugins.SimpleFactions.vehicles.VehicleCommandRoute.transferInstallationId(args);
+				String transferId = me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.VehicleCommandRoute.transferInstallationId(args);
 				if(transferId != null) {
 					me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.armTransfer(
 							p, transferId.isBlank() ? null : transferId);
 					return true;
 				}
 				if(args.length >= 2 && args[1].equalsIgnoreCase("maintenance")) {
-					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleMaintenanceMessages.payUsage());
+					p.sendMessage(me.Plugins.SimpleFactions.vehicles.maintenance.VehicleMaintenanceMessages.payUsage());
 					return true;
 				}
-				p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleMaintenanceMessages.vehicleUsage());
+				p.sendMessage(me.Plugins.SimpleFactions.vehicles.maintenance.VehicleMaintenanceMessages.vehicleUsage());
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("transfervehicle")) {
-				String transferId = me.Plugins.SimpleFactions.vehicles.VehicleCommandRoute.transferInstallationId(args);
+				String transferId = me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.VehicleCommandRoute.transferInstallationId(args);
 				me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.armTransfer(
 						p, transferId == null || transferId.isBlank() ? null : transferId);
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("findvehicles")) {
 				Faction f = FactionManager.getByLeader(p.getName());
 				if(f == null) {
-					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleFindMessages.notLeader());
+					p.sendMessage(me.Plugins.SimpleFactions.vehicles.berth.VehicleFindMessages.notLeader());
 					return true;
 				}
 				if(args.length < 2) {
-					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleFindMessages.usage());
+					p.sendMessage(me.Plugins.SimpleFactions.vehicles.berth.VehicleFindMessages.usage());
 					return true;
 				}
 				var handler = f.getInstallationHandler();
 				Installation installation =
-						me.Plugins.SimpleFactions.vehicles.VehicleFindMessages.resolveInstallation(
+						me.Plugins.SimpleFactions.vehicles.berth.VehicleFindMessages.resolveInstallation(
 								handler, args[1]);
 				if(installation == null) {
-					p.sendMessage(me.Plugins.SimpleFactions.vehicles.VehicleFindMessages.unknownInstallation());
+					p.sendMessage(me.Plugins.SimpleFactions.vehicles.berth.VehicleFindMessages.unknownInstallation());
 					return true;
 				}
-				me.Plugins.SimpleFactions.vehicles.VehicleFindMessages.sendInstallationVehicles(
+				me.Plugins.SimpleFactions.vehicles.berth.VehicleFindMessages.sendInstallationVehicles(
 						p, installation);
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("unclaim") && args.length >= 1) {
+				if(!Cache.requireProvinces(p)) {
+					return true;
+				}
 				Faction f = null;
 				if(args.length == 1) {
 					if(FactionManager.getByLeader(p.getName()) != null) {
@@ -865,6 +886,9 @@ public class CommandManager implements Listener, CommandExecutor{
 				p.sendMessage("§aFaction ruler title changed to "+f.getRulerTitle());
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setcapital") && (args.length == 1 || args.length == 2)) {
+				if(!Cache.requireProvinces(p)) {
+					return true;
+				}
 				Faction f = FactionManager.getByLeader(p.getName());
 				if(f == null) {
 					p.sendMessage("§cYou must be the leader of a faction to set the capital");
@@ -1296,12 +1320,18 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
 					return true;
 				}
+				if(!Cache.requireProvinces(p)) {
+					return true;
+				}
 				FactionManager.getMap().queueAllNations();
 				p.sendMessage("§eQueued all nations and asked for regen");
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("fullregen") && args.length == 2) {
 				if(!Permissions.isAdmin(sender)) {
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				if(!Cache.requireProvinces(p)) {
 					return true;
 				}
 				if(!args[1].equalsIgnoreCase("i_love_tfmc")) {
@@ -1314,6 +1344,9 @@ public class CommandManager implements Listener, CommandExecutor{
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("reloadtitles") && args.length == 1) {
 				if(!Permissions.isAdmin(sender)) {
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				if(!Cache.requireProvinces(p)) {
 					return true;
 				}
 				SimpleFactions.reloadTitles();
@@ -1332,6 +1365,9 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
 					return true;
 				}
+				if(!Cache.requireProvinces(p)) {
+					return true;
+				}
 				Title title = TitleLoader.getById(args[1]);
 				if(title == null){
 					p.sendMessage("§cNo title by that id");
@@ -1348,6 +1384,9 @@ public class CommandManager implements Listener, CommandExecutor{
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("granttitle") && args.length == 3) {
 				if(!Permissions.isAdmin(sender)) {
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				if(!Cache.requireProvinces(p)) {
 					return true;
 				}
 				Faction reciever = FactionManager.getByString(args[1]);
@@ -1422,7 +1461,7 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cNo relation with the id "+args[3]);
 					return false;
 				}
-				if(type.isTradeAgreement()) {
+				if(type.isTradeAgreement() || type.isTreaty()) {
 					p.sendMessage("§cThat is a treaty. Use /faction settreaty");
 					return false;
 				}
@@ -1444,7 +1483,16 @@ public class CommandManager implements Listener, CommandExecutor{
 					return false;
 				}
 				RelationType type = RelationLoader.getType(args[3]);
-				if(type == null || !type.isTradeAgreement()) {
+				if(type == null) {
+					p.sendMessage("§cNo treaty with the id "+args[3]+". Use /faction setrelation for diplomatic relations");
+					return false;
+				}
+				if(type.isTreaty()) {
+					RelationManager.setTreatyRelationForced(type, recieving, sending);
+					p.sendMessage(StringFormatter.formatHex("#a89977Set treaty to "+type.getName()));
+					return true;
+				}
+				if(!type.isTradeAgreement()) {
 					p.sendMessage("§cNo treaty with the id "+args[3]+". Use /faction setrelation for diplomatic relations");
 					return false;
 				}
@@ -1531,6 +1579,9 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
 					return true;
 				}
+				if(!Cache.requireProvinces(p)) {
+					return true;
+				}
 				Faction usurping = FactionManager.getByString(args[1]);
 				if(usurping == null) {
 					p.sendMessage("§cNo faction by the id "+args[1]);
@@ -1547,6 +1598,9 @@ public class CommandManager implements Listener, CommandExecutor{
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("provincecap") && args.length == 1) {
 				if(!Permissions.isAdmin(sender)) {
 					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				if(!Cache.requireProvinces(p)) {
 					return true;
 				}
 				for(Faction f : FactionManager.factions) {

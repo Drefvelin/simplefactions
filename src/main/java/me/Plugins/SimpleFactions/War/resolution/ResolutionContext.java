@@ -2,9 +2,9 @@ package me.Plugins.SimpleFactions.War.resolution;
 
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCapabilityService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget;
 
 public final class ResolutionContext {
 	private final Integer battleProvinceId;

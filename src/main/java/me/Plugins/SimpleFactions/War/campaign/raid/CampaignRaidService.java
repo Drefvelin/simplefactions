@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.War.campaign.raid;
 
+
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidMusterScheduler;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -10,7 +12,7 @@ import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.battle.campaign.BattleNamingService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleService;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationLookup;

@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.Managers.Inventory;
 
+
+import me.Plugins.SimpleFactions.War.campaign.runtime.pick.BattleInstallationPickService.InstallationPickResults;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,10 +23,10 @@ import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.core.War;
-import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationPickService;
-import me.Plugins.SimpleFactions.War.campaign.runtime.BattleInstallationPickEligibility;
+import me.Plugins.SimpleFactions.War.campaign.runtime.pick.BattleInstallationPickService;
+import me.Plugins.SimpleFactions.War.campaign.runtime.pick.BattleInstallationPickEligibility;
 import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
-import me.Plugins.SimpleFactions.War.campaign.runtime.InstallationPickResults.InstallationPickToggleResult;
+import me.Plugins.SimpleFactions.War.campaign.runtime.pick.BattleInstallationPickService.InstallationPickResults.InstallationPickToggleResult;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.installation.Installation;
 

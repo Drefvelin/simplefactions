@@ -47,6 +47,7 @@ import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.War.resolution.CouncilPeaceService;
 import me.Plugins.SimpleFactions.War.resolution.WarReparationsObligation;
 import me.Plugins.SimpleFactions.Utils.BracketToTaxTarget;
 import me.Plugins.SimpleFactions.Utils.Formatter;
@@ -91,6 +92,9 @@ public class Faction {
 	private String leader;
 	private Integer extraNodeCapacity;
 	private List<Modifier> prestigeModifiers = new ArrayList<>();
+	// Epoch seconds. Faction ids come from the name, so a recycled name reuses the id;
+	// the chronicle export pairs id with this to tell reincarnations apart.
+	private long foundedAt;
 	
 	
 	private TaxHandler taxHandler;
@@ -134,6 +138,7 @@ public class Faction {
 		this.rulerTitle = "Leader";
 		this.bannerPatterns = RestServer.fetchBannerList();
 		this.rank = RankLoader.getLowest();
+		this.foundedAt = System.currentTimeMillis()/1000L;
 		this.governmentType = "Community";
 		this.culture = "Multicultural";
 		this.religion = "Religious Diversity";
@@ -166,6 +171,7 @@ public class Faction {
 		this.rulerTitle = "Leader";
 		this.bannerPatterns = guild.getBannerPatterns();
 		this.rank = RankLoader.getLowest();
+		this.foundedAt = System.currentTimeMillis()/1000L;
 		this.governmentType = "Community";
 		this.culture = guild.getFaction().getCulture();
 		this.religion = guild.getFaction().getReligion();
@@ -423,8 +429,10 @@ public class Faction {
 		}
 		*/
 		government.tick();
-		settlementHandler.validate();
-		installationHandler.validate();
+		if (Cache.provincesEnabled) {
+			settlementHandler.validate();
+			installationHandler.validate();
+		}
 	}
 
 	public SettlementHandler getSettlementHandler() {
@@ -494,6 +502,12 @@ public class Faction {
 	public void setRank(PrestigeRank rank) {
 		this.rank = rank;
 	}
+	public long getFoundedAt() {
+		return foundedAt;
+	}
+	public void setFoundedAt(long foundedAt) {
+		this.foundedAt = foundedAt;
+	}
 	public String getGovernmentString() {
 		return governmentType;
 	}
@@ -532,24 +546,14 @@ public class Faction {
 			prestigeModifiers.add(p);
 		}
 	}
-	public void addPrestigeModifier(Modifier p) {
-		for(int i = 0; i<prestigeModifiers.size(); i++) {
-			if(prestigeModifiers.get(i).getType().equalsIgnoreCase(p.getType())) {
-				prestigeModifiers.set(i, p);
-				return;
-			}
-		}
-		prestigeModifiers.add(p);
-	}
 	public void setBanner(ItemStack banner) {
 		BannerMeta b = (BannerMeta) banner.getItemMeta();
 		this.bannerPatterns.clear();
 		this.bannerPatterns.add(banner.getType().toString().replace("_BANNER", ".BASE"));
 		for(Pattern p : b.getPatterns()) {
-			String colour = p.getColor().toString();
-			String pattern = p.getPattern().toString();
-			pattern = pattern.replace("tfmc:", "").toUpperCase();
-			this.bannerPatterns.add(colour+"."+pattern);
+			NamespacedKey key = p.getPattern().getKey();
+			if (key == null) continue;
+			this.bannerPatterns.add(p.getColor().name() + "." + key.getKey().toUpperCase());
 		}
 		createBanner(bannerPatterns);
 	}
@@ -671,6 +675,7 @@ public class Faction {
 	public void setLeader(String leader) {
 		getOrCreateMainGuild().setLeader(leader);
 		this.leader = leader;
+		me.Plugins.SimpleFactions.mercenary.contract.MercenaryLoyaltyWatcher.onGovernmentChanged(this);
 	}
 	public void promoteToLeader(String name) {
 		if (!canBecomeLeader(name)) return;
@@ -709,35 +714,21 @@ public class Faction {
 		return guildHandler.getGuildByMember(player);
 	}
 	public void updatePrestige() {
-		prestige = 0.0;
-		addPrestigeModifier(new Modifier("Members", Formatter.formatDouble(Math.pow(guildHandler.getAllMembers().size()+4, 1.8)+5), false));
-		if(wealth == 0) {
-			addPrestigeModifier(new Modifier("Wealth", 0.0, false));
-		}
+		double members = Math.pow(guildHandler.getAllMembers().size()+4, 1.8)+5;
+
+		double wealthAmount = 0.0;
 		if(wealth > 0 && FactionManager.getGlobalWealth() > 0) {
-			Double amount = wealth/FactionManager.getGlobalWealth()*Cache.maxWealthPrestige;
-			if(amount > wealth) {
-				amount = wealth;
+			wealthAmount = wealth/FactionManager.getGlobalWealth()*Cache.maxWealthPrestige;
+			if(wealthAmount > wealth) {
+				wealthAmount = wealth;
 			}
-			addPrestigeModifier(new Modifier("Wealth", Formatter.formatDouble(amount), false));
 		}
+
 		int provincePrestige = TierLoader.getByString("province").getPrestige();
-		if(provinceHandler.getProvinces().size() > 0 && provincePrestige > 0) {
-			addPrestigeModifier(new Modifier("Provinces", (double) (provincePrestige*provinceHandler.getProvinces().size()), false));
-		}
-		if(titles.size() > 0) {
-			double titleAmount = getHighestTitle().getTier().getPrestige();
-			addPrestigeModifier(new Modifier("Titles", titleAmount, false));
-		}
-		if(getModifier(FactionModifiers.PRESTIGE_BONUS).getAmount() > 0.0) {
-			double multiplier = getModifier(FactionModifiers.PRESTIGE_BONUS).getAmount()/100.0;
-			double extra = 0.0;
-			for(Modifier p : prestigeModifiers) {
-				extra += p.getAmount();
-			}
-			extra = Formatter.formatDouble(extra*multiplier);
-			addPrestigeModifier(new Modifier(getModifier(FactionModifiers.PRESTIGE_BONUS).getAmount()+"% Bonus", extra, false));
-		}
+		double provinceAmount = (double) (provincePrestige*provinceHandler.getProvinces().size());
+
+		double titleAmount = titles.size() > 0 ? getHighestTitle().getTier().getPrestige() : 0.0;
+
 		double fromSubjects = 0.0;
 		for(Faction s : RelationManager.getSubjects(this)) {
 			if(s == null) continue;
@@ -746,14 +737,12 @@ public class Faction {
 				fromSubjects += s.getPrestige()*(added/100.0);
 			}
 		}
-		if(fromSubjects > 0) {
-			fromSubjects = Formatter.formatDouble(fromSubjects);
-			addPrestigeModifier(new Modifier("Subjects", fromSubjects, false));
-		}
-		for(Modifier p : prestigeModifiers) {
-			prestige = prestige + p.getAmount();
-		}
-		prestige = Formatter.formatDouble(prestige);
+
+		double bonusPercent = getModifier(FactionModifiers.PRESTIGE_BONUS).getAmount();
+
+		prestigeModifiers = PrestigeBreakdown.build(
+				prestigeModifiers, members, wealthAmount, provinceAmount, titleAmount, fromSubjects, bonusPercent);
+		prestige = PrestigeBreakdown.total(prestigeModifiers);
 		
 		if(this.rank.getLevel() < RankLoader.getRanks().size()) {
 			Double rankUpAmount = FactionManager.getRankUpAmount(RankLoader.getByLevel(this.rank.getLevel()+1));
@@ -1028,12 +1017,14 @@ public class Faction {
 					}
 				}
 				break;
-			case SNAP_ELECTIONS:
-				if(!government.hasElections()) return;
-				if(government.getElection().isActive()) return; //already running
-				government.getElection().start();
-				break;
-			//Handled elsewhere
+            case SNAP_ELECTIONS:
+                government.getElection().start();
+                break;
+            case WHITE_PEACE:
+            case SURRENDER:
+                CouncilPeaceService.apply(this, proposal);
+                break;
+            //Handled elsewhere
 			case NONE:
 			case LAW_CHANGE:
 			case TAX_CHANGE:
@@ -1190,7 +1181,7 @@ public class Faction {
 	    Map<FactionModifiers, Double> combined = new HashMap<>();
 
 	    for (FactionModifier mod : getModifiers()) {
-			combined.merge(mod.getType(), mod.getAmount(), Double::sum);
+			combined.merge(mod.getType(), mod.resolve(this), Double::sum);
 		}
 
 	    List<FactionModifier> result = new ArrayList<>();
@@ -1208,7 +1199,7 @@ public class Faction {
 	    double totalAmount = 0;
 	    for (FactionModifier mod : getModifiers()) {
 			if(mod.getType() != m) continue;
-	        totalAmount += mod.getAmount();
+	        totalAmount += mod.resolve(this);
 	    }
 	    return new FactionModifier(m, totalAmount);
 	}

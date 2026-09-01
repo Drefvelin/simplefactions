@@ -17,6 +17,7 @@ public class DiplomacyHandler {
     private Faction f;
     private HashMap<String, Relation> relations = new HashMap<>();
     private HashMap<String, RelationType> tradeRelations = new HashMap<>();
+    private HashMap<String, RelationType> treatyRelations = new HashMap<>();
 
     public DiplomacyHandler(Faction f) {
         this.f = f;
@@ -35,13 +36,20 @@ public class DiplomacyHandler {
             Relation r = entry.getValue();
             Faction from = FactionManager.getByString(entry.getKey());
             if(from == null) continue;
-            used += RelationManager.getDiplomaticCost(from, f, r.getType());
+            used += RelationManager.getDiplomaticCost(f, from, r.getType());
+            used += RelationManager.getDiplomaticCost(f, from, r.getAttitude());
         }
         for(Map.Entry<String, RelationType> entry : tradeRelations.entrySet()) {
             RelationType r = entry.getValue();
             Faction from = FactionManager.getByString(entry.getKey());
             if(from == null) continue;
-            used += RelationManager.getDiplomaticCost(from, f, r);
+            used += RelationManager.getDiplomaticCost(f, from, r);
+        }
+        for(Map.Entry<String, RelationType> entry : treatyRelations.entrySet()) {
+            RelationType r = entry.getValue();
+            Faction from = FactionManager.getByString(entry.getKey());
+            if(from == null) continue;
+            used += RelationManager.getDiplomaticCost(f, from, r);
         }
         return used;
     }
@@ -77,6 +85,12 @@ public class DiplomacyHandler {
                 relations.put(s, new Relation()); //default addition so we can tick it
             }
         }
+        for(String s : treatyRelations.keySet()) {
+            if(!relations.containsKey(s)) {
+				LogManager.relations("DEFAULT-FILL %s -> %s (treaty partner, no diplomatic map entry)", this.f.getId(), s);
+                relations.put(s, new Relation());
+            }
+        }
 		for(Map.Entry<String, Relation> entry : relations.entrySet()) {
 			entry.getValue().tick(entry.getKey(), this);
 		}
@@ -109,6 +123,27 @@ public class DiplomacyHandler {
         tradeRelations.put(f.getId(), r);
     }
 
+    public HashMap<String, RelationType> getTreatyRelations() {
+        return treatyRelations;
+    }
+
+    public boolean hasTreatyRelation(String s) {
+        return treatyRelations.containsKey(s);
+    }
+
+    public void removeTreatyRelation(String s) {
+        treatyRelations.remove(s);
+    }
+
+    public RelationType getTreatyRelation(String s) {
+        if(treatyRelations.containsKey(s)) return treatyRelations.get(s);
+        return null;
+    }
+
+    public void setTreatyRelation(Faction f, RelationType r) {
+        treatyRelations.put(f.getId(), r);
+    }
+
     public List<FactionModifier> getTradeModifiersFor(String target) {
         List<FactionModifier> mods = new ArrayList<>();
         RelationType r = getTradeRelation(target);
@@ -130,9 +165,15 @@ public class DiplomacyHandler {
                     mods.add(new FactionModifier(FactionManager.getByString(entry.getKey()), mod));
                 }
             }
+            if(r.getAttitude() != null && r.getAttitude().hasRecieveModifiers()) {
+                for(FactionModifier mod : r.getAttitude().getRecieveModifiers()) {
+                    mods.add(new FactionModifier(FactionManager.getByString(entry.getKey()), mod));
+                }
+            }
             Faction other = FactionManager.getByString(entry.getKey());
             if(other == null) continue;
             Relation back = other.getRelation(f.getId());
+            if(back == null || back.getType() == null) continue;
             if(back.getType().hasGiveModifiers()) {
                 for(FactionModifier mod : back.getType().getGiveModifiers()) {
                     mods.add(new FactionModifier(FactionManager.getByString(entry.getKey()), mod));

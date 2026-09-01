@@ -13,7 +13,7 @@ import me.Plugins.SimpleFactions.War.battle.events.BattleEndedEvent;
 import me.Plugins.SimpleFactions.War.battle.engine.raid.RaidAttackerEliminationService;
 import me.Plugins.SimpleFactions.War.battle.engine.win.SiegeContestService;
 import me.Plugins.SimpleFactions.War.battle.military.BattleCasualtyLedger;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBattleService;
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidBattleService;
 import me.Plugins.SimpleFactions.War.core.War;
 
 public final class BattleEndSupport {

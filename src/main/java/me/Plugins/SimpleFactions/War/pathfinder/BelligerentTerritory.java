@@ -7,11 +7,14 @@ import java.util.Locale;
 import java.util.Set;
 
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
+import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.Participant;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.declare.InterVassalQueries;
 import me.Plugins.SimpleFactions.enums.Terrain;
 
 public class BelligerentTerritory {
@@ -20,12 +23,19 @@ public class BelligerentTerritory {
 	private final Set<String> mainDefenderRealmIds;
 	private final Set<String> allBelligerentIds;
 	private final ProvinceOwnerLookup owners;
+	private final String warTopLiegeId;
+	private final TopLiegeLookup topLieges;
+
+	@FunctionalInterface
+	public interface TopLiegeLookup {
+		String getTopLiegeId(String factionId);
+	}
 
 	public BelligerentTerritory(
 			Set<String> attackerIds,
 			Set<String> defenderIds,
 			ProvinceOwnerLookup owners) {
-		this(attackerIds, defenderIds, defenderIds, owners);
+		this(attackerIds, defenderIds, defenderIds, owners, null, null);
 	}
 
 	public BelligerentTerritory(
@@ -33,20 +43,41 @@ public class BelligerentTerritory {
 			Set<String> defenderIds,
 			Set<String> mainDefenderRealmIds,
 			ProvinceOwnerLookup owners) {
-		this.attackerIds = Set.copyOf(attackerIds);
-		this.defenderIds = Set.copyOf(defenderIds);
+		this(attackerIds, defenderIds, mainDefenderRealmIds, owners, null, null);
+	}
+
+	public BelligerentTerritory(
+			Set<String> attackerIds,
+			Set<String> defenderIds,
+			Set<String> mainDefenderRealmIds,
+			ProvinceOwnerLookup owners,
+			String warTopLiegeId,
+			TopLiegeLookup topLieges) {
+		this.attackerIds = copyNormalized(attackerIds);
+		this.defenderIds = copyNormalized(defenderIds);
 		this.mainDefenderRealmIds = mainDefenderRealmIds == null || mainDefenderRealmIds.isEmpty()
-				? Set.copyOf(defenderIds)
-				: Set.copyOf(mainDefenderRealmIds);
-		this.allBelligerentIds = union(attackerIds, defenderIds);
+				? this.defenderIds
+				: copyNormalized(mainDefenderRealmIds);
+		this.allBelligerentIds = union(this.attackerIds, this.defenderIds);
 		this.owners = owners;
+		this.warTopLiegeId = warTopLiegeId == null ? null : normalizeId(warTopLiegeId);
+		this.topLieges = topLieges;
 	}
 
 	public static BelligerentTerritory fromWar(War war, ProvinceOwnerLookup owners) {
 		Set<String> attackers = collectSideFactionIds(war.getAttackers());
 		Set<String> defenders = collectSideFactionIds(war.getDefenders());
 		Set<String> mainDefender = collectLeaderParticipantIds(war.getDefenders());
-		return new BelligerentTerritory(attackers, defenders, mainDefender, owners);
+		String warTopLiegeId = null;
+		TopLiegeLookup lookup = null;
+		if (InterVassalQueries.isInternalPeerWar(war)) {
+			warTopLiegeId = InterVassalQueries.topLiegeId(war.getAttackers().getLeader());
+			lookup = ownerId -> {
+				Faction faction = FactionManager.getByString(ownerId);
+				return faction == null ? null : RelationManager.getTopLiege(faction);
+			};
+		}
+		return new BelligerentTerritory(attackers, defenders, mainDefender, owners, warTopLiegeId, lookup);
 	}
 
 	private static Set<String> collectSideFactionIds(Side side) {
@@ -94,6 +125,19 @@ public class BelligerentTerritory {
 		}
 	}
 
+	private static Set<String> copyNormalized(Set<String> ids) {
+		Set<String> normalized = new HashSet<>();
+		if (ids == null) {
+			return Set.of();
+		}
+		for (String id : ids) {
+			if (id != null) {
+				normalized.add(normalizeId(id));
+			}
+		}
+		return Set.copyOf(normalized);
+	}
+
 	private static Set<String> union(Set<String> a, Set<String> b) {
 		Set<String> merged = new HashSet<>(a);
 		merged.addAll(b);
@@ -123,7 +167,32 @@ public class BelligerentTerritory {
 		return owners.getOwnerFactionId(provinceId) == null;
 	}
 
+	public boolean isLiegeTransit(int provinceId) {
+		if (warTopLiegeId == null) {
+			return false;
+		}
+		String ownerId = owners.getOwnerFactionId(provinceId);
+		if (ownerId == null) {
+			return false;
+		}
+		String nOwner = normalizeId(ownerId);
+		if (allBelligerentIds.contains(nOwner)) {
+			return false;
+		}
+		if (warTopLiegeId.equals(nOwner)) {
+			return true;
+		}
+		if (topLieges == null) {
+			return false;
+		}
+		String ownerTop = topLieges.getTopLiegeId(ownerId);
+		return ownerTop != null && warTopLiegeId.equals(normalizeId(ownerTop));
+	}
+
 	public boolean isForeignNation(int provinceId) {
+		if (isLiegeTransit(provinceId)) {
+			return false;
+		}
 		String ownerId = owners.getOwnerFactionId(provinceId);
 		if (ownerId == null) {
 			return false;
@@ -132,7 +201,7 @@ public class BelligerentTerritory {
 	}
 
 	public boolean isNeutral(int provinceId) {
-		return isWilderness(provinceId) || isForeignNation(provinceId);
+		return isWilderness(provinceId) || isForeignNation(provinceId) || isLiegeTransit(provinceId);
 	}
 
 	public List<Integer> findInvasionEntryProvinces(ProvinceManager pm) {

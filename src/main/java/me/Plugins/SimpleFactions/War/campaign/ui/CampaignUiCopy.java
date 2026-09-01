@@ -9,7 +9,7 @@ import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPostBattleChoiceService;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService;
 
 public final class CampaignUiCopy {
 	public static final String LABEL = "#a39ba8";

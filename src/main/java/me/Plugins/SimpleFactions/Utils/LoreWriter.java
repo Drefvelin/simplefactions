@@ -93,6 +93,12 @@ public class LoreWriter {
                 case CHANGE_LEADER:
                     lore.add(StringFormatter.formatHex("#d4c9aeTarget: "+ (proposal.hasTarget() ? "#51e0a2"+ proposal.getTarget() : "#a3462cNo target")));
                     break;
+                case WHITE_PEACE:
+                    lore.add(StringFormatter.formatHex("#d4c9aeForce a white peace offer in a chosen war"));
+                    break;
+                case SURRENDER:
+                    lore.add(StringFormatter.formatHex("#d4c9aeSurrender a chosen war immediately"));
+                    break;
                 case DISSOLVE:
                     lore.add(StringFormatter.formatHex("#d4c9aeDissolves the faction as if the #c9655e'Dissolve Faction' #d4c9aebutton was clicked"));
                     break;

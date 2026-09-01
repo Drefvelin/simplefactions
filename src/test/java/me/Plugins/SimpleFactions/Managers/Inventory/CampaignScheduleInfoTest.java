@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.Managers.Inventory;
 
+
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;

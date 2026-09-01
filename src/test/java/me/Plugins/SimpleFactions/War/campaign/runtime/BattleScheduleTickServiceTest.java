@@ -1,5 +1,9 @@
 package me.Plugins.SimpleFactions.War.campaign.runtime;
 
+
+
+import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignOffensiveForfeitService;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -37,8 +41,8 @@ import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleLaunchService
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
-import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService.PostBattleChoicePhase;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
@@ -161,11 +165,11 @@ class BattleScheduleTickServiceTest {
 	void tick_startsScheduledBattleWhenDue() {
 		War war = scheduledWar();
 
-		try (MockedStatic<me.Plugins.SimpleFactions.War.campaign.progression.CampaignOffensiveForfeitService> forfeit =
-				mockStatic(me.Plugins.SimpleFactions.War.campaign.progression.CampaignOffensiveForfeitService.class);
+		try (MockedStatic<me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignOffensiveForfeitService> forfeit =
+				mockStatic(me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignOffensiveForfeitService.class);
 				MockedStatic<me.Plugins.SimpleFactions.War.battle.engine.win.FieldWinService> fieldWin =
 						mockStatic(me.Plugins.SimpleFactions.War.battle.engine.win.FieldWinService.class)) {
-			forfeit.when(() -> me.Plugins.SimpleFactions.War.campaign.progression.CampaignOffensiveForfeitService
+			forfeit.when(() -> me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignOffensiveForfeitService
 					.applyIfBattleOffensiveCannotAttack(any(), any(Integer.class))).thenReturn(false);
 			fieldWin.when(() -> me.Plugins.SimpleFactions.War.battle.engine.win.FieldWinService.checkFieldWin(any()))
 					.then(inv -> null);

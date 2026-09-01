@@ -22,6 +22,21 @@ militia:
         - "#a89977and other people who are not neccesarily"
         - "#a89977soldiers, but can be called upon to"
         - "#a89977defend their home"
+mercenary:
+    name: "#b7aae3Mercenary Company"
+    mercenary: true
+    default-slots: 0
+    upkeep: 8.0
+    expansion-time: 86400
+    levy: false
+    offense: true
+    item:
+        material: BLACK_DYE
+        model-data: 11
+    description:
+        - "#b7aae3Mercenaries #a89977are guild soldiers for hire"
+        - "#a89977they answer to their company, not to a realm"
+        - "#a89977and only fight where their contract sends them"
 levy:
     name: "#ba6450Levies"
     levy: true

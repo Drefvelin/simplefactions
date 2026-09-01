@@ -9,6 +9,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Objects.Request.AutoresolveRequest;
 import me.Plugins.SimpleFactions.Objects.Request.ElevateRequest;
+import me.Plugins.SimpleFactions.Objects.Request.MercenaryInviteRequest;
 import me.Plugins.SimpleFactions.Objects.Request.MovementJoinRequest;
 import me.Plugins.SimpleFactions.Objects.Request.MovementLeaderTargetRequest;
 import me.Plugins.SimpleFactions.Objects.Request.RelationRequest;
@@ -17,6 +18,7 @@ import me.Plugins.SimpleFactions.Objects.Request.Request;
 import me.Plugins.SimpleFactions.Objects.Request.VehicleTransferConsentRequest;
 import me.Plugins.SimpleFactions.Objects.Request.WarRequest;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleAutoresolveService;
+import me.Plugins.SimpleFactions.mercenary.company.MercenaryInvites;
 
 public class RequestManager {
 	private static HashMap<Player, Request> requests = new HashMap<>();
@@ -51,6 +53,10 @@ public class RequestManager {
 		return requests.get(p);
 	}
 	
+	public static void remove(Player p) {
+		requests.remove(p);
+	}
+	
 	public static void addRequest(Player sender, Player p, Request r) {
 		if(hasRequest(p)) {
 			sender.sendMessage("§cThe target is already considering another request.");
@@ -65,6 +71,8 @@ public class RequestManager {
 		if(req instanceof RelationRequest rreq) {
 			if(rreq.isTrade()) {
 				RelationManager.acceptTradeRequest(p);
+			} else if(rreq.isTreaty()) {
+				RelationManager.acceptTreatyRequest(p);
 			} else {
 				RelationManager.acceptRequest(p);
 			}
@@ -80,6 +88,8 @@ public class RequestManager {
 			FactionManager.acceptMovementJoinRequest(p);
 		} else if(req instanceof MovementLeaderTargetRequest) {
 			FactionManager.acceptMovementLeaderTargetRequest(p);
+		} else if(req instanceof MercenaryInviteRequest) {
+			MercenaryInvites.accept(p);
 		} else if(req instanceof VehicleTransferConsentRequest) {
 			SimpleFactions plugin = SimpleFactions.getInstance();
 			if (plugin != null) {

@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.Utils;
 
+
+import me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.VehicleTabCompletions;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,14 +11,17 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.LawLoader;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
+import me.Plugins.SimpleFactions.Managers.RequestManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Objects.Request.MercenaryInviteRequest;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.installation.Installation;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
@@ -29,6 +34,69 @@ public class TabCompletion implements TabCompleter{
 			return true;
 		}
 		return false;
+	}
+
+	private List<String> completeCompany(Player p, String[] args) {
+		List<String> completions = new ArrayList<>();
+		Guild guild = FactionManager.getGuildByLeader(p.getName());
+		if(args.length <= 1) {
+			if(guild != null && guild.getCompany() == null) completions.add("found");
+			if(guild != null && guild.hasCompany()) {
+				completions.add("invite");
+				completions.add("kick");
+				completions.add("expand");
+				completions.add("draft");
+				completions.add("offer");
+				completions.add("contracts");
+			}
+			if(RequestManager.getRequest(p) instanceof MercenaryInviteRequest) {
+				completions.add("accept");
+				completions.add("decline");
+			}
+			return filtered(completions, args.length == 1 ? args[0] : "");
+		}
+		if(args.length == 2 && args[0].equalsIgnoreCase("kick")) {
+			if(guild != null && guild.getCompany() != null) {
+				completions.addAll(guild.getCompany().getEnlisted());
+			}
+			return filtered(completions, args[1]);
+		}
+		if(args.length == 2 && args[0].equalsIgnoreCase("invite")) {
+			for(Player online : Bukkit.getOnlinePlayers()) {
+				completions.add(online.getName());
+			}
+			return filtered(completions, args[1]);
+		}
+		if(args.length == 2 && args[0].equalsIgnoreCase("offer")) {
+			for(me.Plugins.SimpleFactions.Objects.Faction f : FactionManager.factions) {
+				if(f.getName() != null) completions.add(f.getName());
+			}
+			return filtered(completions, args[1]);
+		}
+		return completions;
+	}
+
+	private List<String> completeMercenaries(String[] args) {
+		List<String> completions = new ArrayList<>();
+		if(args.length <= 1) {
+			completions.add("list");
+			completions.add("hire");
+			return filtered(completions, args.length == 1 ? args[0] : "");
+		}
+		if(args.length == 2 && args[0].equalsIgnoreCase("hire")) {
+			for(me.Plugins.SimpleFactions.mercenary.company.MercenaryCompany company
+					: me.Plugins.SimpleFactions.mercenary.contract.MercenaryMarket.listing()) {
+				if(company.getName() != null) completions.add(company.getName());
+			}
+			return filtered(completions, args[1]);
+		}
+		return completions;
+	}
+
+	private List<String> filtered(List<String> completions, String prefix) {
+		String lower = prefix == null ? "" : prefix.toLowerCase();
+		completions.removeIf(s -> !s.toLowerCase().startsWith(lower));
+		return completions;
 	}
 
 	private List<String> completeConstructKinds(String[] args) {
@@ -63,12 +131,21 @@ public class TabCompletion implements TabCompleter{
 		if (includePendingConstruction && f.getInstallationHandler().getPendingConstruction() != null) {
 			completions.add(f.getInstallationHandler().getPendingConstruction().getId());
 		}
-		return me.Plugins.SimpleFactions.vehicles.VehicleTabCompletions.filter(completions, prefix);
+		return me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.VehicleTabCompletions.filter(completions, prefix);
 	}
 
     @Override
     public List<String> onTabComplete (CommandSender sender, Command cmd, String label, String[] args){
-		if(cmd.getName().equalsIgnoreCase("guild") && args.length >= 0 && args.length < 2 ) {
+		if(cmd.getName().equalsIgnoreCase("company")) {
+			if(sender instanceof Player p) {
+				return completeCompany(p, args);
+			}
+			return new ArrayList<>();
+		}
+		else if(cmd.getName().equalsIgnoreCase("mercenaries")) {
+			return completeMercenaries(args);
+		}
+		else if(cmd.getName().equalsIgnoreCase("guild") && args.length >= 0 && args.length < 2 ) {
 			if(sender instanceof Player){
 				Player p = (Player) sender;
 				List<String> completions = new ArrayList<>();
@@ -79,7 +156,9 @@ public class TabCompletion implements TabCompleter{
 				completions.add("setbank");
 				completions.add("deposit");
 				completions.add("withdraw");
-				completions.add("setcapital");
+				if(Cache.provincesEnabled) {
+					completions.add("setcapital");
+				}
 				if(FactionManager.getGuildByLeader(p.getName()) != null) {
 					completions.add("invite");
 					completions.add("setleader");
@@ -97,6 +176,9 @@ public class TabCompletion implements TabCompleter{
 				&& args.length >= 1
 				&& args.length <= 2
 				&& args[0].equalsIgnoreCase("construct")) {
+			if(!Cache.provincesEnabled) {
+				return new ArrayList<>();
+			}
 			if(sender instanceof Player) {
 				Player p = (Player) sender;
 				if(FactionManager.getByLeader(p.getName()) == null) {
@@ -109,6 +191,9 @@ public class TabCompletion implements TabCompleter{
 				&& args.length >= 1
 				&& args.length <= 2
 				&& args[0].equalsIgnoreCase("deconstruct")) {
+			if(!Cache.provincesEnabled) {
+				return new ArrayList<>();
+			}
 			if(sender instanceof Player) {
 				Player p = (Player) sender;
 				return completeDeconstructIds(p, args);
@@ -120,14 +205,14 @@ public class TabCompletion implements TabCompleter{
 			if(sender instanceof Player) {
 				Player p = (Player) sender;
 				if(args.length <= 2) {
-					return me.Plugins.SimpleFactions.vehicles.VehicleTabCompletions.subcommands(
+					return me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.VehicleTabCompletions.subcommands(
 							args.length >= 2 ? args[1] : "");
 				}
 				if(args.length == 3 && args[1].equalsIgnoreCase("transfer")) {
 					return completeInstallationIds(p, args[2], false);
 				}
 				if(args.length == 3 && args[1].equalsIgnoreCase("maintenance")) {
-					return me.Plugins.SimpleFactions.vehicles.VehicleTabCompletions.maintenanceActions(args[2]);
+					return me.Plugins.SimpleFactions.vehicles.VehicleFactionCommands.VehicleTabCompletions.maintenanceActions(args[2]);
 				}
 			}
 		}
@@ -160,13 +245,16 @@ public class TabCompletion implements TabCompleter{
 				completions.add("join");
 				
 				if(FactionManager.getByLeader(p.getName()) != null) {
-					completions.add("claim");
-					completions.add("construct");
-					completions.add("deconstruct");
+					if(Cache.provincesEnabled) {
+						completions.add("claim");
+						completions.add("construct");
+						completions.add("deconstruct");
+						completions.add("unclaim");
+						completions.add("setcapital");
+					}
 					completions.add("vehicle");
 					completions.add("transfervehicle");
 					completions.add("findvehicles");
-					completions.add("unclaim");
 					completions.add("withdraw");
 					completions.add("setbank");
 					completions.add("delete");
@@ -188,19 +276,21 @@ public class TabCompletion implements TabCompleter{
 					completions.add("addprestigemodifier");
 					//completions.add("addwealthmodifier");
 					completions.add("getglobalwealth");
-					completions.add("queueallnations");
-					completions.add("fullregen");
-					completions.add("reloadtitles");
+					if(Cache.provincesEnabled) {
+						completions.add("queueallnations");
+						completions.add("fullregen");
+						completions.add("reloadtitles");
+						completions.add("destroytitle");
+						completions.add("granttitle");
+						completions.add("usurp");
+					}
 					completions.add("reloadconfigs");
-					completions.add("destroytitle");
-					completions.add("granttitle");
 					completions.add("transfersubject");
 					completions.add("setrelation");
 					completions.add("settreaty");
 					completions.add("setpower");
 					completions.add("setlaw");
 					completions.add("setstance");
-					completions.add("usurp");
 					completions.add("startelection");
 					completions.add("endelection");
 				}
@@ -214,6 +304,9 @@ public class TabCompletion implements TabCompleter{
 				return completions;
 			}
 		} else if(eitherCommand(cmd) && args.length == 2 && args[0].equalsIgnoreCase("setcapital")) {
+			if(!Cache.provincesEnabled) {
+				return new ArrayList<>();
+			}
 			if(sender instanceof Player) {
 				Player p = (Player) sender;
 				Faction f = null;
@@ -559,6 +652,9 @@ public class TabCompletion implements TabCompleter{
 				if(sender instanceof Player){
 					List<String> completions = new ArrayList<String>();
 					for(RelationType type : RelationLoader.getTreatyTypes()) {
+						completions.add(type.getId());
+					}
+					for(RelationType type : RelationLoader.getPoliticalTreatyTypes()) {
 						completions.add(type.getId());
 					}
 					return completions;

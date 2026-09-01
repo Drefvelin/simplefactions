@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.War.campaign.progression;
 
 import java.util.List;
 
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.campaign.schedule.CampaignScheduleService;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;

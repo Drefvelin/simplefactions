@@ -50,7 +50,7 @@ public class RelationLoader {
 	public static List<RelationType> getDiplomaticTypes() {
 		List<RelationType> diplomatic = new ArrayList<>();
 		for (RelationType r : types) {
-			if (!r.isTradeAgreement()) {
+			if (!r.isTradeAgreement() && !r.isTreaty()) {
 				diplomatic.add(r);
 			}
 		}
@@ -61,6 +61,16 @@ public class RelationLoader {
 		List<RelationType> treaties = new ArrayList<>();
 		for (RelationType r : types) {
 			if (r.isTradeAgreement()) {
+				treaties.add(r);
+			}
+		}
+		return treaties;
+	}
+
+	public static List<RelationType> getPoliticalTreatyTypes() {
+		List<RelationType> treaties = new ArrayList<>();
+		for (RelationType r : types) {
+			if (r.isTreaty()) {
 				treaties.add(r);
 			}
 		}

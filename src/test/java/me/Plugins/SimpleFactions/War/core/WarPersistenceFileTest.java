@@ -178,6 +178,30 @@ class WarPersistenceFileTest {
 		assertTrue(restored.getDefenders().getMainParticipants().get(0).isCivilWar());
 	}
 
+	@Test
+	void warData_fileRoundTrip_preservesInternalWarSnapshot() throws Exception {
+		Faction attacker = mockFaction("dukeA");
+		Faction defender = mockFaction("dukeB");
+		FactionManager.factions.add(attacker);
+		FactionManager.factions.add(defender);
+
+		War war = new War(4, attacker, defender);
+		war.setInternalWar(true);
+		war.setInternalTopLiegeId("king");
+
+		WarData data = WarMapper.toData(war);
+		File file = tempDir.resolve("war_4.json").toFile();
+		JsonUtil.writeJson(file, data);
+
+		WarData restoredData = JsonUtil.readJson(file, WarData.class);
+		War restored = WarMapper.fromData(restoredData);
+
+		assertEquals(Boolean.TRUE, restoredData.internalWar);
+		assertEquals("king", restoredData.internalTopLiegeId);
+		assertTrue(restored.isInternalWar());
+		assertEquals("king", restored.getInternalTopLiegeId());
+	}
+
 	private static Faction mockFaction(String id) {
 		Faction faction = mock(Faction.class);
 		when(faction.getId()).thenReturn(id);

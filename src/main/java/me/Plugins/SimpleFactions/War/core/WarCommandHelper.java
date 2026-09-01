@@ -3,7 +3,7 @@ package me.Plugins.SimpleFactions.War.core;
 import java.util.Optional;
 
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 
 public final class WarCommandHelper {
 	private WarCommandHelper() {}

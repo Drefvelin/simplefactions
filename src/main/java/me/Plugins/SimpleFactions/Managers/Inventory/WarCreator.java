@@ -243,4 +243,76 @@ public class WarCreator {
 		i.setItemMeta(m);
 		return i;
 	}
+
+	public static String mercenaryHeader(String marker) {
+		if ("mercenary_defender".equalsIgnoreCase(marker)) {
+			return StringFormatter.formatHex("#b7aae3Mercenary (Defender)");
+		}
+		return StringFormatter.formatHex("#b7aae3Mercenary (Attacker)");
+	}
+
+	public List<String> buildMercenaryLore(
+			me.Plugins.SimpleFactions.mercenary.contract.MercenaryEngagements.Engagement engagement,
+			String marker) {
+		List<String> lore = new ArrayList<>();
+		lore.add(mercenaryHeader(marker));
+		if (engagement == null || engagement.company() == null || engagement.contract() == null) {
+			return lore;
+		}
+		me.Plugins.SimpleFactions.mercenary.company.MercenaryCompany company = engagement.company();
+		me.Plugins.SimpleFactions.mercenary.contract.MercenaryContract contract = engagement.contract();
+		lore.add(" ");
+		if (company.getGuild() != null && company.getGuild().getName() != null) {
+			lore.add(StringFormatter.formatHex("#a39ba8Host guild: #d4c9ae" + company.getGuild().getName()));
+		}
+		lore.add(StringFormatter.formatHex("#a39ba8Home: #d4c9ae"
+				+ me.Plugins.SimpleFactions.Utils.HomeSettlementNames.of(company.getGuild())));
+		lore.add(StringFormatter.formatHex("#a39ba8Promised slots: #28ed70" + contract.getSlots()));
+		lore.add(StringFormatter.formatHex("#a39ba8Reputation: #d4c9ae" + company.getReputation()));
+		lore.add(StringFormatter.formatHex("#a39ba8Days remaining: #d4c9ae" + contract.getDaysRemaining()));
+		lore.add(" ");
+		lore.add(StringFormatter.formatHex("#28ed70Click to view the contract"));
+		return lore;
+	}
+
+	public List<String> buildOverflowOpenerLore(int hiddenCount) {
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#b7aae3More mercenaries"));
+		lore.add(" ");
+		lore.add(StringFormatter.formatHex("#a39ba8+" + Math.max(0, hiddenCount) + " not shown"));
+		lore.add(StringFormatter.formatHex("#28ed70Click to view"));
+		return lore;
+	}
+
+	public ItemStack createMercenaryItem(
+			me.Plugins.SimpleFactions.mercenary.contract.MercenaryEngagements.Engagement engagement,
+			String marker) {
+		me.Plugins.SimpleFactions.mercenary.company.MercenaryCompany company =
+				engagement == null ? null : engagement.company();
+		org.bukkit.inventory.ItemStack banner = company == null || company.getGuild() == null
+				? null : company.getGuild().getBanner();
+		ItemStack i = banner == null ? new ItemStack(Material.IRON_SWORD, 1) : banner.clone();
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(company == null ? "Mercenary" : company.getName());
+		m.setLore(buildMercenaryLore(engagement, marker));
+		if (engagement != null && engagement.contract() != null) {
+			m.getPersistentDataContainer().set(
+					me.Plugins.SimpleFactions.keys.Keys.CONTRACT_ID,
+					PersistentDataType.STRING,
+					engagement.contract().getId());
+		}
+		i.setItemMeta(m);
+		return i;
+	}
+
+	public ItemStack createOverflowOpener(String sideId, int hiddenCount) {
+		ItemStack i = new ItemStack(Material.WRITABLE_BOOK, 1);
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(StringFormatter.formatHex("#b7aae3More mercenaries"));
+		m.setLore(buildOverflowOpenerLore(hiddenCount));
+		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "mercenary_overflow");
+		m.getPersistentDataContainer().set(key, PersistentDataType.STRING, sideId);
+		i.setItemMeta(m);
+		return i;
+	}
 }

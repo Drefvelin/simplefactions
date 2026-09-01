@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.War.battle.engine.core;
 
+
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidBossBarService;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +35,7 @@ import me.Plugins.SimpleFactions.War.battle.engine.capture.BattleCapturePoints;
 import me.Plugins.SimpleFactions.War.battle.engine.capture.CapturePoint;
 import me.Plugins.SimpleFactions.War.battle.engine.raid.BattleRaidSetup;
 import me.Plugins.SimpleFactions.War.battle.engine.raid.RaidAttackerEliminationService;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidIntruderService;
+import me.Plugins.SimpleFactions.War.campaign.raid.intruder.CampaignRaidIntruderService;
 import me.Plugins.SimpleFactions.War.battle.engine.raid.RaidRespawnService;
 import me.Plugins.SimpleFactions.War.battle.engine.raid.RaidWinService;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleInventoryManager;
@@ -103,7 +105,7 @@ public class BattleManager implements Listener{
 			}
 			battle.getPointManager().end(battle.getAllParticipants());
 			if (battle.isCampaignRaid()) {
-				me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBossBarService.clear(battle);
+				me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidBossBarService.clear(battle);
 			}
 			for (BattleSide side : battle.getSides()) {
 				side.removeBossBar();

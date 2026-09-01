@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Diplomacy.DiplomacyHandler;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
@@ -360,6 +361,43 @@ class WarGoalValidatorTest {
 	}
 
 	@Test
+	void validateShared_rejectsWarWhenNapOverlay() {
+		Faction attacker = mockFaction("attacker", 3);
+		Faction defender = mockFactionWithCapital("defender", 42);
+		linkNap(attacker, defender);
+		FactionManager.factions.add(defender);
+
+		WarValidationResult result = validator.validate(WarDeclareRequest.of(attacker, defender, WarGoalType.WAR));
+		assertFalse(result.isValid());
+		assertEquals("§cYou cannot declare war while a non-aggression pact is in effect.", result.getMessage());
+	}
+
+	@Test
+	void validateShared_rejectsSubjugateWhenNapOverlay() {
+		Faction attacker = mockFaction("attacker", 3);
+		Faction defender = mockFactionWithCapital("defender", 42);
+		linkOutgoingRelation(attacker, defender, "tributary");
+		linkNap(attacker, defender);
+		FactionManager.factions.add(defender);
+
+		addPickableVassalType("subject");
+		WarValidationResult result = validator.validate(subjugateRequest(attacker, defender, "subject"));
+		assertFalse(result.isValid());
+		assertEquals("§cYou cannot declare war while a non-aggression pact is in effect.", result.getMessage());
+	}
+
+	@Test
+	void validateShared_allowsTributarySubjugateWithoutNap() {
+		Faction attacker = mockFaction("attacker", 3);
+		Faction defender = mockFactionWithCapital("defender", 42);
+		linkOutgoingRelation(attacker, defender, "tributary");
+		FactionManager.factions.add(defender);
+
+		addPickableVassalType("subject");
+		assertTrue(validator.validate(subjugateRequest(attacker, defender, "subject")).isValid());
+	}
+
+	@Test
 	void movementOriginGoals_cannotBeDeclared() {
 		Faction attacker = mockFaction("attacker", 3);
 		Faction defender = mockFactionWithCapital("defender", 42);
@@ -394,6 +432,65 @@ class WarGoalValidatorTest {
 		WarValidationResult result = validator.validate(WarDeclareRequest.of(attacker, defender, WarGoalType.WAR));
 		assertFalse(result.isValid());
 		assertEquals("§cYou cannot declare war on a faction in the same realm.", result.getMessage());
+	}
+
+	@Test
+	void war_allowsInternalPeerDukes() {
+		Faction king = mockFaction("king", 5);
+		Faction dukeA = mockSubject("dukeA", "king");
+		when(dukeA.getTier().getTier()).thenReturn(3);
+		Faction dukeB = mockSubject("dukeB", "king");
+		when(dukeB.getTier().getTier()).thenReturn(3);
+		FactionManager.factions.add(king);
+		FactionManager.factions.add(dukeA);
+		FactionManager.factions.add(dukeB);
+
+		assertTrue(validator.validate(WarDeclareRequest.of(dukeA, dukeB, WarGoalType.WAR)).isValid());
+	}
+
+	@Test
+	void war_rejectsDukeVersusKing() {
+		Faction king = mockFaction("king", 5);
+		Faction duke = mockSubject("duke", "king");
+		when(duke.getTier().getTier()).thenReturn(3);
+		FactionManager.factions.add(king);
+		FactionManager.factions.add(duke);
+
+		WarValidationResult result = validator.validate(WarDeclareRequest.of(duke, king, WarGoalType.WAR));
+		assertFalse(result.isValid());
+		assertEquals("§cYou cannot declare war on a faction in the same realm.", result.getMessage());
+	}
+
+	@Test
+	void usurp_rejectsInternalPeer() {
+		Faction king = mockFaction("king", 5);
+		Faction dukeA = mockSubject("dukeA", "king");
+		when(dukeA.getTier().getTier()).thenReturn(3);
+		Faction dukeB = mockSubject("dukeB", "king");
+		when(dukeB.getTier().getTier()).thenReturn(3);
+		withTitle(dukeB);
+		FactionManager.factions.add(king);
+		FactionManager.factions.add(dukeA);
+		FactionManager.factions.add(dukeB);
+
+		WarValidationResult result = validator.validate(WarDeclareRequest.of(dukeA, dukeB, WarGoalType.USURP));
+		assertFalse(result.isValid());
+		assertEquals("§cUsurp can only target your direct overlord.", result.getMessage());
+	}
+
+	@Test
+	void subjugate_allowsInternalPeer() {
+		addPickableVassalType("subject");
+		Faction king = mockFaction("king", 5);
+		Faction dukeA = mockSubject("dukeA", "king");
+		when(dukeA.getTier().getTier()).thenReturn(3);
+		Faction dukeB = mockSubject("dukeB", "king");
+		when(dukeB.getTier().getTier()).thenReturn(3);
+		FactionManager.factions.add(king);
+		FactionManager.factions.add(dukeA);
+		FactionManager.factions.add(dukeB);
+
+		assertTrue(validator.validate(subjugateRequest(dukeA, dukeB, "subject")).isValid());
 	}
 
 	@Test
@@ -1068,6 +1165,17 @@ class WarGoalValidatorTest {
 		relations.put(target.getId(), relation);
 		when(origin.getRelations()).thenReturn(relations);
 		when(origin.getRelation(target.getId())).thenReturn(relation);
+	}
+
+	private static void linkNap(Faction a, Faction b) {
+		RelationType nap = mock(RelationType.class);
+		when(nap.blocksWar()).thenReturn(true);
+		DiplomacyHandler handlerA = mock(DiplomacyHandler.class);
+		DiplomacyHandler handlerB = mock(DiplomacyHandler.class);
+		when(handlerA.getTreatyRelation(b.getId())).thenReturn(nap);
+		when(handlerB.getTreatyRelation(a.getId())).thenReturn(nap);
+		when(a.getDiplomacyHandler()).thenReturn(handlerA);
+		when(b.getDiplomacyHandler()).thenReturn(handlerB);
 	}
 
 	private static void addTributaryType() {

@@ -35,3 +35,19 @@ dissolve:
       - citizens
       - guilds
       - vassals
+white_peace:
+    name: "#62ccd1White Peace"
+    description:
+        - "#c4c0a1Force this side to keep offering white peace in a chosen war."
+    pools:
+      - citizens
+      - guilds
+      - vassals
+surrender:
+    name: "#62ccd1Surrender"
+    description:
+        - "#c4c0a1Surrender a chosen war immediately."
+    pools:
+      - citizens
+      - guilds
+      - vassals

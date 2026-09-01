@@ -34,4 +34,7 @@ public class GovernmentData {
     public List<StabilityModifierData> stabilityModifiers = new ArrayList<>();
 
     public List<MovementData> movements = new ArrayList<>();
+
+    @SerializedName("voting booths")
+    public List<String> votingBooths = new ArrayList<>();
 }

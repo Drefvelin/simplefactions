@@ -33,6 +33,28 @@ class PillageTradeHitTest {
 	}
 
 	@Test
+	void breakdownLine_nullWhenNoHit() {
+		assertEquals(null, PillageTradeHit.breakdownLine(guildWithHit(0, 1)));
+		assertEquals(null, PillageTradeHit.breakdownLine(null));
+	}
+
+	@Test
+	void breakdownLine_showsRoundedPercent() {
+		assertEquals("#d4c9aePillage: #c45749-99%", PillageTradeHit.breakdownLine(guildWithHit(-99.4, 1)));
+	}
+
+	@Test
+	void ledgerSuffix_emptyWhenNoHit() {
+		assertEquals("", PillageTradeHit.ledgerSuffix(guildWithHit(0, 1)));
+		assertEquals("", PillageTradeHit.ledgerSuffix(null));
+	}
+
+	@Test
+	void ledgerSuffix_whenHit() {
+		assertEquals(" §7(§cPillaged§7)", PillageTradeHit.ledgerSuffix(guildWithHit(-100, 1)));
+	}
+
+	@Test
 	void tick_removesHitAfterDecay() {
 		Guild guild = guildWithHit(-100, 50);
 		PillageTradeHit.tick(guild);

@@ -26,6 +26,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
@@ -151,9 +152,50 @@ class WarOutcomeServiceTest {
 					.thenReturn(true);
 			WarOutcomeService.apply(fx.war, WarEndReason.ATTACKER_VICTORY);
 			relations.verify(() -> RelationManager.setRelationForced(march, fx.defender, fx.attacker));
+			relations.verify(() -> RelationManager.transferSubject(any(), any()), never());
 			factions.verify(() -> FactionManager.usurp(any(Player.class), any(), any()), never());
 		}
 		assertTrue(fx.payerObligations.isEmpty());
+	}
+
+	@Test
+	void attackerVictory_internalSubjugate_transfersThenSetsChosenType() {
+		Fixture fx = fixture();
+		fx.war.setInternalWar(true);
+		fx.war.setRelationTypeId("march");
+		RelationType march = mock(RelationType.class);
+		when(march.getId()).thenReturn("march");
+		try (MockedStatic<RelationLoader> loader = mockStatic(RelationLoader.class);
+				MockedStatic<RelationManager> relations = mockStatic(RelationManager.class)) {
+			loader.when(() -> RelationLoader.getType("march")).thenReturn(march);
+			loader.when(() -> RelationLoader.isWarPickableVassal(march)).thenReturn(true);
+			relations.when(() -> RelationManager.setRelationForced(march, fx.defender, fx.attacker))
+					.thenReturn(true);
+			WarOutcomeService.apply(fx.war, WarEndReason.ATTACKER_VICTORY);
+			relations.verify(() -> RelationManager.transferSubject(fx.defender, fx.attacker));
+			relations.verify(() -> RelationManager.setRelationForced(march, fx.defender, fx.attacker));
+		}
+		assertTrue(fx.payerObligations.isEmpty());
+	}
+
+	@Test
+	void attackerVictory_internalSubjugate_skipsForcedWhenTypeAlreadySet() {
+		Fixture fx = fixture();
+		fx.war.setInternalWar(true);
+		fx.war.setRelationTypeId("march");
+		RelationType march = mock(RelationType.class);
+		when(march.getId()).thenReturn("march");
+		Relation existing = mock(Relation.class);
+		when(existing.getType()).thenReturn(march);
+		when(fx.attacker.getRelation("def")).thenReturn(existing);
+		try (MockedStatic<RelationLoader> loader = mockStatic(RelationLoader.class);
+				MockedStatic<RelationManager> relations = mockStatic(RelationManager.class)) {
+			loader.when(() -> RelationLoader.getType("march")).thenReturn(march);
+			loader.when(() -> RelationLoader.isWarPickableVassal(march)).thenReturn(true);
+			WarOutcomeService.apply(fx.war, WarEndReason.ATTACKER_VICTORY);
+			relations.verify(() -> RelationManager.transferSubject(fx.defender, fx.attacker));
+			relations.verify(() -> RelationManager.setRelationForced(any(), any(), any()), never());
+		}
 	}
 
 	@Test
@@ -472,9 +514,15 @@ class WarOutcomeServiceTest {
 				fx.war.setGoal(goal);
 				WarOutcomeService.apply(fx.war, WarEndReason.ATTACKER_VICTORY);
 			}
+			int movementOriginCount = 0;
+			for (WarGoalType goal : WarGoalType.values()) {
+				if (goal.isMovementOrigin()) {
+					movementOriginCount++;
+				}
+			}
 			gate.verify(
 					() -> MovementOutcomeService.apply(movement, MovementOutcomeSource.WAR),
-					times(3));
+					times(movementOriginCount));
 		}
 		assertTrue(fx.payerObligations.isEmpty());
 	}

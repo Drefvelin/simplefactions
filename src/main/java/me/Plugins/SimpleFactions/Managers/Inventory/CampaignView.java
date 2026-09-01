@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.Managers.Inventory;
 
+
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidResults;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -26,13 +28,13 @@ import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.enums.BattleSchedulePhase;
 import me.Plugins.SimpleFactions.War.enums.WarType;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteEntry;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRouteRenderer;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignRouteEntry;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignRouteRenderer;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignChoiceService;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCapabilityService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPostBattleChoiceService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRetreatService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignRetreatService.RetreatResult;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignRetreatService;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignRetreatService.RetreatResult;
 import me.Plugins.SimpleFactions.War.campaign.progression.WhitePeaceService;
 import me.Plugins.SimpleFactions.War.resolution.WarResolutionService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleAutoresolveService;

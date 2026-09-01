@@ -5,7 +5,6 @@ landless:
         - "#63533dVillage"
         - "#d1cf5aNomads"
         - "#376b2aClan"
-        - "#b7aae3Mercenary Company"
 province:
     name: "#646a6bProvince"
     prestige: 10

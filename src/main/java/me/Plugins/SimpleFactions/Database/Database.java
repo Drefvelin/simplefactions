@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.Database;
 
+
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,6 +21,7 @@ import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Guild.upgrade.UpgradeExpansion;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
+import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
@@ -27,6 +30,7 @@ import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
+import me.Plugins.SimpleFactions.Objects.PrestigeRank;
 import me.Plugins.SimpleFactions.Tiers.Title;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.core.WarMapper;
@@ -52,7 +56,21 @@ public class Database {
 		}
 	}
 
-	public void saveTimer(int time) {
+	public int getDay() {
+		try {
+			File file = new File("plugins/SimpleFactions/Cache", "data.json");
+			if (!file.exists()) return 0;
+
+			TimerData data = JsonUtil.readJson(file, TimerData.class);
+			return data != null ? data.day : 0;
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			return 0;
+		}
+	}
+
+	public void saveTimer(int time, int day) {
 		try {
 			File folder = new File("plugins/SimpleFactions/Cache");
 			if (!folder.exists()) folder.mkdirs();
@@ -61,6 +79,7 @@ public class Database {
 
 			TimerData data = new TimerData();
 			data.time = time;
+			data.day = day;
 
 			JsonUtil.writeJson(file, data);
 
@@ -79,6 +98,10 @@ public class Database {
         File folder = new File("plugins/SimpleFactions/Data");
         if (!folder.exists()) folder.mkdirs();
 
+        // Suppressed for the whole load: each faction and guild calls updateWealth, which
+        // cascades into a full-server prestige pass over a partial list. FactionManager.run
+        // recomputes once everything is in.
+        FactionManager.loading = true;
         for (File file : Objects.requireNonNull(folder.listFiles())) {
             if (!file.getName().endsWith(".json")) continue;
 
@@ -141,6 +164,15 @@ public class Database {
                         data.governmentData
                 );
 
+                // --- Rank / founding ---
+                // Rank is derived state that only climbs one level per updatePrestige, so it
+                // has to be restored rather than re-derived from a cold ladder on every boot.
+                if (data.rank != null) {
+                    PrestigeRank restored = RankLoader.getByString(data.rank);
+                    if (restored != null) f.setRank(restored);
+                }
+                f.setFoundedAt(data.foundedAt != null ? data.foundedAt : System.currentTimeMillis()/1000L);
+
                 if (data.settlements != null) {
                     f.getSettlementHandler().load(data.settlements);
                 }
@@ -166,6 +198,12 @@ public class Database {
                 if(data.tradeRelations != null) {
                     for (String r : data.tradeRelations) {
                         FactionManager.addDBTradeRelation(f, r);
+                    }
+                }
+
+                if(data.treatyRelations != null) {
+                    for (String r : data.treatyRelations) {
+                        FactionManager.addDBTreatyRelation(f, r);
                     }
                 }
 
@@ -244,6 +282,7 @@ public class Database {
                 e.printStackTrace();
             }
         }
+        FactionManager.loading = false;
     }
 
     /* =====================================================
@@ -304,12 +343,21 @@ public class Database {
             // --- Trade Relations ---
             f.getDiplomacyHandler().getTradeRelations().forEach((id, rel) ->
                     data.tradeRelations.add(id + "(" + rel.getId() + ")"));
+            f.getDiplomacyHandler().getTreatyRelations().forEach((id, rel) -> {
+                if (rel != null && rel.isTreaty() && !rel.isClearTreaty()) {
+                    data.treatyRelations.add(id + "(" + rel.getId() + ")");
+                }
+            });
 
             // --- Modifiers ---
             f.getPrestigeModifiers().forEach(m -> {
                 if(m.isPersistent())
                     data.prestigeModifiers.add(m.getType() + "(" + m.getAmount() + ")");
             });
+
+            // --- Rank / founding ---
+            data.rank = f.getRank() != null ? f.getRank().getId() : null;
+            data.foundedAt = f.getFoundedAt();
 
             // --- Guild ---
             for (Guild g : f.getGuildHandler().getGuilds()) {
@@ -330,6 +378,9 @@ public class Database {
                 gd.creditScore = g.getLoanHandler().getCreditScore();
                 gd.repressed = g.isRepressed();
                 gd.favoured = g.isFavoured();
+                gd.dividendPercent = g.getDividendPercent();
+                gd.dividendEligible = g.getDividendEligibleSnapshot();
+                gd.company = g.getCompany() != null ? g.getCompany().serialize() : null;
 
                 // --- Bank ---
                 if (g.getBank() != null) {

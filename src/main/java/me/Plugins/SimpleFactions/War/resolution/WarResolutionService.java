@@ -11,9 +11,9 @@ import me.Plugins.SimpleFactions.War.enums.ObjectiveHolder;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCapabilityService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPostBattleChoiceService;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService;
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget;
 import me.Plugins.SimpleFactions.War.campaign.progression.WhitePeaceService;
 
 public final class WarResolutionService {

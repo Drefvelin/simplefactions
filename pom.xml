@@ -56,6 +56,13 @@
         </dependency>
         <dependency>
             <groupId>local</groupId>
+            <artifactId>MMOCore</artifactId>
+            <version>1.13.1</version>
+            <scope>system</scope>
+            <systemPath>${tfmc.refs}/MMOCore-1.13.1.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>local</groupId>
             <artifactId>spigot-api</artifactId>
             <version>1.21.8</version>
             <scope>system</scope>

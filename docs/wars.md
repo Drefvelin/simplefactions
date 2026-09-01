@@ -10,7 +10,7 @@
 
 Previous-season wars were informal: players arranged fights in Discord, staff sometimes ruled outcomes, and the in-game war GUI was barely used. That caused drama and unfairness.
 
-**v1 automated wars** are fully system-driven after staff approve a declaration ticket. Staff set battle **rule presets** in templates (lives, friendly fire, keep inventory, durations). Staff place **battle geometry** (spawns, jails, capture points) per scheduled fight via `/battle edit`. Players vote on battle times, sign up via warband join, and the campaign advances on the map without manual organisation.
+**v1 automated wars** are fully system-driven after declare. The Discord ticket / one-time **declare code** is a **production gate**, not shipped yet (`war.require_declare_code: false` by default). Staff set battle **rule presets** in templates (lives, friendly fire, keep inventory, durations). Staff place **battle geometry** (spawns, jails, capture points) per scheduled fight via `/battle edit`. Players vote on battle times, sign up via warband join, and the campaign advances on the map without manual organisation.
 
 ---
 
@@ -58,7 +58,9 @@ Implementation lock: [planning/war-goals-apply/00-index.md](./planning/war-goals
 
 ### Shared declare blocks
 
-Cannot declare (goal exceptions are in the planning lock) if: same realm (vassal / overlord / nested), ally, NAP (stub), or tributary unless the goal is **subjugate** or **War**. Usurp may target **direct overlord** only.
+Cannot declare (goal exceptions are in the planning lock) if: same realm (vassal / overlord / nested), ally, **NAP** (treaty overlay), or tributary unless the goal is **subjugate** or **War**. Usurp may target **direct overlord** only.
+
+**NAP** is a diplomacy **treaty overlay** (slot right of the nation icon), not the Ally / Tributary / Subject political type. It can stack with tributary. While it is in effect, **all** declares are blocked, including Subjugate and War against a tributary. Clear it with **No Treaty** first.
 
 **Navy (implemented):** if the generated **invasion** schedule includes a naval slot and the attacker has no **operational port**, declare is rejected (`You need an operational port for a naval path. Source ships before the battle.`). Empty port is allowed. Ships are not counted at declare or Push/Hold. If the next battle after a win is naval and that coalition has no port, they cannot **Push** (must **Hold**).
 
@@ -101,7 +103,7 @@ Cannot declare (goal exceptions are in the planning lock) if: same realm (vassal
 | **De jure / subjugate / transfer / usurp / diplomatic / law** | Border → objective province (and capital push if counter-invasion) | Campaign battles on schedule | Goal applied or reparations / white peace |
 | **Pillage (war type)** | Shortest path border → **one settlement** | **One** battle | Pillage apply + war ends (no return battle) |
 
-**Pillage distance:** settlement within **X** provinces of attacker land borders, **or** within **X** of sea **and** `hasSeaConnection` between the realms. Disconnected oceans and landlocked attackers cannot seaborne-pillage. Deep inland raids require future airborne pillage (out of this lock).
+**Pillage distance:** YAML `range_provinces` (default **3**): settlement within that many provinces of attacker land borders, **or** within that many of sea **and** `hasSeaConnection` between the realms. Disconnected oceans, landlocked attackers, and settlements deeper than that range cannot be pillaged. There is no airborne pillage.
 
 ### Campaign raids
 
@@ -180,15 +182,19 @@ Config (`war.campaign_raid`): `muster_seconds` (60), `duration_seconds` (600), `
 Keep from legacy system (repurpose):
 
 - **Attacker / defender** sides with **main participants**
-- **Subjects** auto-included on participant side
+- **Subjects** auto-included on participant side (direct subjects of each main)
 - **Allies** via call-to-arms (`/faction accept`, 60s timeout)
 - **No switch sides in war GUI.** Subject independence / rebellion uses the **movement system**, not a war-view button (legacy switch removed 2026-08-20).
+
+**Internal (inter-vassal) wars:** two factions that share a top liege and are **not** on each other's overlord path. Defender is the clicked faction, not the king. The liege is not a participant and is not callable. Lock: [planning/inter-vassal-wars/00-index.md](./planning/inter-vassal-wars/00-index.md).
+
+**Call to arms (all wars):** the caller must be a **main**. The target must be an unjoined ally on that main's ally snapshot (match by faction id). The target must not already be participating, must not be the overlord of a main, must not be nested under an enemy participant, and must not have a top liege who is already a main on either side. Same-realm allies are callable only when those rules hold.
 
 **Declined call to arms:** **-30% stability** (config), decays over time.
 
 **Multiple wars** per faction are allowed in design; implement **one war FSM first**, tag all military commits with **`war_id`** from day one.
 
-**War leaders** (main attacker / main defender faction leaders) decide surrender and white peace. Council-forced peace is **future** (proposal / movement / anti-war rebellion).
+**War leaders** (main attacker / main defender faction leaders) can still surrender and offer white peace on the campaign map. Council, leader proposal, or a movement can also force that side: **White Peace** (sticky offer on a chosen war) or **Surrender** (immediate). A rebel civil-war win for those causes applies the same action.
 
 ### Militia (locked)
 
@@ -220,14 +226,15 @@ Uses a new **`ProvincePathfinder`** module (not embedded in `ProvinceManager` tr
 | Type | Definition | Route UI |
 |------|------------|----------|
 | **Wilderness** | Province has no owner (`owner == null`) | Gray tiles on campaign route |
-| **Foreign nation** | Owner exists but is not a war belligerent | Gray tiles on campaign route |
+| **Liege transit** | Internal war only: owner is the war's top liege, or shares that top liege, and is **not** a belligerent | Gray tiles; land-pass allowed like wilderness; not occupied |
+| **Foreign nation** | Owner exists, is not a belligerent, and is not liege transit | Gray tiles on campaign route |
 
 Belligerent set = attacker side + defender side, including subjects and called allies.
 
-| Pass | Wilderness | Foreign nation |
-|------|------------|----------------|
-| **1** Land | Allowed at normal terrain cost | Blocked |
-| **2** Sea | N/A (land tiles irrelevant on sea hops) | Blocked on **land** tiles; sea tiles always allowed |
+| Pass | Wilderness | Liege transit | Foreign nation |
+|------|------------|---------------|----------------|
+| **1** Land | Allowed at normal terrain cost | Allowed | Blocked |
+| **2** Sea | N/A (land tiles irrelevant on sea hops) | N/A | Blocked on **land** tiles; sea tiles always allowed |
 
 `war.pathfinder.neutral_penalty` is no longer used by the pathfinder fallback chain.
 
@@ -235,7 +242,7 @@ Belligerent set = attacker side + defender side, including subjects and called a
 
 Run passes **in order**; first pass that finds a route wins:
 
-1. **Land campaign** - land + WATER + wilderness; no SEA; foreign nations blocked 
+1. **Land campaign** - land + WATER + wilderness + liege transit (internal); no SEA; foreign nations blocked 
 2. **Sea campaign** - SEA hops between coastal belligerent provinces; foreign-owned land blocked 
 
 No sea-first routing; land (including through wilderness) is always preferred when possible.
@@ -270,13 +277,11 @@ Shipped **`B → objective`** only. A **full axis** is built at declare / `warpa
 6. **`cursor_index`** = index of **B** in the array (**middle**, not `0`).
 7. **`campaignStartProvinceId`** = **B**.
 
-**Counter-push:** defender fights **leftward** on the **existing** line toward attacker capital — no polyline append at choice time.
+**Counter-push:** defender fights **leftward** on the **existing** line toward attacker capital - no polyline append at choice time.
 
-**Raid war type:** planned - see [roadmap.md](./roadmap.md).
+### Pillage war type route (shipped)
 
-### Raid war type route
-
-Shortest path: attacker border → settlement (within X border distance). One battle at settlement. Not yet implemented.
+`WarGoalType.PILLAGE`. Shortest path: attacker border (or connected-sea landing) → **one settlement**. One battle at the settlement, empty counter. Navy gate still applies if the natural path has a naval slot. Distinct from [campaign raids](./campaign-raids.md). Apply and campaign populate: [planning/war-goals-apply/06-phase-5.md](./planning/war-goals-apply/06-phase-5.md).
 
 ---
 
@@ -601,7 +606,7 @@ Voting hour toggles and schedule info: Campaign view slots **28-32** (hour multi
 
 ## Occupation map (locked)
 
-Each **won campaign battle** adds explicit province(s) to the occupier's zone (**not** a single snake — creates a natural **bulge / front**).
+Each **won campaign battle** adds explicit province(s) to the occupier's zone (**not** a single snake: a natural **bulge / front**). Implemented in `OccupationService`.
 
 | Field | Meaning |
 |-------|---------|
@@ -614,11 +619,11 @@ Each **won campaign battle** adds explicit province(s) to the occupier's zone (*
 | `whitePeaceProposedByAttacker` | Attacker auto-proposed white peace (unreachable capitulation) |
 | `whitePeaceProposedByDefender` | Defender auto-proposed white peace |
 
-**Website:** ProvinceSystem renders war layers from export; occupation tint planned.
+**Website (shipped):** `occupied_by_*` on `wars[]` plus `province_data[].occupied_by`. ProvinceSystem remaps those tiles to the occupier nation colour (slightly greyer fill) and uses `occupied_held` for labels. The campaign line uses `occupied_by_attacker` to advance the dotted-line front. Chronicle events are owned elsewhere. See [map-export.md](./map-export.md) and [wars-on-map.md](../../ProvinceSystem/docs/map/wars-on-map.md).
 
-**Campaign GUI (in-game):** route block colors use **belligerent territorial ownership**, not de jure title claims and not `occupied_by_*` bulge lists. Bulge lists remain for web map export and chronicle.
+**Campaign GUI (in-game):** route block colors use **belligerent territorial ownership**, not de jure title claims and not `occupied_by_*` bulge lists.
 
-**Per-battle rule (locked):** winning battle **occupies** the battle province and adjacent contested set per config (bulge front), exported after each battle.
+**Per-battle rule (locked):** winning battle **occupies** the battle province and qualifying adjacent enemy tiles (bulge front), then exports.
 
 ---
 
@@ -1039,10 +1044,12 @@ Active campaign wars export a **`wars[]` route slice** in `map_markers.json` (SF
 | Battle pins | `campaign_battle_schedule[]` + `campaign_counter_schedule[]` | One `battle.png` per slot (`leg` + `schedule_index`); siege/port coords from installation when set |
 | Pin hover | `display_name` or `kind_label` + `province_name` + `status` | Prefer `{display_name} - {status}` when SF export includes `display_name` |
 | Next battle highlight | slot `status === "next"` on active leg | 1.1x scale + ring on pin |
+| Occupier nation fill | `province_data[].occupied_by` | Political overlay remaps occupied tiles to occupier colour |
+| Campaign-line front | `occupied_by_attacker[]` | Pushes the dotted front along the axis |
 
 Visible on nation, county, duchy, kingdom, empire, and trade map modes (same as settlement markers).
 
-**Not shipped yet:** occupation province tint (`occupied_by_*` lists) - see [roadmap.md](./roadmap.md) and [map-export.md](./map-export.md). Re-upload `map_markers` or wait for the next regen after deploy so active wars pick up the route slice.
+Re-upload `map_markers` or wait for the next regen after deploy so active wars pick up the route slice and occupation lists. Chronicle event stream is owned elsewhere.
 
 ---
 
@@ -1057,19 +1064,23 @@ Visible on nation, county, duchy, kingdom, empire, and trade map modes (same as 
 | [map-export.md](./map-export.md) | War route slice in `map_markers.json` |
 | [roadmap.md](./roadmap.md) | Shipped vs planned features |
 | [war-goals-apply lock](./planning/war-goals-apply/00-index.md) | Navy gate, goal apply, movement gate |
+| [inter-vassal-wars lock](./planning/inter-vassal-wars/00-index.md) | Internal peer wars, CTA, liege transit |
 | [ProvinceSystem map wars overlay](../../ProvinceSystem/docs/map/wars-on-map.md) | Website overlay |
 
 ---
 
 ## Open items
 
-- Exact **X** provinces for pillage land/sea distance
-- **Occupation bulge** adjacency rule (which extra provinces per battle win)
+- Inter-vassal wars **shipped** (Participants, campaign pathfinder, apply): [planning/inter-vassal-wars/00-index.md](./planning/inter-vassal-wars/00-index.md)
+- NAP treaty overlay **shipped** (stacks with tributary; blocks all declares until cleared)
+- Occupation overlay **shipped** (occupier fill)
+- Council-forced peace **shipped** (white peace offer or surrender on a chosen war)
+- Map chronicle events: other member (`war_declared`, `battle_scheduled`, `battle_result`, `province_occupied`, `war_ended`)
+- Production declare codes / Discord ticket gate: last
 - When to **recalculate** white peace auto-proposal flags after cursor / phase change
-- NAP relation (stub only in the war-goals lock)
 
-Civil wars: [planning/naval-installations/02-phase-2.md](./planning/naval-installations/02-phase-2.md).
+Civil wars: [planning/naval-installations/02-phase-2.md](./planning/naval-installations/02-phase-2.md) (done).
 
-War-goal apply and navy gate: [planning/war-goals-apply/00-index.md](./planning/war-goals-apply/00-index.md).
+War-goal apply and navy gate: [planning/war-goals-apply/00-index.md](./planning/war-goals-apply/00-index.md) (Phases 0-7 done).
 
 `provinces_between_battles` (default **3**), `max_battles_per_leg`, and `initiative_factor` are locked in config (see `war.yml`).

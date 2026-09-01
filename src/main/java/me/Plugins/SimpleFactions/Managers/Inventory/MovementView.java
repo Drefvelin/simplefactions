@@ -14,6 +14,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.checkerframework.checker.units.qual.C;
 
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarStartService;
+import me.Plugins.SimpleFactions.War.resolution.CouncilPeaceQueries;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
@@ -23,6 +24,7 @@ import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.enums.Member;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.government.movement.Movement;
+import me.Plugins.SimpleFactions.government.movement.MovementCrackdownQueries;
 import me.Plugins.SimpleFactions.government.movement.MovementOutcomeService;
 import me.Plugins.SimpleFactions.government.movement.MovementOutcomeSource;
 import me.Plugins.SimpleFactions.government.movement.Phase;
@@ -69,6 +71,9 @@ public class MovementView {
         if(movement.isLeader(player.getName())) {
             i.setItem(19, creator.createSendDemandsItem(movement));
             i.setItem(34, creator.createEndMovmentItem(movement));
+        }
+        if(player.getName().equalsIgnoreCase(f.getLeader())) {
+            i.setItem(25, creator.createDemandDisbandItem(f, movement));
         }
 
         int x = 28;
@@ -226,6 +231,29 @@ public class MovementView {
             player.openInventory(i);
         }
     }
+
+    public void crackdownView(Player player, Faction f, Movement movement, Inventory i) {
+        boolean open = i == null;
+        if (i == null) {
+            i = Bukkit.createInventory(new SFInventoryHolder(movement.getId(), SFGUI.MOVEMENT_CRACKDOWN), 54, "Demand Disband");
+        }
+        i.clear();
+
+        int slot = 10;
+        for (Cause cause : movement.getCauses()) {
+            i.setItem(slot, creator.createDemandItem(cause, movement));
+            slot++;
+        }
+
+        i.setItem(13, creator.createMovementPowerItem(movement));
+        i.setItem(22, creator.createRefuseDisbandWarningItem());
+        i.setItem(29, creator.createAcceptDisbandButton(movement));
+        i.setItem(33, creator.createRefuseDisbandButton(movement));
+
+        if (open) {
+            player.openInventory(i);
+        }
+    }
     
     public void click(InventoryClickEvent e, Inventory inventory, Player p) {
         ItemStack item = e.getCurrentItem();
@@ -279,6 +307,9 @@ public class MovementView {
                 break;
             case MOVEMENT_DEMANDS:
                 handleDemandsViewClick(e, movement, p, f, inventory, meta);
+                break;
+            case MOVEMENT_CRACKDOWN:
+                handleCrackdownViewClick(e, movement, p, f, inventory, meta);
                 break;
             case TARGET_SELECT:
                 handleTargetSelectClick(e, movement, p, f, inventory, meta);
@@ -387,6 +418,35 @@ public class MovementView {
                 }
             }
         }
+        else if (slot == 25) {
+            if (!p.getName().equalsIgnoreCase(f.getLeader())) {
+                return;
+            }
+            if (!MovementCrackdownQueries.canCrush(f, movement)) {
+                p.sendMessage(StringFormatter.formatHex("§c" + MovementCrackdownQueries.denyReason(f, movement)));
+                p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+                return;
+            }
+            if (!movement.hasLeader()) {
+                p.sendMessage(StringFormatter.formatHex("§cThe movement leader must be online to demand a disband."));
+                p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+                return;
+            }
+            Player movementLeader = Bukkit.getPlayer(movement.getLeader());
+            if (movementLeader == null || !movementLeader.isOnline()) {
+                p.sendMessage(StringFormatter.formatHex("§cThe movement leader must be online to demand a disband."));
+                p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+                return;
+            }
+            LogManager.movement(
+                    "CRUSH_SEND movementId=%s faction=%s power=%.1f",
+                    movement.getId(),
+                    f.getId(),
+                    movement.getPower());
+            crackdownView(movementLeader, f, movement, null);
+            p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1.5f);
+            p.sendMessage(StringFormatter.formatHex("§7Disband demand sent to " + movement.getLeader()));
+        }
         // Phase buttons (slots 28-31)
         else if (slot >= 28 && slot <= 31) {
             ItemStack item = e.getCurrentItem();
@@ -493,7 +553,12 @@ public class MovementView {
         // Target selection button
         else if (slot == 28) {
             if (cause.getProposal().needsTarget() && cause.hasLeader() && cause.getLeader().equals(p.getName())) {
-                targetSelectionView(p, f, movement, cause, null);
+                if (CouncilPeaceQueries.isWarEndAction(cause.getProposal().getPoliticalAction().getAction())) {
+                    inv.governmentView.warPeaceSelectView(
+                            p, f, cause.getProposal().getPoliticalAction().getAction(), true, cause.getIndex(), null);
+                } else {
+                    targetSelectionView(p, f, movement, cause, null);
+                }
                 p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1, 1);
             }
         }
@@ -582,6 +647,49 @@ public class MovementView {
 
                 p.closeInventory();
             }
+        }
+    }
+
+    private void handleCrackdownViewClick(InventoryClickEvent e, Movement movement, Player p, Faction f, Inventory inventory, ItemMeta meta) {
+        int slot = e.getSlot();
+        if (!movement.isLeader(p.getName())) {
+            return;
+        }
+        if (slot == 29) {
+            p.sendMessage(StringFormatter.formatHex("§aYou have disbanded the movement."));
+            p.playSound(p.getLocation(), "block.note_block.pling", 1, 2f);
+            LogManager.movement(
+                    "CRUSH_ACCEPT movementId=%s faction=%s power=%.1f",
+                    movement.getId(),
+                    f.getId(),
+                    movement.getPower());
+            Player factionLeader = Bukkit.getPlayer(f.getLeader());
+            if (factionLeader != null && factionLeader.isOnline()) {
+                factionLeader.sendMessage(StringFormatter.formatHex("§a" + p.getName() + " disbanded their movement."));
+            }
+            f.getGovernment().endMovement(movement);
+            p.closeInventory();
+        } else if (slot == 33) {
+            LogManager.movement(
+                    "CRUSH_REFUSE movementId=%s faction=%s power=%.1f",
+                    movement.getId(),
+                    f.getId(),
+                    movement.getPower());
+            String error = CivilWarStartService.start(movement);
+            if (error != null) {
+                p.sendMessage(error);
+                p.playSound(p.getLocation(), "entity.villager.no", 1, 1f);
+                return;
+            }
+            p.sendMessage(StringFormatter.formatHex("§cYou have refused to disband."));
+            p.sendMessage(StringFormatter.formatHex("§7A civil war has begun!"));
+            p.playSound(p.getLocation(), "entity.ender_dragon.growl", 1, 0.8f);
+            Player factionLeader = Bukkit.getPlayer(f.getLeader());
+            if (factionLeader != null && factionLeader.isOnline()) {
+                factionLeader.sendMessage(StringFormatter.formatHex("§c" + p.getName() + " refused to disband!"));
+                factionLeader.sendMessage(StringFormatter.formatHex("§7A civil war has begun!"));
+            }
+            p.closeInventory();
         }
     }
 

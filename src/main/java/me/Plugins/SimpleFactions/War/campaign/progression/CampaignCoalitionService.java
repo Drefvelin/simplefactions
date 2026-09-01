@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.War.campaign.progression;
 
+
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
@@ -162,6 +164,41 @@ public final class CampaignCoalitionService {
 			war.setWhitePeaceProposedByAttacker(proposed);
 		} else {
 			war.setWhitePeaceProposedByDefender(proposed);
+		}
+	}
+
+	/**
+	 * Declare-time war coalition on the campaign axis (maps to {@code war.attackers} / {@code war.defenders}).
+	 * Not the battle-template attacker/defender side ids.
+	 */
+	public enum CampaignCoalition {
+		AGGRESSOR("aggressor"),
+		DEFENDER("defender");
+
+		private final String jsonId;
+
+		CampaignCoalition(String jsonId) {
+			this.jsonId = jsonId;
+		}
+
+		public String toJson() {
+			return jsonId;
+		}
+
+		public static CampaignCoalition fromJson(String value) {
+			if (value == null || value.isBlank()) {
+				return null;
+			}
+			for (CampaignCoalition coalition : values()) {
+				if (coalition.jsonId.equalsIgnoreCase(value)) {
+					return coalition;
+				}
+			}
+			return null;
+		}
+
+		public CampaignCoalition opposing() {
+			return this == AGGRESSOR ? DEFENDER : AGGRESSOR;
 		}
 	}
 }

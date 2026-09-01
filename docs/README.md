@@ -6,7 +6,7 @@ This `docs/` folder is the product and technical reference for the **SimpleFacti
 
 ## Reading order
 
-1. [roadmap.md](./roadmap.md) - shipped vs planned
+1. [roadmap.md](./roadmap.md) - shipped vs planned (next: Phase 9 / [TODO.md](../TODO.md))
 2. [map-export.md](./map-export.md) - HTTP upload, regen, JSON contract
 3. [province-grid.md](./province-grid.md) - local province lookup
 4. Product areas:
@@ -24,6 +24,7 @@ This `docs/` folder is the product and technical reference for the **SimpleFacti
 - [battle-retreat](./planning/battle-retreat/00-index.md) - mid-fight `/warband retreat` during campaign battles
 - [war-goals-apply](./planning/war-goals-apply/00-index.md) - gameplay lock; [01-phases.md](./planning/war-goals-apply/01-phases.md) - phases; [02-phase-1.md](./planning/war-goals-apply/02-phase-1.md) - Phase 1 batches
 - [naval-installations](./planning/naval-installations/00-index.md) - installation transfer + empty-port navy (Phase 1); civil wars spec (Phase 2)
+- [inter-vassal-wars](./planning/inter-vassal-wars/00-index.md) - Phase 8 lock (shipped); [01-batches.md](./planning/inter-vassal-wars/01-batches.md)
 
 ## Agent / contributor guide
 

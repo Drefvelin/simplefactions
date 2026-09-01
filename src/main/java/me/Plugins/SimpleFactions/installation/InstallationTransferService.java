@@ -3,9 +3,9 @@ package me.Plugins.SimpleFactions.installation;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
-import me.Plugins.SimpleFactions.vehicles.InstallationVehicleOwnerSync;
-import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRecord;
-import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRegistry;
+import me.Plugins.SimpleFactions.vehicles.berth.InstallationVehicleOwnerSync;
+import me.Plugins.SimpleFactions.vehicles.registry.PlayerVehicleRecord;
+import me.Plugins.SimpleFactions.vehicles.registry.PlayerVehicleRegistry;
 import net.tfminecraft.VehicleFramework.VehicleFramework;
 import net.tfminecraft.VehicleFramework.Vehicles.ActiveVehicle;
 

@@ -13,10 +13,12 @@ import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.checkerframework.checker.units.qual.t;
 
 import me.Plugins.SimpleFactions.War.civilwar.CivilWarHostMovementRules;
+import me.Plugins.SimpleFactions.War.resolution.CouncilPeaceQueries;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Database.CauseData;
 import me.Plugins.SimpleFactions.Database.GovernmentData;
@@ -112,6 +114,8 @@ public class Government {
         if (data.movements != null && !data.movements.isEmpty()) {
             movementData = data.movements;
         }
+
+        restoreVotingBooths(data.votingBooths);
     }
 
     public void loadMovements() {
@@ -331,7 +335,12 @@ public class Government {
     }
 
     public boolean isCouncilMember(Player p) {
-        String name = p.getName();
+        return p != null && isCouncilMember(p.getName());
+    }
+
+    /** Name-based so offline checks (mercenary loyalty, contract signing) can use it too. */
+    public boolean isCouncilMember(String name) {
+        if(name == null) return false;
         return council.isMember(name) || f.getLeader().equalsIgnoreCase(name);
     }
 
@@ -375,7 +384,14 @@ public class Government {
 
     public boolean canProposePolitical(Player p, Action action) {
         if(action == Action.NONE) return false;
+        boolean warEnd = CouncilPeaceQueries.isWarEndAction(action);
+        if(warEnd && !CouncilPeaceQueries.isParticipatingInAny(f)) {
+            return false;
+        }
         String name = p.getName();
+        if(warEnd && canPropose(p)) {
+            return true;
+        }
         if(name.equalsIgnoreCase(f.getLeader())) return false;
         if(council.isMember(name)) return false;
         if(action == Action.SNAP_ELECTIONS && !hasElections()) return false;
@@ -716,6 +732,70 @@ public class Government {
         return votingBooths;
     }
 
+    public static String formatVotingBooth(Location loc) {
+        if (loc == null || loc.getWorld() == null) {
+            return null;
+        }
+        return formatVotingBooth(loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+    }
+
+    public static String formatVotingBooth(String world, int x, int y, int z) {
+        if (world == null || world.isBlank()) {
+            return null;
+        }
+        return world + "," + x + "," + y + "," + z;
+    }
+
+    public static String[] parseVotingBoothParts(String encoded) {
+        if (encoded == null || encoded.isBlank()) {
+            return null;
+        }
+        String[] parts = encoded.split(",", -1);
+        if (parts.length != 4) {
+            return null;
+        }
+        String world = parts[0];
+        if (world.isBlank()) {
+            return null;
+        }
+        try {
+            Integer.parseInt(parts[1]);
+            Integer.parseInt(parts[2]);
+            Integer.parseInt(parts[3]);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+        return parts;
+    }
+
+    private void restoreVotingBooths(List<String> encoded) {
+        votingBooths.clear();
+        if (encoded == null) {
+            return;
+        }
+        for (String entry : encoded) {
+            Location loc = parseVotingBoothLocation(entry);
+            if (loc != null) {
+                votingBooths.add(loc);
+            }
+        }
+    }
+
+    private static Location parseVotingBoothLocation(String encoded) {
+        String[] parts = parseVotingBoothParts(encoded);
+        if (parts == null) {
+            return null;
+        }
+        World world = Bukkit.getWorld(parts[0]);
+        if (world == null) {
+            return null;
+        }
+        int x = Integer.parseInt(parts[1]);
+        int y = Integer.parseInt(parts[2]);
+        int z = Integer.parseInt(parts[3]);
+        return new Location(world, x, y, z);
+    }
+
     public Election getElection() {
         return election;
     }
@@ -832,6 +912,13 @@ public class Government {
             data.stabilityModifiers.add(modifierData);
         }
         data.movements = serializeMovements();
+        data.votingBooths = new ArrayList<>();
+        for (Location loc : votingBooths) {
+            String encoded = formatVotingBooth(loc);
+            if (encoded != null) {
+                data.votingBooths.add(encoded);
+            }
+        }
         return data;
     }
 

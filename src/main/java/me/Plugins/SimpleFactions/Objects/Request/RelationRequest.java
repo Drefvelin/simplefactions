@@ -6,11 +6,17 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 public class RelationRequest extends Request{
 	private RelationType type;
 	private boolean trade;
+	private boolean treaty;
 	
 	public RelationRequest(Guild sender, RelationType type, boolean trade) {
+		this(sender, type, trade, false);
+	}
+
+	public RelationRequest(Guild sender, RelationType type, boolean trade, boolean treaty) {
 		super(sender);
 		this.type = type;
 		this.trade = trade;
+		this.treaty = treaty;
 	}
 
 	public RelationType getType() {
@@ -19,5 +25,9 @@ public class RelationRequest extends Request{
 
 	public boolean isTrade() {
 		return trade;
+	}
+
+	public boolean isTreaty() {
+		return treaty;
 	}
 }

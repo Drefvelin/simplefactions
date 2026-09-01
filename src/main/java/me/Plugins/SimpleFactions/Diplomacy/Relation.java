@@ -64,7 +64,12 @@ public class Relation {
 			RelationType trade = handler.getTradeRelation(id);
 			tradeOpinion = trade.getTarget();
 		}
-		return attitude.getTarget()+type.getTarget()+tradeOpinion;
+		int treatyOpinion = 0;
+		if(handler.hasTreatyRelation(id)) {
+			RelationType treaty = handler.getTreatyRelation(id);
+			treatyOpinion = treaty.getTarget();
+		}
+		return attitude.getTarget()+type.getTarget()+tradeOpinion+treatyOpinion;
 	}
 	
 	public int getOpinion() {

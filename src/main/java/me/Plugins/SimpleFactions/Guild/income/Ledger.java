@@ -82,13 +82,15 @@ public class Ledger {
                 break;
             case DIVIDENDS:
                 if(!guild.isBase()) return 0;
-                //TODO implement
+                amount = getDividendTaxReceived();
                 break;
             case DIVIDEND_PAYMENT:
-                //TODO implement
+                if(guild.isBase()) return 0;
+                amount = -getDividendBreakdown().tax();
                 break;
             case DIVIDEND_PAYOUT:
-                //TODO implement
+                if(guild.isBase()) return 0;
+                amount = -getDividendBreakdown().payout();
                 break;
             case VASSALS:
                 if(!guild.isBase()) return 0;
@@ -271,6 +273,7 @@ public class Ledger {
                 case OVERLORD_TAX:
                 case TRIBUTE_PAYMENTS:
                 case TARIFF_PAYMENTS:
+                case DIVIDEND_PAYMENT:
                 case DIVIDEND_PAYOUT:
                 case WAR_REPARATIONS_PAYMENT:
                 case LOAN_PAYMENTS:
@@ -296,6 +299,113 @@ public class Ledger {
         }
 
         return delta;
+    }
+
+    /**
+     * Net income excluding the three dividend cashflows. Load-bearing: a
+     * percentage of {@link #getNetIncome()} would be circular because net
+     * income contains {@link Cashflow#DIVIDEND_PAYOUT}. Guild tax is already
+     * inside this number as {@link Cashflow#GUILD_PAYMENTS}.
+     */
+    public double getDividendBase() {
+        if (guild.isBankrupt()) {
+            return 0.0;
+        }
+        double net = 0.0;
+        for (Cashflow cf : Cashflow.values()) {
+            if (isDividendCashflow(cf)) {
+                continue;
+            }
+            switch (cf) {
+                case TRADE:
+                case CITIZENS:
+                case TARIFFS:
+                case GUILDS:
+                case VASSALS:
+                case TRIBUTES:
+                case WAR_REPARATIONS:
+                case LOANS:
+                case INTEREST:
+                    net += getIncome(cf);
+                    break;
+                case TRADE_UPKEEP:
+                case UPGRADES_UPKEEP:
+                case INSTALLATIONS:
+                case MILITARY_UPKEEP:
+                case PENALTIES:
+                case GUILD_PAYMENTS:
+                case OVERLORD_TAX:
+                case TRIBUTE_PAYMENTS:
+                case TARIFF_PAYMENTS:
+                case WAR_REPARATIONS_PAYMENT:
+                case LOAN_PAYMENTS:
+                case INTEREST_PAYMENTS:
+                    net += getIncome(cf);
+                    break;
+                default:
+                    break;
+            }
+        }
+        return Formatter.formatDouble(net);
+    }
+
+    public DividendBreakdown getDividendBreakdown() {
+        if (guild.isBankrupt() || guild.isBase()) {
+            return DividendBreakdown.none();
+        }
+        return breakdownForPool(unclampedPool(getDividendBase()));
+    }
+
+    public DividendBreakdown breakdownForPool(double pool) {
+        if (guild.isBankrupt() || guild.isBase() || pool <= 0) {
+            return DividendBreakdown.none();
+        }
+        double base = getDividendBase();
+        double clampedPool = Formatter.formatDouble(Math.max(0.0, pool));
+        List<String> eligible = guild.getDividendEligibleMembers();
+        int count = eligible == null ? 0 : eligible.size();
+        if (count == 0) {
+            return new DividendBreakdown(base, 0.0, 0.0, 0.0, 0, 0.0);
+        }
+        Faction f = guild.getFaction();
+        double taxRate = f == null ? 0.0 : f.getTaxRate(TaxTarget.DIVIDENDS, guild.getId(), true);
+        double tax = Formatter.formatDouble(clampedPool * taxRate / 100.0);
+        tax = Math.min(tax, clampedPool);
+        double payout = Formatter.formatDouble(clampedPool - tax);
+        double perMember = Formatter.formatDouble(payout / count);
+        return new DividendBreakdown(base, clampedPool, tax, payout, count, perMember);
+    }
+
+    private double unclampedPool(double base) {
+        double percent = guild.getDividendPercent();
+        if (percent <= 0 || base <= 0) {
+            return 0.0;
+        }
+        return Formatter.formatDouble(base * percent / 100.0);
+    }
+
+    private double getDividendTaxReceived() {
+        if (!guild.isBase()) {
+            return 0.0;
+        }
+        Faction faction = guild.getFaction();
+        if (faction == null || faction.getGuildHandler() == null) {
+            return 0.0;
+        }
+        double total = 0.0;
+        for (Guild g : faction.getGuildHandler().getGuilds()) {
+            if (g == null || g.isBase()) {
+                continue;
+            }
+            total += Math.abs(g.getLedger().getIncome(Cashflow.DIVIDEND_PAYMENT));
+        }
+        return total;
+    }
+
+    private static boolean isDividendCashflow(Cashflow cashflow) {
+        return cashflow == Cashflow.DIVIDENDS
+                || cashflow == Cashflow.DIVIDEND_PAYMENT
+                || cashflow == Cashflow.DIVIDEND_PAYOUT;
     }
 
     //Taxes
@@ -435,6 +545,12 @@ public class Ledger {
                 loan.setAutoPay(false);
             }
         }
+        if (!guild.isBankrupt() && !guild.isBase()) {
+            double pool = getDividendBreakdown().pool();
+            if (pool > 0) {
+                buffer.setPendingDividendPool(guild, pool);
+            }
+        }
         for (Cashflow cf : Cashflow.values()) {
             applySettlementFor(cf, buffer);
         }
@@ -565,10 +681,9 @@ public class Ledger {
                 buffer.addExternalDelta(guild, getAggregatedInterestPayments());
                 break;
 
-            //To be implemented
+            // Display only - dividends settle in PostSettlementPayouts after other movements
             case DIVIDEND_PAYOUT:
-            
-            //Display only
+            case DIVIDEND_PAYMENT:
             case GUILDS:
             case VASSALS:
             case DIVIDENDS:

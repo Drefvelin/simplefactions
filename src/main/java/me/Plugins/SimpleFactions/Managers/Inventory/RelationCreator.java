@@ -84,6 +84,11 @@ public class RelationCreator {
 		} else {
 			lore.add(StringFormatter.formatHex("#a89977Trade: #59795fNone"));
 		}
+		if(target.getDiplomacyHandler().hasTreatyRelation(origin.getId())) {
+			lore.add(StringFormatter.formatHex("#a89977Treaty: "+target.getDiplomacyHandler().getTreatyRelation(origin.getId()).getName()));
+		} else {
+			lore.add(StringFormatter.formatHex("#a89977Treaty: #59795fNone"));
+		}
 		lore.add(" ");
 		lore.add(StringFormatter.formatHex("#a39ba8Our opinion of them: "+OpinionColourMapper.getOpinionColor(r.getOpinion())+r.getOpinion()));
 		lore.add(StringFormatter.formatHex("#a39ba8Our attitude towards them: "+r.getAttitude().getName()));
@@ -92,6 +97,55 @@ public class RelationCreator {
 		lore.add(StringFormatter.formatHex("#a39ba8Their attitude towards us: "+ofR.getAttitude().getName()));
 		lore.add(" ");
 		m.setLore(lore);
+		i.setItemMeta(m);
+		return i;
+	}
+
+	public ItemStack createDiplomacyListFactionItem(Faction viewed, Faction other, boolean clickable) {
+		ItemStack i = other.getBanner();
+		if (i == null || i.getType() == Material.AIR) {
+			i = new ItemStack(Material.WHITE_BANNER, 1);
+		} else {
+			i = i.clone();
+		}
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(other.getName());
+		List<String> lore = new ArrayList<>();
+		Relation r = viewed.getRelation(other.getId());
+		if (r != null && r.getType() != null) {
+			lore.add(StringFormatter.formatHex("#d4bb98Relation: " + r.getType().getName()));
+		}
+		if (viewed.getDiplomacyHandler().hasTradeRelation(other.getId())) {
+			lore.add(StringFormatter.formatHex("#a89977Trade: " + viewed.getDiplomacyHandler().getTradeRelation(other.getId()).getName()));
+		}
+		if (viewed.getDiplomacyHandler().hasTreatyRelation(other.getId())) {
+			lore.add(StringFormatter.formatHex("#a89977Treaty: " + viewed.getDiplomacyHandler().getTreatyRelation(other.getId()).getName()));
+		}
+		if (clickable) {
+			lore.add(" ");
+			lore.add(StringFormatter.formatHex("#50e846Click to open diplomacy"));
+		}
+		m.setLore(lore);
+		NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");
+		m.getPersistentDataContainer().set(id, PersistentDataType.STRING, other.getId());
+		i.setItemMeta(m);
+		return i;
+	}
+
+	public ItemStack createDiplomacySeparatorItem() {
+		ItemStack i = new ItemStack(Material.GRAY_STAINED_GLASS_PANE, 1);
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(" ");
+		m.setLore(new ArrayList<>());
+		i.setItemMeta(m);
+		return i;
+	}
+
+	public ItemStack createNoOfficialRelationsItem() {
+		ItemStack i = new ItemStack(Material.MAP, 1);
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(StringFormatter.formatHex("#a89977No official relations"));
+		m.setLore(new ArrayList<>());
 		i.setItemMeta(m);
 		return i;
 	}
@@ -128,6 +182,10 @@ public class RelationCreator {
 	}
 	
 	public ItemStack createAttitudeItem(Attitude a) {
+		return createAttitudeItem(a, null, null, false);
+	}
+
+	public ItemStack createAttitudeItem(Attitude a, Faction origin, Faction target, boolean picker) {
 		ItemStack i = new ItemStack(Material.EMERALD, 1);
 		if(IconGetter.hasIcon(a.getId())) {
 			i = IconGetter.getIcon(a.getId());
@@ -141,8 +199,40 @@ public class RelationCreator {
 		} else {
 			lore.add(StringFormatter.formatHex("#a89977This modifies the opinion target by: "+OpinionColourMapper.getOpinionColor(a.getTarget())+a.getTarget()));
 		}
+		if (origin != null && target != null) {
+			double cost = RelationManager.getDiplomaticCost(origin, target, a);
+			if (cost > 0) {
+				lore.add(StringFormatter.formatHex("#a89977Diplomatic Cost: #56ccf2"+Formatter.formatDouble(cost)+" Diplomatic Capacity"));
+			}
+			if (a.hasRecieveModifiers()) {
+				lore.add(" ");
+				lore.add(StringFormatter.formatHex("#a39ba8We recieve modifiers§e:"));
+				for (FactionModifier template : a.getRecieveModifiers()) {
+					FactionModifier tagged = new FactionModifier(target, template);
+					lore.add("§7- "+tagged.getString(origin));
+				}
+			}
+		}
 		lore.add(" ");
-		lore.add(StringFormatter.formatHex("#28ed70Click to change"));
+		if (picker && origin != null && target != null) {
+			Attitude current = origin.getRelation(target.getId()).getAttitude();
+			boolean same = current != null && current.getId().equalsIgnoreCase(a.getId());
+			double oldCost = RelationManager.getDiplomaticCost(origin, target, current);
+			double newCost = RelationManager.getDiplomaticCost(origin, target, a);
+			if (!same && origin.getDiplomacyHandler().getAvailableCapacity() < newCost - oldCost) {
+				lore.add(StringFormatter.formatHex("#d4bb98You lack diplomatic capacity for this attitude!"));
+				lore.add(" ");
+				lore.add(StringFormatter.formatHex("#ba3439Unavailable"));
+			} else if (same) {
+				lore.add(StringFormatter.formatHex("#28ed70Current"));
+				m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+				m.addEnchant(Enchantment.UNBREAKING, 1, true);
+			} else {
+				lore.add(StringFormatter.formatHex("#28ed70Click to change"));
+			}
+		} else {
+			lore.add(StringFormatter.formatHex("#28ed70Click to change"));
+		}
 		m.setLore(lore);
 		i.setItemMeta(m);
 		return i;
@@ -195,14 +285,14 @@ public class RelationCreator {
 			lore.add(" ");
 			lore.add(StringFormatter.formatHex("#a39ba8We recieve modifiers§e:"));
 			for(FactionModifier mod : t.getRecieveModifiers()) {
-				lore.add("§7- "+mod.getString());
+				lore.add("§7- "+new FactionModifier(target, mod).getString(origin));
 			}
 		}
 		if(t.hasGiveModifiers()) {
 			lore.add(" ");
 			lore.add(StringFormatter.formatHex("#a39ba8They recieve modifiers§e:"));
 			for(FactionModifier mod : t.getGiveModifiers()) {
-				lore.add("§7- "+mod.getString());
+				lore.add("§7- "+new FactionModifier(origin, mod).getString(target));
 			}
 		}
 		lore.add(" ");
@@ -354,6 +444,105 @@ public class RelationCreator {
 					lore.add(" ");
 					lore.add(StringFormatter.formatHex("#ba3439Unavailable"));
 				}
+			}
+		} else {
+			lore.add(StringFormatter.formatHex("#28ed70Click for more information"));
+		}
+		m.setLore(lore);
+		i.setItemMeta(m);
+		return i;
+	}
+
+	public ItemStack createNoTreatyItem() {
+		ItemStack i = new ItemStack(Material.PAPER, 1);
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(StringFormatter.formatHex("#b6aa90No Treaty"));
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#a89977This faction has no treaty with us"));
+		lore.add("");
+		lore.add(StringFormatter.formatHex("#28ed70Click to view options"));
+		m.setLore(lore);
+		i.setItemMeta(m);
+		return i;
+	}
+
+	public ItemStack createTreatyTypeItem(Player p, RelationType t, Faction target, Faction origin, boolean full) {
+		ItemStack i = new ItemStack(Material.PAPER, 1);
+		if(IconGetter.hasIcon(t.getId())) {
+			i = IconGetter.getIcon(t.getId());
+		}
+		ItemMeta m = i.getItemMeta();
+		m.setDisplayName(StringFormatter.formatHex(t.getName()));
+		List<String> lore = new ArrayList<String>();
+		double ourCost = RelationManager.getDiplomaticCost(origin, target, t);
+		double theirCost = t.isMutual() ? RelationManager.getDiplomaticCost(target, origin, t.getLink()) : 0;
+		if(ourCost > 0) {
+			lore.add(StringFormatter.formatHex("#a89977Diplomatic Cost "+(theirCost > 0 ? "§7(us)#a89977" : "")+": #56ccf2"+Formatter.formatDouble(ourCost)+" Diplomatic Capacity"));
+		}
+		if(theirCost > 0) {
+			lore.add(StringFormatter.formatHex("#a89977Diplomatic Cost §7(them)#a89977: #56ccf2"+Formatter.formatDouble(theirCost)+" Diplomatic Capacity"));
+		}
+		if(t.isVisible()) {
+			lore.add(" ");
+			if(t.getTarget() > 0) {
+				lore.add(StringFormatter.formatHex("#a89977This modifies the opinion target by: "+OpinionColourMapper.getOpinionColor(t.getTarget())+"+"+t.getTarget()));
+			} else if(t.getTarget() != 0) {
+				lore.add(StringFormatter.formatHex("#a89977This modifies the opinion target by: "+OpinionColourMapper.getOpinionColor(t.getTarget())+t.getTarget()));
+			}
+		}
+		if(t.blocksWar()) {
+			lore.add(" ");
+			lore.add(StringFormatter.formatHex("#d4bb98Blocks declaring war while in effect"));
+		}
+		if(full) {
+			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
+			m.getPersistentDataContainer().set(key, PersistentDataType.STRING, t.getId());
+			if(t.isMutual()) {
+				lore.add(" ");
+				lore.add(StringFormatter.formatHex("#8e50baRequires Mutual Agreement"));
+				lore.add(StringFormatter.formatHex("#a39ba8(60s request)"));
+			}
+			if(t.hasThreshold()) {
+				addThreshold(lore, t.getThreshold());
+			}
+		}
+		lore.add(" ");
+		if(full) {
+			RelationType current = origin.getDiplomacyHandler().getTreatyRelation(target.getId());
+			if(current != null && current.hasLock()) {
+				lore.add(StringFormatter.formatHex("#d4bb98You have the treaty "+current.getName()+" #d4bb98which you cannot change freely!"));
+				lore.add(" ");
+				lore.add(StringFormatter.formatHex("#ba3439Unavailable"));
+			} else if(!t.isClearTreaty() && current != null && (origin.getDiplomacyHandler().getAvailableCapacity() < ourCost && !current.equals(t) || target.getDiplomacyHandler().getAvailableCapacity() < theirCost && !current.equals(t.getLink()))) {
+				if(origin.getDiplomacyHandler().getAvailableCapacity() < ourCost && !current.equals(t)) 
+					lore.add(StringFormatter.formatHex("#d4bb98You lack diplomatic capacity for this relation!"));
+				if(target.getDiplomacyHandler().getAvailableCapacity() < theirCost && !current.equals(t.getLink())) 
+					lore.add(StringFormatter.formatHex("#d4bb98They lack diplomatic capacity for this relation!"));
+				lore.add(" ");
+				lore.add(StringFormatter.formatHex("#ba3439Unavailable"));
+			} else if(t.isClearTreaty()) {
+				if(current == null) {
+					lore.add(StringFormatter.formatHex("#28ed70Current"));
+				} else {
+					lore.add(StringFormatter.formatHex("#28ed70Click to clear treaty"));
+				}
+			} else if(current != null && current.equals(t)) {
+				lore.add(StringFormatter.formatHex("#28ed70Current"));
+				m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+				m.addEnchant(Enchantment.UNBREAKING, 1, true);
+			} else if(origin.getDiplomacyHandler().getAvailableCapacity() >= ourCost && target.getDiplomacyHandler().getAvailableCapacity() >= theirCost) {
+				if(t.isMutual()) {
+					lore.add(StringFormatter.formatHex("#28ed70Click to request"));
+				} else {
+					lore.add(StringFormatter.formatHex("#28ed70Click to set"));
+				}
+			} else {
+				if(origin.getDiplomacyHandler().getAvailableCapacity() < ourCost) 
+					lore.add(StringFormatter.formatHex("#d4bb98You lack diplomatic capacity for this relation!"));
+				if(target.getDiplomacyHandler().getAvailableCapacity() < theirCost) 
+					lore.add(StringFormatter.formatHex("#d4bb98They lack diplomatic capacity for this relation!"));
+				lore.add(" ");
+				lore.add(StringFormatter.formatHex("#ba3439Unavailable"));
 			}
 		} else {
 			lore.add(StringFormatter.formatHex("#28ed70Click for more information"));

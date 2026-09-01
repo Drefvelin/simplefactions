@@ -13,6 +13,8 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.EconomicImpact;
 import me.Plugins.SimpleFactions.laws.LawGroup;
 
+import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.War.resolution.CouncilPeaceQueries;
 import me.Plugins.SimpleFactions.government.Government;
 import me.Plugins.SimpleFactions.government.movement.Action;
 import me.Plugins.SimpleFactions.government.movement.PoliticalAction;
@@ -66,6 +68,9 @@ public class Proposal {
             Faction faction = gov.getFaction();
             return faction != null && faction.canBecomeLeader(target);
         }
+        if (isPoliticalActionProposal() && CouncilPeaceQueries.isWarEndAction(action.getAction())) {
+            return CouncilPeaceQueries.isValidTarget(gov.getFaction(), target);
+        }
         return false;
     }
 
@@ -82,7 +87,11 @@ public class Proposal {
     }
 
     public boolean needsTarget() {
-        return isPoliticalActionProposal() && action.getAction() == Action.CHANGE_LEADER;
+        if (!isPoliticalActionProposal()) {
+            return false;
+        }
+        Action kind = action.getAction();
+        return kind == Action.CHANGE_LEADER || CouncilPeaceQueries.isWarEndAction(kind);
     }
 
     public boolean isLawProposal() {
@@ -199,6 +208,10 @@ public class Proposal {
                 case CHANGE_LEADER:
                     first.add(StringFormatter.formatHex("#d4c9aeTarget: "+ (hasTarget() ? "#51e0a2"+ target : "#a3462cNo target")));
                     break;
+                case WHITE_PEACE:
+                case SURRENDER:
+                    first.add(StringFormatter.formatHex("#d4c9aeWar: "+ warTargetLabel()));
+                    break;
                 case DISSOLVE:
                     first.add(StringFormatter.formatHex("#d4c9aeDissolves the faction as if the #c9655e'Dissolve Faction' #d4c9aebutton was clicked"));
                     break;
@@ -246,5 +259,16 @@ public class Proposal {
         meta.setPages(pages);
         item.setItemMeta(meta);
         return item;
+    }
+
+    private String warTargetLabel() {
+        if (!hasTarget()) {
+            return "#a3462cNo target";
+        }
+        War war = CouncilPeaceQueries.warFromTarget(target);
+        if (war == null) {
+            return "#a3462cInvalid war";
+        }
+        return "#51e0a2" + war.getName();
     }
 }

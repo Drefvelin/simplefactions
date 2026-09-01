@@ -19,6 +19,7 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
+import me.Plugins.SimpleFactions.mercenary.contract.MercenaryLoyaltyWatcher;
 
 public class Council {
     private Faction f;
@@ -172,21 +173,27 @@ public class Council {
 
     public void clearMembers() {
         members.clear();
+        MercenaryLoyaltyWatcher.onGovernmentChanged(f);
     }
 
     public void addMemberForce(String name) {
         if (!members.contains(name)) {
             members.add(name);
+            MercenaryLoyaltyWatcher.onGovernmentChanged(f);
         }
     }
 
     public void addMember(String member) {
-        if(members.size() < size) members.add(member);
+        if(members.size() < size) {
+            members.add(member);
+            MercenaryLoyaltyWatcher.onGovernmentChanged(f);
+        }
     }
 
     public void replaceMember(int slot, String newMember) {
         if(slot >= 0 && slot < members.size()) {
             members.set(slot, newMember);
+            MercenaryLoyaltyWatcher.onGovernmentChanged(f);
         }
     }
 

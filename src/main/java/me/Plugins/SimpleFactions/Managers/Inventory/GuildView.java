@@ -14,6 +14,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Guild.Branch.Branch;
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
@@ -53,6 +54,9 @@ public class GuildView {
 
 	private static final int PREV_PAGE_SLOT = 45;
 	private static final int NEXT_PAGE_SLOT = 53;
+
+	/** Mercenary company entry. Slot 13 of the guild view already holds the trade breakdown. */
+	public static final int COMPANY_SLOT = 18;
 
 	
 	public GuildView(InventoryManager inv) {
@@ -125,7 +129,14 @@ public class GuildView {
 
 
 	public void guildView(Player player, Guild guild) {
-		Inventory i = SimpleFactions.plugin.getServer().createInventory(new SFInventoryHolder(guild.getId(), SFGUI.GUILD_VIEW), 54, "§7Guild View");
+		guildView(player, guild, false);
+	}
+
+	public void guildView(Player player, Guild guild, boolean fromFaction) {
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(
+				new SFInventoryHolder(guild.getId(), SFGUI.GUILD_VIEW, 0, fromFaction),
+				54,
+				"§7Guild View");
 		player.openInventory(i);
 		guildView(player, guild, i);
 	}
@@ -147,7 +158,7 @@ public class GuildView {
 		if(guild.hasUpgrades()) i.setItem(16, creator.createUpgradesItem(player, guild));
 		i.setItem(25, creator.createLoansItem(player, guild));
 		Faction target = FactionManager.getMap().getRelocationTarget(player);
-		if(target != null) {
+		if(target != null && Cache.provincesEnabled) {
 			i.setItem(34, creator.createRelocateItem(player, target, guild));
 		}
 		if(guild.getFaction().isLeader(player.getName()) && !guild.isBase()) {
@@ -168,6 +179,13 @@ public class GuildView {
 		}
 		i.setItem(13, creator.createMenuItem(player, guild, MenuItemType.TRADE_BREAKDOWN));
 		i.setItem(14, creator.createLedgerItem(player, guild));
+		if (!guild.isBase()) {
+			i.setItem(17, creator.createDividendItem(player, guild));
+		}
+		i.setItem(22, creator.createHostFactionItem(guild));
+		if (!guild.isBase()) {
+			i.setItem(COMPANY_SLOT, inv.companyView.creator.createCompanyEntryItem(guild));
+		}
 		i.setItem(53, inv.createBackButton(SFGUI.GUILD_VIEW));
 	}
 
@@ -262,6 +280,17 @@ public class GuildView {
 		if(e.getView().getTitle().equalsIgnoreCase("§7Guild View")) {
 			e.setCancelled(true);
 			Guild guild = FactionManager.getGuildByString(h.getId());
+			if (guild == null) {
+				return;
+			}
+			if (e.getSlot() == 22) {
+				Faction faction = guild.getFaction();
+				if (faction != null) {
+					inv.factionView(p, faction);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				}
+				return;
+			}
 			if(e.getSlot() == 19) {
 				guild.setBannerPatterns(RestServer.fetchBannerList());
 				inventory.setItem(10, creator.createMenuItem(p, guild, MenuItemType.BANNER));
@@ -279,6 +308,9 @@ public class GuildView {
 			} else if(e.getSlot() == 34) {
 				if(guild.isLeader(p)) {
 					if(guild.isBase()) return;
+					if(!Cache.requireProvinces(p)) {
+						return;
+					}
 					Faction target = FactionManager.getMap().getRelocationTarget(p);
 					if(target == null)  return;
 					int province = RestServer.getProvince(p);
@@ -342,9 +374,24 @@ public class GuildView {
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				p.closeInventory();
 				return;
+			} else if(e.getSlot() == COMPANY_SLOT) {
+				if(guild.isBase()) return;
+				if(guild.getCompany() == null || guild.getCompany().isForming()) {
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
+					return;
+				}
+				inv.companyView(p, guild);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				return;
 			} else if(e.getSlot() == 25) {
 				inv.loanMainView(p, guild);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				return;
+			} else if(e.getSlot() == 17) {
+				if (guild.isBase() || !guild.isLeader(p)) {
+					return;
+				}
+				inv.setChangingDividend(p, guild);
 				return;
 			}
 			ItemStack item = e.getCurrentItem();

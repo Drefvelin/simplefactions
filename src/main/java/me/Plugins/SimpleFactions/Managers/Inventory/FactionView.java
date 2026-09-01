@@ -120,6 +120,7 @@ public class FactionView {
 		i.setItem(12, creator.createMenuItem(player, f, MenuItemType.WEALTH));
 		i.setItem(13, creator.createMenuItem(player, f, MenuItemType.PRESTIGE));
 		i.setItem(14, creator.createMenuItem(player, f, MenuItemType.MEMBERS));
+		i.setItem(23, creator.createMenuItem(player, f, MenuItemType.GUILDS));
 		i.setItem(15, guildCreator.createLedgerItem(player, f.getOrCreateMainGuild()));
 		i.setItem(16, creator.createMenuItem(player, f, MenuItemType.MODIFIERS));
 		i.setItem(25, creator.createMenuItem(player, f, MenuItemType.TAX));
@@ -133,7 +134,58 @@ public class FactionView {
 		i.setItem(53, this.inv.createBackButton(SFGUI.FACTION_VIEW));
 		if(open) player.openInventory(i);
 	}
-	
+
+	public void factionGuildsView(Player player, Faction f, Inventory i) {
+		boolean open = i == null;
+		int page = 0;
+		if (i != null && i.getHolder() instanceof SFInventoryHolder existing) {
+			page = existing.getPage();
+		}
+		if (open) {
+			i = SimpleFactions.plugin.getServer().createInventory(
+					new SFInventoryHolder(f.getId(), SFGUI.FACTION_GUILDS, page),
+					INVENTORY_SIZE,
+					"§7Faction Guilds");
+		}
+		populateFactionGuilds(i, f, page);
+		if (open) {
+			player.openInventory(i);
+		}
+	}
+
+	public void factionGuildsView(Player player, Faction f, int page) {
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(
+				new SFInventoryHolder(f.getId(), SFGUI.FACTION_GUILDS, page),
+				INVENTORY_SIZE,
+				"§7Faction Guilds");
+		populateFactionGuilds(i, f, page);
+		player.openInventory(i);
+	}
+
+	public void populateFactionGuilds(Inventory inv, Faction f, int page) {
+		List<Guild> guilds = new ArrayList<>(f.getGuildHandler().getGuilds());
+		List<Integer> usableSlots = new ArrayList<>();
+		for (int i = 0; i < INVENTORY_SIZE; i++) {
+			if (!RESERVED_SLOTS.contains(i)) {
+				usableSlots.add(i);
+			}
+		}
+		inv.clear();
+		int perPage = usableSlots.size();
+		int start = page * perPage;
+		int end = Math.min(start + perPage, guilds.size());
+		for (int i = start; i < end; i++) {
+			inv.setItem(usableSlots.get(i - start), guildCreator.createListItem(null, guilds.get(i)));
+		}
+		if (page > 0) {
+			inv.setItem(PREV_PAGE_SLOT, DefaultCreator.createPreviousPageButton());
+		}
+		if (end < guilds.size()) {
+			inv.setItem(NEXT_PAGE_SLOT, DefaultCreator.createNextPageButton());
+		}
+		inv.setItem(8, this.inv.createBackButton(SFGUI.FACTION_GUILDS));
+	}
+
 	public void clickPreventions(InventoryClickEvent e, Inventory inventory, Player p) {
 		if(!(inventory != null && inventory.getHolder() instanceof SFInventoryHolder)) return;
 		if (e.getClickedInventory() == null) return;
@@ -249,7 +301,7 @@ public class FactionView {
 				if(factionId == null) return;
 				Faction f = FactionManager.getByString(factionId);
 				if(f != null) {
-					inv.diplomacyView(null, p, f, true);
+					inv.diplomacyListView(null, p, f, true);
 					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				}
 			} else if(e.getSlot() == 32) {
@@ -322,6 +374,50 @@ public class FactionView {
 				Faction f = FactionManager.getByString(h.getId());
 				if(!f.getLeader().equalsIgnoreCase(p.getName())) return;
 				inv.taxView(p, f);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			} else if(e.getSlot() == 23) {
+				ItemStack item = e.getCurrentItem();
+				if (item == null || !item.hasItemMeta()) return;
+				ItemMeta m = item.getItemMeta();
+				NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");
+				String factionId = m.getPersistentDataContainer().get(id, PersistentDataType.STRING);
+				if(factionId == null) return;
+				Faction f = FactionManager.getByString(factionId);
+				if(f != null) {
+					factionGuildsView(p, f, null);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				}
+			}
+		} else if (inventory.getHolder() instanceof SFInventoryHolder holder
+				&& holder.getType() == SFGUI.FACTION_GUILDS) {
+			e.setCancelled(true);
+			Faction f = FactionManager.getByString(holder.getId());
+			if (f == null) {
+				return;
+			}
+			if (e.getSlot() == NEXT_PAGE_SLOT) {
+				factionGuildsView(p, f, holder.getPage() + 1);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				return;
+			}
+			if (e.getSlot() == PREV_PAGE_SLOT) {
+				factionGuildsView(p, f, Math.max(0, holder.getPage() - 1));
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				return;
+			}
+			ItemStack item = e.getCurrentItem();
+			if (item == null || !item.hasItemMeta()) {
+				return;
+			}
+			String id = item.getItemMeta()
+					.getPersistentDataContainer()
+					.get(new NamespacedKey(SimpleFactions.plugin, "id"), PersistentDataType.STRING);
+			if (id == null) {
+				return;
+			}
+			Guild guild = FactionManager.getGuildByString(id);
+			if (guild != null) {
+				inv.guildView.guildView(p, guild, true);
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 			}
 		}

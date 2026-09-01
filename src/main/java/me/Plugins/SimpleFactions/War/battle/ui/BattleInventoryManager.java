@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.War.battle.ui;
 
+
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidWarbandService;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,7 +29,7 @@ import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleJoinService.CampaignBattleContext;
-import me.Plugins.SimpleFactions.War.battle.campaign.CampaignWarbandSignupService;
+import me.Plugins.SimpleFactions.War.battle.campaign.warband.CampaignWarbandSignupService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;

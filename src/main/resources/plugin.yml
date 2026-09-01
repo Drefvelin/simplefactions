@@ -5,7 +5,7 @@ version: 1.0
 author: Drefvelin
 
 depend: [DenarEconomy, TLibs]
-softdepend: [MMOItems, MythicLib, TFMCWeb, VehicleFramework, VFBuilders, ConditionalEvents]
+softdepend: [MMOItems, MythicLib, MMOCore, TFMCWeb, VehicleFramework, VFBuilders, ConditionalEvents]
 
 commands:
   faction:
@@ -32,3 +32,9 @@ commands:
   ledger:
       useage: /<command>
       description: View your daily cashflow ledger
+  company:
+      useage: /<command>
+      description: Mercenary company command
+  mercenaries:
+      useage: /<command>
+      description: Browse and hire mercenary companies

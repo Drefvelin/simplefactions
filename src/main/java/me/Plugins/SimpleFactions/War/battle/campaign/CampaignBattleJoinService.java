@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.War.battle.campaign;
 
+
+import me.Plugins.SimpleFactions.War.battle.campaign.warband.CampaignWarbandBattleService;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -8,6 +10,7 @@ import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.Side;
 import me.Plugins.SimpleFactions.War.core.War;
+import me.Plugins.SimpleFactions.mercenary.contract.MercenaryEngagements;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;
@@ -101,10 +104,20 @@ public final class CampaignBattleJoinService {
 		if (faction == null) {
 			return "You must be in a faction to join this campaign battle";
 		}
-		Side playerSide = war.getSide(faction);
 		Side battleSide = resolveWarSide(war, sideId);
-		if (playerSide == null || battleSide == null || playerSide != battleSide) {
+		if (battleSide == null) {
 			return "Your faction is not on this battle side";
+		}
+		String mercenaryError = validateMercenaryRoster(
+				war, battle, sideId, battleSide, joiningPlayerName, playerId);
+		if (mercenaryError != null) {
+			return mercenaryError;
+		}
+		Side playerSide = rosterSideFor(war, joiningPlayerName, faction);
+		if (playerSide == null || playerSide != battleSide) {
+			return MercenaryEngagements.forPlayer(war, joiningPlayerName) != null
+					? "You are under contract to the other host"
+					: "Your faction is not on this battle side";
 		}
 		if (!warbandSideMatches(warband, sideId)) {
 			return "Warband is not on this battle side";
@@ -114,6 +127,56 @@ public final class CampaignBattleJoinService {
 					war, battle, sideId, warband, joiningPlayerName, playerId);
 		}
 		return validateRosterHasRoom(war, battle, sideId, warband, 1);
+	}
+
+	public static Side rosterSideFor(War war, String playerName, Faction faction) {
+		if (war == null) {
+			return null;
+		}
+		Side contracted = MercenaryEngagements.sideFor(war, playerName);
+		if (contracted != null) {
+			return contracted;
+		}
+		return faction == null ? null : war.getSide(faction);
+	}
+
+	public static String validateMercenaryRoster(
+			War war,
+			Battle battle,
+			String sideId,
+			Side battleSide,
+			String joiningPlayerName,
+			java.util.UUID playerId) {
+		MercenaryEngagements.Engagement engagement =
+				MercenaryEngagements.forPlayer(war, joiningPlayerName);
+		if (engagement == null) {
+			return null;
+		}
+		Side contracted = engagement.hirer() == null ? null : war.getSide(engagement.hirer());
+		if (contracted == null || contracted != battleSide) {
+			return "You are under contract to the other host";
+		}
+		Side opposing = war.getOppositeSide(engagement.hirer());
+		if (!me.Plugins.SimpleFactions.mercenary.contract.MercenaryLoyalty.canDeployAgainst(
+				joiningPlayerName, opposing)) {
+			return "You cannot march on your own realm";
+		}
+		BattleSide roster = battle.getSideById(sideId);
+		boolean alreadyOn = playerId != null && roster != null && isOnRoster(roster, playerId);
+		int covering = MercenaryEngagements.coveringMembers(engagement, roster);
+		if (!alreadyOn && covering >= engagement.promisedSlots()) {
+			return "Every hired slot is already covered";
+		}
+		return null;
+	}
+
+	private static boolean isOnRoster(BattleSide side, java.util.UUID playerId) {
+		for (Warband band : side.getBands()) {
+			if (band != null && band.hasMember(playerId)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public static boolean warbandSideMatches(Warband warband, String sideId) {

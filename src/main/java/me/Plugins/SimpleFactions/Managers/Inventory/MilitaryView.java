@@ -11,6 +11,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
+import me.Plugins.SimpleFactions.Army.ExpandResult;
 import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
@@ -94,9 +95,15 @@ public class MilitaryView {
 		String type = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 		if(type == null) return;
 		if(type.contentEquals("increase")) {
-			p.sendMessage("§eQueued "+r.getName());
-			f.getMilitary().enqueue(r);
-			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			ExpandResult result = f.getMilitary().canExpand(r);
+			if (!result.allowed()) {
+				p.sendMessage("§c" + result.reason());
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
+			} else {
+				p.sendMessage("§eQueued "+r.getName());
+				f.getMilitary().enqueue(r);
+				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			}
 		} else {
 			inv.confirmView(p, f, "regiment", r.getId());
 			inv.confirming.put(p, f);

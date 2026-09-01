@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.War.campaign.admin;
 
+
+import me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -38,7 +40,7 @@ import me.Plugins.SimpleFactions.War.enums.CampaignBattleKind;
 import me.Plugins.SimpleFactions.War.enums.CampaignPhase;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.enums.WarType;
-import me.Plugins.SimpleFactions.War.campaign.progression.PostBattleChoicePhase;
+import me.Plugins.SimpleFactions.War.campaign.progression.postbattle.CampaignPostBattleChoiceService.PostBattleChoicePhase;
 import me.Plugins.SimpleFactions.War.campaign.schedule.ScheduledCampaignBattle;
 
 class WarScheduleFeedbackFormatterTest {
@@ -84,7 +86,7 @@ class WarScheduleFeedbackFormatterTest {
 		war.setCampaignCounterSchedule(List.of(
 				new ScheduledCampaignBattle(10, CampaignBattleKind.FIELD, false, null)));
 		war.setCampaignScheduleIndex(0);
-		war.setPushTarget(me.Plugins.SimpleFactions.War.campaign.progression.CampaignPushTarget.TOWARD_AGGRESSOR_CAPITAL);
+		war.setPushTarget(me.Plugins.SimpleFactions.War.campaign.ui.CampaignPushTarget.TOWARD_AGGRESSOR_CAPITAL);
 
 		List<String> lines = WarScheduleFeedbackFormatter.format("opencvote", war);
 		String combined = stripColorCodes(String.join("\n", lines));

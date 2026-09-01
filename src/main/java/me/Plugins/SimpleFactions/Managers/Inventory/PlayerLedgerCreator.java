@@ -12,7 +12,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import me.Plugins.SimpleFactions.player.PlayerEconomyManager;
 import me.Plugins.SimpleFactions.player.income.PlayerCashflow;
 import me.Plugins.SimpleFactions.player.income.PlayerLedger;
-import me.Plugins.SimpleFactions.vehicles.VehicleUpkeepProjection;
+import me.Plugins.SimpleFactions.vehicles.maintenance.VehicleUpkeepProjection;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 public final class PlayerLedgerCreator {

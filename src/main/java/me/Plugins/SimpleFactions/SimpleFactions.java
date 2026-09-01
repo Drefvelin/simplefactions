@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions;
 
+
+import me.Plugins.SimpleFactions.vehicles.maintenance.VehicleHealthDecayApi.Vf;
 import java.io.File;
 
 import org.bukkit.configuration.file.FileConfiguration;
@@ -16,6 +18,7 @@ import me.Plugins.SimpleFactions.Map.presence.ProvincePresenceTickService;
 import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Loaders.BattleTemplateLoader;
 import me.Plugins.SimpleFactions.Loaders.BranchLoader;
+import me.Plugins.SimpleFactions.Loaders.CompanyUpgradeLoader;
 import me.Plugins.SimpleFactions.Loaders.ConfigLoader;
 import me.Plugins.SimpleFactions.Loaders.GuildLoader;
 import me.Plugins.SimpleFactions.Loaders.LawLoader;
@@ -33,6 +36,8 @@ import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
 import me.Plugins.SimpleFactions.Managers.BankManager;
 import me.Plugins.SimpleFactions.Managers.CommandManager;
 import me.Plugins.SimpleFactions.Managers.LedgerCommandManager;
+import me.Plugins.SimpleFactions.Managers.MercenaryCommandManager;
+import me.Plugins.SimpleFactions.mercenary.stat.MercenaryStatService;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.PlayerManager;
@@ -53,9 +58,9 @@ import me.Plugins.SimpleFactions.government.movement.admin.MovementCommandManage
 import me.Plugins.SimpleFactions.government.movement.admin.MovementTabCompletion;
 import me.Plugins.SimpleFactions.War.core.WarTabCompletion;
 import me.Plugins.SimpleFactions.War.battle.campaign.CampaignBattleOutcomeService;
-import me.Plugins.SimpleFactions.War.battle.engine.core.BattleItemDurabilityListener;
+import me.Plugins.SimpleFactions.War.battle.engine.rules.BattleItemDurability;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
-import me.Plugins.SimpleFactions.War.battle.engine.core.BattleProvinceBlockProtectionListener;
+import me.Plugins.SimpleFactions.War.battle.engine.rules.BattleProvinceBlockProtectionService;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleCommandManager;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleTabCompletion;
 import me.Plugins.SimpleFactions.War.campaign.raid.RaidCommandManager;
@@ -63,32 +68,31 @@ import me.Plugins.SimpleFactions.War.campaign.raid.RaidTabCompletion;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandMembershipListener;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplateService;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBattleEndService;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidIntruderListener;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidIntruderTickService;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidWarbandListener;
-import me.Plugins.SimpleFactions.vehicles.BattleVehicleEligibilityListener;
-import me.Plugins.SimpleFactions.vehicles.InstallationVehicleOwnerSync;
-import me.Plugins.SimpleFactions.vehicles.InstallationVehicleService;
-import me.Plugins.SimpleFactions.vehicles.InstallationVehicleUnberthService;
-import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRegistry;
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidBattleEndService;
+import me.Plugins.SimpleFactions.War.campaign.raid.intruder.CampaignRaidIntruderService;
+import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidWarbandService;
+import me.Plugins.SimpleFactions.vehicles.battle.BattleVehicleEligibilityService;
+import me.Plugins.SimpleFactions.vehicles.berth.InstallationVehicleOwnerSync;
+import me.Plugins.SimpleFactions.vehicles.berth.InstallationVehicleService;
+import me.Plugins.SimpleFactions.vehicles.berth.InstallationVehicleUnberthService;
+import me.Plugins.SimpleFactions.vehicles.registry.PlayerVehicleRegistry;
 import me.Plugins.SimpleFactions.vehicles.VehicleIntegrationListener;
-import me.Plugins.SimpleFactions.vehicles.VehicleRegistryClaimListener;
-import me.Plugins.SimpleFactions.vehicles.VehicleRegistryClaimService;
-import me.Plugins.SimpleFactions.vehicles.VehicleRegistryPersistence;
-import me.Plugins.SimpleFactions.vehicles.VehicleMaintenanceDecayTask;
-import me.Plugins.SimpleFactions.vehicles.VehicleMaintenancePayListener;
-import me.Plugins.SimpleFactions.vehicles.VehicleMaintenancePayService;
-import me.Plugins.SimpleFactions.vehicles.VehicleMaintenancePaySessionManager;
-import me.Plugins.SimpleFactions.vehicles.VehicleMaintenancePersistence;
-import me.Plugins.SimpleFactions.vehicles.VehicleMaintenanceRepairListener;
-import me.Plugins.SimpleFactions.vehicles.VehicleMaintenanceStore;
+import me.Plugins.SimpleFactions.vehicles.registry.VehicleRegistryClaimListener;
+import me.Plugins.SimpleFactions.vehicles.registry.VehicleRegistryClaimService;
+import me.Plugins.SimpleFactions.vehicles.registry.VehicleRegistryPersistence;
+import me.Plugins.SimpleFactions.vehicles.maintenance.VehicleMaintenanceDecayTask;
+import me.Plugins.SimpleFactions.vehicles.maintenance.VehicleMaintenancePayListener;
+import me.Plugins.SimpleFactions.vehicles.maintenance.VehicleMaintenancePayService;
+import me.Plugins.SimpleFactions.vehicles.maintenance.VehicleMaintenancePaySessionManager;
+import me.Plugins.SimpleFactions.vehicles.maintenance.VehicleMaintenancePersistence;
+import me.Plugins.SimpleFactions.vehicles.maintenance.VehicleMaintenanceRepairListener;
+import me.Plugins.SimpleFactions.vehicles.maintenance.VehicleMaintenanceStore;
 import me.Plugins.SimpleFactions.vehicles.VehicleSpawnListener;
-import me.Plugins.SimpleFactions.vehicles.VehicleTransferConsentService;
-import me.Plugins.SimpleFactions.vehicles.VehicleTransferListener;
-import me.Plugins.SimpleFactions.vehicles.VehicleTransferSessionManager;
-import me.Plugins.SimpleFactions.vehicles.VehicleUpkeepService;
-import me.Plugins.SimpleFactions.vehicles.DenarEconomyPlayerBank;
+import me.Plugins.SimpleFactions.vehicles.berth.VehicleTransferConsentService;
+import me.Plugins.SimpleFactions.vehicles.berth.VehicleTransferListener;
+import me.Plugins.SimpleFactions.vehicles.berth.VehicleTransferSessionManager;
+import me.Plugins.SimpleFactions.vehicles.maintenance.VehicleUpkeepService;
+import me.Plugins.SimpleFactions.vehicles.maintenance.DenarEconomyPlayerBank;
 import me.Plugins.SimpleFactions.player.PlayerEconomyManager;
 
 public class SimpleFactions extends JavaPlugin{
@@ -104,6 +108,7 @@ public class SimpleFactions extends JavaPlugin{
 	private static final TitleLoader titleLoader = new TitleLoader();
 	private final BranchLoader branchLoader = new BranchLoader();
 	private final UpgradeLoader upgradeLoader = new UpgradeLoader();
+	private final CompanyUpgradeLoader companyUpgradeLoader = new CompanyUpgradeLoader();
 	private final GuildLoader guildLoader = new GuildLoader();
 	private final LawLoader lawLoader = new LawLoader();
 	private final ProvinceLoader provinceLoader = new ProvinceLoader();
@@ -115,6 +120,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final CommandManager commands = new CommandManager();
 	private final InventoryManager inventoryManager = new InventoryManager();
 	private final LedgerCommandManager ledgerCommandManager = new LedgerCommandManager(inventoryManager);
+	private final MercenaryCommandManager mercenaryCommandManager = new MercenaryCommandManager();
 	private final BankManager bankManager = new BankManager();
 	private final Database db = new Database();
 	private final FactionManager factionManager = new FactionManager();
@@ -125,22 +131,26 @@ public class SimpleFactions extends JavaPlugin{
 	private final CapitalMovePrompt capitalMovePrompt = new CapitalMovePrompt();
 	private final ProvincePresenceListener provincePresenceListener = new ProvincePresenceListener();
 	private final BattleManager battleManager = new BattleManager();
-	private final BattleItemDurabilityListener battleItemDurabilityListener =
-			new BattleItemDurabilityListener();
-	private final BattleProvinceBlockProtectionListener battleProvinceBlockProtectionListener =
-			new BattleProvinceBlockProtectionListener();
+	private final BattleItemDurability.Listener battleItemDurabilityListener =
+			new BattleItemDurability.Listener();
+	private final BattleProvinceBlockProtectionService.Listener battleProvinceBlockProtectionListener =
+			new BattleProvinceBlockProtectionService.Listener();
 	private final WarbandManager warbandManager = new WarbandManager();
 	private final BattleCommandManager battleCommandManager = new BattleCommandManager();
 	private final RaidCommandManager raidCommandManager = new RaidCommandManager();
 	private final WarCommandManager warCommandManager = new WarCommandManager();
 	private final MovementCommandManager movementCommandManager = new MovementCommandManager();
 	private final WarbandMembershipListener warbandMembershipListener = new WarbandMembershipListener();
-	private final CampaignRaidWarbandListener campaignRaidWarbandListener = new CampaignRaidWarbandListener();
-	private final CampaignRaidIntruderListener campaignRaidIntruderListener = new CampaignRaidIntruderListener();
+	private final CampaignRaidWarbandService.Listener campaignRaidWarbandListener = new CampaignRaidWarbandService.Listener();
+	private final CampaignRaidIntruderService.Listener campaignRaidIntruderListener = new CampaignRaidIntruderService.Listener();
 	private final CampaignRaidBattleEndService campaignRaidBattleEndService = new CampaignRaidBattleEndService();
 	private final CampaignBattleOutcomeService campaignBattleOutcomeService = new CampaignBattleOutcomeService();
 	private final InstallationProtectionListener installationProtectionListener =
 			new InstallationProtectionListener();
+	private final MercenaryStatService.Listener mercenaryStatListener =
+			new MercenaryStatService.Listener();
+	private final me.Plugins.SimpleFactions.mercenary.contract.AttendanceService.Hook attendanceHook =
+			new me.Plugins.SimpleFactions.mercenary.contract.AttendanceService.Hook();
 	private ProvinceManager provinceSnapshot = new ProvinceManager();
 	private ProvinceGrid provinceGrid;
 	private final PlayerVehicleRegistry vehicleRegistry = new PlayerVehicleRegistry();
@@ -174,8 +184,8 @@ public class SimpleFactions extends JavaPlugin{
 			vehicleTransferConsentService);
 	private final VehicleSpawnListener vehicleSpawnListener =
 			new VehicleSpawnListener(installationVehicleOwnerSync);
-	private final BattleVehicleEligibilityListener battleVehicleEligibilityListener =
-			new BattleVehicleEligibilityListener(vehicleRegistry);
+	private final BattleVehicleEligibilityService.Listener battleVehicleEligibilityListener =
+			new BattleVehicleEligibilityService.Listener(vehicleRegistry);
 	private final VehicleMaintenancePayService vehicleMaintenancePayService =
 			new VehicleMaintenancePayService(vehicleMaintenanceStore, DenarEconomyPlayerBank.INSTANCE);
 	private final VehicleMaintenanceRepairListener vehicleMaintenanceRepairListener =
@@ -191,7 +201,7 @@ public class SimpleFactions extends JavaPlugin{
 		playerEconomyManager,
 		DenarEconomyPlayerBank.INSTANCE,
 		vehicleMaintenanceStore,
-		me.Plugins.SimpleFactions.vehicles.VehicleFrameworkDecayApi.INSTANCE);
+		me.Plugins.SimpleFactions.vehicles.maintenance.VehicleHealthDecayApi.Vf.INSTANCE);
 	private final VehicleMaintenanceDecayTask vehicleMaintenanceDecayTask =
 			new VehicleMaintenanceDecayTask();
 	
@@ -225,35 +235,46 @@ public class SimpleFactions extends JavaPlugin{
 		getCommand(commands.cmd1).setTabCompleter(new TabCompletion());
 		getCommand(commands.cmd2).setTabCompleter(new TabCompletion());
 		getCommand(ledgerCommandManager.cmd).setExecutor(ledgerCommandManager);
-		try {
-			provinceManager.start(
-				provinceLoader.loadProvinces(
-					new File(getDataFolder(), "Input/provinces.txt"),
-					new File(getDataFolder(), "Input/province_neighbors.json")
-				)
-			);
-		} catch (Exception e) {
-			getLogger().severe("Failed to load provinces! Plugin disabled.");
-			e.printStackTrace();
-			getServer().getPluginManager().disablePlugin(this);
-			return;
-		}
-		try {
-			provinceGrid = ProvinceGrid.load(new File(getDataFolder(), "Input/province_id_grid.bin.gz"));
+		getCommand(MercenaryCommandManager.CMD).setExecutor(mercenaryCommandManager);
+		getCommand(MercenaryCommandManager.CMD).setTabCompleter(new TabCompletion());
+		getCommand(MercenaryCommandManager.MARKET_CMD).setExecutor(mercenaryCommandManager);
+		getCommand(MercenaryCommandManager.MARKET_CMD).setTabCompleter(new TabCompletion());
+		if (!Cache.provincesEnabled) {
 			getLogger().info(
-					"Loaded province_id_grid "
-							+ provinceGrid.getWidth()
-							+ "x"
-							+ provinceGrid.getHeight());
-		} catch (Exception e) {
-			getLogger().severe("Failed to load province_id_grid.bin.gz! Plugin disabled.");
-			e.printStackTrace();
-			getServer().getPluginManager().disablePlugin(this);
-			return;
+					"[SimpleFactions] enable-provinces is false; skipping province Input load.");
+		} else {
+			try {
+				provinceManager.start(
+					provinceLoader.loadProvinces(
+						new File(getDataFolder(), "Input/provinces.txt"),
+						new File(getDataFolder(), "Input/province_neighbors.json")
+					)
+				);
+			} catch (Exception e) {
+				getLogger().severe("Failed to load provinces! Plugin disabled.");
+				e.printStackTrace();
+				getServer().getPluginManager().disablePlugin(this);
+				return;
+			}
+			try {
+				provinceGrid = ProvinceGrid.load(new File(getDataFolder(), "Input/province_id_grid.bin.gz"));
+				getLogger().info(
+						"Loaded province_id_grid "
+								+ provinceGrid.getWidth()
+								+ "x"
+								+ provinceGrid.getHeight());
+			} catch (Exception e) {
+				getLogger().severe("Failed to load province_id_grid.bin.gz! Plugin disabled.");
+				e.printStackTrace();
+				getServer().getPluginManager().disablePlugin(this);
+				return;
+			}
 		}
 		factionManager.run();
-		ProvincePresenceTickService.start();
-		CampaignRaidIntruderTickService.start();
+		if (Cache.provincesEnabled) {
+			ProvincePresenceTickService.start();
+		}
+		CampaignRaidIntruderService.Tick.start();
 		warbandManager.start();
 		battleManager.start();
 		getCommand(battleCommandManager.cmd1).setExecutor(battleCommandManager);
@@ -276,20 +297,23 @@ public class SimpleFactions extends JavaPlugin{
 		BattleScheduleTickService.start();
 		CampaignViewRefreshService.start();
 		sessionManager.start();
-		provinceSnapshot = provinceManager.createSnapshotShell();
-		provinceManager.recalculate();
+		if (Cache.provincesEnabled) {
+			provinceSnapshot = provinceManager.createSnapshotShell();
+			provinceManager.recalculate();
+		}
 		inventoryManager.start();
 		vehicleMaintenanceDecayTask.start();
 	}
 	@Override
 	public void onDisable() {
+		MercenaryStatService.clearAll();
 		vehicleMaintenanceDecayTask.stop();
 		CampaignViewRefreshService.stop();
 		BattleManager.shutdown();
 		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.stopAutosave();
 		me.Plugins.SimpleFactions.War.battle.persistence.BattlePersistenceService.saveAll();
 		sessionManager.end();
-		db.saveTimer(FactionManager.getTimer());
+		db.saveTimer(FactionManager.getTimer(), FactionManager.getDay());
 		for(Faction f : FactionManager.factions) {
 			db.saveFaction(f);
 		}
@@ -324,6 +348,7 @@ public class SimpleFactions extends JavaPlugin{
 		guildLoader.load(new File(getDataFolder(), "Guilds/guild-types.yml"));
 		branchLoader.load(new File(getDataFolder(), "Guilds/branches.yml"));
 		upgradeLoader.load(new File(getDataFolder(), "Guilds/upgrades.yml"));
+		companyUpgradeLoader.load(new File(getDataFolder(), "Guilds/company-upgrades.yml"));
 		titleLoader.loadAll();
 	}
 	public void registerListeners() {
@@ -347,6 +372,9 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(campaignRaidBattleEndService, this);
 		getServer().getPluginManager().registerEvents(campaignBattleOutcomeService, this);
 		getServer().getPluginManager().registerEvents(installationProtectionListener, this);
+		getServer().getPluginManager().registerEvents(mercenaryStatListener, this);
+		getServer().getPluginManager().registerEvents(attendanceHook, this);
+		MercenaryStatService.setGate(new me.Plugins.SimpleFactions.mercenary.stat.HiredMercenaryGate());
 	}
 	public void createFolders() {
 		File dataFolder = getDataFolder();
@@ -385,6 +413,7 @@ public class SimpleFactions extends JavaPlugin{
 				"Guilds/guild-types.yml",
 				"Guilds/branches.yml",
 				"Guilds/upgrades.yml",
+				"Guilds/company-upgrades.yml",
 				"battle-templates.yml",
 				"vehicles.yml",
 				"installations.yml",

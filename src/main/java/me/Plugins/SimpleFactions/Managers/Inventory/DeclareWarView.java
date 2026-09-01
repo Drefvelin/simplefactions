@@ -11,6 +11,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.SimpleFactions;
@@ -45,6 +46,9 @@ public class DeclareWarView {
 	}
 
 	public void openGoalPicker(Player player, Faction attacker, Faction defender, Inventory inventory) {
+		if (!Cache.requireProvinces(player)) {
+			return;
+		}
 		boolean open = inventory == null;
 		if(open) {
 			DeclareWarHolder holder = new DeclareWarHolder(attacker.getId(), defender.getId(), SFGUI.WAR_DECLARE_GOAL);
@@ -234,7 +238,7 @@ public class DeclareWarView {
 				case DE_JURE_ANNEX -> openTitlePicker(player, attacker, defender);
 				case TRANSFER_SUBJECT -> openSubjectPicker(player, attacker, defender);
 				case PILLAGE -> openSettlementPicker(player, attacker, defender);
-				case OVERTHROW, CHANGE_LAW, CHANGE_TAX -> {
+				case OVERTHROW, CHANGE_LAW, CHANGE_TAX, FORCE_PEACE -> {
 				}
 			}
 			return;
@@ -309,7 +313,7 @@ public class DeclareWarView {
 		Faction attacker = request.getAttacker();
 		Faction defender = request.getDefender();
 		switch (request.getGoal()) {
-			case WAR, TRIBUTARY, USURP, OPEN_MARKET, OVERTHROW, CHANGE_LAW, CHANGE_TAX ->
+			case WAR, TRIBUTARY, USURP, OPEN_MARKET, OVERTHROW, CHANGE_LAW, CHANGE_TAX, FORCE_PEACE ->
 					openGoalPicker(player, attacker, defender);
 			case CHANGE_GOVERNMENT -> openGovernmentPicker(
 					player, attacker, defender, request.getGovernmentLawId(), request.getLeadershipLawId());

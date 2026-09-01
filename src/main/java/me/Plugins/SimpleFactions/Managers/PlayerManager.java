@@ -26,6 +26,12 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.FactionCleanup;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
 import me.Plugins.SimpleFactions.keys.Keys;
+import me.Plugins.SimpleFactions.mercenary.MercenaryResult;
+import me.Plugins.SimpleFactions.mercenary.company.MercenaryCompany;
+import me.Plugins.SimpleFactions.mercenary.contract.ContractBook;
+import me.Plugins.SimpleFactions.mercenary.contract.ContractTerms;
+import me.Plugins.SimpleFactions.mercenary.contract.ContractValidator;
+import me.Plugins.SimpleFactions.mercenary.contract.MercenaryContract;
 import me.Plugins.SimpleFactions.player.PlayerEconomyManager;
 import me.Plugins.SimpleFactions.player.income.PlayerCashflow;
 import me.Plugins.SimpleFactions.player.income.PlayerLedger;
@@ -53,6 +59,11 @@ public class PlayerManager implements Listener{
         if(id == null) return;
         Guild issuer = FactionManager.getGuildByString(id);
         if(issuer == null) return;
+        Integer contractStage = ContractBook.stage(meta);
+        if(contractStage != null) {
+            signContractBook(e, p, issuer, contractStage, newMeta);
+            return;
+        }
         Integer stage = meta.getPersistentDataContainer().get(Keys.INT, PersistentDataType.INTEGER);
         if(stage == null) return;
         if(stage == 1) {
@@ -150,6 +161,108 @@ public class PlayerManager implements Listener{
                 }
             }.runTaskLater(SimpleFactions.plugin, 5L);
         }
+    }
+
+    /**
+     * The mercenary contract negotiation, same three stages as a loan: the company
+     * leader edits and signs a draft, reviews and signs again to publish an offer,
+     * and a government member of the hiring faction signs the agreement to accept.
+     */
+    private void signContractBook(
+            PlayerEditBookEvent e, Player p, Guild host, int stage, BookMeta newMeta) {
+        e.setCancelled(true);
+        MercenaryCompany company = host.getCompany();
+        if(company == null || !company.isFormed()) {
+            p.sendMessage("§cThat company is not open for hire.");
+            return;
+        }
+        Long expiry = ContractBook.expiry(newMeta);
+        if(expiry != null && expiry < System.currentTimeMillis()) {
+            p.sendMessage("§cThis contract has expired! Unable to process.");
+            replaceHeldBook(p, new ItemStack(Material.WRITABLE_BOOK));
+            return;
+        }
+        ContractTerms terms = ContractBook.parseTerms(newMeta);
+        if(terms == null) {
+            p.sendMessage("§cThe terms page could not be read.");
+            return;
+        }
+        if(stage == ContractBook.STAGE_DRAFT) {
+            if(!company.isLeader(p.getName())) {
+                p.sendMessage("§cOnly the company leader may draft a contract.");
+                return;
+            }
+            MercenaryResult valid = ContractValidator.validate(
+                    terms, company, System.currentTimeMillis());
+            if(!valid.ok()) {
+                p.sendMessage("§c"+valid.message());
+                return;
+            }
+            replaceHeldBook(p, ContractBook.reviewBook(company, terms));
+            return;
+        }
+        if(stage == ContractBook.STAGE_REVIEW) {
+            if(!company.isLeader(p.getName())) {
+                p.sendMessage("§cOnly the company leader may publish an offer.");
+                return;
+            }
+            if(!ContractBook.matchesSnapshot(newMeta)) {
+                p.sendMessage("§cThis contract has been tampered with! Unable to process.");
+                replaceHeldBook(p, new ItemStack(Material.WRITABLE_BOOK));
+                return;
+            }
+            p.sendMessage("§7Choose who to offer this to with §e/company offer <faction>");
+            replaceHeldBook(p, ContractBook.reviewBook(company, terms));
+            return;
+        }
+        if(stage == ContractBook.STAGE_AGREEMENT) {
+            String contractId = ContractBook.contractId(newMeta);
+            MercenaryContract contract = company.getContractHandler().getById(contractId);
+            if(contract == null) {
+                p.sendMessage("§cThat offer no longer exists.");
+                return;
+            }
+            if(!ContractBook.matchesSnapshot(newMeta)) {
+                p.sendMessage("§cThis contract has been tampered with! Unable to process.");
+                replaceHeldBook(p, new ItemStack(Material.WRITABLE_BOOK));
+                return;
+            }
+            MercenaryResult result = company.getContractHandler()
+                    .accept(contractId, contract.getHirer(), p.getName());
+            p.sendMessage((result.ok() ? "§a" : "§c")+result.message());
+            if(!result.ok()) return;
+            p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+            Player leader = Bukkit.getPlayer(company.getLeader());
+            if(leader != null && leader.isOnline()) {
+                leader.sendMessage("§a"+result.message());
+                leader.playSound(leader, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+            }
+            replaceHeldBook(p, signedAgreement(company, contract, p.getName()));
+        }
+    }
+
+    /** A signed book cannot be replaced in the same tick, so this waits one. */
+    private void replaceHeldBook(Player p, ItemStack book) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                p.getInventory().setItemInMainHand(book);
+            }
+        }.runTaskLater(SimpleFactions.plugin, 1L);
+    }
+
+    private ItemStack signedAgreement(
+            MercenaryCompany company, MercenaryContract contract, String signer) {
+        ItemStack i = new ItemStack(Material.WRITTEN_BOOK);
+        BookMeta m = (BookMeta) i.getItemMeta();
+        ItemStack agreement = ContractBook.agreementBook(contract);
+        m.setPages(((BookMeta) agreement.getItemMeta()).getPages());
+        String title = "§6Mercenary Contract §7"+Cache.getFantasyDate(System.currentTimeMillis());
+        m.setDisplayName(title);
+        m.setTitle(title);
+        m.setAuthor(company.getLeader()+" and "+signer);
+        i.setItemMeta(m);
+        return i;
     }
 
     @EventHandler

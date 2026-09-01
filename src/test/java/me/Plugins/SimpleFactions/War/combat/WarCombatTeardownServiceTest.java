@@ -20,7 +20,6 @@ import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.event.Event;
 import org.bukkit.plugin.PluginManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,10 +34,11 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
+import me.Plugins.SimpleFactions.War.battle.events.BattleEndedEvent;
 import me.Plugins.SimpleFactions.War.battle.template.BattleTemplate;
 import me.Plugins.SimpleFactions.War.battle.warband.WarbandManager;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaid;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBattleService;
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidBattleService;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidWarbandService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.BattleWindowService;
@@ -151,7 +151,7 @@ class WarCombatTeardownServiceTest {
 			assertTrue(BattleManager.get().isEmpty());
 			assertNull(CampaignRaidWarbandService.getAttackerWarband(raid));
 			assertNull(CampaignRaidWarbandService.getDefenderWarband(raid));
-			verify(pluginManager, never()).callEvent(any(Event.class));
+			verify(pluginManager, never()).callEvent(any(BattleEndedEvent.class));
 		}
 	}
 

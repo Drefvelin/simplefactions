@@ -37,8 +37,11 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
+import me.Plugins.SimpleFactions.War.resolution.PillageTradeHit;
 import me.Plugins.SimpleFactions.Utils.FactionRanker;
 import me.Plugins.SimpleFactions.Utils.Formatter;
+import me.Plugins.SimpleFactions.Utils.HomeSettlementNames;
+import me.Plugins.SimpleFactions.Guild.income.DividendBreakdown;
 import me.Plugins.SimpleFactions.enums.MenuItemType;
 import me.Plugins.SimpleFactions.enums.RankType;
 import me.Plugins.SimpleFactions.keys.Keys;
@@ -60,6 +63,7 @@ public class GuildCreator {
 		lore.add(StringFormatter.formatHex("#7a706a§lType: "+guild.getType().getName()));
 		if(guild.hasCapital()) lore.add(StringFormatter.formatHex("#c45749§lSize: #d4c9ae"+guild.getSize()));
 		lore.add(StringFormatter.formatHex("#b8ae61Part of: "+guild.getFaction().getName()));
+		lore.add(StringFormatter.formatHex("#b8ae61Based in: #d4c9ae" + HomeSettlementNames.of(guild)));
 		lore.add(" ");
 		lore.add(StringFormatter.formatHex("#9c9775Leader: #c2bea7"+guild.getLeader()));
 		lore.add(StringFormatter.formatHex("#b8ae61Members: #7fbd73"+guild.getMembers().size()));
@@ -73,6 +77,21 @@ public class GuildCreator {
 		meta.setLore(lore);
 		NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");
 		meta.getPersistentDataContainer().set(id, PersistentDataType.STRING, guild.getId());
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createHostFactionItem(Guild guild) {
+		Faction faction = guild.getFaction();
+		ItemStack i = new ItemStack(faction.getBanner());
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(faction.getName());
+		List<String> lore = new ArrayList<String>();
+		lore.add(StringFormatter.formatHex("#b8ae61Host faction"));
+		lore.add(StringFormatter.formatHex("#28ed70Click to open faction"));
+		meta.setLore(lore);
+		NamespacedKey id = new NamespacedKey(SimpleFactions.plugin, "id");
+		meta.getPersistentDataContainer().set(id, PersistentDataType.STRING, faction.getId());
 		i.setItemMeta(meta);
 		return i;
 	}
@@ -132,6 +151,10 @@ public class GuildCreator {
 			lore.add(StringFormatter.formatHex("#d4c9aeUpkeep from trade: #cb5b4f"+guild.getTradeBreakdown().getUpkeep()));
 			lore.add(StringFormatter.formatHex("#d4c9aeTariffs Paid: #b23c2f"+guild.getTradeBreakdown().getTariffs()));
 			lore.add(StringFormatter.formatHex("#d4c9aeTotal Trade Power: #a4bc5c"+guild.getTradeBreakdown().getTradePower()));
+			String pillageLine = PillageTradeHit.breakdownLine(guild);
+			if (pillageLine != null) {
+				lore.add(StringFormatter.formatHex(pillageLine));
+			}
 			lore.add("");
 			lore.add(StringFormatter.formatHex("#73adbfIncome Contributors:"));
 			int x = 0;
@@ -342,15 +365,20 @@ public class GuildCreator {
 		boolean hasIncome = false;
 		for (Cashflow cf : Cashflow.values()) {
 			double value = ledger.getIncome(cf);
-			if (value <= 0) continue;
+			boolean showZeroPillageTrade = cf == Cashflow.TRADE
+					&& value == 0
+					&& PillageTradeHit.percent(g) != 0;
+			if (value <= 0 && !showZeroPillageTrade) continue;
 
 			hasIncome = true;
+			String suffix = cf == Cashflow.TRADE ? PillageTradeHit.ledgerSuffix(g) : "";
 			lore.add(StringFormatter.formatHex(
 				"#cfc7a2• "
 				+ cf.getDisplay()
 				+ "#d6cf69: #7fbd73"
 				+ String.format("+%.2f", value)
 				+ "d"
+				+ suffix
 			));
 		}
 		if (!hasIncome) lore.add(StringFormatter.formatHex("#7a706aNo income sources."));
@@ -384,6 +412,42 @@ public class GuildCreator {
 			+ String.format("%+.2f", net)
 			+ "d"
 		));
+		lore.add("");
+		lore.add(StringFormatter.formatHex("#7a706aUse /ledger for your personal ledger"));
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
+	public ItemStack createDividendItem(Player p, Guild g) {
+		ItemStack i = new ItemStack(Material.GOLD_INGOT, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex("#c49e5cDividends"));
+		List<String> lore = new ArrayList<>();
+		if (g.isBase()) {
+			lore.add(StringFormatter.formatHex("#7a706aThe capital treasury cannot pay dividends."));
+			meta.setLore(lore);
+			i.setItemMeta(meta);
+			return i;
+		}
+		DividendBreakdown breakdown = g.getLedger().getDividendBreakdown();
+		lore.add(StringFormatter.formatHex("#d4c9aeShare of profits paid equally to members."));
+		lore.add(StringFormatter.formatHex("#d4c9aeRate: #ccbb76" + String.format("%.2f", g.getDividendPercent()) + "%"));
+		lore.add(StringFormatter.formatHex("#d4c9aeBase: #7fbd73" + String.format("%.2f", breakdown.base()) + "d"));
+		lore.add(StringFormatter.formatHex("#d4c9aePool: #ccbb76" + String.format("%.2f", breakdown.pool()) + "d"));
+		lore.add(StringFormatter.formatHex("#d4c9aeTax withheld: #cf493a" + String.format("%.2f", breakdown.tax()) + "d"));
+		lore.add(StringFormatter.formatHex("#d4c9aePer member: #7fbd73" + String.format("%.2f", breakdown.perMember()) + "d"));
+		lore.add(StringFormatter.formatHex("#d4c9aeEligible members: #d4c9ae" + breakdown.eligibleCount()));
+		if (g.getBank() != null && breakdown.pool() > g.getBank().getWealth()) {
+			lore.add("");
+			lore.add(StringFormatter.formatHex("#c74d32Payout will be limited by the guild bank."));
+		}
+		lore.add("");
+		if (g.isLeader(p)) {
+			lore.add(StringFormatter.formatHex("#28ed70Click to set the percentage in chat"));
+		} else {
+			lore.add(StringFormatter.formatHex("#7a706aOnly the guild leader can change this."));
+		}
 		meta.setLore(lore);
 		i.setItemMeta(meta);
 		return i;

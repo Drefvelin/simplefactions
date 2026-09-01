@@ -15,6 +15,18 @@ max-members: 64
 max-untitled-provinces: 5
 max-free-titles: 3
 province-cost: 50
+dividend-require-previous-tick-membership: true
+
+# Mercenary companies
+mercenary-formation-cost: 100.0
+mercenary-formation-seconds: 86400
+mercenary-slot-upkeep: 8.0
+# Contract floors. A company sets its own prices but may not go below these.
+mercenary-min-price-per-battle: 50.0
+mercenary-min-price-per-day: 10.0
+mercenary-max-contract-days: 14
+# Pre-filled into a new contract; the real figure lives on the contract itself.
+mercenary-default-breach-refund: 500.0
 
 bank-block: iaf(tfmc:bank)
 voting-block: v(chiseled_bookshelf)
@@ -25,6 +37,12 @@ de-jure-requirement: 75.0
 
 # Map platform (step 42) — requires TFMCWeb softdepend + api.base-url configured
 enable-map: true
+# When false, skip Input/ province grid load; land, war, and map systems are off.
+# Also forces enable-map to false.
+enable-provinces: true
+# Daily wealth/prestige snapshot uploaded to ProvinceSystem for season graphs.
+# Independent of enable-map so a broken chronicle never blocks a map regen.
+enable-chronicle: true
 map-reference: main
 settlement-large-population-threshold: 8
 port-sea-proximity-blocks: 20

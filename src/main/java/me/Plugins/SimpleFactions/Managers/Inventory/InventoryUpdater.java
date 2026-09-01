@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.Managers.Inventory;
 
+
+import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -22,6 +24,7 @@ import me.Plugins.SimpleFactions.Tiers.Tier;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.government.election.Candidate;
+import me.Plugins.SimpleFactions.government.movement.Action;
 import me.Plugins.SimpleFactions.government.movement.Movement;
 import me.Plugins.SimpleFactions.government.movement.cause.Cause;
 import me.Plugins.SimpleFactions.government.proposal.TaxTarget;
@@ -51,6 +54,12 @@ public class InventoryUpdater {
 					inv.warView(i, p, w, false);
 				}
 			} else if (i.getHolder() instanceof SFCombinedInventoryHolder h) {
+				if (h.getType().equals(SFGUI.MERCENARY_ENGAGEMENT_LIST)) {
+					War w = WarManager.getById(h.getWarId());
+					if (w == null) continue;
+					inv.warView.populateEngagementList(i, p, w, h.getFactionId());
+					continue;
+				}
 				Faction f = FactionManager.getByString(h.getFactionId());
 				War w = WarManager.getById(h.getWarId());
 				if (f == null || w == null) continue;
@@ -87,6 +96,10 @@ public class InventoryUpdater {
 		}
 		if (type == SFGUI.WAR_LIST) {
 			inv.warView.populateWarList(i);
+			return;
+		}
+		if (type == SFGUI.MERCENARY_MARKET_LIST) {
+			inv.mercenaryMarketView.populateMarketList(i, p);
 			return;
 		}
 		if (type == SFGUI.PLAYER_LEDGER_VIEW) {
@@ -129,6 +142,22 @@ public class InventoryUpdater {
 			case GUILD_VIEW -> inv.guildView(p, guild, i);
 			case UPGRADE_VIEW -> inv.upgradeView(p, guild, i);
 			case LEDGER_VIEW -> inv.ledgerView(p, guild, i);
+			case COMPANY_VIEW -> inv.companyView(p, guild, i);
+			case COMPANY_SLOTS_VIEW -> inv.companySlotsView(p, guild, i);
+			case COMPANY_ROSTER_VIEW -> inv.companyRosterView(p, guild, i);
+			case COMPANY_UPGRADE_VIEW -> inv.companyUpgradeView(p, guild, i);
+			case CONTRACT_LIST_VIEW -> inv.contractListView(p, guild, i);
+			case CONTRACT_DETAIL_VIEW -> {
+				String contractId = h.getSecondaryId();
+				if (contractId == null) return;
+				if (guild.getCompany() == null
+						|| guild.getCompany().getContractHandler().getById(contractId) == null) {
+					// Contract gone - bounce to parent list
+					inv.contractListView(p, guild, i);
+					return;
+				}
+				inv.contractDetailView(p, guild, i, contractId);
+			}
 			case LOAN_MAIN_VIEW -> inv.loanMainView(p, guild, i);
 			case LOANS_GIVEN_VIEW -> inv.loansGivenView(p, guild, i);
 			case LOANS_TAKEN_VIEW -> inv.loansTakenView(p, guild, i);
@@ -160,11 +189,22 @@ public class InventoryUpdater {
 	private void refreshFactionHolder(Player p, Inventory i, SFInventoryHolder h, Faction f) {
 		switch (h.getType()) {
 			case FACTION_VIEW -> inv.factionView.factionView(p, f, i);
+			case FACTION_GUILDS -> inv.factionView.factionGuildsView(p, f, i);
 			case GOVERNMENT_VIEW -> inv.governmentView(p, f, i);
 			case COUNCIL_VIEW -> inv.governmentView.councilView(p, f, i);
 			case PROPOSALS -> inv.governmentView.proposalList(p, f, i);
 			case PROPOSAL_VIEW -> inv.proposalView(p, f, i);
 			case POLITICAL_PROPOSAL_VIEW -> inv.governmentView.politicalProposalView(p, f, i);
+			case WAR_PEACE_SELECT -> {
+				String sid = h.getSecondaryId();
+				if (sid == null) {
+					return;
+				}
+				try {
+					Action action = Action.valueOf(sid);
+					inv.governmentView.warPeaceSelectView(p, f, action, h.getFlag(), h.getPage(), i);
+				} catch (IllegalArgumentException ex) { /* stale */ }
+			}
 			case TAX_PROPOSAL_VIEW -> inv.governmentView.taxProposalView(p, f, i);
 			case SPECIFIC_TAX_PROPOSAL_VIEW -> {
 				String sid = h.getSecondaryId();
@@ -196,6 +236,7 @@ public class InventoryUpdater {
 				inv.installationDetailView(p, f, sid, i);
 			}
 			case DIPLOMACY_VIEW -> inv.diplomacyView(i, p, f, false);
+			case DIPLOMACY_LIST -> inv.diplomacyListView(i, p, f, false);
 			case ATTITUDE_VIEW -> inv.attitudeView(i, p, f, false);
 			case RELATION_VIEW -> inv.relationView(i, p, f, false);
 			case TAX_VIEW -> inv.taxView.taxView(p, f, i);
@@ -260,6 +301,7 @@ public class InventoryUpdater {
 				inv.movementView.targetSelectionView(p, f, movement, causes.get(index), i);
 			}
 			case MOVEMENT_DEMANDS -> inv.movementView.demandsView(p, f, movement, i);
+			case MOVEMENT_CRACKDOWN -> inv.movementView.crackdownView(p, f, movement, i);
 			default -> {}
 		}
 	}
@@ -310,14 +352,16 @@ public class InventoryUpdater {
 		return switch (type) {
 			case GUILD_VIEW, UPGRADE_VIEW, LEDGER_VIEW,
 				 LOAN_MAIN_VIEW, LOANS_GIVEN_VIEW, LOANS_TAKEN_VIEW,
-				 TAKEN_LOAN_DETAIL_VIEW, ISSUED_LOAN_DETAIL_VIEW -> true;
+				 TAKEN_LOAN_DETAIL_VIEW, ISSUED_LOAN_DETAIL_VIEW,
+				 COMPANY_VIEW, COMPANY_SLOTS_VIEW, COMPANY_ROSTER_VIEW, COMPANY_UPGRADE_VIEW,
+				 CONTRACT_LIST_VIEW, CONTRACT_DETAIL_VIEW -> true;
 			default -> false;
 		};
 	}
 
 	private static boolean isMovementKeyed(SFGUI type) {
 		return switch (type) {
-			case MOVEMENT_VIEW, CAUSES_VIEW, CAUSE_VIEW, TARGET_SELECT, MOVEMENT_DEMANDS -> true;
+			case MOVEMENT_VIEW, CAUSES_VIEW, CAUSE_VIEW, TARGET_SELECT, MOVEMENT_DEMANDS, MOVEMENT_CRACKDOWN -> true;
 			default -> false;
 		};
 	}

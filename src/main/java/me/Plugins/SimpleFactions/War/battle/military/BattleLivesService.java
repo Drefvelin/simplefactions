@@ -23,7 +23,8 @@ public final class BattleLivesService {
 			int committedRegiments,
 			int poolLives,
 			int rosterFighters,
-			int sideLives) {
+			int sideLives,
+			int mercenarySlots) {
 	}
 
 	private BattleLivesService() {}
@@ -58,22 +59,24 @@ public final class BattleLivesService {
 
 	public static SideLivesPreview previewCampaignSideLives(War war, Battle battle, String battleSideId) {
 		if (war == null || battle == null || battleSideId == null) {
-			return new SideLivesPreview(0, 0, 0, 0);
+			return new SideLivesPreview(0, 0, 0, 0, 0);
 		}
 		Integer provinceId = resolveProvinceId(war, battle);
 		Side warSide = resolveWarSide(war, battleSideId);
 		BattleSide battleSide = battle.getSideById(battleSideId);
 		if (warSide == null || battleSide == null) {
-			return new SideLivesPreview(0, 0, 0, 0);
+			return new SideLivesPreview(0, 0, 0, 0, 0);
 		}
 		int committedRegiments = 0;
 		if (provinceId != null) {
 			committedRegiments = BattlePoolService.totalCommittedRegiments(war, provinceId, warSide);
 		}
+		int mercenarySlots = mercenarySlots(war, warSide, battleSide);
+		committedRegiments += mercenarySlots;
 		int rosterFighters = countRosterFighters(battleSide);
 		int poolLives = Cache.warBattleLivesPerRegiment * committedRegiments;
 		int sideLives = computeSideLives(committedRegiments, rosterFighters);
-		return new SideLivesPreview(committedRegiments, poolLives, rosterFighters, sideLives);
+		return new SideLivesPreview(committedRegiments, poolLives, rosterFighters, sideLives, mercenarySlots);
 	}
 
 	public static int computeSideLives(int committedRegiments, int rosterFighters) {
@@ -122,6 +125,8 @@ public final class BattleLivesService {
 			return;
 		}
 		int committedRegiments = BattlePoolService.totalCommittedRegiments(war, provinceId, warSide);
+		int mercenarySlots = mercenarySlots(war, warSide, battleSide);
+		committedRegiments += mercenarySlots;
 		if (committedRegiments <= 0) {
 			LOGGER.info(
 					"Campaign battle " + battle.getId() + " side " + battleSideId
@@ -130,6 +135,19 @@ public final class BattleLivesService {
 		int rosterFighters = countRosterFighters(battleSide);
 		int sideLives = computeSideLives(committedRegiments, rosterFighters);
 		battleSide.setLives(sideLives);
+	}
+
+	static int mercenarySlots(War war, Side warSide, BattleSide battleSide) {
+		if (war == null || warSide == null || battleSide == null) {
+			return 0;
+		}
+		int total = 0;
+		for (me.Plugins.SimpleFactions.mercenary.contract.MercenaryEngagements.Engagement engagement
+				: me.Plugins.SimpleFactions.mercenary.contract.MercenaryEngagements.on(war, warSide)) {
+			total += me.Plugins.SimpleFactions.mercenary.contract.MercenaryEngagements
+					.coveringMembers(engagement, battleSide);
+		}
+		return total;
 	}
 
 	static Integer resolveProvinceId(War war, Battle battle) {

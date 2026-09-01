@@ -100,6 +100,65 @@ class BelligerentTerritoryTest {
 		assertEquals(List.of(2), warTerritory.findInvasionEntryProvinces(pm));
 	}
 
+	@Test
+	void kingLandIsLiegeTransitOnInternalWar() {
+		ownerByProvince.put(1, "dukeA");
+		ownerByProvince.put(2, "king");
+		ownerByProvince.put(3, "dukeB");
+		BelligerentTerritory internal = internalTerritory();
+
+		assertTrue(internal.isLiegeTransit(2));
+		assertFalse(internal.isAttackerSide(2));
+		assertFalse(internal.isDefenderSide(2));
+		assertFalse(internal.isForeignNation(2));
+		assertTrue(internal.isNeutral(2));
+		assertTrue(internal.isAttackerSide(1));
+		assertTrue(internal.isDefenderSide(3));
+	}
+
+	@Test
+	void uninvolvedSiblingLandIsLiegeTransit() {
+		ownerByProvince.put(5, "dukeC");
+		BelligerentTerritory internal = internalTerritory();
+
+		assertTrue(internal.isLiegeTransit(5));
+		assertFalse(internal.isForeignNation(5));
+		assertTrue(internal.isNeutral(5));
+		assertFalse(internal.isAttackerSide(5));
+		assertFalse(internal.isDefenderSide(5));
+	}
+
+	@Test
+	void externalWarThirdNationStaysForeign() {
+		ownerByProvince.put(200, FOREIGN);
+		assertTrue(territory.isForeignNation(200));
+		assertFalse(territory.isLiegeTransit(200));
+		assertTrue(territory.isNeutral(200));
+	}
+
+	private BelligerentTerritory internalTerritory() {
+		return new BelligerentTerritory(
+				Set.of("dukeA"),
+				Set.of("dukeB"),
+				Set.of("dukeB"),
+				ownerByProvince::get,
+				"king",
+				id -> {
+					if (id == null) {
+						return null;
+					}
+					if ("king".equalsIgnoreCase(id)) {
+						return null;
+					}
+					if ("dukeA".equalsIgnoreCase(id)
+							|| "dukeB".equalsIgnoreCase(id)
+							|| "dukeC".equalsIgnoreCase(id)) {
+						return "king";
+					}
+					return null;
+				});
+	}
+
 	private Province province(int id, String ownerId) {
 		ownerByProvince.put(id, ownerId);
 		return new Province(id, Terrain.PLAINS.name(), 50);

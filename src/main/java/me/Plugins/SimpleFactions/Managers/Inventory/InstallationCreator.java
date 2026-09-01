@@ -18,8 +18,8 @@ import me.Plugins.SimpleFactions.installation.InstallationConstruction;
 import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.SimpleFactions.installation.handler.InstallationHandler;
 import me.Plugins.SimpleFactions.keys.Keys;
-import me.Plugins.SimpleFactions.vehicles.PlayerVehicleRecord;
-import me.Plugins.SimpleFactions.vehicles.VehicleFindMessages;
+import me.Plugins.SimpleFactions.vehicles.registry.PlayerVehicleRecord;
+import me.Plugins.SimpleFactions.vehicles.berth.VehicleFindMessages;
 import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 import me.Plugins.TLibs.Utils.TimeFormatter;
 

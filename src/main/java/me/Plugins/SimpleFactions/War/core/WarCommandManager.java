@@ -19,7 +19,7 @@ import me.Plugins.SimpleFactions.War.campaign.admin.WarScheduleAdminResult;
 import me.Plugins.SimpleFactions.War.campaign.admin.WarScheduleAdminService;
 import me.Plugins.SimpleFactions.War.campaign.admin.WarScheduleFeedbackFormatter;
 import me.Plugins.SimpleFactions.War.campaign.progression.BelligerentRole;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
 import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidService;
 import me.Plugins.SimpleFactions.War.campaign.runtime.CampaignClock;
 import me.Plugins.SimpleFactions.War.enums.WarEndReason;

@@ -6,8 +6,8 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import me.Plugins.SimpleFactions.Database.CampaignRaidData;
-import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalition;
-import me.Plugins.SimpleFactions.War.campaign.runtime.RaidKind;
+import me.Plugins.SimpleFactions.War.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import me.Plugins.SimpleFactions.War.campaign.raid.RaidTargetService.RaidKind;
 
 public class CampaignRaid {
 	private String id;

@@ -21,7 +21,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
-import me.Plugins.SimpleFactions.War.battle.campaign.CampaignWarbandSignupService;
+import me.Plugins.SimpleFactions.War.battle.campaign.warband.CampaignWarbandSignupService;
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleManager;
 import me.Plugins.SimpleFactions.War.battle.engine.core.BattleSide;

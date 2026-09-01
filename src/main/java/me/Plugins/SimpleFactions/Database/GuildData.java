@@ -45,4 +45,9 @@ public class GuildData {
     public Boolean repressed = false;
 
     public List<StabilityModifierData> pillageHits = new ArrayList<>();
+
+    public Double dividendPercent;
+    public List<String> dividendEligible = new ArrayList<>();
+
+    public MercenaryCompanyData company;
 }

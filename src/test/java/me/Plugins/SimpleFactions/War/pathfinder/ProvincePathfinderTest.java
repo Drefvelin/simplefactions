@@ -139,6 +139,46 @@ class ProvincePathfinderTest {
 	}
 
 	@Test
+	void internalWarLandPassCrossesKingLand() {
+		String king = "king";
+		Province dukeA = province(1, Terrain.PLAINS, ATK);
+		Province kingLand = province(2, Terrain.PLAINS, king);
+		Province dukeB = province(3, Terrain.PLAINS, DEF);
+		link(dukeA, kingLand);
+		link(kingLand, dukeB);
+		load(dukeA, kingLand, dukeB);
+
+		BelligerentTerritory internal = new BelligerentTerritory(
+				Set.of(ATK),
+				Set.of(DEF),
+				Set.of(DEF),
+				ownerByProvince::get,
+				king,
+				id -> king.equalsIgnoreCase(id) ? null : king);
+
+		assertFalse(internal.isAttackerSide(2));
+		assertFalse(internal.isDefenderSide(2));
+		assertTrue(internal.isLiegeTransit(2));
+
+		PathfinderResult result = pathfinder.findRoute(1, 3, PathfinderPass.LAND_NO_NEUTRAL, internal);
+		assertTrue(result.isFound());
+		assertEquals(List.of(1, 2, 3), result.getPath());
+	}
+
+	@Test
+	void externalWarStillBlocksThirdNationLand() {
+		Province c = province(3, Terrain.PLAINS, ATK);
+		Province foreign = province(8, Terrain.PLAINS, NEUTRAL);
+		Province d = province(4, Terrain.PLAINS, DEF);
+		link(c, foreign);
+		link(foreign, d);
+		load(c, foreign, d);
+
+		PathfinderResult pass1 = pathfinder.findRoute(3, 4, PathfinderPass.LAND_NO_NEUTRAL, territory);
+		assertFalse(pass1.isFound());
+	}
+
+	@Test
 	void findRouteWithFallbackUsesWildernessOnLandPass() {
 		Province c = province(3, Terrain.PLAINS, ATK);
 		Province wilderness = wilderness(8, Terrain.PLAINS);

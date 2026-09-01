@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -16,6 +17,7 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleType;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 import me.Plugins.SimpleFactions.War.battle.enums.LifeType;
+import me.Plugins.SimpleFactions.War.battle.events.BattleStartedEvent;
 import me.Plugins.SimpleFactions.War.battle.military.BattleCasualtyLedger;
 import me.Plugins.SimpleFactions.War.battle.military.BattleLivesService;
 import me.Plugins.SimpleFactions.War.battle.engine.capture.BattleCapturePoints;
@@ -30,7 +32,7 @@ import me.Plugins.SimpleFactions.War.battle.engine.win.SiegeWinService;
 import me.Plugins.SimpleFactions.War.battle.template.CapturePointDefinition;
 import me.Plugins.SimpleFactions.War.battle.template.ContestArea;
 import me.Plugins.SimpleFactions.War.battle.ui.BattleInventoryManager;
-import me.Plugins.SimpleFactions.War.campaign.raid.CampaignRaidBossBarService;
+import me.Plugins.SimpleFactions.War.campaign.raid.fight.CampaignRaidBossBarService;
 import me.Plugins.SimpleFactions.War.battle.warband.Warband;
 
 public class Battle {
@@ -227,6 +229,7 @@ public class Battle {
 		}
 		this.started = true;
 		this.startedAt = Instant.now();
+		fireStartedEvent();
 		if (battleType == BattleType.RAID) {
 			BattleRaidSetup.onStart(this);
 		} else {
@@ -266,6 +269,22 @@ public class Battle {
 		}
 		return null;
 	}
+
+	private void fireStartedEvent() {
+		if (SimpleFactions.plugin == null) {
+			return;
+		}
+		org.bukkit.plugin.PluginManager plugins = Bukkit.getPluginManager();
+		if (plugins == null) {
+			return;
+		}
+		plugins.callEvent(new BattleStartedEvent(
+				getId(),
+				getBattleType(),
+				getWarId(),
+				BattleParticipantCollector.collect(this)));
+	}
+
 	public void end() {
 		if(!this.started) return;
 		this.started = false;

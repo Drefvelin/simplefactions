@@ -2,9 +2,11 @@ package me.Plugins.SimpleFactions.Guild;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.bukkit.Bukkit;
 import org.bukkit.DyeColor;
@@ -33,6 +35,7 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
 import me.Plugins.SimpleFactions.installation.InstallationTransferService;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
+import me.Plugins.SimpleFactions.mercenary.company.MercenaryCompany;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.FactionModifier;
@@ -95,6 +98,9 @@ public class Guild {
     private boolean favoured = false;
     private boolean repressed = false;
     private final List<StabilityModifier> pillageHits = new ArrayList<>();
+    private double dividendPercent = 0.0;
+    private List<String> dividendEligible = new ArrayList<>();
+    private MercenaryCompany company;
 
     public Guild(Faction f) {
         host = f;
@@ -122,6 +128,7 @@ public class Guild {
         this.ledger = new Ledger(this);
         this.loanHandler = new LoanHandler(this);
         this.bank = new Bank(this);
+        this.dividendEligible = new ArrayList<>(members);
         createBanner();
     }
 
@@ -152,6 +159,7 @@ public class Guild {
         f.getOrCreateMainGuild().kick(p.getName()); //remove from main guild
         this.ledger = new Ledger(this);
         this.loanHandler = new LoanHandler(this);
+        this.dividendEligible = new ArrayList<>(members);
         createBanner();
     }
 
@@ -203,6 +211,18 @@ public class Guild {
         this.loanHandler = new LoanHandler(this, data.creditScore == null ? 50 : data.creditScore);
         if(data.favoured != null) this.favoured = data.favoured;
         if(data.repressed != null) this.repressed = data.repressed;
+        if (data.dividendPercent != null) {
+            this.dividendPercent = clampDividendPercent(data.dividendPercent);
+        }
+        if (data.dividendEligible != null) {
+            this.dividendEligible = new ArrayList<>(data.dividendEligible);
+        } else {
+            this.dividendEligible = new ArrayList<>(this.members);
+        }
+        if (data.company != null) {
+            this.company = new MercenaryCompany(
+                    this, data.company, MercenaryCompany.cloneMercenaryRegiment());
+        }
         if(data.pillageHits != null) {
             for (StabilityModifierData smd : data.pillageHits) {
                 if (smd == null || smd.name == null) {
@@ -282,6 +302,11 @@ public class Guild {
     }
 
     public void tick() {
+		tickUpgradeQueue();
+		if(company != null) company.tick();
+	}
+
+	private void tickUpgradeQueue() {
 		if(upgradeQueue.size() == 0) return;
 		UpgradeExpansion e = upgradeQueue.get(0);
 		e.tick();
@@ -289,6 +314,24 @@ public class Guild {
 		upgradeQueue.remove(0);
 		e.getUpgrade().levelUp();
 		FactionManager.getInv().getUpdater().inventorySound("minecraft:block.note_block.chime", SFGUI.UPGRADE_VIEW);
+	}
+
+	/** Null until the guild requests a company; non-null while founding too. */
+	public MercenaryCompany getCompany() {
+		return company;
+	}
+
+	public void setCompany(MercenaryCompany company) {
+		this.company = company;
+	}
+
+	/** A finished company. Founding guilds answer false here and true below. */
+	public boolean hasCompany() {
+		return company != null && company.isFormed();
+	}
+
+	public boolean isFoundingCompany() {
+		return company != null && company.isForming();
 	}
 
     public Ledger getLedger() {
@@ -468,10 +511,9 @@ public class Guild {
 		this.bannerPatterns.clear();
 		this.bannerPatterns.add(banner.getType().toString().replace("_BANNER", ".BASE"));
 		for(Pattern p : b.getPatterns()) {
-			String colour = p.getColor().toString();
-			String pattern = p.getPattern().toString();
-			pattern = pattern.replace("tfmc:", "").toUpperCase();
-			this.bannerPatterns.add(colour+"."+pattern);
+			NamespacedKey key = p.getPattern().getKey();
+			if (key == null) continue;
+			this.bannerPatterns.add(p.getColor().name() + "." + key.getKey().toUpperCase());
 		}
 		createBanner();
 	}
@@ -882,6 +924,49 @@ public class Guild {
 
     public boolean isBankrupt() {
         return bank.getWealth() < 0;
+    }
+
+    public double getDividendPercent() {
+        return dividendPercent;
+    }
+
+    public double setDividendPercent(double percent) {
+        dividendPercent = clampDividendPercent(percent);
+        return dividendPercent;
+    }
+
+    public List<String> getDividendEligibleSnapshot() {
+        return new ArrayList<>(dividendEligible);
+    }
+
+    public List<String> getDividendEligibleMembers() {
+        if (!Cache.dividendRequirePreviousTickMembership) {
+            return new ArrayList<>(members);
+        }
+        Set<String> current = new HashSet<>();
+        for (String member : members) {
+            if (member != null) {
+                current.add(member);
+            }
+        }
+        List<String> eligible = new ArrayList<>();
+        for (String name : dividendEligible) {
+            if (name != null && current.contains(name)) {
+                eligible.add(name);
+            }
+        }
+        return eligible;
+    }
+
+    public void refreshDividendEligibility() {
+        dividendEligible = new ArrayList<>(members);
+    }
+
+    private static double clampDividendPercent(double percent) {
+        if (Double.isNaN(percent) || Double.isInfinite(percent)) {
+            return 0.0;
+        }
+        return Math.max(0.0, Math.min(100.0, percent));
     }
 
     public boolean canLiquidate() {
