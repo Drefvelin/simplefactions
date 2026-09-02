@@ -1,7 +1,7 @@
 professional:
     name: "#73c9aaProfessional Army"
     upkeep: 6.0
-    expansion-time: 10
+    expansion-time: 21600
     offense: true
     item:
         material: BLACK_DYE
@@ -13,7 +13,7 @@ militia:
     name: "#b2d485Militia"
     default-slots: 6
     upkeep: 2.0
-    expansion-time: 10 #43200
+    expansion-time: 43200
     item:
         material: BLACK_DYE
         model-data: 10
@@ -49,7 +49,7 @@ levy:
     levy: true
     default-slots: 0
     upkeep: 0.0
-    expansion-time: 0 #43200
+    expansion-time: 43200
     offense: true
     item:
         material: BLACK_DYE

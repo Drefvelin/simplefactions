@@ -1239,6 +1239,9 @@ public class Faction {
 		for(Guild guild : guildHandler.getGuilds()) {
 			guild.newDay();
 		}
+		if (government != null) {
+			government.applyDailyOrganizationGain();
+		}
     }
 
 	public void provinceCap() {

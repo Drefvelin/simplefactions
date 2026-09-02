@@ -16,8 +16,8 @@ import me.Plugins.SimpleFactions.government.StabilityModifier;
 class PillageTradeHitTest {
 
 	@Test
-	void decayPerPowerTick_matchesTenDayWindow() {
-		assertEquals(100.0 / (10 * 8640), PillageTradeHit.decayPerPowerTick(-100, 10));
+	void decayPerPowerTick_matchesTenDayWindowAtHourlyTicks() {
+		assertEquals(100.0 / (10 * 24), PillageTradeHit.decayPerPowerTick(-100, 10));
 	}
 
 	@Test

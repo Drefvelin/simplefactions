@@ -14,10 +14,10 @@ Campaign keys (`war.*`) are in **`war.yml`** (`src/main/resources/war.yml` → `
 
 | Key | Dev value | Production target | Notes |
 |-----|-----------|-------------------|-------|
-| Header comment | `dev server template` | Remove or relabel | Documents intent only |
+| Header comment | Was `dev server template` | Now `map-reference: main (world: TFMC_Map)` | Documents intent only |
 | `map-reference` | `main` on prod file; use `dev` on test | `main` (or live map id) | Drives TFMCWeb upload/regen paths |
 | `enable-chronicle` | `true` | `true` | Chronicle snapshot upload. Set `false` to stop the chronicle without taking the map down; `enable-map` still gates it |
-| `war.require_declare_code` (`war.yml`) | `false` | `true` | On, an attacking leader must type a staff-minted Discord code, which pins the war goal. `simplefactions.admin` bypasses it |
+| `war.require_declare_code` (`war.yml`) | `false` to declare without a Discord ticket | `true` (**shipped value**) | On, an attacking leader must type a staff-minted Discord code, which pins the war goal. `simplefactions.admin` bypasses it |
 | `war.declare_code_timeout_seconds` (`war.yml`) | `10` | `10` | How long to wait for ProvinceSystem before refusing the declare. The gate fails closed |
 | `war.battle_cadence.provinces_between_battles` (`war.yml`) | `3` | `3` (or higher after playtest) | Field battle cadence |
 | `war.battle_loot.mode` (`war.yml`) | `COMMAND` | `COMMAND` | `COMMAND` runs every line in `commands` from console once per rewarded player; `ITEM` gives a TLibs item instead. An unrecognised value falls back to `COMMAND`. See [wars.md](./wars.md#battle-loot) |
@@ -25,7 +25,7 @@ Campaign keys (`war.*`) are in **`war.yml`** (`src/main/resources/war.yml` → `
 | `war.battle_loot.item` (`war.yml`) | `v.diamond` | The real reward item | Used when `mode` is `ITEM`. TLibs path (`v.`, `ia.`, `m.`, `modeled.`). Blank means no loot |
 | `war.battle_loot.item_amount` (`war.yml`) | `1` | `1` | Stack size for `ITEM` mode. Clamped to at least `1` |
 | `max-prestige-playtime-exponent` | `5`, or lower to reach the ceiling sooner while testing | `5` | Caps the per-member playtime prestige curve. `5` means a member tops out at 32, at 500 online hours. Needs RPCharacters; the term is 0 without it. See [prestige.md](./prestige.md) |
-| `installations.*.construction-time` | `10` | `432000` fort / `259200` port+airport | Seconds |
+| `installations.*.construction-time` | `10` to watch a build finish in a session | `432000` fort / `259200` port+airport (**shipped values**) | Seconds |
 | `mercenary-formation-seconds` | `10` to test the founding flow | `86400` (24 h) | Real seconds, same tick model as construction. Shipped file has the production value |
 
 **Tick model:** faction `tick()` runs **once per real second** (`FactionManager` timer every 20 ticks). Construction and regiment expansion `timeLeft` decrement **once per second**, so `10` = **10 seconds**, not 10 days.
@@ -36,12 +36,14 @@ Mercenary key reference (all keys with defaults): [mercenaries.md](./mercenaries
 
 ## `regiments.yml`
 
-| Regiment | Key | Dev value | Production target (comment in file) |
-|----------|-----|-----------|-------------------------------------|
-| professional | `expansion-time` | `10` | Loader fallback `21600` (6 h) if omitted |
-| militia | `expansion-time` | `10` | `#43200` (12 h) in comment |
-| levy | `expansion-time` | `0` | `#43200` in comment |
-| mercenary | `expansion-time` | Lower to `10` to test slot expansion | `86400` (24 h), already the shipped value |
+All four now ship production values. Lower any of them to `10` to test the expansion queue, then restore.
+
+| Regiment | Key | Shipped value | Dev override |
+|----------|-----|---------------|--------------|
+| professional | `expansion-time` | `21600` (6 h) | `10` |
+| militia | `expansion-time` | `43200` (12 h) | `10` |
+| levy | `expansion-time` | `43200` (12 h) | `0` for instant expansion |
+| mercenary | `expansion-time` | `86400` (24 h) | `10` |
 
 Queue ticks once per faction second (same as construction).
 
@@ -51,13 +53,14 @@ Queue ticks once per faction second (same as construction).
 
 ## `Guilds/upgrades.yml`
 
-All three realm upgrades use `expansion-time: 10` (10 seconds). Production values not commented in file; treat as **dev-only** until locked.
+All four upgrades now use `expansion-time: 21600` (6 h), matching the `Upgrade.java` loader fallback. Lower to `10` to test the purchase queue, then restore.
 
-| Upgrade id | Dev `expansion-time` |
-|------------|----------------------|
-| `max_admin_power` | 10 |
-| `max_diplomatic_capacity` | 10 |
-| `admin_power_gain` | 10 |
+| Upgrade id | Shipped `expansion-time` |
+|------------|--------------------------|
+| `max_admin_power` | 21600 |
+| `max_diplomatic_capacity` | 21600 |
+| `admin_power_gain` | 21600 |
+| `auto_dealer_tables` | 21600 |
 
 ---
 
@@ -89,8 +92,10 @@ All three realm upgrades use `expansion-time: 10` (10 seconds). Production value
 
 | System | Actual tick | UI / docs say | Action |
 |--------|-------------|---------------|--------|
-| Administrative power gain | Every **10 s** (`FactionManager.timer % 10`) | Lore shows `+N/hour` | Confirm intended hourly rate |
-| Faction daily cycle | `timer >= 86400` (~24 h real time) | Daily guild income, loans | Real-time days on test server |
+| Administrative power gain | Every **3600 s** (`FactionManager.timer % 3600`) | Lore shows `+N/hour` | Matches lore |
+| Stability / pillage decay | Same hourly `powerTick` | `%/hour` lore; pillage `POWER_TICKS_PER_DAY = 24` | Matches lore |
+| Movement organization | Once per daily tick (`Faction.newDay`) | GUI `per day`; `base` 30 | ~3.3 days to 100 org at 100% power, 1 cause |
+| Faction daily cycle | `timer >= 86400` (~24 h real time) | Daily guild income, loans, movement org | Real-time days on test server |
 | Diplomacy opinion drift | `RelationManager.tick` every **3600 s** | - | Real-time hour |
 | Map partial upload | `MapSystem` full update every **3600 s** | - | Real-time hour |
 
@@ -134,7 +139,7 @@ Defaults under `war.battle_schedule`:
 | Mechanism | Detail |
 |-----------|--------|
 | `/war admin schedule <id>` | Admin subcommands: `opencvote`, `closevote`, `skipday`, `castvote <hour> [attacker\|defender\|both]`, `forcequorum`, `setscheduled <iso>`, `battlecreate`, `battledelete`, `battlestart`, `winbattle attacker\|defender`, `choice push\|hold\|attack\|accept` (aliases: `battlechoice`, `defenderchoice`, …) |
-| `war.battle_voting.dev_min_players: 1` | Test-server quorum override (default quorum uses `min_players: 4`) |
+| `war.battle_voting.dev_min_players: 1` | Test-server quorum override. **Removed from the shipped `war.yml`**; add the key back to lower quorum, delete it to fall back to `min_players: 4` |
 | Shortened hour keys | Test server may use e.g. 10/11/12/13 if order constraint holds |
 
 ---

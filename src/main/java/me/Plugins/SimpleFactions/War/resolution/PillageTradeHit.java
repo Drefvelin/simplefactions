@@ -9,7 +9,7 @@ import me.Plugins.SimpleFactions.government.StabilityModifier;
 
 public final class PillageTradeHit {
 	public static final String NAME = "Pillage";
-	public static final int POWER_TICKS_PER_DAY = 8640;
+	public static final int POWER_TICKS_PER_DAY = 24;
 
 	private PillageTradeHit() {}
 

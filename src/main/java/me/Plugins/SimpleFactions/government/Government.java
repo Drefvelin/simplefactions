@@ -290,6 +290,15 @@ public class Government {
         replace();
     }
 
+    public void applyDailyOrganizationGain() {
+        for (Movement movement : new ArrayList<>(movements)) {
+            if (movement.isFrozen()) {
+                continue;
+            }
+            movement.changeOrganization(movement.getOrganizationGain());
+        }
+    }
+
     public void powerTick() {
         for (StabilityModifier modifier : new ArrayList<>(stabilityModifiers)) {
             if (modifier.tick()) {

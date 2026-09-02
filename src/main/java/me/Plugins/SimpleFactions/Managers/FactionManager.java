@@ -394,7 +394,7 @@ public class FactionManager implements Listener{
 
 	public void time() {
 		timer++;
-		if(timer%10 == 0) {
+		if(timer % 3600 == 0) {
 			for(Faction f : factions) {
 				if (f.getGovernment() != null) {
 					f.getGovernment().powerTick();

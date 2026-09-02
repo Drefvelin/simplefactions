@@ -102,7 +102,7 @@ public class LawCreator {
 			if(forProposal) {
 				lore.add(StringFormatter.formatHex("#d4c9aeCost: §e"+Formatter.formatDouble(cost)+" Administrative Power"));
 				if(upkeep > 0) {
-					lore.add(StringFormatter.formatHex("#d4c9aeUpkeep: §e"+Formatter.formatDouble(upkeep)+" Administrative Power/hour"));
+					lore.add(StringFormatter.formatHex("#d4c9aeUpkeep: §e"+Formatter.formatDouble(upkeep)+" Administrative Power"));
 				} else {
 					lore.add(StringFormatter.formatHex("#d4c9aeUpkeep: §eNone"));
 				}

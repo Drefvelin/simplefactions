@@ -1,7 +1,7 @@
 max_admin_power:
   name: "#76ad9dMax Administative Power"
   icon: "writable_book.0"
-  expansion-time: 10
+  expansion-time: 21600
   allowed-types:
     - realm
   modifiers:
@@ -9,7 +9,7 @@ max_admin_power:
 max_diplomatic_capacity:
   name: "#76ad9dMax Diplomatic Capacity"
   icon: "writable_book.0"
-  expansion-time: 10
+  expansion-time: 21600
   allowed-types:
     - realm
   modifiers:
@@ -17,7 +17,7 @@ max_diplomatic_capacity:
 admin_power_gain:
   name: "#76ad9dAdministative Power Gain"
   icon: "writable_book.0"
-  expansion-time: 10
+  expansion-time: 21600
   allowed-types:
     - realm
   modifiers:
@@ -25,7 +25,7 @@ admin_power_gain:
 auto_dealer_tables:
   name: "#76ad9dAuto Dealer Tables"
   icon: "writable_book.0"
-  expansion-time: 10
+  expansion-time: 21600
   allowed-types:
     - guild
     - realm

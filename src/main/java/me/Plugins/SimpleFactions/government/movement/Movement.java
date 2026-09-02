@@ -161,7 +161,7 @@ public class Movement {
     }
 
     public double getOrganizationGain() {
-        double base = 15;
+        double base = 30;
         base *= getPower()/100.0;
         base /= (double) causes.size();
         for(Cause cause : causes) {
@@ -192,7 +192,6 @@ public class Movement {
         }
         checkSupporters();
         checkForeignBackers();
-        changeOrganization(getOrganizationGain());
         if(causes.size() == 0) {
             f.getGovernment().endMovement(this);
         }

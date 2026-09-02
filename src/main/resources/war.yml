@@ -5,7 +5,7 @@
 war:
   # Production gate: an attacking leader must type a staff-minted Discord code before
   # the goal picker opens, and the code pins the goal. simplefactions.admin bypasses it.
-  require_declare_code: false
+  require_declare_code: true
   # How long to wait for ProvinceSystem to answer a code check before giving up. The
   # gate fails closed, so a slow backend blocks the declare rather than allowing it.
   declare_code_timeout_seconds: 10
@@ -75,7 +75,6 @@ war:
     min_players: 4
     require_smallest_side_full: true
     pass_if_either: true
-    dev_min_players: 1
   devmode:
     phantom_count: 10
   battle_military:
