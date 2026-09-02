@@ -44,6 +44,7 @@ import me.Plugins.SimpleFactions.Managers.PlayerManager;
 import me.Plugins.SimpleFactions.Managers.ProvinceManager;
 import me.Plugins.SimpleFactions.Managers.RelocationPrompt;
 import me.Plugins.SimpleFactions.Managers.CapitalMovePrompt;
+import me.Plugins.SimpleFactions.Utils.DisplayNameGate;
 import me.Plugins.SimpleFactions.Managers.RequestManager;
 import me.Plugins.SimpleFactions.Managers.SessionManager;
 import me.Plugins.SimpleFactions.Managers.TitleManager;
@@ -130,6 +131,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final SessionManager sessionManager = new SessionManager();
 	private final RelocationPrompt relocationPrompt = new RelocationPrompt();
 	private final CapitalMovePrompt capitalMovePrompt = new CapitalMovePrompt();
+	private final DisplayNameGate displayNameGate = new DisplayNameGate();
 	private final DeclareCodePrompt declareCodePrompt = new DeclareCodePrompt();
 	private final ProvincePresenceListener provincePresenceListener = new ProvincePresenceListener();
 	private final BattleManager battleManager = new BattleManager();
@@ -365,6 +367,7 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(sessionManager, this);
 		getServer().getPluginManager().registerEvents(relocationPrompt, this);
 		getServer().getPluginManager().registerEvents(capitalMovePrompt, this);
+		getServer().getPluginManager().registerEvents(displayNameGate, this);
 		getServer().getPluginManager().registerEvents(declareCodePrompt, this);
 		getServer().getPluginManager().registerEvents(factionManager, this);
 		getServer().getPluginManager().registerEvents(provincePresenceListener, this);

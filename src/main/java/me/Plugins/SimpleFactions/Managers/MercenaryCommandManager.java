@@ -11,6 +11,8 @@ import org.bukkit.inventory.meta.BookMeta;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Utils.DisplayNameGate;
+import me.Plugins.SimpleFactions.Utils.DisplayNameGate.NameOperation;
 import me.Plugins.SimpleFactions.mercenary.MercenaryResult;
 import me.Plugins.SimpleFactions.mercenary.company.MercenaryCompany;
 import me.Plugins.SimpleFactions.mercenary.company.MercenaryCompanyService;
@@ -82,6 +84,10 @@ public final class MercenaryCommandManager implements CommandExecutor {
             return;
         }
         String name = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
+        if (DisplayNameGate.check(p, NameOperation.COMPANY_FOUND, name)
+                == DisplayNameGate.Result.NEEDS_CONFIRM) {
+            return;
+        }
         report(p, MercenaryCompanyService.requestFormation(leaderGuild(p), p.getName(), name));
     }
 

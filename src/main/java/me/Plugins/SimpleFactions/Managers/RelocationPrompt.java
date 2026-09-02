@@ -16,6 +16,8 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.settlement.handler.CapitalResult;
+import me.Plugins.SimpleFactions.Utils.DisplayNameGate;
+import me.Plugins.SimpleFactions.Utils.DisplayNameGate.NameOperation;
 
 public class RelocationPrompt implements Listener {
     private static final Map<Player, RelocationPending> pending = new HashMap<>();
@@ -100,7 +102,7 @@ public class RelocationPrompt implements Listener {
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
-        RelocationPending state = pending.remove(player);
+        RelocationPending state = pending.get(player);
         if (state == null) {
             return;
         }
@@ -111,6 +113,11 @@ public class RelocationPrompt implements Listener {
             player.sendMessage("§cA city name is required to relocate here");
             return;
         }
+        if (DisplayNameGate.check(player, NameOperation.SETTLEMENT_FOUND, name, true)
+                == DisplayNameGate.Result.NEEDS_CONFIRM) {
+            return;
+        }
+        pending.remove(player);
 
         new BukkitRunnable() {
             @Override

@@ -4,6 +4,7 @@ import java.util.Collection;
 
 import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 
 /** Server-wide lookups over mercenary companies. */
 public final class MercenaryCompanies {
@@ -35,7 +36,7 @@ public final class MercenaryCompanies {
             if (g == null) continue;
             MercenaryCompany company = g.getCompany();
             if (company != null && company.getName() != null
-                    && company.getName().equalsIgnoreCase(name)) {
+                    && Formatter.formatId(company.getName()).equalsIgnoreCase(Formatter.formatId(name))) {
                 return company;
             }
         }

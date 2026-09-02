@@ -9,7 +9,9 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Bank;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.mercenary.MercenaryResult;
+import me.Plugins.TLibs.Objects.API.SubAPI.StringFormatter;
 
 /**
  * Every entry point into a mercenary company, so the command layer and the GUI
@@ -56,7 +58,10 @@ public final class MercenaryCompanyService {
         }
         bank.withdraw(cost);
         guild.setCompany(new MercenaryCompany(
-                guild, name.trim(), regiment, Cache.mercenaryFormationSeconds));
+                guild,
+                StringFormatter.formatHex(Formatter.formatName(name.trim())),
+                regiment,
+                Cache.mercenaryFormationSeconds));
         return MercenaryResult.ok("Your company will be ready in "
                 + hours(Cache.mercenaryFormationSeconds) + ".");
     }

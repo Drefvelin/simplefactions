@@ -38,6 +38,8 @@ import me.Plugins.SimpleFactions.installation.InstallationKind;
 import me.Plugins.SimpleFactions.installation.handler.ConstructResult;
 import me.Plugins.SimpleFactions.settlement.handler.CapitalResult;
 import me.Plugins.SimpleFactions.Tiers.Title;
+import me.Plugins.SimpleFactions.Utils.DisplayNameGate;
+import me.Plugins.SimpleFactions.Utils.DisplayNameGate.NameOperation;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Permissions;
 import me.Plugins.SimpleFactions.laws.Law;
@@ -79,6 +81,10 @@ public class CommandManager implements Listener, CommandExecutor{
 				String id = Formatter.formatId(args[1]);
 				if(FactionManager.guildExists(id)) {
 					p.sendMessage("§cThis guild already exists");
+					return true;
+				}
+				if(DisplayNameGate.check(p, NameOperation.GUILD_CREATE, args[1])
+						== DisplayNameGate.Result.NEEDS_CONFIRM) {
 					return true;
 				}
 				Guild guild = new Guild(args[1], p, f, -1);
@@ -384,10 +390,15 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cThis location has no province!");
 					return true;
 				}
+				String name = args.length == 2 ? args[1] : null;
+				if(name != null && g.getFaction().getSettlementHandler().requiresFoundingName(claim)
+						&& DisplayNameGate.check(p, NameOperation.SETTLEMENT_FOUND, name)
+						== DisplayNameGate.Result.NEEDS_CONFIRM) {
+					return true;
+				}
 				if(!tryClaimForCapital(p, g.getFaction(), claim)) {
 					return true;
 				}
-				String name = args.length == 2 ? args[1] : null;
 				CapitalResult result = g.getFaction().getSettlementHandler()
 						.resolveGuildCapital(p, g, claim, name);
 				p.sendMessage(result.getMessage());
@@ -447,6 +458,10 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§a[SimpleFactions]§c Error! You must be the leader of a guild to rename one!");
 					return true;
 				}
+				if(DisplayNameGate.check(p, NameOperation.GUILD_RENAME, args[1])
+						== DisplayNameGate.Result.NEEDS_CONFIRM) {
+					return true;
+				}
 				Formatter format = new Formatter();
 				g.setName(StringFormatter.formatHex(format.formatName(args[1])));
 				p.sendMessage("§aGuild renamed to "+g.getName());
@@ -455,6 +470,10 @@ public class CommandManager implements Listener, CommandExecutor{
 			if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("create") && args.length == 2) {
 				if(FactionManager.getByMember(p.getName()) != null) {
 					p.sendMessage("§cYou already have a faction!");
+					return true;
+				}
+				if(DisplayNameGate.check(p, NameOperation.FACTION_CREATE, args[1])
+						== DisplayNameGate.Result.NEEDS_CONFIRM) {
 					return true;
 				}
 				Faction f = new Faction(args[1], p.getName());
@@ -870,6 +889,10 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§a[SimpleFactions]§c Error! You must be the leader of a faction to rename one!");
 					return true;
 				}
+				if(DisplayNameGate.check(p, NameOperation.FACTION_RENAME, args[1])
+						== DisplayNameGate.Result.NEEDS_CONFIRM) {
+					return true;
+				}
 				Formatter format = new Formatter();
 				f.setName(StringFormatter.formatHex(format.formatName(args[1])));
 				FactionManager.getMap().enqueue("nation", f.getRGB());
@@ -907,10 +930,15 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cName required to found your capital city: §e/faction setcapital <name>");
 					return true;
 				}
+				String name = args.length == 2 ? args[1] : null;
+				if(name != null && f.getSettlementHandler().requiresFoundingName(claim)
+						&& DisplayNameGate.check(p, NameOperation.SETTLEMENT_FOUND, name)
+						== DisplayNameGate.Result.NEEDS_CONFIRM) {
+					return true;
+				}
 				if(!tryClaimForCapital(p, f, claim)) {
 					return true;
 				}
-				String name = args.length == 2 ? args[1] : null;
 				CapitalResult result = f.getSettlementHandler().validateFactionCapital(p, claim, name);
 				if(!result.isSuccess()) {
 					p.sendMessage(result.getMessage());

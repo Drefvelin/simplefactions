@@ -11,6 +11,7 @@ import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.REST.RestServer;
 import me.Plugins.SimpleFactions.Utils.HomeSettlementNames;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.mercenary.MercenaryResult;
 import me.Plugins.SimpleFactions.mercenary.company.MercenaryCompany;
 
@@ -135,7 +136,8 @@ public final class MercenaryMarket {
     public static MercenaryCompany byName(String name) {
         if (name == null) return null;
         for (MercenaryCompany company : listing()) {
-            if (company.getName() != null && company.getName().equalsIgnoreCase(name)) {
+            if (company.getName() != null
+                    && Formatter.formatId(company.getName()).equalsIgnoreCase(Formatter.formatId(name))) {
                 return company;
             }
         }
