@@ -13,6 +13,7 @@ public class BattleModeTemplate {
 	private TemplateSideConfig defender;
 	private Boolean friendlyFire;
 	private Boolean keepInventory;
+	private Boolean lootEnabled;
 	private LifeType lifeType;
 	private int lives;
 	private List<CapturePointDefinition> capturePoints = new ArrayList<>();
@@ -35,6 +36,9 @@ public class BattleModeTemplate {
 		}
 		if (section.contains("keep_inventory")) {
 			mode.keepInventory = section.getBoolean("keep_inventory");
+		}
+		if (section.contains("loot_enabled")) {
+			mode.lootEnabled = section.getBoolean("loot_enabled");
 		}
 		mode.lifeType = LifeType.fromJson(section.getString("life_type"));
 		if (section.contains("lives")) {
@@ -125,6 +129,14 @@ public class BattleModeTemplate {
 
 	public void setKeepInventory(Boolean keepInventory) {
 		this.keepInventory = keepInventory;
+	}
+
+	public Boolean getLootEnabled() {
+		return lootEnabled;
+	}
+
+	public void setLootEnabled(Boolean lootEnabled) {
+		this.lootEnabled = lootEnabled;
 	}
 
 	public LifeType getLifeType() {

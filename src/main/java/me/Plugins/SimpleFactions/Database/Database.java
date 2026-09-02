@@ -380,6 +380,7 @@ public class Database {
                 gd.favoured = g.isFavoured();
                 gd.dividendPercent = g.getDividendPercent();
                 gd.dividendEligible = g.getDividendEligibleSnapshot();
+                gd.casinoProfit = g.getLedger().getCasinoProfit();
                 gd.company = g.getCompany() != null ? g.getCompany().serialize() : null;
 
                 // --- Bank ---

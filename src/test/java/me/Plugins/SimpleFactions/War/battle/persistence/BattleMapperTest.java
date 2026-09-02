@@ -81,6 +81,54 @@ class BattleMapperTest {
 	}
 
 	@Test
+	void roundTrip_preservesLootFlag() {
+		BossBar bossBar = mock(BossBar.class);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.createBossBar(anyString(), any(BarColor.class), any(BarStyle.class)))
+					.thenReturn(bossBar);
+
+			Battle battle = BattleFactory.createBlank(BattleType.FIELD, "loot_off_field");
+			battle.setLootEnabled(false);
+
+			BattleData data = BattleMapper.toData(battle);
+
+			assertFalse(data.lootEnabled);
+			assertFalse(BattleMapper.fromData(data).hasLootEnabled());
+		}
+	}
+
+	@Test
+	void fromData_defaultsLootOnWhenKeyIsAbsent() {
+		BossBar bossBar = mock(BossBar.class);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.createBossBar(anyString(), any(BarColor.class), any(BarStyle.class)))
+					.thenReturn(bossBar);
+
+			BattleData data = new BattleData();
+			data.id = "legacy_field";
+			data.battleType = BattleType.FIELD.toJson();
+
+			assertTrue(BattleMapper.fromData(data).hasLootEnabled());
+		}
+	}
+
+	@Test
+	void fromData_defaultsLootOffForLegacyCampaignRaid() {
+		BossBar bossBar = mock(BossBar.class);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.createBossBar(anyString(), any(BarColor.class), any(BarStyle.class)))
+					.thenReturn(bossBar);
+
+			BattleData data = new BattleData();
+			data.id = "legacy_raid";
+			data.battleType = BattleType.RAID.toJson();
+			data.campaignRaid = true;
+
+			assertFalse(BattleMapper.fromData(data).hasLootEnabled());
+		}
+	}
+
+	@Test
 	void roundTrip_startedAt() {
 		BossBar bossBar = mock(BossBar.class);
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {

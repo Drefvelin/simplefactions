@@ -96,7 +96,7 @@ public final class MercenaryCommandManager implements CommandExecutor {
             p.sendMessage("§7Companies for hire, best reputation first:");
             for (MercenaryCompany company : listing) {
                 p.sendMessage("§e" + company.getName()
-                        + " §7- reputation §e" + company.getReputation()
+                        + " §7- reputation " + company.getReputationString()
                         + " §7- §e" + MercenaryMarket.availableToday(company)
                         + "§7/§e" + company.getSlots() + " §7free"
                         + " §7- §e" + MercenaryMarket.homeSettlement(company));

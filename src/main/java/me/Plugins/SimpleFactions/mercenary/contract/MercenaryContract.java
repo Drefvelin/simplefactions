@@ -270,6 +270,21 @@ public class MercenaryContract {
         return true;
     }
 
+    /**
+     * The day price, owed every day the contract is active whether or not a battle
+     * is fought. Unlike the battle legs this needs no idempotency set, because the
+     * daily settlement pre-pass is the only caller and it runs once a day.
+     */
+    public void accrueDayPrice() {
+        accruedToCompany += getDailyPrice();
+    }
+
+    /** Called once the settlement pass has moved the money, so a day cannot be paid twice. */
+    public void clearAccrued() {
+        accruedToCompany = 0;
+        accruedToHirer = 0;
+    }
+
     public java.util.Set<String> getBattleIdsCharged() {
         return java.util.Collections.unmodifiableSet(battleIdsCharged);
     }

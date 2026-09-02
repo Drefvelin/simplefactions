@@ -82,7 +82,7 @@ Skip mercenary types there. This is the single enforcement point for "regular fa
 3. Enlisting is refused when every slot already has a player.
 4. The company leader may kick at any time. Kicking frees the slot, which by Batch 3 also freezes expansion until it is refilled, and by Phase 3 may breach a contract.
 5. Membership is not restricted by guild, faction or nationality. Do not add any such check here; loyalty is enforced per contract in Phase 3, not at enlistment.
-6. **Character trait hook, disabled.** Add a single `MercenaryEligibility.canJoin(player)` seam that currently returns true. When identity moves from player-based to character-based (last item of that migration), it checks the active character for the `mercenary` trait defined in `rpcharacters/src/main/resources/traits/evil-traits.yml`. Same seam gates company creation. Leave a comment pointing at the lock.
+6. **Character trait gate.** `MercenaryEligibility` checks the active character for the `mercenary` trait defined in `rpcharacters/src/main/resources/traits/evil-traits.yml`. Same seam gates company creation, join, and the per-second company tick (leader disbands, members are kicked). The default probe is open for tests; production installs `RpCharactersMercenaryTraitProbe` when RPCharacters is present.
 
 **Tests:** second company join refused; invite accept and decline paths; kick frees the slot; enlist beyond slot count refused; the eligibility seam is consulted for both create and join.
 

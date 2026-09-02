@@ -121,6 +121,11 @@ public final class CampaignRaidBattleService {
 			BattleFactory.applyTemplate(battle, Cache.battleCampaignTemplateRaid);
 			BattleManager.addBattle(battle);
 		}
+		// applyTemplate resets layout first, which clears campaignRaid before reading it
+		// back off the template. Restate both flags so a hand-edited template cannot
+		// turn a campaign raid into a loot payout.
+		battle.setCampaignRaid(true);
+		battle.setLootEnabled(false);
 
 		CampaignRaidWarbandService.createRaidWarbands(war, raid);
 		Warband attackerWarband = CampaignRaidWarbandService.getAttackerWarband(raid);

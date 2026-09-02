@@ -10,6 +10,7 @@ import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.SimpleFactions.mercenary.company.MercenaryCompany;
+import me.Plugins.SimpleFactions.mercenary.company.MercenaryReputationCalculator;
 import net.md_5.bungee.api.ChatColor;
 
 /**
@@ -136,7 +137,9 @@ public final class ContractBook {
     public static String signaturePage(MercenaryContract contract) {
         Faction hirer = contract.getHirer();
         return "§6§l[SIGNATURES]\n"
-                + "§0Reputation at signing: " + contract.getReputationAtSigning() + "\n"
+                // Book ink stays black, so the band carries what the gradient carries elsewhere.
+                + "§0Reputation at signing: " + contract.getReputationAtSigning()
+                + " (" + MercenaryReputationCalculator.band(contract.getReputationAtSigning()) + ")\n"
                 + "\n"
                 + "Company:\n"
                 + "-------------------\n"

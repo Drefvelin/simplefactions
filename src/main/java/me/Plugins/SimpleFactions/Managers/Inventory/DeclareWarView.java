@@ -2,6 +2,7 @@ package me.Plugins.SimpleFactions.Managers.Inventory;
 
 import java.util.List;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -18,6 +19,7 @@ import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.Holder.DeclareWarHolder;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
+import me.Plugins.SimpleFactions.Managers.LogManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.War.core.War;
@@ -26,6 +28,7 @@ import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.War.declare.ChangeGovernmentEligibility;
 import me.Plugins.SimpleFactions.War.declare.DeJureAnnexEligibility.DeJureTitleOption;
 import me.Plugins.SimpleFactions.War.declare.PillageEligibility;
+import me.Plugins.SimpleFactions.War.declare.WarDeclareCodeService;
 import me.Plugins.SimpleFactions.War.declare.WarDeclareRequest;
 import me.Plugins.SimpleFactions.War.declare.WarGoalValidator;
 import me.Plugins.SimpleFactions.War.declare.WarValidationResult;
@@ -219,7 +222,7 @@ public class DeclareWarView {
 				openGovernmentPicker(
 						player, attacker, defender, holder.getGovernmentLawId(), holder.getLeadershipLawId());
 			} else {
-				openGoalPicker(player, attacker, defender);
+				backOutOfSubPicker(player, attacker, defender);
 			}
 			return;
 		}
@@ -230,17 +233,7 @@ public class DeclareWarView {
 			WarGoalType goal = WarGoalType.fromJson(goalId);
 			if (goal == null) return;
 			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-			switch (goal) {
-				case WAR, TRIBUTARY, USURP, OPEN_MARKET ->
-						openConfirm(player, attacker, defender, goal, null, null, null, null, null, null);
-				case CHANGE_GOVERNMENT -> openGovernmentPicker(player, attacker, defender, null, null);
-				case SUBJUGATE -> openRelationTypePicker(player, attacker, defender);
-				case DE_JURE_ANNEX -> openTitlePicker(player, attacker, defender);
-				case TRANSFER_SUBJECT -> openSubjectPicker(player, attacker, defender);
-				case PILLAGE -> openSettlementPicker(player, attacker, defender);
-				case OVERTHROW, CHANGE_LAW, CHANGE_TAX, FORCE_PEACE -> {
-				}
-			}
+			routeGoal(player, attacker, defender, goal);
 			return;
 		}
 
@@ -295,6 +288,26 @@ public class DeclareWarView {
 		}
 	}
 
+	/**
+	 * Sends a chosen goal to its own sub-picker, or straight to confirm when it needs
+	 * no extra ids. Also the entry point for a validated declare code, which skips the
+	 * goal picker entirely because the code already pinned the goal.
+	 */
+	public void routeGoal(Player player, Faction attacker, Faction defender, WarGoalType goal) {
+		if (goal == null) return;
+		switch (goal) {
+			case WAR, TRIBUTARY, USURP, OPEN_MARKET ->
+					openConfirm(player, attacker, defender, goal, null, null, null, null, null, null);
+			case CHANGE_GOVERNMENT -> openGovernmentPicker(player, attacker, defender, null, null);
+			case SUBJUGATE -> openRelationTypePicker(player, attacker, defender);
+			case DE_JURE_ANNEX -> openTitlePicker(player, attacker, defender);
+			case TRANSFER_SUBJECT -> openSubjectPicker(player, attacker, defender);
+			case PILLAGE -> openSettlementPicker(player, attacker, defender);
+			case OVERTHROW, CHANGE_LAW, CHANGE_TAX, FORCE_PEACE -> {
+			}
+		}
+	}
+
 	public void handleConfirm(Player player, WarDeclareRequest request, boolean confirmed) {
 		if (!confirmed) {
 			returnToPreviousPicker(player, request);
@@ -309,12 +322,27 @@ public class DeclareWarView {
 		executeDeclare(player, request);
 	}
 
+	/**
+	 * Back out of a goal's sub-picker. A code session means the goal was pinned, so the
+	 * goal picker must not reappear: the pin is the point, and reopening it would offer
+	 * goals the confirm step is going to refuse anyway.
+	 */
+	private void backOutOfSubPicker(Player player, Faction attacker, Faction defender) {
+		if (WarDeclareCodeService.session(player) != null) {
+			WarDeclareCodeService.clearSession(player);
+			player.sendMessage("§7War declaration cancelled. Your code is still unused.");
+			inv.diplomacyView(null, player, defender, true);
+			return;
+		}
+		openGoalPicker(player, attacker, defender);
+	}
+
 	private void returnToPreviousPicker(Player player, WarDeclareRequest request) {
 		Faction attacker = request.getAttacker();
 		Faction defender = request.getDefender();
 		switch (request.getGoal()) {
 			case WAR, TRIBUTARY, USURP, OPEN_MARKET, OVERTHROW, CHANGE_LAW, CHANGE_TAX, FORCE_PEACE ->
-					openGoalPicker(player, attacker, defender);
+					backOutOfSubPicker(player, attacker, defender);
 			case CHANGE_GOVERNMENT -> openGovernmentPicker(
 					player, attacker, defender, request.getGovernmentLawId(), request.getLeadershipLawId());
 			case SUBJUGATE -> openRelationTypePicker(player, attacker, defender);
@@ -355,6 +383,17 @@ public class DeclareWarView {
 	}
 
 	private void executeDeclare(Player player, WarDeclareRequest request) {
+		// The war button gates the entry, but pendingWarDeclares is a separate map, so
+		// the session is re-checked here against the pairing and goal actually confirmed.
+		WarDeclareCodeService.Session session = null;
+		if (WarDeclareCodeService.isRequired(player)) {
+			session = WarDeclareCodeService.session(player);
+			if (!WarDeclareCodeService.covers(session, request)) {
+				WarDeclareCodeService.clearSession(player);
+				player.sendMessage("§cYour war code does not cover this declaration.");
+				return;
+			}
+		}
 		War war = WarManager.declareWar(
 				request.getAttacker(),
 				request.getDefender(),
@@ -366,12 +405,42 @@ public class DeclareWarView {
 				request.getLeadershipLawId(),
 				request.getTargetSettlementId());
 		if (war == null) {
+			// The code stays unspent: a goal-validator or navy-gate refusal must not burn
+			// a staff-approved ticket, so the leader can fix the problem and try again.
 			String error = WarManager.getLastDeclareError();
 			player.sendMessage(error != null ? error : "§cCould not declare war.");
 			return;
 		}
 		player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+		if (session != null) {
+			redeemCode(player, session, war);
+		}
 		inv.warList(player);
+	}
+
+	private void redeemCode(Player player, WarDeclareCodeService.Session session, War war) {
+		WarDeclareCodeService.clearSession(player);
+		LogManager.war(
+				"DECLARE_CODE warId=%d code=%s player=%s goal=%s",
+				war.getId(),
+				session.code,
+				player.getName(),
+				war.getGoal());
+		SimpleFactions plugin = SimpleFactions.getInstance();
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+			WarDeclareCodeService.Result result = WarDeclareCodeService.redeem(
+					session.code, session.attackerId, session.defenderId, war.getId());
+			if (result.ok) {
+				return;
+			}
+			// The war already exists, so this is a staff cleanup problem rather than
+			// something to undo or to tell the leader about.
+			Bukkit.getScheduler().runTask(plugin, () -> LogManager.war(
+					"DECLARE_CODE_UNSPENT warId=%d code=%s reason=%s",
+					war.getId(),
+					session.code,
+					result.error));
+		});
 	}
 
 	private void openGovernmentLawPicker(

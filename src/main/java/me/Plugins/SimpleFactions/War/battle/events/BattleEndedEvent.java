@@ -23,6 +23,7 @@ public class BattleEndedEvent extends Event {
 	private final Set<UUID> participantIds;
 	private final BattleEndReason endReason;
 	private final boolean campaignRaid;
+	private final boolean lootEnabled;
 
 	public BattleEndedEvent(
 			String battleId,
@@ -39,7 +40,8 @@ public class BattleEndedEvent extends Event {
 				sideCasualties,
 				participantIds,
 				inferEndReason(winningSideId),
-				false);
+				false,
+				true);
 	}
 
 	public BattleEndedEvent(
@@ -58,7 +60,8 @@ public class BattleEndedEvent extends Event {
 				sideCasualties,
 				participantIds,
 				endReason,
-				false);
+				false,
+				true);
 	}
 
 	public BattleEndedEvent(
@@ -70,6 +73,28 @@ public class BattleEndedEvent extends Event {
 			Set<UUID> participantIds,
 			BattleEndReason endReason,
 			boolean campaignRaid) {
+		this(
+				battleId,
+				battleType,
+				warId,
+				winningSideId,
+				sideCasualties,
+				participantIds,
+				endReason,
+				campaignRaid,
+				true);
+	}
+
+	public BattleEndedEvent(
+			String battleId,
+			BattleType battleType,
+			Integer warId,
+			String winningSideId,
+			Map<String, Integer> sideCasualties,
+			Set<UUID> participantIds,
+			BattleEndReason endReason,
+			boolean campaignRaid,
+			boolean lootEnabled) {
 		this.battleId = battleId;
 		this.battleType = battleType;
 		this.warId = warId;
@@ -86,6 +111,7 @@ public class BattleEndedEvent extends Event {
 		}
 		this.endReason = endReason != null ? endReason : inferEndReason(winningSideId);
 		this.campaignRaid = campaignRaid;
+		this.lootEnabled = lootEnabled;
 	}
 
 	private static BattleEndReason inferEndReason(String winningSideId) {
@@ -129,6 +155,10 @@ public class BattleEndedEvent extends Event {
 
 	public boolean isCampaignRaid() {
 		return campaignRaid;
+	}
+
+	public boolean isLootEnabled() {
+		return lootEnabled;
 	}
 
 	@Override

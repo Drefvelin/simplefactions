@@ -10,6 +10,8 @@ campaign_raid_template:
   friendly_fire: true
   keep_inventory: true
   campaign_raid: true
+  # Campaign raids are the one battle kind that pays no loot.
+  loot_enabled: false
 
 field_default:
   type: field

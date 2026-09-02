@@ -105,7 +105,7 @@ public class MercenaryMarketView {
      */
     public List<String> buildListingLore(Player viewer, MercenaryCompany company) {
         List<String> lore = new ArrayList<>();
-        lore.add("§7Reputation: §e" + company.getReputation());
+        lore.add("§7Reputation: " + company.getReputationString());
         lore.add("§7Home: §e" + MercenaryMarket.homeSettlement(company));
         lore.add("§7Slots: §e" + company.getFilledSlots() + "§7/§e" + company.getSlots());
         lore.add("§7Free today: §e" + MercenaryMarket.availableToday(company));

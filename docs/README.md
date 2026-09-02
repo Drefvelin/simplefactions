@@ -10,8 +10,10 @@ This `docs/` folder is the product and technical reference for the **SimpleFacti
 2. [map-export.md](./map-export.md) - HTTP upload, regen, JSON contract
 3. [province-grid.md](./province-grid.md) - local province lookup
 4. Product areas:
+   - [prestige.md](./prestige.md) - what a nation's standing is made of, and the playtime term
    - [wars.md](./wars.md) - automated campaign war system (canonical spec)
    - [campaign-raids.md](./campaign-raids.md) - inter-battle installation raids
+   - [mercenaries.md](./mercenaries.md) - companies for hire, contracts, wages, reputation
    - [installations.md](./installations.md) - forts, ports, airports
    - [settlements.md](./settlements.md) - named cities on the map
    - [vehicles.md](./vehicles.md) - berths, slots, VehicleFramework integration
@@ -25,6 +27,7 @@ This `docs/` folder is the product and technical reference for the **SimpleFacti
 - [war-goals-apply](./planning/war-goals-apply/00-index.md) - gameplay lock; [01-phases.md](./planning/war-goals-apply/01-phases.md) - phases; [02-phase-1.md](./planning/war-goals-apply/02-phase-1.md) - Phase 1 batches
 - [naval-installations](./planning/naval-installations/00-index.md) - installation transfer + empty-port navy (Phase 1); civil wars spec (Phase 2)
 - [inter-vassal-wars](./planning/inter-vassal-wars/00-index.md) - Phase 8 lock (shipped); [01-batches.md](./planning/inter-vassal-wars/01-batches.md)
+- [war-companies](./planning/war-companies/00-index.md) - gameplay lock (shipped); [01-phases.md](./planning/war-companies/01-phases.md) - phases; [08-verify.md](./planning/war-companies/08-verify.md) - in-game matrix
 
 ## Agent / contributor guide
 

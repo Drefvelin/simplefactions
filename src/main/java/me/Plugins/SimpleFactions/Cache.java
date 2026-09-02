@@ -13,6 +13,7 @@ import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.enums.Scope;
 import me.Plugins.SimpleFactions.enums.Terrain;
 import me.Plugins.SimpleFactions.laws.LawEffect;
+import me.Plugins.SimpleFactions.War.battle.enums.BattleLootMode;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 
 public class Cache {
@@ -21,6 +22,7 @@ public class Cache {
 
 	public static int maxMembers;
 	public static int maxWealthPrestige;
+	public static double maxPlaytimePrestigeExponent = 5;
 	public static String baseYear;
 	public static int baseIrlYear = java.time.Year.now().getValue();
 	public static String bankBlock;
@@ -53,6 +55,7 @@ public class Cache {
 	public static int portSeaProximityBlocks;
 
 	public static boolean warRequireDeclareCode;
+	public static int warDeclareCodeTimeoutSeconds = 10;
 	public static int warDeclareOpinionThreshold;
 	public static double warInitiativeFactor = 1.5;
 	public static int warPortSeaZocRadius = 2;
@@ -95,6 +98,10 @@ public class Cache {
 	public static boolean warBattleVotingDevMinPlayersEnabled;
 	public static int warBattleLivesPerRegiment;
 	public static int warBattleMinSideLives;
+	public static BattleLootMode battleLootMode;
+	public static List<String> battleLootCommands = new ArrayList<>();
+	public static String battleLootItemPath;
+	public static int battleLootItemAmount;
 
 	public static int campaignRaidMusterSeconds;
 	public static List<Integer> campaignRaidMusterReminderSecondsBefore = new ArrayList<>();

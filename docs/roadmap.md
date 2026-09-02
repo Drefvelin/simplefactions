@@ -2,15 +2,15 @@
 
 ## Next
 
-Diplomacy polish is shipped. The chronicle snapshot is shipped; chronicle **events** remain owned elsewhere. Next is war companies (recruitment, dividends, mercenaries), then assassins. Declare codes last.
+Everything SimpleFactions owns is shipped. Diplomacy polish, the chronicle snapshot, war companies and declare codes are all done, and assassins have been dropped.
 
-- **War companies** - planned as a six-phase program: [planning/war-companies/00-index.md](./planning/war-companies/00-index.md) (lock), [01-phases.md](./planning/war-companies/01-phases.md) (batches). Covers the army recruitment rule, guild dividends, mercenary companies, contracts, war participation, wages and reputation. Guild PvP stats land here as `GuildModifier` entries, not as a normal guild upgrade.
-- **Assassins** - same hired-violence layer; reuses the war-companies contract object via its `ContractKind` discriminator
 - **Map chronicle events** - other member; SF hooks for ProvinceSystem (`war_declared`, `battle_scheduled`, `battle_result`, `province_occupied`, `war_ended`)
-- **Declare codes and ticket gate** - Discord ticket → staff code → in-game declare (production gate; last)
 
 ## Shipped
 
+- Declare codes and ticket gate - staff mint a one-time code in Discord with the `factions` cog's `/warcode mint`, the attacking leader types it in chat, and it pins the war goal so the picker is skipped. Realm-scoped and hashed in ProvinceSystem (`war_declare_codes`), reached through TFMCWeb's gateway, which injects the realm id. Redeemed only once `declareWar` returns a war, so a navy-gate refusal does not burn a ticket. `simplefactions.admin` bypasses the gate, which is what lets it fail closed. Staff look up faction ids with `/war admin factions [filter]`.
+- War companies - six-phase program, all phases done: [planning/war-companies/00-index.md](./planning/war-companies/00-index.md) (lock), [01-phases.md](./planning/war-companies/01-phases.md) (batches), [mercenaries.md](./mercenaries.md) (reference). Army recruitment rule, guild dividends, mercenary companies and slots, contracts and the market, war participation with attendance and shared lives, wages, and company reputation. Company PvP stats are `GuildModifier` entries on the company, not normal guild upgrades, and only apply while a member fights as a hireling.
+- Guild dividends - leader sets a percent of the guild's dividend base; eligible members split it equally on the daily tick, the faction withholds dividend tax, and the shares show in `/ledger`. Previous-tick membership is required by default (`dividend-require-previous-tick-membership`) so nobody joins on payday.
 - Chronicle snapshot - `chronicle.json` uploaded every 300 s with per-faction wealth, prestige, rank and territory for season graphs ([map-export.md](./map-export.md), [planning/chronicle-export/00-index.md](./planning/chronicle-export/00-index.md)). Includes the prestige idempotency fix and `PrestigeRank` persistence.
 - Guild ↔ faction GUI links; Friendly attitude used-cap; rival/hostile/unfriendly relative-prestige diplomatic capacity curve
 - Council-forced white peace and surrender (political action on a chosen war; sticky offer or immediate surrender)

@@ -1,5 +1,6 @@
 package me.Plugins.SimpleFactions.War.core;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -8,9 +9,12 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Objects.Faction;
+import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.Utils.Permissions;
 import me.Plugins.SimpleFactions.War.campaign.admin.CampaignTimeCommandService;
 import me.Plugins.SimpleFactions.War.campaign.admin.CampaignTimeResult;
@@ -26,6 +30,8 @@ import me.Plugins.SimpleFactions.War.enums.WarEndReason;
 
 public class WarCommandManager implements CommandExecutor {
 	public static final String CMD = "war";
+
+	private static final int FACTION_LIST_LIMIT = 40;
 
 	@Override
 	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -64,7 +70,7 @@ public class WarCommandManager implements CommandExecutor {
 			return true;
 		}
 		if (args.length < 2) {
-			player.sendMessage("§cUsage: /war admin end|win|status|path|time|schedule|devmode|raid|reparations ...");
+			player.sendMessage("§cUsage: /war admin end|win|status|path|time|schedule|devmode|raid|reparations|factions ...");
 			return true;
 		}
 		String subcommand = args[1].toLowerCase();
@@ -78,8 +84,9 @@ public class WarCommandManager implements CommandExecutor {
 			case "devmode" -> handleDevmode(player, args);
 			case "raid" -> handleRaid(player, args);
 			case "reparations" -> handleReparations(player, args);
+			case "factions" -> handleFactions(player, args);
 			default -> {
-				player.sendMessage("§cUnknown admin subcommand. Use: end, win, status, path, time, schedule, devmode, raid, reparations");
+				player.sendMessage("§cUnknown admin subcommand. Use: end, win, status, path, time, schedule, devmode, raid, reparations, factions");
 				yield true;
 			}
 		};
@@ -134,6 +141,50 @@ public class WarCommandManager implements CommandExecutor {
 				: WarEndReason.DEFENDER_VICTORY;
 		WarManager.endWar(w, reason);
 		player.sendMessage("§aEnded war " + w.getId() + " (" + winner.name().toLowerCase() + " victory).");
+		return true;
+	}
+
+	/**
+	 * Faction id lookup for staff minting war declare codes in Discord. Nothing links a
+	 * Discord user to a faction, so the ids have to be read here and pasted there.
+	 */
+	private boolean handleFactions(Player player, String[] args) {
+		if (args.length > 3) {
+			player.sendMessage("§cUsage: /war admin factions [filter]");
+			return true;
+		}
+		String filter = args.length == 3 ? args[2].toLowerCase() : "";
+		List<Faction> matches = new ArrayList<>();
+		for (Faction faction : FactionManager.factions) {
+			if (faction == null || faction.getId() == null) {
+				continue;
+			}
+			String plainName = faction.getName() == null
+					? ""
+					: Formatter.formatId(faction.getName());
+			if (filter.isEmpty()
+					|| faction.getId().toLowerCase().contains(filter)
+					|| plainName.toLowerCase().contains(filter)) {
+				matches.add(faction);
+			}
+		}
+		if (matches.isEmpty()) {
+			player.sendMessage("§cNo faction matches §f" + (filter.isEmpty() ? "-" : filter));
+			return true;
+		}
+		player.sendMessage("§7Factions (" + matches.size() + "):");
+		int shown = 0;
+		for (Faction faction : matches) {
+			if (shown >= FACTION_LIST_LIMIT) {
+				// There is no chat pager anywhere in the plugin, so the honest answer is to
+				// stop and tell staff to narrow the filter.
+				player.sendMessage("§7... " + (matches.size() - shown)
+						+ " more. Narrow the filter: §e/war admin factions <filter>");
+				break;
+			}
+			player.sendMessage("§f" + faction.getId() + " §7- " + faction.getName());
+			shown++;
+		}
 		return true;
 	}
 

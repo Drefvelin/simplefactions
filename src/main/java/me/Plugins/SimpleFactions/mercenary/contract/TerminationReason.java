@@ -1,7 +1,7 @@
 package me.Plugins.SimpleFactions.mercenary.contract;
 
 /**
- * The four ways a contract can end, each carrying the outcome locked in
+ * The ways a contract can end, each carrying the outcome locked in
  * docs/planning/war-companies/00-index.md section 5. Days already served are paid
  * in every one of them, so that is not a per-reason flag.
  */
@@ -16,7 +16,13 @@ public enum TerminationReason {
      */
     HOST_BANKRUPT(ContractStatus.TERMINATED, false, true),
     /** An ally joined, a vassalage landed, or a government changed. Nobody's fault. */
-    LOYALTY_CONFLICT(ContractStatus.TERMINATED, false, false);
+    LOYALTY_CONFLICT(ContractStatus.TERMINATED, false, false),
+    /**
+     * The company itself vanished (leader's active character lost the mercenary
+     * trait). Same money and reputation as a slot breach: the hirer bought slots
+     * that can no longer be delivered.
+     */
+    COMPANY_DISBANDED(ContractStatus.BREACHED, true, true);
 
     private final ContractStatus outcome;
     private final boolean paysBreachRefund;

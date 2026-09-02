@@ -206,16 +206,19 @@ class ContractTerminationTest {
     void onlyTheBreachRowPaysARefundAndOnlyTheConflictRowIsSilent() {
         assertFalse(TerminationReason.DURATION_ELAPSED.paysBreachRefund());
         assertTrue(TerminationReason.SLOTS_BREACH.paysBreachRefund());
+        assertTrue(TerminationReason.COMPANY_DISBANDED.paysBreachRefund());
         assertFalse(TerminationReason.HOST_BANKRUPT.paysBreachRefund());
         assertFalse(TerminationReason.LOYALTY_CONFLICT.paysBreachRefund());
 
         assertTrue(TerminationReason.DURATION_ELAPSED.movesReputation());
         assertTrue(TerminationReason.SLOTS_BREACH.movesReputation());
+        assertTrue(TerminationReason.COMPANY_DISBANDED.movesReputation());
         assertTrue(TerminationReason.HOST_BANKRUPT.movesReputation());
         assertFalse(TerminationReason.LOYALTY_CONFLICT.movesReputation());
 
         assertEquals(ContractStatus.COMPLETED, TerminationReason.DURATION_ELAPSED.getOutcome());
         assertEquals(ContractStatus.BREACHED, TerminationReason.SLOTS_BREACH.getOutcome());
+        assertEquals(ContractStatus.BREACHED, TerminationReason.COMPANY_DISBANDED.getOutcome());
         assertEquals(ContractStatus.TERMINATED, TerminationReason.HOST_BANKRUPT.getOutcome());
         assertEquals(ContractStatus.TERMINATED, TerminationReason.LOYALTY_CONFLICT.getOutcome());
     }

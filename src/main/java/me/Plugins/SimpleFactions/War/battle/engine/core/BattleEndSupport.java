@@ -33,6 +33,7 @@ public final class BattleEndSupport {
 		battle.endTitle();
 		Map<String, Integer> sideCasualties = BattleCasualtyLedger.getSideCasualties(battle);
 		Set<UUID> participantIds = BattleParticipantCollector.collect(battle);
+		boolean lootEnabled = battle.hasLootEnabled();
 		battle.end();
 		if (SimpleFactions.plugin != null) {
 			boolean campaignRaid = battle.isCampaignRaid();
@@ -51,7 +52,8 @@ public final class BattleEndSupport {
 							sideCasualties,
 							participantIds,
 							endReason,
-							campaignRaid));
+							campaignRaid,
+							lootEnabled));
 		}
 	}
 }

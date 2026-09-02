@@ -74,6 +74,38 @@ class MercenaryCompanyPersistenceTest {
     }
 
     @Test
+    void wageTermsAndUnpaidPayrollSurviveARestart() {
+        CompanyFixture fixture = new CompanyFixture(0);
+        MercenaryCompany company = new MercenaryCompany(
+                fixture.guild, "Hired Blades", CompanyFixture.companyRegiment(), 0);
+        company.enlist("Sigrun");
+        company.getWageSettings().setActivePercent(20);
+        company.getWageSettings().setPeacetimePerDay(4.0);
+        company.getWageSettings().setActiveOverride("Sigrun", 50.0);
+        company.getWageSettings().setPeacetimeOverride("Sigrun", 12.0);
+        // A battle share accrues the moment a battle resolves, hours before it is paid.
+        company.accrueWage("Sigrun", 10.0);
+
+        MercenaryCompany loaded = reload(fixture, company);
+
+        assertEquals(20.0, loaded.getWageSettings().getActivePercent());
+        assertEquals(4.0, loaded.getWageSettings().getPeacetimePerDay());
+        assertEquals(50.0, loaded.getWageSettings().activePercentFor("Sigrun"));
+        assertEquals(12.0, loaded.getWageSettings().peacetimeFor("Sigrun"));
+        assertEquals(10.0, loaded.getPendingWages().get("Sigrun"));
+    }
+
+    @Test
+    void aReputationHitSurvivesARestart() {
+        CompanyFixture fixture = new CompanyFixture(0);
+        MercenaryCompany company = new MercenaryCompany(
+                fixture.guild, "Hired Blades", CompanyFixture.companyRegiment(), 0);
+        company.changeReputation(-15);
+
+        assertEquals(35, reload(fixture, company).getReputation());
+    }
+
+    @Test
     void loadedCompanyKeepsFollowingTheGuildLeader() {
         CompanyFixture fixture = new CompanyFixture(0);
         MercenaryCompany company = new MercenaryCompany(

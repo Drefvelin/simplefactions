@@ -714,7 +714,10 @@ public class Faction {
 		return guildHandler.getGuildByMember(player);
 	}
 	public void updatePrestige() {
-		double members = Math.pow(guildHandler.getAllMembers().size()+4, 1.8)+5;
+		// Two halves: headcount, plus what each member's online time is worth.
+		List<String> roster = guildHandler.getAllMembers();
+		double members = Math.pow(roster.size()+4, 1.8)+5
+				+ me.Plugins.SimpleFactions.prestige.MemberPlaytime.totalFor(roster);
 
 		double wealthAmount = 0.0;
 		if(wealth > 0 && FactionManager.getGlobalWealth() > 0) {
@@ -924,6 +927,10 @@ public class Faction {
 		group.setCurrent(law);
 
 		LawEffect effect = law.getScopedEffects().get(Scope.FACTION);
+		if (effect == null) {
+			cancelInvalidElections();
+			return;
+		}
 
 		// --- existing tax logic ---
 		if (effect.hasBrackets()) {

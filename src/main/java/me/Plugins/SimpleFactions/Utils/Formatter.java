@@ -48,7 +48,6 @@ public class Formatter {
         // Replace _ with space
         s = s.replace("_", " ");
 
-        System.out.println(s);
         return s;
     }
     public static Double formatDouble(Double d) {

@@ -54,6 +54,7 @@ import me.Plugins.SimpleFactions.War.campaign.runtime.BattleScheduleTickService;
 import me.Plugins.SimpleFactions.War.campaign.ui.CampaignViewRefreshService;
 import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.War.core.WarCommandManager;
+import me.Plugins.SimpleFactions.War.declare.DeclareCodePrompt;
 import me.Plugins.SimpleFactions.government.movement.admin.MovementCommandManager;
 import me.Plugins.SimpleFactions.government.movement.admin.MovementTabCompletion;
 import me.Plugins.SimpleFactions.War.core.WarTabCompletion;
@@ -129,6 +130,7 @@ public class SimpleFactions extends JavaPlugin{
 	private final SessionManager sessionManager = new SessionManager();
 	private final RelocationPrompt relocationPrompt = new RelocationPrompt();
 	private final CapitalMovePrompt capitalMovePrompt = new CapitalMovePrompt();
+	private final DeclareCodePrompt declareCodePrompt = new DeclareCodePrompt();
 	private final ProvincePresenceListener provincePresenceListener = new ProvincePresenceListener();
 	private final BattleManager battleManager = new BattleManager();
 	private final BattleItemDurability.Listener battleItemDurabilityListener =
@@ -145,6 +147,8 @@ public class SimpleFactions extends JavaPlugin{
 	private final CampaignRaidIntruderService.Listener campaignRaidIntruderListener = new CampaignRaidIntruderService.Listener();
 	private final CampaignRaidBattleEndService campaignRaidBattleEndService = new CampaignRaidBattleEndService();
 	private final CampaignBattleOutcomeService campaignBattleOutcomeService = new CampaignBattleOutcomeService();
+	private final me.Plugins.SimpleFactions.War.battle.loot.BattleLootService battleLootService =
+			new me.Plugins.SimpleFactions.War.battle.loot.BattleLootService();
 	private final InstallationProtectionListener installationProtectionListener =
 			new InstallationProtectionListener();
 	private final MercenaryStatService.Listener mercenaryStatListener =
@@ -307,6 +311,7 @@ public class SimpleFactions extends JavaPlugin{
 	@Override
 	public void onDisable() {
 		MercenaryStatService.clearAll();
+		me.Plugins.SimpleFactions.mercenary.company.MercenaryEligibility.reset();
 		vehicleMaintenanceDecayTask.stop();
 		CampaignViewRefreshService.stop();
 		BattleManager.shutdown();
@@ -360,6 +365,7 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(sessionManager, this);
 		getServer().getPluginManager().registerEvents(relocationPrompt, this);
 		getServer().getPluginManager().registerEvents(capitalMovePrompt, this);
+		getServer().getPluginManager().registerEvents(declareCodePrompt, this);
 		getServer().getPluginManager().registerEvents(factionManager, this);
 		getServer().getPluginManager().registerEvents(provincePresenceListener, this);
 		getServer().getPluginManager().registerEvents(battleManager, this);
@@ -371,10 +377,19 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(campaignRaidIntruderListener, this);
 		getServer().getPluginManager().registerEvents(campaignRaidBattleEndService, this);
 		getServer().getPluginManager().registerEvents(campaignBattleOutcomeService, this);
+		getServer().getPluginManager().registerEvents(battleLootService, this);
 		getServer().getPluginManager().registerEvents(installationProtectionListener, this);
 		getServer().getPluginManager().registerEvents(mercenaryStatListener, this);
 		getServer().getPluginManager().registerEvents(attendanceHook, this);
 		MercenaryStatService.setGate(new me.Plugins.SimpleFactions.mercenary.stat.HiredMercenaryGate());
+		me.Plugins.SimpleFactions.mercenary.contract.ContractTerminationService.setReputationSeam(
+				new me.Plugins.SimpleFactions.mercenary.company.MercenaryReputationSeam());
+		if (getServer().getPluginManager().isPluginEnabled("RPCharacters")) {
+			me.Plugins.SimpleFactions.mercenary.company.MercenaryEligibility.setProbe(
+					new me.Plugins.SimpleFactions.mercenary.company.RpCharactersMercenaryTraitProbe());
+			me.Plugins.SimpleFactions.prestige.MemberPlaytime.setProbe(
+					new me.Plugins.SimpleFactions.prestige.RpCharactersPlaytimeProbe());
+		}
 	}
 	public void createFolders() {
 		File dataFolder = getDataFolder();

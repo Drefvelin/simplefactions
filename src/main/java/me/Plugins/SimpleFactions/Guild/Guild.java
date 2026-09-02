@@ -208,6 +208,9 @@ public class Guild {
         this.wealth = 0.0;
         this.wealthModifiers = Database.loadModifiers(data.wealthModifiers);
         this.ledger = new Ledger(this);
+        if (data.casinoProfit != null) {
+            this.ledger.setCasinoProfit(data.casinoProfit);
+        }
         this.loanHandler = new LoanHandler(this, data.creditScore == null ? 50 : data.creditScore);
         if(data.favoured != null) this.favoured = data.favoured;
         if(data.repressed != null) this.repressed = data.repressed;

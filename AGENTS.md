@@ -34,7 +34,7 @@ me.Plugins.SimpleFactions/
 ├── War/
 │   ├── core/             # War, Side, WarMapper, declare helpers
 │   ├── enums/
-│   ├── declare/          # Validation at war declare
+│   ├── declare/          # Validation at war declare; staff declare-code gate
 │   ├── pathfinder/
 │   ├── campaign/
 │   │   ├── schedule/     # Campaign battle list build (FB legs, placer)
@@ -50,6 +50,7 @@ me.Plugins.SimpleFactions/
 │       ├── campaign/     # Launch scheduled campaign battles; warband/ signup/retreat
 │       ├── warband/, military/, template/, persistence/, ui/
 │       └── …
+├── prestige/             # Playtime prestige curve and RPCharacters probe seam
 ├── installation/         # Installations, bounds, handler
 ├── vehicles/             # Root listeners/commands; registry/, berth/, maintenance/, battle/
 └── SimpleFactions.java   # Bootstrap, listener registration
@@ -85,8 +86,10 @@ Use this table before creating a file.
 | Warband signup for campaign battle | `War/battle/campaign/warband` | `engine/core` |
 | War domain types (War, Side, WarMapper) | `War/core` | `War/` root |
 | Lives, pool, casualties | `War/battle/military` | Battle engine |
+| Post-battle rewards for fighters | `War/battle/loot` | Handing items out from `BattleEndSupport` or a win check |
 | YAML battle templates | `War/battle/template` | Hard-coded in engine |
 | Faction ledger / war declare GUI | `Managers/Inventory` | War package UI for non-war commands |
+| Staff declare-code gate and chat prompt | `War/declare/WarDeclareCodeService`, `DeclareCodePrompt` | `GatewayClient` calls straight from a GUI class |
 | General file logging | `Managers/LogManager` (`logs/log.txt`, `relations.log`, `movement.log`, `civilwar.log`, `war.log`; all wiped by `wipe-log`) | Mixing domain events into chat |
 | REST/export shape | Keep stable; change mappers + PS docs together | Renaming JSON fields casually |
 | Installation berth / transfer / consent | `vehicles/berth` | `Managers` or `installation/handler` |
@@ -117,6 +120,7 @@ Use this table before creating a file.
 | Campaign battle vehicle eligibility | `vehicles/battle/BattleVehicleEligibilityService` | Battle engine core |
 | Battle province block protection | `War/battle/engine/rules/BattleProvinceBlockProtectionService` | Installation protection or raid logic |
 | Campaign installation pick GUI | `Managers/Inventory/CampaignInstallationPickView` | Pick logic in view |
+| Prestige term math or a new prestige input | `prestige/` (curve + probe seam), assembled by `Objects/PrestigeBreakdown` | Any I/O behind a prestige read; `updatePrestige()` runs for every faction on every bank mutation. See [docs/prestige.md](docs/prestige.md) |
 
 ---
 
@@ -196,6 +200,8 @@ For schedule/pathfinder work, confirm tests include:
 ## Related docs
 
 - [docs/wars.md](docs/wars.md) - gameplay spec
+- [docs/prestige.md](docs/prestige.md) - prestige terms, the two halves of Members, playtime curve, hot-path rules
+- [docs/mercenaries.md](docs/mercenaries.md) - companies for hire, contracts, wages, reputation, config keys
 - [docs/installations.md](docs/installations.md) - installations, berth flow, personal limits
 - [docs/vehicles.md](docs/vehicles.md) - berths, slots, VF integration
 - [docs/campaign-raids.md](docs/campaign-raids.md) - inter-battle raids
@@ -204,6 +210,7 @@ For schedule/pathfinder work, confirm tests include:
 - [docs/planning/campaign-time-dev/](docs/planning/campaign-time-dev/00-index.md) - campaign clock dev batches
 - [docs/planning/campaign-retreat/](docs/planning/campaign-retreat/00-index.md) - strategic retreat batches
 - [docs/planning/battle-retreat/](docs/planning/battle-retreat/00-index.md) - mid-fight battle retreat batches
+- [docs/planning/war-companies/](docs/planning/war-companies/00-index.md) - mercenary gameplay lock; [08-verify.md](docs/planning/war-companies/08-verify.md) - in-game matrix
 - [docs/planning/inter-vassal-wars/](docs/planning/inter-vassal-wars/00-index.md) - Phase 8 internal wars lock
 - [docs/planning/chronicle-export/](docs/planning/chronicle-export/00-index.md) - chronicle snapshot batches
 - [docs/roadmap.md](docs/roadmap.md) - shipped vs planned features

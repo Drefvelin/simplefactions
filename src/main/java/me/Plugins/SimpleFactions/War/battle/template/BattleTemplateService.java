@@ -49,6 +49,11 @@ public final class BattleTemplateService {
 		if (mode.getKeepInventory() == null) {
 			mode.setKeepInventory(true);
 		}
+		if (mode.getLootEnabled() == null) {
+			// Campaign raids are the one battle kind that pays nothing, so a raid
+			// template that omits the key still ends up with loot off.
+			mode.setLootEnabled(!Boolean.TRUE.equals(mode.getCampaignRaid()));
+		}
 		if (mode.getLifeType() == null) {
 			mode.setLifeType(LifeType.COLLECTIVE);
 		}
@@ -73,6 +78,7 @@ public final class BattleTemplateService {
 		copy.setDefender(source.getDefender());
 		copy.setFriendlyFire(source.getFriendlyFire());
 		copy.setKeepInventory(source.getKeepInventory());
+		copy.setLootEnabled(source.getLootEnabled());
 		copy.setLifeType(source.getLifeType());
 		copy.setLives(source.getLives());
 		copy.setCapturePoints(source.getCapturePoints());

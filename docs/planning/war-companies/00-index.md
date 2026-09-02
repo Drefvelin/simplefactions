@@ -82,7 +82,7 @@ A company is a **company inside a company**: hosted and owned by a guild, but it
 - **Leader** is the guild leader, always and automatically. Leadership follows the guild leader when it changes.
 - **Membership:** the company leader invites by command, the invitee accepts or declines. Membership is not restricted by guild, faction, or nationality.
 - **A player may be in one company at a time.** The company leader may kick at any time.
-- **Character gate (deferred):** creating a company and joining one both require the acting character to have the `mercenary` trait (`rpcharacters/src/main/resources/traits/evil-traits.yml`). This lands only after the plugin moves from player-based to character-based identity, which is the **last** item of that migration. Write the hook, leave it disabled.
+- **Character gate:** creating a company and joining one both require the acting character to have the `mercenary` trait (`rpcharacters/src/main/resources/traits/evil-traits.yml`). Factions stay player-based. Each company tick (once per second, before formation countdown) checks the guild leader even if they are not enlisted, then every enlisted name. Online players with no active character or without the trait are ineligible: kick a fighter, disband if it is the leader (abort if still founding). Offline players and a missing RPCharacters plugin are left alone. Disbanding terminates active contracts as a company-side breach (refund and reputation hit, same as a slot breach) and drops open offers.
 
 ### Slots
 
@@ -142,6 +142,7 @@ Modelled on loans, including a signed written book (`LoanBook`).
 |---------|--------|
 | Duration elapses | Ends normally, reputation gain if attendance was clean |
 | Company drops below promised slots | Terminated, breach refund paid, **large** reputation hit |
+| Company disbands (leader's active character has no mercenary trait) | Same as a slot breach: refund paid, large reputation hit. Open offers are dropped. |
 | Host guild goes bankrupt | Terminated. No refund is possible; a bankrupt guild is inert in both directions by design. Bankruptcy is a real-world style exit and its punishment is social, not mechanical. |
 | Loyalty conflict appears mid-contract (see section 6) | Terminated with no breach refund and no reputation change. Neither party caused it. Days already served are still paid. |
 

@@ -45,8 +45,29 @@ class BattleTemplateServiceTest {
 		assertNotNull(resolved);
 		assertTrue(resolved.getFriendlyFire());
 		assertTrue(resolved.getKeepInventory());
+		assertTrue(resolved.getLootEnabled());
 		assertEquals(LifeType.COLLECTIVE, resolved.getLifeType());
 		assertEquals(25, resolved.getLives());
+	}
+
+	@Test
+	void getModeConfig_readsExplicitLootFlag() {
+		YamlConfiguration config = new YamlConfiguration();
+		config.set("type", "field");
+		config.set("loot_enabled", false);
+		BattleTemplateLoader.putForTests(new BattleTemplate("no_loot_field", config));
+
+		assertFalse(service.getModeConfig("no_loot_field").getLootEnabled());
+	}
+
+	@Test
+	void getModeConfig_defaultsLootOffForCampaignRaidTemplate() {
+		YamlConfiguration config = new YamlConfiguration();
+		config.set("type", "raid");
+		config.set("campaign_raid", true);
+		BattleTemplateLoader.putForTests(new BattleTemplate("campaign_raid_template", config));
+
+		assertFalse(service.getModeConfig("campaign_raid_template").getLootEnabled());
 	}
 
 	@Test

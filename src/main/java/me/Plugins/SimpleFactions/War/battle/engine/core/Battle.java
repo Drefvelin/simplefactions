@@ -42,6 +42,7 @@ public class Battle {
 	private List<CapturePoint> points = new ArrayList<CapturePoint>();
 	private boolean friendlyFire;
 	private boolean keepInventory;
+	private boolean lootEnabled;
 	private boolean teleport;
 	private boolean started;
 	private Instant startedAt;
@@ -81,6 +82,7 @@ public class Battle {
 		this.id = id;
 		this.friendlyFire = true;
 		this.keepInventory = true;
+		this.lootEnabled = true;
 		this.teleport = false;
 		this.started = false;
 		this.locked = true;
@@ -191,6 +193,9 @@ public class Battle {
 	public boolean hasKeepInventory() {
 		return this.keepInventory;
 	}
+	public boolean hasLootEnabled() {
+		return this.lootEnabled;
+	}
 	public boolean hasTeleport() {
 		return teleport;
 	}
@@ -218,6 +223,9 @@ public class Battle {
 	}
 	public void setKeepInventory(boolean b) {
 		this.keepInventory = b;
+	}
+	public void setLootEnabled(boolean b) {
+		this.lootEnabled = b;
 	}
 	public String start() {
 		if(this.started) return null;
@@ -482,6 +490,7 @@ public class Battle {
 	public void resetBaseSettings() {
 		friendlyFire = true;
 		keepInventory = true;
+		lootEnabled = true;
 		teleport = false;
 		locked = true;
 		lt = LifeType.COLLECTIVE;

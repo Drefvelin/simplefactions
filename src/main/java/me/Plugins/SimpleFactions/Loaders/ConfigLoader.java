@@ -13,6 +13,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.War.battle.enums.BattleLootMode;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
 import me.Plugins.SimpleFactions.enums.Scope;
@@ -27,6 +28,7 @@ public class ConfigLoader {
 
 		Cache.maxMembers = config.getInt("max-members", 64);
 		Cache.maxWealthPrestige = config.getInt("max-prestige-from-wealth", 1000);
+		Cache.maxPlaytimePrestigeExponent = config.getDouble("max-prestige-playtime-exponent", 5);
 		Cache.bankBlock = config.getString("bank-block", "v.lodestone");
 		Cache.maxExtraNodeCapacity = config.getInt("max-extra-node-capacity", 0);
 		
@@ -130,6 +132,8 @@ public class ConfigLoader {
 			}
 		}
 		Cache.warRequireDeclareCode = config.getBoolean("war.require_declare_code", false);
+		Cache.warDeclareCodeTimeoutSeconds =
+				Math.max(1, config.getInt("war.declare_code_timeout_seconds", 10));
 		Cache.warDeclareOpinionThreshold = config.getInt("war.declare_opinion_threshold", -50);
 		Cache.warInitiativeFactor = config.getDouble("war.initiative_factor", 1.5);
 		Cache.warPortSeaZocRadius = config.getInt("war.port_sea_zoc_radius", 2);
@@ -196,6 +200,13 @@ public class ConfigLoader {
 
 		Cache.warBattleLivesPerRegiment = config.getInt("war.battle_military.lives_per_regiment", 5);
 		Cache.warBattleMinSideLives = config.getInt("war.battle_military.min_side_lives", 1);
+		Cache.battleLootMode = BattleLootMode.fromJson(config.getString("war.battle_loot.mode", "COMMAND"));
+		if (Cache.battleLootMode == null) {
+			Cache.battleLootMode = BattleLootMode.COMMAND;
+		}
+		Cache.battleLootCommands = new ArrayList<>(config.getStringList("war.battle_loot.commands"));
+		Cache.battleLootItemPath = config.getString("war.battle_loot.item", "");
+		Cache.battleLootItemAmount = Math.max(1, config.getInt("war.battle_loot.item_amount", 1));
 		Cache.campaignRaidMusterSeconds = config.getInt("war.campaign_raid.muster_seconds", 60);
 		Cache.campaignRaidMusterReminderSecondsBefore = loadReminderOffsets(
 				config,

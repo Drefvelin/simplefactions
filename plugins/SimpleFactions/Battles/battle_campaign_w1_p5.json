@@ -6,6 +6,7 @@
   "provinceId": 5,
   "friendlyFire": true,
   "keepInventory": true,
+  "lootEnabled": true,
   "teleport": true,
   "locked": false,
   "lives": 25,

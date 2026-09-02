@@ -66,13 +66,27 @@ public class CompanyCreator {
 		lore.add("§7Leader: §e" + company.getLeader());
 		lore.add("§7Home: §e" + HomeSettlementNames.of(guild));
 		lore.add("§7Slots: §e" + company.getFilledSlots() + "/" + company.getSlots());
-		lore.add("§7Reputation: §e" + company.getReputation());
+		lore.add("§7Reputation: " + company.getReputationString());
 		lore.add(" ");
 		lore.add(StringFormatter.formatHex("#d4c9aeDaily burn: §e"
 				+ Formatter.formatMoney(company.getDailyBurn()) + "d"));
 		lore.add("§7- Slots: §e" + Formatter.formatMoney(company.getSlotUpkeep()) + "d");
 		lore.add("§7- Upgrades: §e" + Formatter.formatMoney(company.getUpgradeUpkeep()) + "d");
 		lore.add("§7- Wages: §e" + Formatter.formatMoney(company.getWageUpkeep()) + "d");
+		lore.add(" ");
+		lore.add("§7Contract income: §e"
+				+ Formatter.formatMoney(company.getContractIncome()) + "d §7per day");
+		double net = company.getNetPosition();
+		lore.add(StringFormatter.formatHex((net < 0 ? "#c74d32" : "#7ba85f") + "Net position: "
+				+ (net < 0 ? "" : "+") + Formatter.formatMoney(net) + "d"));
+		if (burnExceedsIncome(guild, company)) {
+			lore.add(" ");
+			lore.add(StringFormatter.formatHex("#c74d32Burn exceeds what this guild earns"));
+			lore.add(StringFormatter.formatHex(
+					"#877e7cA bankrupt host voids every contract it holds"));
+			lore.add(StringFormatter.formatHex(
+					"#877e7cand takes the reputation hit for each of them"));
+		}
 		String blocked = company.getExpansionBlockedReason();
 		if (blocked != null) {
 			lore.add(" ");
@@ -80,6 +94,22 @@ public class CompanyCreator {
 			lore.add(StringFormatter.formatHex("#877e7c" + blocked));
 		}
 		return lore;
+	}
+
+	/**
+	 * Everything the guild earns before it pays for its company. The burn is already
+	 * a cost inside {@code getNetIncome}, so comparing burn against net income
+	 * directly would be comparing a figure against itself.
+	 */
+	public static double incomeBeforeBurn(Guild guild, MercenaryCompany company) {
+		if (guild == null || guild.getLedger() == null) return 0;
+		return guild.getLedger().getNetIncome() + company.getDailyBurn();
+	}
+
+	/** A bankrupt host voids every contract it holds, so this warning has to be loud. */
+	public static boolean burnExceedsIncome(Guild guild, MercenaryCompany company) {
+		if (guild == null || guild.getLedger() == null) return false;
+		return company.getDailyBurn() > incomeBeforeBurn(guild, company);
 	}
 
 	/**

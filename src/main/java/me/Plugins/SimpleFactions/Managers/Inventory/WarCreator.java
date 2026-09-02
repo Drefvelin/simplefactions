@@ -268,7 +268,7 @@ public class WarCreator {
 		lore.add(StringFormatter.formatHex("#a39ba8Home: #d4c9ae"
 				+ me.Plugins.SimpleFactions.Utils.HomeSettlementNames.of(company.getGuild())));
 		lore.add(StringFormatter.formatHex("#a39ba8Promised slots: #28ed70" + contract.getSlots()));
-		lore.add(StringFormatter.formatHex("#a39ba8Reputation: #d4c9ae" + company.getReputation()));
+		lore.add(StringFormatter.formatHex("#a39ba8Reputation: ") + company.getReputationString());
 		lore.add(StringFormatter.formatHex("#a39ba8Days remaining: #d4c9ae" + contract.getDaysRemaining()));
 		lore.add(" ");
 		lore.add(StringFormatter.formatHex("#28ed70Click to view the contract"));

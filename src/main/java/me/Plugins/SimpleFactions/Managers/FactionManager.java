@@ -433,6 +433,10 @@ public class FactionManager implements Listener{
 	public void settleIncome() {
 		DailyGuildTransfers buffer = new DailyGuildTransfers();
 
+		// Phase 0: contracts accrue the day and hand the hiring capital its bill, which
+		// it cannot compute itself because it owns no contract object.
+		me.Plugins.SimpleFactions.mercenary.contract.ContractAccrualService.accrueDailyAndPush();
+
 		// Phase 1: collect transfers & external deltas
 		for (Guild g : getAllGuilds()) {
 			g.getLedger().populateDailyTransfers(buffer);

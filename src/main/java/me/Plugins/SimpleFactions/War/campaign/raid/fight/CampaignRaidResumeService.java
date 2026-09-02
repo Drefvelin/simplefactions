@@ -80,6 +80,7 @@ public final class CampaignRaidResumeService {
 		Battle battle = resolveBattle(war, raid, now);
 		if (battle != null && battle.hasStarted()) {
 			battle.setCampaignRaid(true);
+			battle.setLootEnabled(false);
 			restoreFightStartedAt(battle, raid);
 			CampaignRaidWarbandService.createRaidWarbands(war, raid);
 			Warband attacker = CampaignRaidWarbandService.getAttackerWarband(raid);

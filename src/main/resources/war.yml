@@ -3,7 +3,12 @@
 # Hours under battle_schedule are Europe/Paris (CET/CEST), not UTC.
 
 war:
+  # Production gate: an attacking leader must type a staff-minted Discord code before
+  # the goal picker opens, and the code pins the goal. simplefactions.admin bypasses it.
   require_declare_code: false
+  # How long to wait for ProvinceSystem to answer a code check before giving up. The
+  # gate fails closed, so a slow backend blocks the declare rather than allowing it.
+  declare_code_timeout_seconds: 10
   declare_opinion_threshold: -50
   initiative_factor: 1.5
   port_sea_zoc_radius: 2
@@ -76,6 +81,19 @@ war:
   battle_military:
     lives_per_regiment: 5
     min_side_lives: 1
+  # One reward per player for every fighter who was still in the battle when it
+  # ended, both sides, and only when the battle produced a winner. The per-battle
+  # toggle lives in the battle editor; campaign raids ship with it off.
+  battle_loot:
+    # COMMAND dispatches every line below from console once per player.
+    # ITEM gives a TLibs item instead.
+    mode: COMMAND
+    # Both %player% and #player# are replaced with the player name.
+    commands:
+      - "crates key give %player% battle_key 1"
+    # Used when mode is ITEM. TLibs path: v.diamond, ia.namespace:id, m.type.id
+    item: v.diamond
+    item_amount: 1
   campaign_raid:
     muster_seconds: 60
     muster_reminder_seconds_before:

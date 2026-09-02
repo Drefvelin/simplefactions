@@ -13,7 +13,7 @@ import me.Plugins.SimpleFactions.War.core.War;
 import me.Plugins.SimpleFactions.mercenary.company.MercenaryCompany;
 
 /**
- * One service, four triggers, each with its locked outcome. Everything funnels
+ * One service, five triggers, each with its locked outcome. Everything funnels
  * through {@link #terminate}, whose status guard is what makes a refund fire
  * exactly once even when the trigger repeats.
  */

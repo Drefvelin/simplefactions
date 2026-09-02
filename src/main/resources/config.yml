@@ -11,22 +11,38 @@ logging: true
 wipe-log: true
 
 max-prestige-from-wealth: 800 # shared between factions based on % of global wealth
+# Each member adds 2^(online hours / 100) to the Members prestige term, so 100 h
+# doubles their share and this cap ends the curve. 5 means a member is worth at
+# most 32, reached at 500 h. Needs RPCharacters; without it the term is 0.
+max-prestige-playtime-exponent: 5
 max-members: 64
 max-untitled-provinces: 5
 max-free-titles: 3
 province-cost: 50
+# Anti payday-joining: a member only receives a dividend share if they were
+# already in the guild at the previous daily tick. The percentage itself is not
+# a config key; each guild leader sets it, starting at 0%.
 dividend-require-previous-tick-membership: true
 
-# Mercenary companies
+# Mercenary companies. Full reference: docs/mercenaries.md
+# One-off charge taken from the host guild when the charter is requested.
 mercenary-formation-cost: 100.0
+# Founding time. The faction timer ticks once per real second, so 86400 is 24 h
+# of real time, not a campaign day. The company arrives with 1 slot.
 mercenary-formation-seconds: 86400
+# Denars per slot per day, paid by the host guild, not by or to the soldier.
+# Charged for every slot the company owns, filled or not, contracted or not.
 mercenary-slot-upkeep: 8.0
 # Contract floors. A company sets its own prices but may not go below these.
+# A battle day costs the day price AND the battle price, not either/or.
 mercenary-min-price-per-battle: 50.0
 mercenary-min-price-per-day: 10.0
 mercenary-max-contract-days: 14
 # Pre-filled into a new contract; the real figure lives on the contract itself.
 mercenary-default-breach-refund: 500.0
+# Not configurable: the absence refund per slot per battle must be at least
+# mercenary-min-price-per-battle, validated when the contract is created. A
+# smaller refund would make no-showing more profitable per head than fighting.
 
 bank-block: iaf(tfmc:bank)
 voting-block: v(chiseled_bookshelf)

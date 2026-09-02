@@ -70,7 +70,7 @@ public final class PostSettlementPayouts {
 
 		double actualPool = Formatter.formatDouble(pool * scale);
 		payDividends(guild, actualPool, playerBank, economy, uuids);
-		payPlayerPayouts(guild, payouts, scale, playerBank);
+		payPlayerPayouts(guild, payouts, scale, playerBank, economy);
 	}
 
 	private static void payDividends(
@@ -126,7 +126,8 @@ public final class PostSettlementPayouts {
 			Guild guild,
 			Map<UUID, Double> payouts,
 			double scale,
-			PlayerBank playerBank) {
+			PlayerBank playerBank,
+			PlayerEconomyManager economy) {
 		if (payouts == null || payouts.isEmpty() || playerBank == null) {
 			return;
 		}
@@ -140,6 +141,11 @@ public final class PostSettlementPayouts {
 				continue;
 			}
 			playerBank.depositToBank(entry.getKey(), amount);
+			// Wages are deliberately not taxed as citizen income for now; the seam is
+			// the PlayerCashflow entry, so taxing them later means reading this one line.
+			if (economy != null) {
+				economy.getLedger(entry.getKey()).add(PlayerCashflow.WAGES, amount);
+			}
 			withdrawn += amount;
 		}
 		withdrawn = Formatter.formatDouble(withdrawn);

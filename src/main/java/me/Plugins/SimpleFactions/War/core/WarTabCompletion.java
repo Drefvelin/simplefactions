@@ -44,9 +44,13 @@ public class WarTabCompletion implements TabCompleter {
 			addIfPrefix(completions, args[1], "devmode");
 			addIfPrefix(completions, args[1], "raid");
 			addIfPrefix(completions, args[1], "reparations");
+			addIfPrefix(completions, args[1], "factions");
 			return completions;
 		}
 		if (args.length == 3 && args[1].equalsIgnoreCase("reparations")) {
+			return factionIds(args[2]);
+		}
+		if (args.length == 3 && args[1].equalsIgnoreCase("factions")) {
 			return factionIds(args[2]);
 		}
 		if (args.length == 4 && args[1].equalsIgnoreCase("reparations")) {

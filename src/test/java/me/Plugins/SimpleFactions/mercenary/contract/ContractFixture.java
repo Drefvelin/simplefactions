@@ -14,6 +14,7 @@ import me.Plugins.SimpleFactions.Objects.Handler.GuildHandler;
 import me.Plugins.SimpleFactions.mercenary.company.CompanyFixture;
 import me.Plugins.SimpleFactions.mercenary.company.MercenaryCompany;
 import me.Plugins.SimpleFactions.mercenary.company.MercenaryCompanyService;
+import me.Plugins.SimpleFactions.mercenary.company.MercenaryEligibility;
 
 /** A formed company and a faction willing to hire it, without a server. */
 public final class ContractFixture {
@@ -100,6 +101,7 @@ public final class ContractFixture {
         FactionManager.factions.clear();
         CompanyFixture.clearCompanyUpgrades();
         CompanyFixture.clearRegiments();
+        MercenaryEligibility.reset();
     }
 
     /** Terms that pass every rule, for tests that want to vary one figure at a time. */

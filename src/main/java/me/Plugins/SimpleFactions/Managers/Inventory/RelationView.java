@@ -27,6 +27,8 @@ import me.Plugins.SimpleFactions.Managers.WarManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Tiers.Tier;
+import me.Plugins.SimpleFactions.War.declare.DeclareCodePrompt;
+import me.Plugins.SimpleFactions.War.declare.WarDeclareCodeService;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 
 public class RelationView {
@@ -270,12 +272,6 @@ public class RelationView {
 					p.sendMessage("§cYour faction is already in a war with that faction.");
 					return;
 				}
-				// DEBUG: other declare pre-checks disabled for war testing — re-enable before production
-				/*
-				if (Cache.warRequireDeclareCode) {
-					p.sendMessage("§cWar declaration requires a staff code (not enabled yet).");
-					return;
-				}
 				if(attacker.getRelation(f.getId()).getOpinion() > Cache.warDeclareOpinionThreshold) {
 					p.sendMessage("§cYour opinion of the target is too high");
 					return;
@@ -284,7 +280,13 @@ public class RelationView {
 					p.sendMessage("§cCannot declare war while none of the target faction members are online!");
 					return;
 				}
-				*/
+				if (WarDeclareCodeService.isRequired(p)) {
+					// Staff bypass the code entirely by permission, which is what makes it
+					// safe for an unreachable ProvinceSystem to fail closed here.
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					DeclareCodePrompt.begin(p, attacker, f);
+					return;
+				}
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
 				inv.openDeclareWarGoalPicker(p, attacker, f);
 			}

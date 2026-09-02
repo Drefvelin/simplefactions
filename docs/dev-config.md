@@ -17,11 +17,20 @@ Campaign keys (`war.*`) are in **`war.yml`** (`src/main/resources/war.yml` → `
 | Header comment | `dev server template` | Remove or relabel | Documents intent only |
 | `map-reference` | `main` on prod file; use `dev` on test | `main` (or live map id) | Drives TFMCWeb upload/regen paths |
 | `enable-chronicle` | `true` | `true` | Chronicle snapshot upload. Set `false` to stop the chronicle without taking the map down; `enable-map` still gates it |
-| `war.require_declare_code` (`war.yml`) | `false` | `true` | See RelationView bypass below |
+| `war.require_declare_code` (`war.yml`) | `false` | `true` | On, an attacking leader must type a staff-minted Discord code, which pins the war goal. `simplefactions.admin` bypasses it |
+| `war.declare_code_timeout_seconds` (`war.yml`) | `10` | `10` | How long to wait for ProvinceSystem before refusing the declare. The gate fails closed |
 | `war.battle_cadence.provinces_between_battles` (`war.yml`) | `3` | `3` (or higher after playtest) | Field battle cadence |
+| `war.battle_loot.mode` (`war.yml`) | `COMMAND` | `COMMAND` | `COMMAND` runs every line in `commands` from console once per rewarded player; `ITEM` gives a TLibs item instead. An unrecognised value falls back to `COMMAND`. See [wars.md](./wars.md#battle-loot) |
+| `war.battle_loot.commands` (`war.yml`) | Point it at a throwaway command you can watch in console | The real crate-key command | Used when `mode` is `COMMAND`. Both `%player%` and `#player#` are replaced with the player name. An empty list means no loot |
+| `war.battle_loot.item` (`war.yml`) | `v.diamond` | The real reward item | Used when `mode` is `ITEM`. TLibs path (`v.`, `ia.`, `m.`, `modeled.`). Blank means no loot |
+| `war.battle_loot.item_amount` (`war.yml`) | `1` | `1` | Stack size for `ITEM` mode. Clamped to at least `1` |
+| `max-prestige-playtime-exponent` | `5`, or lower to reach the ceiling sooner while testing | `5` | Caps the per-member playtime prestige curve. `5` means a member tops out at 32, at 500 online hours. Needs RPCharacters; the term is 0 without it. See [prestige.md](./prestige.md) |
 | `installations.*.construction-time` | `10` | `432000` fort / `259200` port+airport | Seconds |
+| `mercenary-formation-seconds` | `10` to test the founding flow | `86400` (24 h) | Real seconds, same tick model as construction. Shipped file has the production value |
 
 **Tick model:** faction `tick()` runs **once per real second** (`FactionManager` timer every 20 ticks). Construction and regiment expansion `timeLeft` decrement **once per second**, so `10` = **10 seconds**, not 10 days.
+
+Mercenary key reference (all keys with defaults): [mercenaries.md](./mercenaries.md).
 
 ---
 
@@ -32,8 +41,11 @@ Campaign keys (`war.*`) are in **`war.yml`** (`src/main/resources/war.yml` → `
 | professional | `expansion-time` | `10` | Loader fallback `21600` (6 h) if omitted |
 | militia | `expansion-time` | `10` | `#43200` (12 h) in comment |
 | levy | `expansion-time` | `0` | `#43200` in comment |
+| mercenary | `expansion-time` | Lower to `10` to test slot expansion | `86400` (24 h), already the shipped value |
 
 Queue ticks once per faction second (same as construction).
+
+`Guilds/company-upgrades.yml` uses `expansion-time: 86400` for all three company upgrades; lower it the same way to test the purchase queue.
 
 ---
 
@@ -53,7 +65,6 @@ All three realm upgrades use `expansion-time: 10` (10 seconds). Production value
 
 | Location | What | Production action |
 |----------|------|-------------------|
-| `RelationView.java` ~L133 | **Commented block** skips declare pre-checks (code gate, opinion, duplicate war, target online) | Uncomment block; rely on `war.require_declare_code` + validators |
 | `RestServer.java` L24 | `REGEN_HASH` hardcoded | Move to config / env |
 
 ---
@@ -90,7 +101,24 @@ All three realm upgrades use `expansion-time: 10` (10 seconds). Production value
 | Item | Dev setting | Prod |
 |------|-------------|------|
 | Declare without Discord ticket | `war.require_declare_code: false` | Declare codes + ticket gate |
-| Declare GUI pre-checks | Disabled in code (see above) | Re-enable with codes |
+| Declare GUI pre-checks | Live: opinion threshold, duplicate war, target online | Same, plus the code gate |
+| Faction id lookup for minting | `/war admin factions [filter]` | Same (staff only) |
+
+### Declare codes (test server E2E)
+
+Prerequisites: `war.require_declare_code: true` in `war.yml`, the `factions` cog loaded and pointed at the same ProvinceSystem as TFMCWeb, and its `realm_id` matching what TFMCWeb reports on this server. Run the declare as a **non-admin** leader, or the gate bypasses itself.
+
+1. `/war admin factions` in game, copy the attacker and defender ids.
+2. `/warcode mint <attacker> <defender> <goal>` in Discord, copy the code.
+3. `/warcode list` shows the id, the pairing and the goal, and **no** code text.
+4. As the attacking leader, diplomacy → **Declare War**. Expect a chat prompt, not the goal picker.
+5. Type a wrong code. Expect `Invalid war code` and no state change.
+6. Type the real code. Expect `Code accepted. War goal: <goal>` and the goal's **own** sub-picker (or confirm for War, Tributary, Usurp, Open Market). The goal picker must never appear.
+7. Confirm. Check `plugins/SimpleFactions/Logs/war.log` for a `DECLARE_CODE` line next to the `DECLARE` line.
+8. `/warcode list` no longer lists that id.
+9. Repeat step 4 with the same code. Expect `This code has already been used`.
+10. Mint another code, then make the declare fail on purpose (naval path with no port, or an ineligible goal target). The code must survive: `/warcode list` still shows it and a second attempt works.
+11. Stop ProvinceSystem, mint nothing, and try to declare. Expect a refusal, not a free declare. Then repeat as an admin (`simplefactions.admin`) and confirm the goal picker opens with no prompt.
 
 ### Battle scheduling timeline (Europe/Paris)
 
@@ -208,10 +236,29 @@ Prerequisites: campaign battle running; set `battle.retreat_min_elapsed_seconds:
 
 See [planning/battle-retreat/04-docs-verify.md](./planning/battle-retreat/04-docs-verify.md) for the full manual matrix.
 
+### Mercenary companies (test server E2E)
+
+Prerequisites: two factions and two players, `war.battle_voting.dev_min_players: 1`, optional `/war admin devmode on`, and `/war admin time` for the campaign clock. Lower `mercenary-formation-seconds` (`config.yml`), `mercenary.expansion-time` (`regiments.yml`) and the company `expansion-time` keys (`Guilds/company-upgrades.yml`) to `10` so the 24 h timers finish inside a session; restore them afterwards.
+
+Commands: `/company <found|invite|accept|decline|kick|expand|draft|offer|contracts>`, `/mercenaries [list|hire <name>]`, `/ledger`.
+
+1. `/company found <name>` - 100 d charged once; wait out formation; confirm 1 slot.
+2. `/company expand` with the slot empty - refused; enlist, retry, restart mid-expansion and confirm it resumes.
+3. Confirm the mercenary regiment appears in **no** faction military screen and moves no faction totals.
+4. Sign a contract at the company's home settlement as a council member; try again from another province - refused, naming the settlement.
+5. Fight a battle: confirm the company in the war screen with promised slots, lives folding in filled and attending slots only, and a dual-role player subtracted once.
+6. Run a daily tick mid-contract: six ledger lines with correct signs, wages in the soldier's `/ledger`.
+7. Restore the timer keys.
+
+The money and reputation checks need a faction daily tick, which is real time (`timer >= 86400`) and is **not** moved by `war admin time`.
+
+See [planning/war-companies/08-verify.md](./planning/war-companies/08-verify.md) for the full 21-step matrix.
+
 ---
 
 ## Related docs
 
 - [roadmap.md](./roadmap.md) - what is still planned for production
 - [wars.md](./wars.md) - full war spec
+- [mercenaries.md](./mercenaries.md) - mercenary config keys and defaults
 - [map-export.md](./map-export.md) - `map-reference` and regen hash

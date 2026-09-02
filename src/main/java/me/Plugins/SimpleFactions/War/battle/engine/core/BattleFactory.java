@@ -105,6 +105,9 @@ public final class BattleFactory {
 		}
 		battle.setFriendlyFire(config.getFriendlyFire());
 		battle.setKeepInventory(config.getKeepInventory());
+		if (config.getLootEnabled() != null) {
+			battle.setLootEnabled(config.getLootEnabled());
+		}
 		battle.setLifeType(config.getLifeType());
 		battle.setLives(config.getLives());
 		if (config.getCapturePointsEnabled() != null) {

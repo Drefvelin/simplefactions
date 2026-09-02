@@ -91,6 +91,53 @@ class PostSettlementPayoutsTest {
 		verify(bank, never()).withdraw(org.mockito.ArgumentMatchers.any());
 	}
 
+	/**
+	 * A wage is the only guild to player leg besides dividends, so the soldier has
+	 * to be able to see where the money came from in {@code /ledger}.
+	 */
+	@Test
+	void aWageShowsAsItsOwnIncomeLineInThePlayersLedger() {
+		Guild guild = mock(Guild.class);
+		Bank bank = mock(Bank.class);
+		when(guild.getBank()).thenReturn(bank);
+		when(guild.isBankrupt()).thenReturn(false);
+		when(bank.getWealth()).thenReturn(100.0);
+
+		UUID soldier = UUID.randomUUID();
+		DailyGuildTransfers buffer = new DailyGuildTransfers();
+		buffer.addPlayerPayout(guild, soldier, 12.0);
+
+		PlayerEconomyManager economy = new PlayerEconomyManager();
+		PostSettlementPayouts.apply(buffer, new RecordingBank(), economy, name -> null);
+
+		assertEquals(12.0, economy.getLedger(soldier).getAmount(PlayerCashflow.WAGES), 1e-9);
+		assertEquals(12.0, economy.getLedger(soldier).getNetDaily(), 1e-9);
+		assertEquals(List.of(PlayerCashflow.WAGES), economy.getLedger(soldier).getIncomeFlows());
+		assertEquals(0.0, economy.getLedger(soldier).getAmount(PlayerCashflow.DIVIDEND_PAYOUT), 1e-9);
+	}
+
+	@Test
+	void aClampedWageIsWrittenAtTheAmountActuallyPaid() {
+		Guild guild = mock(Guild.class);
+		Bank bank = mock(Bank.class);
+		when(guild.getBank()).thenReturn(bank);
+		when(guild.isBankrupt()).thenReturn(false);
+		when(bank.getWealth()).thenReturn(5.0);
+
+		UUID soldier = UUID.randomUUID();
+		DailyGuildTransfers buffer = new DailyGuildTransfers();
+		buffer.addPlayerPayout(guild, soldier, 20.0);
+
+		PlayerEconomyManager economy = new PlayerEconomyManager();
+		RecordingBank playerBank = new RecordingBank();
+		PostSettlementPayouts.apply(buffer, playerBank, economy, name -> null);
+
+		// The ledger line and the bank deposit cannot disagree, or the soldier reads
+		// a wage they never received.
+		assertEquals(5.0, playerBank.balance(soldier), 1e-9);
+		assertEquals(5.0, economy.getLedger(soldier).getAmount(PlayerCashflow.WAGES), 1e-9);
+	}
+
 	@Test
 	void severalGuildsAggregateToOnePlayer() {
 		Guild one = mock(Guild.class);

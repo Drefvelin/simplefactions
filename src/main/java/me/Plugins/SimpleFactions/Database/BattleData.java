@@ -15,6 +15,9 @@ public class BattleData {
 	public String templateName;
 	public boolean friendlyFire;
 	public boolean keepInventory;
+	// Wrapper on purpose: absent in older files means "decide from campaignRaid",
+	// which a primitive would silently read as false.
+	public Boolean lootEnabled;
 	public boolean teleport;
 	public boolean locked;
 	public int lives;

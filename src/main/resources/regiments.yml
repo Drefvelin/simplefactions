@@ -22,11 +22,18 @@ militia:
         - "#a89977and other people who are not neccesarily"
         - "#a89977soldiers, but can be called upon to"
         - "#a89977defend their home"
+# Prototype for mercenary company slots. The mercenary: true flag keeps this
+# type out of every faction military; only a company clones it. Full reference:
+# docs/mercenaries.md
 mercenary:
     name: "#b7aae3Mercenary Company"
     mercenary: true
     default-slots: 0
+    # Charged per slot per day to the host guild. Kept in step with
+    # mercenary-slot-upkeep in config.yml, which is what the ledger reads.
     upkeep: 8.0
+    # Slot expansion time in real seconds (24 h). A company cannot start a new
+    # expansion while it already has one unfilled slot.
     expansion-time: 86400
     levy: false
     offense: true

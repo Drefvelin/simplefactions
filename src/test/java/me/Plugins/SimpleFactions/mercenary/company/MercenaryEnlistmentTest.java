@@ -19,11 +19,13 @@ class MercenaryEnlistmentTest {
 
     @BeforeEach
     void setUp() {
+        MercenaryEligibility.reset();
         CompanyFixture.installCompanyUpgrades();
     }
 
     @AfterEach
     void tearDown() {
+        MercenaryEligibility.reset();
         CompanyFixture.clearCompanyUpgrades();
     }
 
@@ -184,6 +186,10 @@ class MercenaryEnlistmentTest {
         MercenaryCompany company = formed(fixture);
 
         assertTrue(MercenaryCompanyService.canJoin(company, "Sigrun", List.of(fixture.guild)).ok());
+
+        MercenaryEligibility.setProbe(player -> MercenaryEligibility.Status.INELIGIBLE);
+        assertFalse(MercenaryEligibility.canCreate("Ivar"));
+        assertFalse(MercenaryCompanyService.canJoin(company, "Sigrun", List.of(fixture.guild)).ok());
     }
 
     private static MercenaryCompany formed(CompanyFixture fixture) {

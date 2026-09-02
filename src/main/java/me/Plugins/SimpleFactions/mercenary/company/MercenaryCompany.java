@@ -6,6 +6,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Army.MilitaryExpansion;
 import me.Plugins.SimpleFactions.Army.Regiment;
@@ -25,8 +28,10 @@ import me.Plugins.SimpleFactions.enums.GuildModifier;
 import me.Plugins.SimpleFactions.enums.SFGUI;
 import me.Plugins.SimpleFactions.mercenary.MercenaryResult;
 import me.Plugins.SimpleFactions.mercenary.contract.ContractHandler;
+import me.Plugins.SimpleFactions.mercenary.contract.ContractStatus;
 import me.Plugins.SimpleFactions.mercenary.contract.ContractTerminationService;
 import me.Plugins.SimpleFactions.mercenary.contract.MercenaryContract;
+import me.Plugins.SimpleFactions.mercenary.contract.TerminationReason;
 
 /**
  * A mercenary company owned by a guild. The company holds its own regiment, so
@@ -49,6 +54,14 @@ public class MercenaryCompany {
     private final List<UpgradeExpansion> upgradeQueue = new ArrayList<>();
     private final List<MilitaryExpansion> slotQueue = new ArrayList<>();
     private final ContractHandler contractHandler = new ContractHandler(this);
+    private final WageSettings wages = new WageSettings();
+
+    /**
+     * Wages owed but not yet settled, keyed by player name. Persisted because a
+     * battle share accrues the moment a battle resolves, which can be many hours
+     * before the daily tick that pays it out.
+     */
+    private final Map<String, Double> pendingWages = new LinkedHashMap<>();
 
     public MercenaryCompany(Guild guild, String name, Regiment regiment, int formationSeconds) {
         this.guild = guild;
@@ -94,6 +107,23 @@ public class MercenaryCompany {
             for (MercenaryContractData cd : data.contracts) {
                 if (cd == null || cd.id == null) continue;
                 contractHandler.add(new MercenaryContract(this, cd));
+            }
+        }
+        if (data.activeWagePercent != null) wages.setActivePercent(data.activeWagePercent);
+        if (data.peacetimeWagePerDay != null) wages.setPeacetimePerDay(data.peacetimeWagePerDay);
+        if (data.activeWageOverrides != null) {
+            for (Map.Entry<String, Double> e : data.activeWageOverrides.entrySet()) {
+                wages.setActiveOverride(e.getKey(), e.getValue());
+            }
+        }
+        if (data.peacetimeWageOverrides != null) {
+            for (Map.Entry<String, Double> e : data.peacetimeWageOverrides.entrySet()) {
+                wages.setPeacetimeOverride(e.getKey(), e.getValue());
+            }
+        }
+        if (data.pendingWages != null) {
+            for (Map.Entry<String, Double> e : data.pendingWages.entrySet()) {
+                accrueWage(e.getKey(), e.getValue() == null ? 0 : e.getValue());
             }
         }
         if (data.slotQueue != null && regiment != null) {
@@ -172,7 +202,20 @@ public class MercenaryCompany {
     }
 
     public void setReputation(int reputation) {
-        this.reputation = reputation;
+        this.reputation = clampReputation(reputation);
+    }
+
+    /** The one place reputation is clamped, mirroring {@code LoanHandler.changeCreditScore}. */
+    public void changeReputation(int amount) {
+        reputation = clampReputation(reputation + amount);
+    }
+
+    public String getReputationString() {
+        return MercenaryReputationCalculator.display(reputation);
+    }
+
+    private static int clampReputation(int value) {
+        return Math.max(0, Math.min(100, value));
     }
 
     public Regiment getRegiment() {
@@ -362,13 +405,67 @@ public class MercenaryCompany {
         return total;
     }
 
-    /** Wages join this in Phase 5; until then they are always zero. */
+    public WageSettings getWageSettings() {
+        return wages;
+    }
+
+    /**
+     * What a day of payroll is expected to cost: a peacetime wage for every
+     * enlisted player, plus the active day share for each slot actually under
+     * contract. Projected rather than accrued, because this drives the burn
+     * display before the money moves.
+     */
     public double getWageUpkeep() {
-        return 0;
+        double total = 0;
+        for (String player : enlisted) {
+            total += wages.peacetimeFor(player);
+        }
+        for (MercenaryContract c : contractHandler.getActive()) {
+            int covered = Math.min(c.getSlots(), enlisted.size());
+            for (int i = 0; i < covered; i++) {
+                total += wages.activeShareOf(c.getPricePerSlotPerDay(), enlisted.get(i));
+            }
+        }
+        return total;
+    }
+
+    /* =====================================================
+     * Payroll
+     * ===================================================== */
+
+    public void accrueWage(String player, double amount) {
+        if (player == null || amount <= 0) return;
+        pendingWages.merge(player, amount, Double::sum);
+    }
+
+    public Map<String, Double> getPendingWages() {
+        return Collections.unmodifiableMap(pendingWages);
+    }
+
+    public void clearPendingWages() {
+        pendingWages.clear();
     }
 
     public double getDailyBurn() {
         return getSlotUpkeep() + getUpgradeUpkeep() + getWageUpkeep();
+    }
+
+    /**
+     * What a day of the current contracts is worth, so a leader can read burn
+     * against income rather than in isolation. The day price only, because a battle
+     * price depends on whether anyone declares war.
+     */
+    public double getContractIncome() {
+        double total = 0;
+        for (MercenaryContract c : contractHandler.getActive()) {
+            total += c.getDailyPrice();
+        }
+        return total;
+    }
+
+    /** Income less burn. Negative means the company is eating its host guild. */
+    public double getNetPosition() {
+        return getContractIncome() - getDailyBurn();
     }
 
     /* =====================================================
@@ -376,6 +473,7 @@ public class MercenaryCompany {
      * ===================================================== */
 
     public void tick() {
+        if (enforceCharacterGate()) return;
         if (formationRemaining > 0) {
             formationRemaining--;
             if (formationRemaining == 0 && regiment != null) {
@@ -389,6 +487,64 @@ public class MercenaryCompany {
         if (!contractHandler.tickExpiry().isEmpty()) {
             chime(SFGUI.CONTRACT_LIST_VIEW);
         }
+    }
+
+    /**
+     * Leader without the mercenary trait dissolves the company. Enlisted fighters
+     * without it are kicked. Offline players and a missing character plugin are
+     * left alone until they can be checked.
+     *
+     * @return true when this company was disbanded and the rest of the tick must stop
+     */
+    boolean enforceCharacterGate() {
+        if (!MercenaryEligibility.isEnforced()) return false;
+        if (MercenaryEligibility.check(getLeader()) == MercenaryEligibility.Status.INELIGIBLE) {
+            String companyName = name;
+            String leader = getLeader();
+            List<String> roster = new ArrayList<>(enlisted);
+            disband();
+            tell(leader, "§c" + companyName
+                    + " disbanded because your character has no mercenary trait.");
+            for (String member : roster) {
+                if (member.equalsIgnoreCase(leader)) continue;
+                tell(member, "§c" + companyName + " has disbanded.");
+            }
+            return true;
+        }
+        for (String member : new ArrayList<>(enlisted)) {
+            if (MercenaryEligibility.check(member) != MercenaryEligibility.Status.INELIGIBLE) {
+                continue;
+            }
+            kick(member);
+            tell(member, "§cYou were dismissed from " + name
+                    + ". Your character has no mercenary trait.");
+            tell(getLeader(), "§c" + member
+                    + " was dismissed from the company. Their character has no mercenary trait.");
+        }
+        return false;
+    }
+
+    /**
+     * Closes every live contract as a company-side breach, drops open offers, and
+     * detaches from the host guild. Pending wages die with the company.
+     */
+    public void disband() {
+        for (MercenaryContract contract : contractHandler.getActive()) {
+            ContractTerminationService.terminate(contract, TerminationReason.COMPANY_DISBANDED);
+        }
+        for (MercenaryContract contract : contractHandler.getOffered()) {
+            contract.finish(ContractStatus.TERMINATED);
+        }
+        enlisted.clear();
+        if (guild != null && guild.getCompany() == this) {
+            guild.setCompany(null);
+        }
+    }
+
+    private static void tell(String player, String message) {
+        if (player == null || message == null || SimpleFactions.plugin == null) return;
+        Player online = Bukkit.getPlayerExact(player);
+        if (online != null) online.sendMessage(message);
     }
 
     private void tickSlotQueue() {
@@ -450,6 +606,11 @@ public class MercenaryCompany {
         for (MercenaryContract c : contractHandler.getAll()) {
             data.contracts.add(c.serialize());
         }
+        data.activeWagePercent = wages.getActivePercent();
+        data.peacetimeWagePerDay = wages.getPeacetimePerDay();
+        data.activeWageOverrides = new LinkedHashMap<>(wages.getActiveOverrides());
+        data.peacetimeWageOverrides = new LinkedHashMap<>(wages.getPeacetimeOverrides());
+        data.pendingWages = new LinkedHashMap<>(pendingWages);
         return data;
     }
 }

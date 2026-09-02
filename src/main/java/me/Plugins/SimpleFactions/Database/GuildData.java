@@ -49,5 +49,8 @@ public class GuildData {
     public Double dividendPercent;
     public List<String> dividendEligible = new ArrayList<>();
 
+    @SerializedName("casino profit")
+    public Double casinoProfit;
+
     public MercenaryCompanyData company;
 }

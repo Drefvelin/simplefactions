@@ -21,7 +21,15 @@ import me.Plugins.SimpleFactions.War.core.War;
  * snapshot records no absence.
  */
 public final class AttendanceService {
-    public record Result(int attended, int absent, boolean snapshotMissing) {
+    /**
+     * Counts drive the refund and the lives, but the per-battle wage has to know
+     * <em>which</em> soldier showed up, so the attending ids travel with them.
+     */
+    public record Result(int attended, int absent, boolean snapshotMissing, Set<UUID> attendedIds) {
+        public Result(int attended, int absent, boolean snapshotMissing) {
+            this(attended, absent, snapshotMissing, Set.of());
+        }
+
         public static Result none() {
             return new Result(0, 0, true);
         }
@@ -73,17 +81,17 @@ public final class AttendanceService {
         for (MercenaryEngagements.Engagement engagement : engagements) {
             if (engagement.contract() == null || engagement.company() == null) continue;
             Set<UUID> enlisted = enlistedIds(engagement, uuids);
-            int both = 0;
+            Set<UUID> present = new HashSet<>();
             for (UUID id : enlisted) {
-                if (start.contains(id) && end.contains(id)) both++;
+                if (start.contains(id) && end.contains(id)) present.add(id);
             }
-            int attended = Math.min(both, engagement.promisedSlots());
+            int attended = Math.min(present.size(), engagement.promisedSlots());
             int absent = Math.max(0, engagement.promisedSlots() - attended);
             if (absent > 0) {
                 engagement.contract().markAttendanceFailure();
             }
             results.computeIfAbsent(engagement.contract().getId(), k -> new HashMap<>())
-                    .put(battleId, new Result(attended, absent, false));
+                    .put(battleId, new Result(attended, absent, false, Set.copyOf(present)));
         }
     }
 

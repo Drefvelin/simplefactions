@@ -54,6 +54,7 @@ public class RelationCreator {
 			if (Cache.warRequireDeclareCode) {
 				lore.add("§4Only click this if you have");
 				lore.add("§4an approved War Ticket in the discord!");
+				lore.add("§7You will be asked for the code in chat.");
 			} else {
 				lore.add("§7Select a war goal.");
 			}

@@ -3,6 +3,8 @@ package me.Plugins.SimpleFactions.mercenary.company;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Guild.income.Ledger;
 import me.Plugins.SimpleFactions.Guild.upgrade.Upgrade;
 import me.Plugins.SimpleFactions.Managers.Inventory.CompanyCreator;
 import me.Plugins.SimpleFactions.Utils.Formatter;
@@ -56,21 +59,71 @@ class CompanyGuiTest {
         }
         company.getUpgrade("company_health").setLevel(3);
 
+        company.getWageSettings().setPeacetimePerDay(4.0);
+
         assertEquals(2, company.getSlots());
         assertEquals(16.0, company.getSlotUpkeep());
         assertEquals(30.0, company.getUpgradeUpkeep());
-        assertEquals(0.0, company.getWageUpkeep());
-        assertEquals(46.0, company.getDailyBurn());
+        assertEquals(4.0, company.getWageUpkeep(), "one enlisted player on a 4 denar retainer");
+        assertEquals(50.0, company.getDailyBurn());
 
         List<String> lore = creator.buildCompanyLore(fixture.guild, company);
         assertTrue(lore.stream().anyMatch(line ->
-                line.contains("Daily burn") && line.contains(Formatter.formatMoney(46.0))));
+                line.contains("Daily burn") && line.contains(Formatter.formatMoney(50.0))));
         assertTrue(lore.stream().anyMatch(line ->
                 line.contains("Slots") && line.contains(Formatter.formatMoney(16.0))));
         assertTrue(lore.stream().anyMatch(line ->
                 line.contains("Upgrades") && line.contains(Formatter.formatMoney(30.0))));
         assertTrue(lore.stream().anyMatch(line ->
-                line.contains("Wages") && line.contains(Formatter.formatMoney(0.0))));
+                line.contains("Wages") && line.contains(Formatter.formatMoney(4.0))));
+    }
+
+    @Test
+    void aCompanyWithNoContractsShowsPeacetimeBurnOnly() {
+        MercenaryCompany company = formedCompany();
+        company.enlist("Bjorn");
+        company.getWageSettings().setPeacetimePerDay(4.0);
+
+        assertEquals(0.0, company.getContractIncome());
+        assertEquals(4.0, company.getWageUpkeep());
+        assertEquals(-company.getDailyBurn(), company.getNetPosition());
+
+        List<String> lore = creator.buildCompanyLore(fixture.guild, company);
+        assertTrue(lore.stream().anyMatch(line ->
+                line.contains("Contract income") && line.contains(Formatter.formatMoney(0.0))));
+        assertTrue(lore.stream().anyMatch(line -> line.contains("Net position")));
+    }
+
+    @Test
+    void theWarningTriggersOnTheBoundaryAndNotBefore() {
+        MercenaryCompany company = formedCompany();
+        Ledger ledger = mock(Ledger.class);
+        when(fixture.guild.getLedger()).thenReturn(ledger);
+        double burn = company.getDailyBurn();
+
+        // Net income already has the burn taken out of it, so zero net means the guild
+        // covers its company exactly.
+        when(ledger.getNetIncome()).thenReturn(0.0);
+        assertFalse(CompanyCreator.burnExceedsIncome(fixture.guild, company));
+        assertFalse(creator.buildCompanyLore(fixture.guild, company).stream()
+                .anyMatch(line -> line.contains("Burn exceeds")));
+
+        when(ledger.getNetIncome()).thenReturn(-0.01);
+        assertTrue(CompanyCreator.burnExceedsIncome(fixture.guild, company));
+        List<String> lore = creator.buildCompanyLore(fixture.guild, company);
+        assertTrue(lore.stream().anyMatch(line -> line.contains("Burn exceeds")));
+        assertTrue(lore.stream().anyMatch(line -> line.contains("voids every contract")));
+        assertTrue(burn > 0, "a formed company always costs something");
+    }
+
+    @Test
+    void aSolventGuildIsNotWarned() {
+        MercenaryCompany company = formedCompany();
+        Ledger ledger = mock(Ledger.class);
+        when(fixture.guild.getLedger()).thenReturn(ledger);
+        when(ledger.getNetIncome()).thenReturn(500.0);
+
+        assertFalse(CompanyCreator.burnExceedsIncome(fixture.guild, company));
     }
 
     @Test

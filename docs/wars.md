@@ -28,21 +28,28 @@ Previous-season wars were informal: players arranged fights in Discord, staff so
 
 ## Declaration flow
 
+Every declare runs the same pre-checks: no existing war with that target, opinion at or below `war.declare_opinion_threshold`, and at least one target member online. The declare code gate sits after those.
+
 ### Production
 
-1. Players open a **Discord ticket** (war type, target, goal, belligerents).
-2. Staff review → approve → issue a **one-time declare code**.
-3. In-game: diplomacy → **Declare War** → enter code.
+`war.require_declare_code: true` in `war.yml`.
 
-**Deferred to production declare codes** so the war system can be built and tested without ticket/code friction first.
+1. Players open a **Discord ticket** (war type, target, goal, belligerents).
+2. Staff review, then mint a **one-time declare code** with `/warcode mint attacker defender goal [hours]`. Faction ids come from `/war admin factions [filter]` in game. The code is shown once; a lost code is revoked and reminted.
+3. In-game: diplomacy → **Declare War** → the plugin asks for the code **in chat** (type `cancel` to back out). There is no anvil or sign input, so chat is the only free-text path.
+4. The code is checked without being spent, and **pins the war goal**: the goal picker is skipped entirely and the leader lands on that goal's own sub-picker (title, subject, relation type, settlement, government) or straight on confirm.
+5. On confirm, `WarManager.declareWar` runs. The code is **redeemed only if a war came back**, so a refusal from `WarGoalValidator`, `CampaignDeclareValidator` or `CampaignNavyGate` leaves the ticket spendable.
+
+**Staff bypass:** `simplefactions.admin` skips the code entirely. That bypass is what makes the gate safe to **fail closed** - if ProvinceSystem is unreachable or slow (`war.declare_code_timeout_seconds`), the declare is refused rather than waved through.
 
 ### Development / testing
 
-- Declare war **directly in-game** from diplomacy GUI (same entry point as today).
-- Config `war.require_declare_code: false` in `war.yml` (default until declare codes ship).
-- All goal validation and FSM rules apply; no code check.
+- `war.require_declare_code: false` (the default). Declare war **directly in-game** from the diplomacy GUI; the goal picker opens as normal.
+- All goal validation and FSM rules still apply; only the code check is skipped.
 
-**Code properties:** one-time use, expiry, bound to attacker/defender/goal, audit log.
+**Code properties:** one-time use, expiry, bound to attacker/defender/goal/realm, audit log (`DECLARE_CODE` in the war log, plus `DECLARE_CODE_UNSPENT` if the war exists but redemption failed).
+
+Codes live in ProvinceSystem (`war_declare_codes`), realm-scoped, hashed with no plaintext column. SimpleFactions reaches them through TFMCWeb's gateway, which injects the realm id because the plugin does not know its own. Routes: [ProvinceSystem/docs/identity/tfmcweb.md](../../ProvinceSystem/docs/identity/tfmcweb.md).
 
 ---
 
@@ -184,6 +191,7 @@ Keep from legacy system (repurpose):
 - **Attacker / defender** sides with **main participants**
 - **Subjects** auto-included on participant side (direct subjects of each main)
 - **Allies** via call-to-arms (`/faction accept`, 60s timeout)
+- **Mercenary companies** hired by contract on one side, listed with their promised slots. A third kind, neither main nor secondary, and never a belligerent: see [Mercenaries (locked)](#mercenaries-locked) below.
 - **No switch sides in war GUI.** Subject independence / rebellion uses the **movement system**, not a war-view button (legacy switch removed 2026-08-20).
 
 **Internal (inter-vassal) wars:** two factions that share a top liege and are **not** on each other's overlord path. Defender is the clicked faction, not the king. The liege is not a participant and is not callable. Lock: [planning/inter-vassal-wars/00-index.md](./planning/inter-vassal-wars/00-index.md).
@@ -203,6 +211,20 @@ Keep from legacy system (repurpose):
 | Militia fights only on **that faction's direct land** | Province owner = faction |
 | **Overlord militia** does **not** deploy in **vassal** territory | Overlord sends army + levies |
 | Battle in **vassal land** | Vassal's **full** military including militia joins; overlord sends non-militia + levies |
+
+### Mercenaries (locked)
+
+A **mercenary company** is a guild-owned band of soldiers for hire. It fights where its contract sends it and is the third kind of thing that can be on a war side, alongside belligerents and their allies. Gameplay lock: [planning/war-companies/00-index.md](./planning/war-companies/00-index.md) - reference doc: [mercenaries.md](./mercenaries.md).
+
+| Rule | Detail |
+|------|--------|
+| **Hired by contract** | A company joins a side only through a signed contract naming the war, the side, and the promised slots |
+| **Listed with promised slots** | The war screen shows the company and the slot count it promised, not a regiment row |
+| **Never a belligerent** | A company is not a participant: it has no war goal, no initiative, no call to arms, and cannot be declared on because it fought |
+| **Never a party to a peace deal** | White peace, surrender, and goal apply ignore companies entirely; a contract ends on its own terms |
+| **The host faction stays out** | The company's **host faction** (the one its guild belongs to) does **not** become a participant because its citizens fight for hire |
+
+**Loyalty:** a company can never fight **its own host faction**, whichever side the contract is on. A rostered mercenary who is a plain, **non-government citizen of another faction may fight their own faction**; a leader or council member of that faction may not. A contract that becomes illegal (an ally joins on the opposing side, an overlord bond forms) terminates with no refund and no reputation change, and the days already served are still paid.
 
 ---
 
@@ -914,10 +936,16 @@ Applies when `battle.warId != null` and type is **FIELD** or **SIEGE** at `battl
 sideLives = max(minSideLives, livesPerRegiment × committedRegiments − rosterFighters)
 ```
 
-- `committedRegiments`: eligible pool total from battle pool resolver (61.03)
+- `committedRegiments`: eligible pool total from battle pool resolver (61.03), **plus mercenary slots** (below)
 - `rosterFighters`: unique warband roster members on that side (includes devmode dummies; offline real players included)
 - Capture markers and capture presence still count **online real players only**
 - Pre-battle join cap uses **pool lives** (committed regiments × lives per regiment); mid-battle join costs 1 life from the started side pool
+
+**Mercenary contribution (locked):** a hired company adds to `committedRegiments` only its **filled and attending** slots - enlisted players actually on that side's warband roster, capped at the slots the contract promised. An empty or unfilled slot adds nothing, and a company cannot inflate the pool past its promise. Lives stay a **single shared side pool**: mercenary lives are not a separate allowance, so a company burning lives spends the belligerent's pool too.
+
+A **dual-role** player (a mercenary who is also a citizen fighting on that side) is counted once in the pool and **subtracted once** from `rosterFighters`, because both figures walk unique roster ids.
+
+**Attendance (locked):** a slot attends when its player is present at **battle start** and still on the roster at **resolution**. End means on the roster, not alive and not online: a player who dies or logs out mid-battle still attends as long as they were not removed. Absence is what drives the refund, so a restart that loses the battle-start snapshot records **no** absence rather than guessing one.
 
 Config under `war.battle_military`:
 
@@ -925,6 +953,8 @@ Config under `war.battle_military`:
 |-----|---------|
 | `lives_per_regiment` | `5` |
 | `min_side_lives` | `1` |
+
+Mercenary slot, price and contract keys are documented in [mercenaries.md](./mercenaries.md); the gameplay lock is [planning/war-companies/00-index.md](./planning/war-companies/00-index.md).
 
 ### Casualties (locked )
 
@@ -944,6 +974,24 @@ Config under `war.battle_military`:
 - **transferSubject** mid-war: remove old subtree only; no snapshot for new overlord.
 - Fighter on the war side never also appears as levy from the same side (no double count).
 - All commits tagged **`war_id`**. Losses decrement committed levy and source faction sent counts.
+
+### Battle loot
+
+One identical reward, paid once, to every fighter who was **online when the battle ended**. Both sides are paid: the battle happened in lore, so losing it still earns the reward. A retreat pays too, since a retreat produces a winner.
+
+Three things must all hold, checked in `BattleLootService.shouldPay`:
+
+1. The battle produced a **winner**. A timer expiry with no winner pays nothing.
+2. The battle is **not a campaign raid**.
+3. The battle's own **loot toggle** is on.
+
+The toggle is a per-battle flag, persisted with the battle and flippable at **slot 14** of `/battle edit` ("Battle Loot"). It defaults **on** for manual and campaign field and siege battles, and **off** for campaign raids. Battle files written before this feature existed load as on, except campaign raids, which load as off. Staff can turn a raid's loot on by hand and it sticks.
+
+What gets paid is server-wide, not per battle - see the `war.battle_loot` keys in [dev-config.md](./dev-config.md). `COMMAND` mode dispatches each configured line from console once per rewarded player, which is how a crate key is handed out; `ITEM` mode gives a TLibs item and drops it at the player's feet if the inventory is full. An empty command list or a blank item path means no loot, so there is no separate enable key.
+
+Everyone is paid the same regardless of contribution, kills, or time on the field.
+
+**Wins that pay nothing:** the reward hangs off `BattleEndedEvent`, which only fires for battles that were actually fought. Walkovers, offensive forfeits, the naval auto-loss, campaign slot concessions and admin `/war admin schedule winbattle` all record a winner without a live battle, so none of them pay. Offline roster members are also skipped, which means joining a warband and logging off earns nothing.
 
 ---
 
@@ -1061,10 +1109,12 @@ Re-upload `map_markers` or wait for the next regen after deploy so active wars p
 | [settlements.md](./settlements.md) | Settlement provinces (de jure annex block) |
 | [province-grid.md](./province-grid.md) | Province ids and neighbours |
 | [campaign-raids.md](./campaign-raids.md) | Inter-battle installation assaults |
+| [mercenaries.md](./mercenaries.md) | Companies, contracts, wages, reputation, config keys |
 | [map-export.md](./map-export.md) | War route slice in `map_markers.json` |
 | [roadmap.md](./roadmap.md) | Shipped vs planned features |
 | [war-goals-apply lock](./planning/war-goals-apply/00-index.md) | Navy gate, goal apply, movement gate |
 | [inter-vassal-wars lock](./planning/inter-vassal-wars/00-index.md) | Internal peer wars, CTA, liege transit |
+| [war-companies lock](./planning/war-companies/00-index.md) | Mercenary gameplay lock, dividends, recruitment rule |
 | [ProvinceSystem map wars overlay](../../ProvinceSystem/docs/map/wars-on-map.md) | Website overlay |
 
 ---
