@@ -30,6 +30,8 @@ me.Plugins.SimpleFactions/
 ├── Managers/             # Orchestration, commands, GUIs
 ├── Database/             # Gson/load-save DTOs
 ├── Map/                  # Provinces, grid
+│   └── fertility/        # Province fertility crop growth
+│       └── customcrops/  # CustomCrops requirement bridge (optional dep)
 ├── government/           # Laws, elections, movement
 ├── War/
 │   ├── core/             # War, Side, WarMapper, declare helpers
@@ -121,6 +123,10 @@ Use this table before creating a file.
 | Battle province block protection | `War/battle/engine/rules/BattleProvinceBlockProtectionService` | Installation protection or raid logic |
 | Campaign installation pick GUI | `Managers/Inventory/CampaignInstallationPickView` | Pick logic in view |
 | Prestige term math or a new prestige input | `prestige/` (curve + probe seam), assembled by `Objects/PrestigeBreakdown` | Any I/O behind a prestige read; `updatePrestige()` runs for every faction on every bank mutation. See [docs/prestige.md](docs/prestige.md) |
+| Fertility growth math / province lookup | `Map/fertility/` | `Managers` listeners for one event |
+| Vanilla crop growth gate | `Map/fertility/FertilityVanillaGrowth` + `FertilityCropGrowthListener` | Inline roll logic in listener |
+| CustomCrops grow requirement | `Map/fertility/customcrops/` | CustomCrops imports outside bridge package |
+| Crop weight config | `fertility-crops.yml` + `Loaders/FertilityCropsLoader` | `config.yml` / `Cache` for per-crop weights |
 
 ---
 
@@ -184,6 +190,7 @@ When moving classes: IDE refactor/move, update main + test + Database imports, g
 ```bash
 cd simplefactions && mvn test -Dtest="me.Plugins.SimpleFactions.War.**"   # war changes
 cd simplefactions && mvn test -Dtest="me.Plugins.SimpleFactions.vehicles.**"  # vehicle berth changes
+cd simplefactions && mvn test -Dtest="me.Plugins.SimpleFactions.Map.fertility.**,me.Plugins.SimpleFactions.Loaders.FertilityCropsLoaderTest"  # fertility crop growth
 cd simplefactions && mvn test                                              # broad changes
 ```
 
@@ -201,6 +208,8 @@ For schedule/pathfinder work, confirm tests include:
 
 - [docs/wars.md](docs/wars.md) - gameplay spec
 - [docs/prestige.md](docs/prestige.md) - prestige terms, the two halves of Members, playtime curve, hot-path rules
+- [docs/fertility.md](docs/fertility.md) - province fertility crop growth (vanilla + CustomCrops)
+- [docs/fertility-verify.md](docs/fertility-verify.md) - in-game QA matrix for fertility crop growth
 - [docs/mercenaries.md](docs/mercenaries.md) - companies for hire, contracts, wages, reputation, config keys
 - [docs/installations.md](docs/installations.md) - installations, berth flow, personal limits
 - [docs/vehicles.md](docs/vehicles.md) - berths, slots, VF integration

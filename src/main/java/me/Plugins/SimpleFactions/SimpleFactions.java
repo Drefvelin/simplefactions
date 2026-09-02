@@ -12,6 +12,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Map.ProvinceGrid;
+import me.Plugins.SimpleFactions.Map.fertility.FertilityCropGrowthListener;
+import me.Plugins.SimpleFactions.Map.fertility.customcrops.CustomCropsFertilityBridge;
 import me.Plugins.SimpleFactions.Map.presence.ProvincePresenceListener;
 import me.Plugins.SimpleFactions.Map.presence.ProvincePresenceService;
 import me.Plugins.SimpleFactions.Map.presence.ProvincePresenceTickService;
@@ -32,6 +34,7 @@ import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Loaders.UpgradeLoader;
 import me.Plugins.SimpleFactions.Loaders.InstallationConfigLoader;
 import me.Plugins.SimpleFactions.installation.InstallationProtectionListener;
+import me.Plugins.SimpleFactions.Loaders.FertilityCropsLoader;
 import me.Plugins.SimpleFactions.Loaders.VehiclesConfigLoader;
 import me.Plugins.SimpleFactions.Managers.BankManager;
 import me.Plugins.SimpleFactions.Managers.CommandManager;
@@ -134,6 +137,9 @@ public class SimpleFactions extends JavaPlugin{
 	private final DisplayNameGate displayNameGate = new DisplayNameGate();
 	private final DeclareCodePrompt declareCodePrompt = new DeclareCodePrompt();
 	private final ProvincePresenceListener provincePresenceListener = new ProvincePresenceListener();
+	private final FertilityCropGrowthListener fertilityCropGrowthListener = new FertilityCropGrowthListener();
+	private final CustomCropsFertilityBridge customCropsFertilityBridge = new CustomCropsFertilityBridge();
+	private boolean customCropsFertilityRegistered;
 	private final BattleManager battleManager = new BattleManager();
 	private final BattleItemDurability.Listener battleItemDurabilityListener =
 			new BattleItemDurability.Listener();
@@ -220,6 +226,7 @@ public class SimpleFactions extends JavaPlugin{
 		createConfigs();
 		registerListeners();
 		loadConfigs();
+		registerCustomCropsFertilityHooks();
 		vehicleRegistryPersistence = new VehicleRegistryPersistence(
 			new File(getDataFolder(), "Cache"),
 			vehicleRegistry);
@@ -336,6 +343,7 @@ public class SimpleFactions extends JavaPlugin{
 	}
 	public void loadConfigs() {
 		configLoader.loadConfig(new File(getDataFolder(), "config.yml"));
+		FertilityCropsLoader.load(new File(getDataFolder(), "fertility-crops.yml"));
 		configLoader.loadWar(new File(getDataFolder(), "war.yml"));
 		VehiclesConfigLoader.load(new File(getDataFolder(), "vehicles.yml"));
 		InstallationConfigLoader.load(new File(getDataFolder(), "installations.yml"));
@@ -371,6 +379,7 @@ public class SimpleFactions extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(declareCodePrompt, this);
 		getServer().getPluginManager().registerEvents(factionManager, this);
 		getServer().getPluginManager().registerEvents(provincePresenceListener, this);
+		getServer().getPluginManager().registerEvents(fertilityCropGrowthListener, this);
 		getServer().getPluginManager().registerEvents(battleManager, this);
 		getServer().getPluginManager().registerEvents(battleItemDurabilityListener, this);
 		getServer().getPluginManager().registerEvents(battleProvinceBlockProtectionListener, this);
@@ -435,6 +444,7 @@ public class SimpleFactions extends JavaPlugin{
 				"battle-templates.yml",
 				"vehicles.yml",
 				"installations.yml",
+				"fertility-crops.yml",
 				};
 		for(String s : files) {
 			File newConfigFile = new File(getDataFolder(), s);
@@ -515,6 +525,26 @@ public class SimpleFactions extends JavaPlugin{
 		}
 		if (vehicleMaintenancePersistence != null) {
 			vehicleMaintenancePersistence.save();
+		}
+	}
+
+	private void registerCustomCropsFertilityHooks() {
+		getServer().getPluginManager().registerEvents(new Listener() {
+			@EventHandler
+			public void onPluginEnable(PluginEnableEvent event) {
+				if ("CustomCrops".equalsIgnoreCase(event.getPlugin().getName())) {
+					registerCustomCropsFertilityIntegration();
+				}
+			}
+		}, this);
+		registerCustomCropsFertilityIntegration();
+	}
+
+	private void registerCustomCropsFertilityIntegration() {
+		CustomCropsFertilityBridge.tryRegister();
+		if (!customCropsFertilityRegistered) {
+			CustomCropsFertilityBridge.registerReloadListener(this, customCropsFertilityBridge);
+			customCropsFertilityRegistered = true;
 		}
 	}
 

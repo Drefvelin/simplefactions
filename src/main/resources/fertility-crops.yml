@@ -1,0 +1,49 @@
+enabled: true
+
+vanilla:
+  WHEAT: 0.90
+  BEETROOTS: 0.80
+  CARROTS: 0.55
+  POTATOES: 0.30
+  MELON_STEM: 0.70
+  ATTACHED_MELON_STEM: 0.70
+  PUMPKIN_STEM: 0.65
+  ATTACHED_PUMPKIN_STEM: 0.65
+  COCOA: 0.75
+  SWEET_BERRY_BUSH: 0.25
+  TORCHFLOWER: 0.80
+  PITCHER_CROP: 0.75
+  NETHER_WART: 0.15
+  SUGAR_CANE: 0.45
+
+customcrops:
+  rice: 0.85
+  corn: 0.80
+  lettuce: 0.70
+  tomato: 0.75
+  cucumber: 0.65
+  onion: 0.35
+  garlic: 0.40
+  rhubarb: 0.50
+  mustard: 0.55
+  basil: 0.50
+  spiceleaf: 0.55
+  yeast: 0.25
+  apple: 0.60
+  cherry: 0.60
+  peach: 0.60
+  plum: 0.60
+  grape: 0.55
+  strawberry: 0.65
+  orange: 0.55
+  lemon: 0.55
+  lime: 0.55
+  banana: 0.40
+  pineapple: 0.45
+  cactusfruit: 0.12
+  pistachio: 0.35
+  olive: 0.30
+  blackpepper: 0.70
+  vanilla: 0.75
+  cinnamon: 0.65
+  nutmeg: 0.70

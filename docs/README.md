@@ -10,6 +10,8 @@ This `docs/` folder is the product and technical reference for the **SimpleFacti
 2. [map-export.md](./map-export.md) - HTTP upload, regen, JSON contract
 3. [province-grid.md](./province-grid.md) - local province lookup
 4. Product areas:
+   - [fertility.md](./fertility.md) - province fertility crop growth (vanilla + CustomCrops)
+   - [fertility-verify.md](./fertility-verify.md) - in-game QA matrix for fertility crop growth
    - [prestige.md](./prestige.md) - what a nation's standing is made of, and the playtime term
    - [wars.md](./wars.md) - automated campaign war system (canonical spec)
    - [campaign-raids.md](./campaign-raids.md) - inter-battle installation raids
