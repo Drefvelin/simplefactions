@@ -300,6 +300,34 @@ public class MercenaryCompany {
         slotQueue.add(new MilitaryExpansion(regiment, timeLeft));
     }
 
+    public MercenaryResult adminAdjustSlots(int delta) {
+        if (delta == 0) {
+            return MercenaryResult.deny("Amount must be non-zero.");
+        }
+        if (regiment == null) {
+            return MercenaryResult.deny("Mercenary companies are not configured on this server.");
+        }
+        if (isForming()) {
+            return MercenaryResult.deny("Your company is still being founded.");
+        }
+        if (delta > 0) {
+            for (int i = 0; i < delta; i++) {
+                regiment.sizeIncrease();
+            }
+            return MercenaryResult.ok("Added " + delta + " slot" + (delta == 1 ? "" : "s") + ".");
+        }
+        int remove = -delta;
+        if (getSlots() < remove) {
+            return MercenaryResult.deny("Not enough slots to remove.");
+        }
+        for (int i = 0; i < remove; i++) {
+            if (!dropSlot()) {
+                return MercenaryResult.deny("Not enough slots to remove.");
+            }
+        }
+        return MercenaryResult.ok("Removed " + remove + " slot" + (remove == 1 ? "" : "s") + ".");
+    }
+
     /**
      * The only way a company loses a slot. Phase 3 hangs contract breach off
      * this, so every caller must come through here.

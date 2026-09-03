@@ -101,6 +101,36 @@ public class Military {
 		if(queue.size() == 3) return;
 		queue.add(new MilitaryExpansion(r, time));
 	}
+
+	public ExpandResult adminAdjustSlots(String regimentId, int delta) {
+		if (delta == 0) {
+			return ExpandResult.deny("Amount must be non-zero.");
+		}
+		Regiment regiment = getRegiment(regimentId);
+		if (regiment == null) {
+			return ExpandResult.deny("Unknown regiment.");
+		}
+		if (regiment.isLevy()) {
+			return ExpandResult.deny("Levies cannot be adjusted by admins.");
+		}
+		if (regiment.isMercenary()) {
+			return ExpandResult.deny("Mercenary regiments belong to companies, not factions.");
+		}
+		if (delta > 0) {
+			for (int i = 0; i < delta; i++) {
+				regiment.sizeIncrease();
+			}
+			return ExpandResult.ok();
+		}
+		int remove = -delta;
+		if (regiment.getCurrentSlots() < remove) {
+			return ExpandResult.deny("Not enough slots to remove.");
+		}
+		for (int i = 0; i < remove; i++) {
+			regiment.sizeDecrease();
+		}
+		return ExpandResult.ok();
+	}
 	
 	public int getManpower(boolean offense) {
 		int manpower = 0;

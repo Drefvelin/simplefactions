@@ -47,4 +47,13 @@ class SFInventoryHolderTest {
         assertNull(h.getSecondaryId());
         assertEquals(true, h.getFlag());
     }
+
+    @Test
+    void setPageUpdatesHolderAndClampsNegative() {
+        SFInventoryHolder h = new SFInventoryHolder("faction1", SFGUI.TITLE_TYPE_VIEW, 0, false, "county");
+        h.setPage(2);
+        assertEquals(2, h.getPage());
+        h.setPage(-1);
+        assertEquals(0, h.getPage());
+    }
 }

@@ -110,60 +110,59 @@ public class InstallationHandler {
             int province,
             int x,
             int z) {
-        if (kind == null) {
-            return ConstructResult.fail("§cUnknown installation type");
-        }
-        if (displayName == null || displayName.isBlank()) {
-            return ConstructResult.fail("§cName required: §e/faction construct " + kind.getCommandName() + " <name>");
-        }
-        if (pendingConstruction != null) {
-            return ConstructResult.fail("§cYour faction is already building an installation");
-        }
-        if (!faction.getProvinceHandler().hasProvince(province)) {
-            return ConstructResult.fail("§cYour faction doesn't own this province!");
-        }
-        if (byProvinceKind.containsKey(indexKey(kind, province))
-                || pendingByProvinceKind.containsKey(indexKey(kind, province))) {
-            return ConstructResult.fail(
-                    "§cThis province already has a " + kind.getCommandName());
+        ValidatedConstruct validated = validateConstruct(kind, displayName, province, x, z);
+        if (validated.failed()) {
+            return validated.failure;
         }
 
-        Province prov = SimpleFactions.getInstance().getProvinceManager().get(province);
-        if (!prov.isValid()) {
-            return ConstructResult.fail("§cThis location has no province!");
-        }
-        if (prov.isSea()) {
-            return ConstructResult.fail("§cYou cannot construct on water!");
-        }
-        if (kind == InstallationKind.PORT
-                && !ProvinceSpatial.withinConfiguredPortSeaProximity(x, z)) {
-            return ConstructResult.fail(
-                    "§cPorts must be within "
-                            + me.Plugins.SimpleFactions.Cache.portSeaProximityBlocks
-                            + " blocks of sea or river!");
-        }
-
-        String id = Formatter.formatId(displayName);
-        if (id.isBlank()) {
-            return ConstructResult.fail("§cInvalid installation name");
-        }
-        if (byId.containsKey(id)) {
-            return ConstructResult.fail("§cAn installation with that id already exists");
-        }
-
-        String name = StringFormatter.formatHex(Formatter.formatName(displayName));
-        InstallationConstruction construction =
-                new InstallationConstruction(id, name, kind, province, x, z);
+        InstallationConstruction construction = new InstallationConstruction(
+                validated.id,
+                validated.name,
+                kind,
+                province,
+                x,
+                z);
         setPendingConstruction(construction);
 
         return ConstructResult.ok(
                 "§eBuilding "
                         + kind.getCommandName()
                         + " §f"
-                        + name
+                        + validated.name
                         + "§e - §7"
                         + TimeFormatter.formatTime(construction.getTimeLeft())
                         + " remaining");
+    }
+
+    public ConstructResult constructInstant(
+            InstallationKind kind,
+            String displayName,
+            int province,
+            int x,
+            int z) {
+        ValidatedConstruct validated = validateConstruct(kind, displayName, province, x, z);
+        if (validated.failed()) {
+            return validated.failure;
+        }
+
+        Installation installation = placeCompleted(
+                validated.id,
+                validated.name,
+                kind,
+                province,
+                x,
+                z,
+                System.currentTimeMillis());
+
+        return ConstructResult.ok(
+                "§aConstructed "
+                        + kind.getCommandName()
+                        + " §f"
+                        + validated.name
+                        + " §7("
+                        + validated.id
+                        + ")",
+                installation);
     }
 
     public ConstructResult deconstruct(String id) {
@@ -332,19 +331,92 @@ public class InstallationHandler {
         enqueueMapUpdate();
     }
 
+    private ValidatedConstruct validateConstruct(
+            InstallationKind kind,
+            String displayName,
+            int province,
+            int x,
+            int z) {
+        if (kind == null) {
+            return ValidatedConstruct.fail(ConstructResult.fail("§cUnknown installation type"));
+        }
+        if (displayName == null || displayName.isBlank()) {
+            return ValidatedConstruct.fail(
+                    ConstructResult.fail(
+                            "§cName required: §e/faction construct "
+                                    + kind.getCommandName()
+                                    + " <name>"));
+        }
+        if (pendingConstruction != null) {
+            return ValidatedConstruct.fail(
+                    ConstructResult.fail("§cYour faction is already building an installation"));
+        }
+        if (!faction.getProvinceHandler().hasProvince(province)) {
+            return ValidatedConstruct.fail(
+                    ConstructResult.fail("§cYour faction doesn't own this province!"));
+        }
+        if (byProvinceKind.containsKey(indexKey(kind, province))
+                || pendingByProvinceKind.containsKey(indexKey(kind, province))) {
+            return ValidatedConstruct.fail(
+                    ConstructResult.fail(
+                            "§cThis province already has a " + kind.getCommandName()));
+        }
+
+        Province prov = SimpleFactions.getInstance().getProvinceManager().get(province);
+        if (!prov.isValid()) {
+            return ValidatedConstruct.fail(
+                    ConstructResult.fail("§cThis location has no province!"));
+        }
+        if (prov.isSea()) {
+            return ValidatedConstruct.fail(
+                    ConstructResult.fail("§cYou cannot construct on water!"));
+        }
+        if (kind == InstallationKind.PORT
+                && !ProvinceSpatial.withinConfiguredPortSeaProximity(x, z)) {
+            return ValidatedConstruct.fail(
+                    ConstructResult.fail(
+                            "§cPorts must be within "
+                                    + me.Plugins.SimpleFactions.Cache.portSeaProximityBlocks
+                                    + " blocks of sea or river!"));
+        }
+
+        String id = Formatter.formatId(displayName);
+        if (id.isBlank()) {
+            return ValidatedConstruct.fail(ConstructResult.fail("§cInvalid installation name"));
+        }
+        if (byId.containsKey(id)) {
+            return ValidatedConstruct.fail(
+                    ConstructResult.fail("§cAn installation with that id already exists"));
+        }
+
+        String name = StringFormatter.formatHex(Formatter.formatName(displayName));
+        return ValidatedConstruct.ok(id, name);
+    }
+
+    private Installation placeCompleted(
+            String id,
+            String name,
+            InstallationKind kind,
+            int province,
+            int x,
+            int z,
+            long completedAt) {
+        Installation installation = new Installation(id, name, kind, province, x, z, completedAt);
+        register(installation);
+        enqueueMapUpdate();
+        return installation;
+    }
+
     private void completeConstruction(InstallationConstruction construction) {
-        long completedAt = System.currentTimeMillis();
-        Installation installation = new Installation(
+        Installation installation = placeCompleted(
                 construction.getId(),
                 construction.getName(),
                 construction.getKind(),
                 construction.getProvince(),
                 construction.getCenterX(),
                 construction.getCenterZ(),
-                completedAt);
-        register(installation);
+                System.currentTimeMillis());
         clearPendingConstruction();
-        enqueueMapUpdate();
 
         Player leader = Bukkit.getPlayerExact(faction.getLeader());
         if (leader != null) {
@@ -354,6 +426,30 @@ public class InstallationHandler {
                             + " §f"
                             + installation.getName()
                             + " §ahas finished construction");
+        }
+    }
+
+    private static final class ValidatedConstruct {
+        private final ConstructResult failure;
+        private final String id;
+        private final String name;
+
+        private ValidatedConstruct(ConstructResult failure, String id, String name) {
+            this.failure = failure;
+            this.id = id;
+            this.name = name;
+        }
+
+        static ValidatedConstruct fail(ConstructResult failure) {
+            return new ValidatedConstruct(failure, null, null);
+        }
+
+        static ValidatedConstruct ok(String id, String name) {
+            return new ValidatedConstruct(null, id, name);
+        }
+
+        boolean failed() {
+            return failure != null;
         }
     }
 

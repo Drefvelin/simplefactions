@@ -56,6 +56,10 @@ public class SFInventoryHolder implements InventoryHolder {
         return page;
     }
 
+    public void setPage(int page) {
+        this.page = Math.max(0, page);
+    }
+
     public boolean getFlag() {
         return flag;
     }

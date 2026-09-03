@@ -60,7 +60,7 @@
   "concededScheduleSlots": [],
   "locationBattleCounts": {},
   "battleSchedulePhase": "voting",
-  "battleDay": "2026-09-03",
+  "battleDay": "2026-09-04",
   "battleVotes": {},
   "battleInstallationPicks": {},
   "campaignRaidsUsed": {},
@@ -75,7 +75,7 @@
   "postBattleChoiceResolved": true,
   "holdPeaceProposalActive": false,
   "forceQuorumNextClose": false,
-  "startedAt": "2026-09-02T15:42:37.624163Z",
+  "startedAt": "2026-09-03T08:50:56.657831200Z",
   "attackers": {
     "leader": "atk",
     "participants": [

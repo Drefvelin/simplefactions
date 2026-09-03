@@ -53,7 +53,29 @@ public class TabCompletion implements TabCompleter{
 				completions.add("accept");
 				completions.add("decline");
 			}
+			if(Permissions.isAdmin(p)) {
+				completions.add("admin");
+			}
 			return filtered(completions, args.length == 1 ? args[0] : "");
+		}
+		if(args.length == 2 && args[0].equalsIgnoreCase("admin") && Permissions.isAdmin(p)) {
+			completions.add("give");
+			completions.add("take");
+			return filtered(completions, args[1]);
+		}
+		if(args.length == 3 && args[0].equalsIgnoreCase("admin") && Permissions.isAdmin(p)) {
+			for(Guild g : FactionManager.getAllGuilds()) {
+				if(g == null || g.getCompany() == null) continue;
+				if(g.getCompany().getName() != null) {
+					completions.add(g.getCompany().getName());
+				}
+				completions.add(g.getId());
+			}
+			return filtered(completions, args[2]);
+		}
+		if(args.length == 4 && args[0].equalsIgnoreCase("admin") && Permissions.isAdmin(p)) {
+			completions.add("1");
+			return completions;
 		}
 		if(args.length == 2 && args[0].equalsIgnoreCase("kick")) {
 			if(guild != null && guild.getCompany() != null) {
@@ -100,12 +122,16 @@ public class TabCompletion implements TabCompleter{
 	}
 
 	private List<String> completeConstructKinds(String[] args) {
+		return completeConstructKinds(args, 1);
+	}
+
+	private List<String> completeConstructKinds(String[] args, int kindIndex) {
 		List<String> completions = new ArrayList<>();
 		for (InstallationKind kind : InstallationKind.values()) {
 			completions.add(kind.getCommandName());
 		}
-		if (args.length >= 2) {
-			String prefix = args[1].toLowerCase();
+		if (args.length > kindIndex) {
+			String prefix = args[kindIndex].toLowerCase();
 			completions.removeIf(kind -> !kind.toLowerCase().startsWith(prefix));
 		}
 		return completions;
@@ -273,10 +299,12 @@ public class TabCompletion implements TabCompleter{
 					completions.add("forceleader");
 					completions.add("forcejoin");
 					completions.add("forcewithdraw");
+					completions.add("forceregiment");
 					completions.add("addprestigemodifier");
 					//completions.add("addwealthmodifier");
 					completions.add("getglobalwealth");
 					if(Cache.provincesEnabled) {
+						completions.add("forceconstruct");
 						completions.add("queueallnations");
 						completions.add("fullregen");
 						completions.add("reloadtitles");
@@ -481,6 +509,61 @@ public class TabCompletion implements TabCompleter{
 					}
 					return completions;
 				}
+			} else if(cmd.getName().equalsIgnoreCase("faction")
+					&& Cache.provincesEnabled
+					&& args.length == 2
+					&& args[0].equalsIgnoreCase("forceconstruct")) {
+				List<String> completions = new ArrayList<>();
+				for(Faction f : FactionManager.factions) {
+					completions.add(f.getId());
+				}
+				return completions;
+			} else if(cmd.getName().equalsIgnoreCase("faction")
+					&& Cache.provincesEnabled
+					&& args.length == 3
+					&& args[0].equalsIgnoreCase("forceconstruct")) {
+				return completeConstructKinds(args, 2);
+			} else if(cmd.getName().equalsIgnoreCase("faction")
+					&& Cache.provincesEnabled
+					&& args.length >= 4
+					&& args[0].equalsIgnoreCase("forceconstruct")) {
+				List<String> completions = new ArrayList<>();
+				completions.add("<name>");
+				return completions;
+			} else if(cmd.getName().equalsIgnoreCase("faction")
+					&& args.length == 2
+					&& args[0].equalsIgnoreCase("forceregiment")) {
+				List<String> completions = new ArrayList<>();
+				for(Faction f : FactionManager.factions) {
+					completions.add(f.getId());
+				}
+				return completions;
+			} else if(cmd.getName().equalsIgnoreCase("faction")
+					&& args.length == 3
+					&& args[0].equalsIgnoreCase("forceregiment")) {
+				List<String> completions = new ArrayList<>();
+				completions.add("give");
+				completions.add("take");
+				return completions;
+			} else if(cmd.getName().equalsIgnoreCase("faction")
+					&& args.length == 4
+					&& args[0].equalsIgnoreCase("forceregiment")) {
+				List<String> completions = new ArrayList<>();
+				Faction f = FactionManager.getByString(args[1]);
+				if(f != null) {
+					for(me.Plugins.SimpleFactions.Army.Regiment r : f.getMilitary().getRegiments()) {
+						if(!r.isLevy()) {
+							completions.add(r.getId());
+						}
+					}
+				}
+				return completions;
+			} else if(cmd.getName().equalsIgnoreCase("faction")
+					&& args.length == 5
+					&& args[0].equalsIgnoreCase("forceregiment")) {
+				List<String> completions = new ArrayList<>();
+				completions.add("1");
+				return completions;
 			} else if (args.length == 2 && args[0].equalsIgnoreCase("forcejoin")) {
 				List<String> completions = new ArrayList<String>();
 				// Suggest faction names

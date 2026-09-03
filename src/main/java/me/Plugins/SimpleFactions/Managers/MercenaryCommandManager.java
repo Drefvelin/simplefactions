@@ -13,7 +13,9 @@ import me.Plugins.SimpleFactions.Guild.Guild;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.DisplayNameGate;
 import me.Plugins.SimpleFactions.Utils.DisplayNameGate.NameOperation;
+import me.Plugins.SimpleFactions.Utils.Permissions;
 import me.Plugins.SimpleFactions.mercenary.MercenaryResult;
+import me.Plugins.SimpleFactions.mercenary.company.MercenaryCompanies;
 import me.Plugins.SimpleFactions.mercenary.company.MercenaryCompany;
 import me.Plugins.SimpleFactions.mercenary.company.MercenaryCompanyService;
 import me.Plugins.SimpleFactions.mercenary.company.MercenaryInvites;
@@ -73,6 +75,7 @@ public final class MercenaryCommandManager implements CommandExecutor {
                 offer(p, String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length)));
             }
             case "contracts" -> contracts(p);
+            case "admin" -> admin(p, args);
             default -> usage(p);
         }
         return true;
@@ -178,6 +181,45 @@ public final class MercenaryCommandManager implements CommandExecutor {
         FactionManager.getInv().contractListView(p, guild);
     }
 
+    private void admin(Player p, String[] args) {
+        if (!Permissions.isAdmin(p)) {
+            p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+            return;
+        }
+        if (args.length < 3) {
+            p.sendMessage("§cUsage: §e/company admin give|take <company> [amount]");
+            return;
+        }
+        boolean give;
+        if (args[1].equalsIgnoreCase("give")) {
+            give = true;
+        } else if (args[1].equalsIgnoreCase("take")) {
+            give = false;
+        } else {
+            p.sendMessage("§cUsage: §e/company admin give|take <company> [amount]");
+            return;
+        }
+        MercenaryCompany company = resolveCompany(args[2]);
+        if (company == null) {
+            p.sendMessage("§cNo company by that name.");
+            return;
+        }
+        int amount = 1;
+        if (args.length >= 4) {
+            try {
+                amount = Integer.parseInt(args[3]);
+            } catch (NumberFormatException e) {
+                p.sendMessage("§cAmount must be a positive whole number.");
+                return;
+            }
+            if (amount <= 0) {
+                p.sendMessage("§cAmount must be a positive whole number.");
+                return;
+            }
+        }
+        report(p, company.adminAdjustSlots(give ? amount : -amount));
+    }
+
     /** Players type the display name; ids are only ever seen by the database. */
     static Faction resolveFaction(String nameOrId) {
         Faction byId = FactionManager.getByString(nameOrId);
@@ -186,6 +228,15 @@ public final class MercenaryCommandManager implements CommandExecutor {
             if (f.getName() != null && f.getName().equalsIgnoreCase(nameOrId)) return f;
         }
         return null;
+    }
+
+    private static MercenaryCompany resolveCompany(String nameOrId) {
+        MercenaryCompany company = MercenaryCompanies.findByName(nameOrId);
+        if (company != null) {
+            return company;
+        }
+        Guild guild = FactionManager.getGuildByString(nameOrId);
+        return guild == null ? null : guild.getCompany();
     }
 
     private static MercenaryCompany company(Player p) {

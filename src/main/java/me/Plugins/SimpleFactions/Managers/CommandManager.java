@@ -15,6 +15,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 
+import me.Plugins.SimpleFactions.Army.ExpandResult;
+import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
@@ -1156,6 +1158,109 @@ public class CommandManager implements Listener, CommandExecutor{
 						BankManager.banks.remove(f.getBank());
 					}
 					p.sendMessage("§aFaction "+f.getName()+" §adeleted!");
+				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("forceconstruct")) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				if(!Cache.requireProvinces(p)) {
+					return true;
+				}
+				if(args.length < 2) {
+					p.sendMessage("§cUsage: §e/faction forceconstruct <faction> <fort|port|airport> <name>");
+					return true;
+				}
+				Faction f = FactionManager.getByString(args[1]);
+				if(f == null) {
+					p.sendMessage("§a[SimpleFactions]§c Error! faction does not exist!");
+					return true;
+				}
+				if(args.length < 3) {
+					p.sendMessage("§cUsage: §e/faction forceconstruct <faction> <fort|port|airport> <name>");
+					return true;
+				}
+				InstallationKind kind = InstallationKind.fromCommand(args[2]);
+				if(kind == null) {
+					p.sendMessage("§cUnknown installation type. Use: §efort§7, §eport§7, or §eairport");
+					return true;
+				}
+				if(args.length < 4) {
+					p.sendMessage("§cName required: §e/faction forceconstruct " + args[1] + " " + kind.getCommandName() + " <name>");
+					return true;
+				}
+				int province = RestServer.getProvince(p);
+				if(province == -2) {
+					p.sendMessage("§a[SimpleFactions] §cError! could not resolve province");
+					return true;
+				}
+				if(province == 0) {
+					p.sendMessage("§cThis location has no province!");
+					return true;
+				}
+				String name = String.join(" ", Arrays.copyOfRange(args, 3, args.length));
+				ConstructResult result = f.getInstallationHandler().constructInstant(
+						kind,
+						name,
+						province,
+						p.getLocation().getBlockX(),
+						p.getLocation().getBlockZ());
+				p.sendMessage(result.getMessage());
+				if(result.isSuccess()) {
+					p.playSound(p, Sound.BLOCK_ANVIL_USE, 1f, 1f);
+				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("forceregiment")) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				if(args.length < 4) {
+					p.sendMessage("§cUsage: §e/faction forceregiment <faction> give|take <regiment> [amount]");
+					return true;
+				}
+				Faction f = FactionManager.getByString(args[1]);
+				if(f == null) {
+					p.sendMessage("§a[SimpleFactions]§c Error! faction does not exist!");
+					return true;
+				}
+				boolean give;
+				if(args[2].equalsIgnoreCase("give")) {
+					give = true;
+				} else if(args[2].equalsIgnoreCase("take")) {
+					give = false;
+				} else {
+					p.sendMessage("§cUsage: §e/faction forceregiment <faction> give|take <regiment> [amount]");
+					return true;
+				}
+				String regimentId = args[3];
+				int amount = 1;
+				if(args.length >= 5) {
+					try {
+						amount = Integer.parseInt(args[4]);
+					} catch (NumberFormatException e) {
+						p.sendMessage("§cAmount must be a positive whole number.");
+						return true;
+					}
+					if(amount <= 0) {
+						p.sendMessage("§cAmount must be a positive whole number.");
+						return true;
+					}
+				}
+				int delta = give ? amount : -amount;
+				ExpandResult result = f.getMilitary().adminAdjustSlots(regimentId, delta);
+				if(!result.allowed()) {
+					p.sendMessage("§c" + result.reason());
+					return true;
+				}
+				Regiment regiment = f.getMilitary().getRegiment(regimentId);
+				String regimentName = regiment != null ? regiment.getName() : regimentId;
+				String slotWord = amount == 1 ? "slot" : "slots";
+				if(give) {
+					p.sendMessage("§aAdded " + amount + " " + slotWord + " to " + regimentName);
+				} else {
+					p.sendMessage("§aRemoved " + amount + " " + slotWord + " from " + regimentName);
 				}
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("forceleader") && args.length == 3) {
