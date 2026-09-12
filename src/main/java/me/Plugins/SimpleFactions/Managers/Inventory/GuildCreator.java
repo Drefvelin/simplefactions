@@ -96,19 +96,6 @@ public class GuildCreator {
 		return i;
 	}
 
-	public ItemStack createReturnToFactionItem(Guild guild) {
-		Faction faction = guild.getFaction();
-		ItemStack i = new ItemStack(Material.ARROW, 1);
-		ItemMeta meta = i.getItemMeta();
-		meta.setDisplayName(StringFormatter.formatHex("#b8ae61Return to faction"));
-		List<String> lore = new ArrayList<>();
-		lore.add(StringFormatter.formatHex("#d4c9aeReturn to the guild list for " + faction.getName()));
-		lore.add(StringFormatter.formatHex("#28ed70Click to return"));
-		meta.setLore(lore);
-		i.setItemMeta(meta);
-		return i;
-	}
-
     @SuppressWarnings("deprecation")
 	public ItemStack createMenuItem(Player p, Guild guild, MenuItemType t) {
 		ItemStack i = new ItemStack(Material.DIRT, 1);

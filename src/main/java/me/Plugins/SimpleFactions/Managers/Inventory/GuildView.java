@@ -57,7 +57,7 @@ public class GuildView {
 
 	/** Mercenary company entry. Slot 13 of the guild view already holds the trade breakdown. */
 	public static final int COMPANY_SLOT = 18;
-	public static final int RETURN_TO_FACTION_SLOT = 37;
+	public static final int HOST_FACTION_SLOT = 37;
 
 	
 	public GuildView(InventoryManager inv) {
@@ -183,12 +183,9 @@ public class GuildView {
 		if (!guild.isBase()) {
 			i.setItem(17, creator.createDividendItem(player, guild));
 		}
-		i.setItem(22, creator.createHostFactionItem(guild));
+		i.setItem(HOST_FACTION_SLOT, creator.createHostFactionItem(guild));
 		if (!guild.isBase()) {
 			i.setItem(COMPANY_SLOT, inv.companyView.creator.createCompanyEntryItem(guild));
-		}
-		if (i.getHolder() instanceof SFInventoryHolder holder && holder.getFlag()) {
-			i.setItem(RETURN_TO_FACTION_SLOT, creator.createReturnToFactionItem(guild));
 		}
 		i.setItem(53, inv.createBackButton(SFGUI.GUILD_VIEW));
 	}
@@ -287,15 +284,7 @@ public class GuildView {
 			if (guild == null) {
 				return;
 			}
-			if (e.getSlot() == RETURN_TO_FACTION_SLOT && h.getFlag()) {
-				Faction faction = guild.getFaction();
-				if (faction != null) {
-					inv.factionView.factionGuildsView(p, faction, null);
-					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
-				}
-				return;
-			}
-			if (e.getSlot() == 22) {
+			if (e.getSlot() == HOST_FACTION_SLOT) {
 				Faction faction = guild.getFaction();
 				if (faction != null) {
 					inv.factionView(p, faction);
