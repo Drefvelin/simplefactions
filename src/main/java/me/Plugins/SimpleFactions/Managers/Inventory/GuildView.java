@@ -57,6 +57,7 @@ public class GuildView {
 
 	/** Mercenary company entry. Slot 13 of the guild view already holds the trade breakdown. */
 	public static final int COMPANY_SLOT = 18;
+	public static final int RETURN_TO_FACTION_SLOT = 37;
 
 	
 	public GuildView(InventoryManager inv) {
@@ -186,6 +187,9 @@ public class GuildView {
 		if (!guild.isBase()) {
 			i.setItem(COMPANY_SLOT, inv.companyView.creator.createCompanyEntryItem(guild));
 		}
+		if (i.getHolder() instanceof SFInventoryHolder holder && holder.getFlag()) {
+			i.setItem(RETURN_TO_FACTION_SLOT, creator.createReturnToFactionItem(guild));
+		}
 		i.setItem(53, inv.createBackButton(SFGUI.GUILD_VIEW));
 	}
 
@@ -216,7 +220,7 @@ public class GuildView {
 		int queueIndex = 0;
 		for (var queueItem : guild.getUpgradeQueue()) {
 			if (queueIndex >= 3) break;
-			i.setItem(39 + queueIndex, creator.createUpgradeQueueItem(queueItem, queueIndex));
+			i.setItem(39 + queueIndex, creator.createUpgradeQueueItem(queueItem, queueIndex, guild));
 			queueIndex++;
 		}
 		
@@ -281,6 +285,14 @@ public class GuildView {
 			e.setCancelled(true);
 			Guild guild = FactionManager.getGuildByString(h.getId());
 			if (guild == null) {
+				return;
+			}
+			if (e.getSlot() == RETURN_TO_FACTION_SLOT && h.getFlag()) {
+				Faction faction = guild.getFaction();
+				if (faction != null) {
+					inv.factionView.factionGuildsView(p, faction, null);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+				}
 				return;
 			}
 			if (e.getSlot() == 22) {
@@ -427,11 +439,19 @@ public class GuildView {
 		if(h.getType() == SFGUI.UPGRADE_VIEW) {
 			e.setCancelled(true);
 			Guild guild = FactionManager.getGuildByString(h.getId());
+			if (guild == null) return;
 			
 			ItemStack item = e.getCurrentItem();
 			if(item == null || !item.hasItemMeta()) return;
 			
 			ItemMeta meta = item.getItemMeta();
+			String queuePayload = meta.getPersistentDataContainer().get(Keys.QUEUE_CANCEL, PersistentDataType.STRING);
+			if (queuePayload != null) {
+				if (!guild.isLeader(p)) return;
+				inv.openQueueCancelConfirm(p, guild.getFaction(), queuePayload,
+						"§eCancel queued upgrade?");
+				return;
+			}
 			String data = meta.getPersistentDataContainer().get(Keys.STRING_KEY, PersistentDataType.STRING);
 			if(data != null) {
 				Boolean upgrade = meta.getPersistentDataContainer().get(Keys.BOOLEAN_FLAG, PersistentDataType.BOOLEAN);

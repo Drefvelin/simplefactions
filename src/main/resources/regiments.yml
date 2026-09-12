@@ -1,5 +1,6 @@
 professional:
     name: "#73c9aaProfessional Army"
+    professional: true
     upkeep: 6.0
     expansion-time: 21600
     offense: true

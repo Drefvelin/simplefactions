@@ -774,6 +774,14 @@ public class Guild {
         upgradeQueue.add(new UpgradeExpansion(u, time));
     }
 
+    public boolean cancelUpgradeQueue(int index) {
+        if (index < 0 || index >= upgradeQueue.size()) {
+            return false;
+        }
+        upgradeQueue.remove(index);
+        return true;
+    }
+
     public double getUpgradesUpkeep() {
         double total = 0;
         for(Upgrade u : upgrades.values()) {

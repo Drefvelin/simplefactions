@@ -189,7 +189,7 @@ public class CompanyCreator {
 		return lore;
 	}
 
-	public ItemStack createSlotQueueItem(MilitaryExpansion expansion, int index) {
+	public ItemStack createSlotQueueItem(MilitaryExpansion expansion, int index, Guild guild) {
 		ItemStack item = new ItemStack(Material.IRON_HELMET, 1);
 		ItemMeta meta = item.getItemMeta();
 		meta.setDisplayName(StringFormatter.formatHex("#baa875Expanding"));
@@ -199,7 +199,12 @@ public class CompanyCreator {
 		} else {
 			lore.add(StringFormatter.formatHex("#857e59Queued..."));
 		}
+		lore.add("§cClick to cancel");
 		meta.setLore(lore);
+		meta.getPersistentDataContainer().set(
+				Keys.QUEUE_CANCEL,
+				PersistentDataType.STRING,
+				QueueCancelPayload.companySlot(guild.getId(), index));
 		item.setItemMeta(meta);
 		return item;
 	}
@@ -272,7 +277,7 @@ public class CompanyCreator {
 		return lore;
 	}
 
-	public ItemStack createUpgradeQueueItem(UpgradeExpansion expansion, int index) {
+	public ItemStack createUpgradeQueueItem(UpgradeExpansion expansion, int index, Guild guild) {
 		ItemStack item = expansion.getUpgrade().getIconItem();
 		ItemMeta meta = item.getItemMeta();
 		meta.setDisplayName("§eTraining " + expansion.getUpgrade().getName());
@@ -282,7 +287,12 @@ public class CompanyCreator {
 		} else {
 			lore.add(StringFormatter.formatHex("#857e59Queued..."));
 		}
+		lore.add("§cClick to cancel");
 		meta.setLore(lore);
+		meta.getPersistentDataContainer().set(
+				Keys.QUEUE_CANCEL,
+				PersistentDataType.STRING,
+				QueueCancelPayload.companyUpgrade(guild.getId(), index));
 		item.setItemMeta(meta);
 		return item;
 	}

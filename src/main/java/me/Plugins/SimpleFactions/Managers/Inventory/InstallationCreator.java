@@ -70,7 +70,7 @@ public class InstallationCreator {
         return item;
     }
 
-    public ItemStack createConstructionIcon(InstallationConstruction construction) {
+    public ItemStack createConstructionIcon(InstallationConstruction construction, Faction faction) {
         ItemStack item = new ItemStack(Material.YELLOW_CONCRETE, 1);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName("§eBuilding " + construction.getName());
@@ -79,9 +79,13 @@ public class InstallationCreator {
         lore.add("§7Province: §e" + construction.getProvince());
         lore.add("§7Coords: §e" + construction.getCenterX() + ", " + construction.getCenterZ());
         lore.add("§7Time left: §e" + TimeFormatter.formatTime(construction.getTimeLeft()));
+        lore.add("§cClick to cancel");
         meta.setLore(lore);
         meta.getPersistentDataContainer()
                 .set(Keys.STRING_KEY, PersistentDataType.STRING, construction.getId());
+        meta.getPersistentDataContainer()
+                .set(Keys.QUEUE_CANCEL, PersistentDataType.STRING,
+                        QueueCancelPayload.installation(faction.getId(), construction.getId()));
         item.setItemMeta(meta);
         return item;
     }

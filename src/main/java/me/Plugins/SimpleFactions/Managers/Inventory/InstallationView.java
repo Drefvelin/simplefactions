@@ -69,7 +69,7 @@ public class InstallationView {
 
         InstallationConstruction pending = handler.getPendingConstruction();
         if (pending != null) {
-            inventory.setItem(39, creator.createConstructionIcon(pending));
+            inventory.setItem(39, creator.createConstructionIcon(pending, f));
         } else {
             inventory.setItem(39, new ItemStack(Material.AIR, 1));
         }
@@ -158,6 +158,15 @@ public class InstallationView {
                 return;
             }
             ItemMeta meta = item.getItemMeta();
+            String queuePayload = meta.getPersistentDataContainer().get(Keys.QUEUE_CANCEL, PersistentDataType.STRING);
+            if (queuePayload != null) {
+                if (!f.getLeader().equalsIgnoreCase(player.getName())) {
+                    return;
+                }
+                inv.openQueueCancelConfirm(player, f, queuePayload, "§eCancel construction?");
+                player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+                return;
+            }
             if (!meta.getPersistentDataContainer().has(Keys.STRING_KEY, PersistentDataType.STRING)) {
                 return;
             }

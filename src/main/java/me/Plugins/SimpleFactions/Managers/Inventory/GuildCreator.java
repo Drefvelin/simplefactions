@@ -96,6 +96,19 @@ public class GuildCreator {
 		return i;
 	}
 
+	public ItemStack createReturnToFactionItem(Guild guild) {
+		Faction faction = guild.getFaction();
+		ItemStack i = new ItemStack(Material.ARROW, 1);
+		ItemMeta meta = i.getItemMeta();
+		meta.setDisplayName(StringFormatter.formatHex("#b8ae61Return to faction"));
+		List<String> lore = new ArrayList<>();
+		lore.add(StringFormatter.formatHex("#d4c9aeReturn to the guild list for " + faction.getName()));
+		lore.add(StringFormatter.formatHex("#28ed70Click to return"));
+		meta.setLore(lore);
+		i.setItemMeta(meta);
+		return i;
+	}
+
     @SuppressWarnings("deprecation")
 	public ItemStack createMenuItem(Player p, Guild guild, MenuItemType t) {
 		ItemStack i = new ItemStack(Material.DIRT, 1);
@@ -724,7 +737,7 @@ public class GuildCreator {
 		return i;
 	}
 
-	public ItemStack createUpgradeQueueItem(UpgradeExpansion expansion, int index) {
+	public ItemStack createUpgradeQueueItem(UpgradeExpansion expansion, int index, Guild guild) {
 		ItemStack i = expansion.getUpgrade().getIconItem().clone();
 		ItemMeta meta = i.getItemMeta();
 		meta.setDisplayName(StringFormatter.formatHex("#d979c2Upgrading " + expansion.getUpgrade().getName()));
@@ -735,8 +748,13 @@ public class GuildCreator {
 		} else {
 			lore.add(StringFormatter.formatHex("#857e59Queued..."));
 		}
+		lore.add("§cClick to cancel");
 		
 		meta.setLore(lore);
+		meta.getPersistentDataContainer().set(
+				Keys.QUEUE_CANCEL,
+				PersistentDataType.STRING,
+				QueueCancelPayload.guildUpgrade(guild.getId(), index));
 		i.setItemMeta(meta);
 		return i;
 	}

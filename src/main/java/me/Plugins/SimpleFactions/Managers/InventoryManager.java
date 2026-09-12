@@ -35,6 +35,7 @@ import me.Plugins.SimpleFactions.Managers.Inventory.CampaignInstallationPickView
 import me.Plugins.SimpleFactions.Managers.Inventory.CampaignRaidLaunchView;
 import me.Plugins.SimpleFactions.Managers.Inventory.CampaignView;
 import me.Plugins.SimpleFactions.Managers.Inventory.CompanyView;
+import me.Plugins.SimpleFactions.Managers.Inventory.QueueCancelPayload;
 import me.Plugins.SimpleFactions.Managers.Inventory.ContractView;
 import me.Plugins.SimpleFactions.Managers.Inventory.MercenaryMarketView;
 import me.Plugins.SimpleFactions.Managers.Inventory.DeclareWarView;
@@ -606,6 +607,85 @@ public class InventoryManager implements Listener{
 		player.openInventory(i);
 	}
 
+	public void openQueueCancelConfirm(Player player, Faction f, String payload, String title) {
+		confirming.put(player, f);
+		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Confirm Action");
+		ItemStack info = new ItemStack(Material.PAPER);
+		ItemMeta infoMeta = info.getItemMeta();
+		infoMeta.setDisplayName(title);
+		infoMeta.setLore(java.util.List.of("§7This will remove the item from the queue."));
+		info.setItemMeta(infoMeta);
+		i.setItem(13, info);
+		i.setItem(11, createButton("confirm", "queue_cancel", payload));
+		i.setItem(15, createButton("cancel", "queue_cancel", payload));
+		player.openInventory(i);
+	}
+
+	private void refreshAfterQueueCancel(Player player, QueueCancelPayload.Parsed parsed) {
+		switch (parsed.type()) {
+			case MILITARY -> {
+				Faction f = FactionManager.getByString(parsed.ownerId());
+				if (f != null) {
+					militaryView(null, player, f, true);
+				}
+			}
+			case GUILD_UPGRADE -> {
+				Guild guild = FactionManager.getGuildByString(parsed.ownerId());
+				if (guild != null) {
+					guildView.upgradeView(player, guild);
+				}
+			}
+			case INSTALLATION -> {
+				Faction f = FactionManager.getByString(parsed.ownerId());
+				if (f != null) {
+					installationsView(null, player, f, true);
+				}
+			}
+			case COMPANY_SLOT -> {
+				Guild guild = FactionManager.getGuildByString(parsed.ownerId());
+				if (guild != null) {
+					companyView.slotsView(player, guild);
+				}
+			}
+			case COMPANY_UPGRADE -> {
+				Guild guild = FactionManager.getGuildByString(parsed.ownerId());
+				if (guild != null) {
+					companyView.companyUpgradeView(player, guild);
+				}
+			}
+			default -> {}
+		}
+	}
+
+	private boolean executeQueueCancel(QueueCancelPayload.Parsed parsed) {
+		return switch (parsed.type()) {
+			case MILITARY -> {
+				Faction f = FactionManager.getByString(parsed.ownerId());
+				yield f != null && f.getMilitary().cancelQueue(parsed.index());
+			}
+			case GUILD_UPGRADE -> {
+				Guild guild = FactionManager.getGuildByString(parsed.ownerId());
+				yield guild != null && guild.cancelUpgradeQueue(parsed.index());
+			}
+			case INSTALLATION -> {
+				Faction f = FactionManager.getByString(parsed.ownerId());
+				yield f != null && f.getInstallationHandler().deconstruct(parsed.detail()).isSuccess();
+			}
+			case COMPANY_SLOT -> {
+				Guild guild = FactionManager.getGuildByString(parsed.ownerId());
+				yield guild != null
+						&& guild.getCompany() != null
+						&& guild.getCompany().cancelSlotQueue(parsed.index());
+			}
+			case COMPANY_UPGRADE -> {
+				Guild guild = FactionManager.getGuildByString(parsed.ownerId());
+				yield guild != null
+						&& guild.getCompany() != null
+						&& guild.getCompany().cancelUpgradeQueue(parsed.index());
+			}
+		};
+	}
+
 	public void confirmCapitalMoveView(Player player, int provincesLost) {
 		Inventory i = SimpleFactions.plugin.getServer().createInventory(null, 27, "§7Confirm Action");
 		ItemStack info = new ItemStack(Material.PAPER);
@@ -1036,8 +1116,34 @@ public class InventoryManager implements Listener{
 			if(!confirming.containsKey(p)) return;
 			ItemStack item = e.getCurrentItem();
 			ItemMeta m = item.getItemMeta();
-			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "regiment");
+			NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "queue_cancel");
 			String data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+			if (data != null) {
+				var parsed = QueueCancelPayload.parse(data);
+				if (parsed.isEmpty()) {
+					confirming.remove(p);
+					return;
+				}
+				QueueCancelPayload.Parsed cancel = parsed.get();
+				if (item.getType().equals(Material.RED_CONCRETE)) {
+					refreshAfterQueueCancel(p, cancel);
+					confirming.remove(p);
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+					return;
+				}
+				if (executeQueueCancel(cancel)) {
+					p.sendMessage("§aQueue item cancelled.");
+					p.playSound(p, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+				} else {
+					p.sendMessage("§cCould not cancel queue item.");
+					p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
+				}
+				refreshAfterQueueCancel(p, cancel);
+				confirming.remove(p);
+				return;
+			}
+			key = new NamespacedKey(SimpleFactions.plugin, "regiment");
+			data = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 			if(data != null) {
 				Faction f = confirming.get(p);
 				if(item.getType().equals(Material.RED_CONCRETE)) {

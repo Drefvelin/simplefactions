@@ -16,7 +16,7 @@ class MilitaryRecruitmentRuleTest {
 	@Test
 	void levyAllowedWhenProfessionalRuleOff() {
 		Military military = military(false);
-		Regiment levy = regiment(true);
+		Regiment levy = regiment(false, true);
 
 		assertTrue(military.canExpand(levy).allowed());
 		assertTrue(military.enqueue(levy));
@@ -24,9 +24,19 @@ class MilitaryRecruitmentRuleTest {
 	}
 
 	@Test
+	void militiaAllowedWhenProfessionalRuleOff() {
+		Military military = military(false);
+		Regiment militia = regiment(false, false);
+
+		assertTrue(military.canExpand(militia).allowed());
+		assertTrue(military.enqueue(militia));
+		assertEquals(1, military.getQueue().size());
+	}
+
+	@Test
 	void professionalBlockedWhenRuleOff() {
 		Military military = military(false);
-		Regiment professional = regiment(false);
+		Regiment professional = regiment(true, false);
 
 		ExpandResult result = military.canExpand(professional);
 		assertFalse(result.allowed());
@@ -38,7 +48,7 @@ class MilitaryRecruitmentRuleTest {
 	@Test
 	void professionalAllowedWhenRuleOn() {
 		Military military = military(true);
-		Regiment professional = regiment(false);
+		Regiment professional = regiment(true, false);
 
 		assertTrue(military.canExpand(professional).allowed());
 		assertTrue(military.enqueue(professional));
@@ -48,8 +58,9 @@ class MilitaryRecruitmentRuleTest {
 	@Test
 	void bothAllowedWhenRuleOn() {
 		Military military = military(true);
-		assertTrue(military.canExpand(regiment(true)).allowed());
-		assertTrue(military.canExpand(regiment(false)).allowed());
+		assertTrue(military.canExpand(regiment(false, true)).allowed());
+		assertTrue(military.canExpand(regiment(true, false)).allowed());
+		assertTrue(military.canExpand(regiment(false, false)).allowed());
 	}
 
 	private static Military military(boolean canRecruitProfessional) {
@@ -58,8 +69,9 @@ class MilitaryRecruitmentRuleTest {
 		return new Military(faction);
 	}
 
-	private static Regiment regiment(boolean levy) {
+	private static Regiment regiment(boolean professional, boolean levy) {
 		Regiment regiment = mock(Regiment.class);
+		when(regiment.isProfessional()).thenReturn(professional);
 		when(regiment.isLevy()).thenReturn(levy);
 		when(regiment.getExpansionTime()).thenReturn(1);
 		return regiment;

@@ -120,6 +120,16 @@ class MercenaryCompanySlotTest {
         assertEquals(32.0, company.getDailyBurn());
     }
 
+    @Test
+    void cancelSlotQueueRemovesQueuedExpansion() {
+        MercenaryCompany company = formedCompany();
+        company.enlist("Sigrun");
+        company.enqueueExpansion();
+
+        assertTrue(company.cancelSlotQueue(0));
+        assertTrue(company.getSlotQueue().isEmpty());
+    }
+
     private static MercenaryCompany formedCompany() {
         return new MercenaryCompany(
                 new CompanyFixture(0).guild, "Hired Blades", CompanyFixture.companyRegiment(), 0);

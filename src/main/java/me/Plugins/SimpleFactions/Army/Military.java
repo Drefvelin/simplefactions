@@ -79,7 +79,7 @@ public class Military {
 		if (r == null) {
 			return ExpandResult.deny("Unknown regiment.");
 		}
-		if (r.isLevy()) {
+		if (!r.isProfessional()) {
 			return ExpandResult.ok();
 		}
 		if (f != null && f.hasFactionRule(Rules.CAN_RECRUIT_PROFESSIONAL_ARMY)) {
@@ -100,6 +100,14 @@ public class Military {
 	public void addQueueItem(Regiment r, int time){
 		if(queue.size() == 3) return;
 		queue.add(new MilitaryExpansion(r, time));
+	}
+
+	public boolean cancelQueue(int index) {
+		if (index < 0 || index >= queue.size()) {
+			return false;
+		}
+		queue.remove(index);
+		return true;
 	}
 
 	public ExpandResult adminAdjustSlots(String regimentId, int delta) {

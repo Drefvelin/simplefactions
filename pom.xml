@@ -9,16 +9,12 @@
     <version>2.8.7</version>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <tfmc.refs>D:/Dokumenter/My Plugins/Reference Libs</tfmc.refs>
-        <tfmc.builds>D:/Dokumenter/My Plugins/TFMC/SimpleFactions</tfmc.builds>
-        <tfmc.tlibs>D:/Dokumenter/My Plugins/TFMC/TLibs</tfmc.tlibs>
-        <tfmc.denareconomy>D:/Dokumenter/My Plugins/TFMC/DenarEconomy</tfmc.denareconomy>
-        <tfmc.rpcharacters>D:/Dokumenter/My Plugins/TFMC/RPCharacters</tfmc.rpcharacters>
-        <tfmc.vehicleframework>D:/Dokumenter/My Plugins/TFMC/VehicleFramework</tfmc.vehicleframework>
-        <tfmc.vfbuilders>D:/Dokumenter/My Plugins/VSCode Workspace/vfbuilders</tfmc.vfbuilders>
+        <tfmc.refs>D:/Documents/TFMC/ReferenceLibs</tfmc.refs>
+        <tfmc.builds>D:/Documents/TFMC/Builds/SimpleFactions</tfmc.builds>
+        <tfmc.tlibs>D:/Documents/TFMC/Builds/TLibs</tfmc.tlibs>
+        <tfmc.plugins>D:/Documents/TFMC/Workspace/plugins</tfmc.plugins>
     </properties>
 
     <dependencies>
@@ -65,9 +61,9 @@
         <dependency>
             <groupId>local</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.21.8</version>
+            <version>1.21.10</version>
             <scope>system</scope>
-            <systemPath>${tfmc.refs}/spigot-api.jar</systemPath>
+            <systemPath>${tfmc.refs}/spigot-api-1.21.10.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
@@ -81,35 +77,35 @@
             <artifactId>RPCharacters</artifactId>
             <version>1.1.6</version>
             <scope>system</scope>
-            <systemPath>${tfmc.rpcharacters}/rpcharacters-1.1.6.jar</systemPath>
+            <systemPath>${tfmc.refs}/rpcharacters-1.1.6.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
             <artifactId>DenarEconomy</artifactId>
             <version>0.1.7</version>
             <scope>system</scope>
-            <systemPath>${tfmc.denareconomy}/denareconomy-0.1.7.jar</systemPath>
+            <systemPath>${tfmc.plugins}/denareconomy-0.1.7.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
             <artifactId>VehicleFramework</artifactId>
-            <version>1.0.0</version>
+            <version>1.1.11</version>
             <scope>system</scope>
-            <systemPath>${tfmc.vehicleframework}/vehicleframework-1.1.11.jar</systemPath>
+            <systemPath>${tfmc.refs}/vehicleframework-1.1.11.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
             <artifactId>VFBuilders</artifactId>
             <version>1.0.0</version>
             <scope>system</scope>
-            <systemPath>${tfmc.vfbuilders}/target/vfbuilders-1.0.0.jar</systemPath>
+            <systemPath>${tfmc.refs}/vfbuilders-1.0.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
             <artifactId>CustomCrops</artifactId>
             <version>3.6.49</version>
             <scope>system</scope>
-            <systemPath>${tfmc.refs}/CustomCrops-3.6.49.jar</systemPath>
+            <systemPath>${tfmc.plugins}/CustomCrops-3.6.49.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>commons-lang</groupId>
@@ -125,13 +121,13 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>5.11.0</version>
+            <version>5.14.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.11.0</version>
+            <version>5.14.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -146,8 +142,19 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
+                <configuration>
+                    <argLine>-Dnet.bytebuddy.experimental=true -Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

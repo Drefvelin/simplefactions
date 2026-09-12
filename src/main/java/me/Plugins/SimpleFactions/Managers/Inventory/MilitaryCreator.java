@@ -18,6 +18,7 @@ import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Utils.Formatter;
 import me.Plugins.SimpleFactions.enums.FactionModifiers;
+import me.Plugins.SimpleFactions.keys.Keys;
 import me.Plugins.TLibs.TLibs;
 import me.Plugins.TLibs.Enums.APIType;
 import me.Plugins.TLibs.Objects.API.ItemAPI;
@@ -38,7 +39,7 @@ public class MilitaryCreator {
 		i.setItemMeta(meta);
 		return i;
 	}
-	public ItemStack createQueueItem(MilitaryExpansion e, int x) {
+	public ItemStack createQueueItem(MilitaryExpansion e, int x, Faction f) {
 		ItemStack i = e.getRegiment().getIcon().clone();
 		ItemMeta meta = i.getItemMeta();
 		meta.setDisplayName("§eExpanding "+e.getRegiment().getName());
@@ -48,8 +49,12 @@ public class MilitaryCreator {
 		} else {
 			lore.add(StringFormatter.formatHex("#857e59Queued..."));
 		}
-		
+		lore.add("§cClick to cancel");
 		meta.setLore(lore);
+		meta.getPersistentDataContainer().set(
+				Keys.QUEUE_CANCEL,
+				PersistentDataType.STRING,
+				QueueCancelPayload.military(f.getId(), x));
 		i.setItemMeta(meta);
 		return i;
 	}

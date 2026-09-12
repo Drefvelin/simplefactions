@@ -1,7 +1,6 @@
 package me.Plugins.SimpleFactions.Managers.Inventory;
 
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -12,13 +11,13 @@ import org.bukkit.persistence.PersistentDataType;
 
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Army.ExpandResult;
-import me.Plugins.SimpleFactions.Army.Military;
 import me.Plugins.SimpleFactions.Army.Regiment;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.InventoryManager;
 import me.Plugins.SimpleFactions.Managers.Holder.SFInventoryHolder;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.enums.SFGUI;
+import me.Plugins.SimpleFactions.keys.Keys;
 
 public class MilitaryView {
 	public InventoryManager inv;
@@ -39,7 +38,7 @@ public class MilitaryView {
 		for (int slot = 21; slot <= 26; slot++) {
 			i.setItem(slot, new ItemStack(Material.AIR, 1));
 		}
-		Military m = f.getMilitary();
+		var m = f.getMilitary();
 		i.setItem(10, creator.createMilitarySummary(f));
 		for(int x = 0; x<m.getRegiments().size(); x++) {
 			int slot = x+12;
@@ -60,7 +59,7 @@ public class MilitaryView {
 		for(int x = 0; x<3; x++) {
 			int slot = x+39;
 			if(x <m.getQueue().size()) {
-				i.setItem(slot, creator.createQueueItem(m.getQueue().get(x), x));
+				i.setItem(slot, creator.createQueueItem(m.getQueue().get(x), x, f));
 			} else {
 				i.setItem(slot, new ItemStack(Material.AIR, 1));
 			}
@@ -73,8 +72,20 @@ public class MilitaryView {
 	public void click(InventoryClickEvent e, Inventory inventory, Player p) {
 		e.setCancelled(true);
 		ItemStack item = e.getCurrentItem();
+		if (item == null || !item.hasItemMeta()) return;
 		ItemMeta m = item.getItemMeta();
-		NamespacedKey key = new NamespacedKey(SimpleFactions.plugin, "id");
+
+		String queuePayload = m.getPersistentDataContainer().get(Keys.QUEUE_CANCEL, PersistentDataType.STRING);
+		if (queuePayload != null) {
+			if (!(inventory.getHolder() instanceof SFInventoryHolder holder)) return;
+			Faction f = FactionManager.getByString(holder.getId());
+			if (f == null || !f.getLeader().equalsIgnoreCase(p.getName())) return;
+			inv.openQueueCancelConfirm(p, f, queuePayload, "§eCancel queued regiment expansion?");
+			p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
+			return;
+		}
+
+		var key = new org.bukkit.NamespacedKey(SimpleFactions.plugin, "id");
 		String factionId = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 		if(factionId == null) return;
 		Faction f = FactionManager.getByString(factionId);
@@ -85,13 +96,13 @@ public class MilitaryView {
 			return;
 		}
 		
-		key = new NamespacedKey(SimpleFactions.plugin, "regiment");
+		key = new org.bukkit.NamespacedKey(SimpleFactions.plugin, "regiment");
 		String regiment = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 		if(regiment == null) return;
 		Regiment r = f.getMilitary().getRegiment(regiment);
 		if(r == null) return;
 		
-		key = new NamespacedKey(SimpleFactions.plugin, "type");
+		key = new org.bukkit.NamespacedKey(SimpleFactions.plugin, "type");
 		String type = m.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 		if(type == null) return;
 		if(type.contentEquals("increase")) {

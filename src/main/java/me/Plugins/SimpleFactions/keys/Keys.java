@@ -18,4 +18,6 @@ public class Keys {
     public static final NamespacedKey CONTRACT_STAGE = new NamespacedKey(SimpleFactions.plugin, "contract_stage");
     /** The offered contract a stage 3 agreement book belongs to. */
     public static final NamespacedKey CONTRACT_ID = new NamespacedKey(SimpleFactions.plugin, "contract_id");
+    /** Queue tile payload for cancel confirmation ({@code type:ownerId:detail}). */
+    public static final NamespacedKey QUEUE_CANCEL = new NamespacedKey(SimpleFactions.plugin, "queue_cancel");
 }

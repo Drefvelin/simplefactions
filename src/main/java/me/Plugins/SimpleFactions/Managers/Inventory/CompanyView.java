@@ -85,7 +85,7 @@ public class CompanyView {
 		}
 		for (int x = 0; x < company.getSlotQueue().size() && x < 3; x++) {
 			MilitaryExpansion e = company.getSlotQueue().get(x);
-			i.setItem(45 + x, creator.createSlotQueueItem(e, x));
+			i.setItem(45 + x, creator.createSlotQueueItem(e, x, guild));
 		}
 		i.setItem(53, inv.createBackButton(SFGUI.COMPANY_SLOTS_VIEW));
 	}
@@ -137,7 +137,7 @@ public class CompanyView {
 		int queueIndex = 0;
 		for (UpgradeExpansion queued : company.getUpgradeQueue()) {
 			if (queueIndex >= 3) break;
-			i.setItem(39 + queueIndex, creator.createUpgradeQueueItem(queued, queueIndex));
+			i.setItem(39 + queueIndex, creator.createUpgradeQueueItem(queued, queueIndex, guild));
 			queueIndex++;
 		}
 		i.setItem(53, inv.createBackButton(SFGUI.COMPANY_UPGRADE_VIEW));
@@ -189,9 +189,17 @@ public class CompanyView {
 
 	private void clickSlots(
 			InventoryClickEvent e, Inventory inventory, Player p, Guild guild, MercenaryCompany company) {
-		if (e.getSlot() != EXPAND_BUTTON) return;
-		report(p, MercenaryCompanyService.expand(guild, p.getName()));
-		slotsView(p, guild, inventory);
+		if (e.getSlot() == EXPAND_BUTTON) {
+			report(p, MercenaryCompanyService.expand(guild, p.getName()));
+			slotsView(p, guild, inventory);
+			return;
+		}
+		String queuePayload = queueCancelPayload(e.getCurrentItem());
+		if (queuePayload != null) {
+			if (!company.isLeader(p.getName())) return;
+			inv.openQueueCancelConfirm(p, guild.getFaction(), queuePayload, "§eCancel queued slot expansion?");
+			chirp(p);
+		}
 	}
 
 	private void clickRoster(
@@ -204,10 +212,22 @@ public class CompanyView {
 
 	private void clickUpgrade(
 			InventoryClickEvent e, Inventory inventory, Player p, Guild guild, MercenaryCompany company) {
+		String queuePayload = queueCancelPayload(e.getCurrentItem());
+		if (queuePayload != null) {
+			if (!company.isLeader(p.getName())) return;
+			inv.openQueueCancelConfirm(p, guild.getFaction(), queuePayload, "§eCancel queued company upgrade?");
+			chirp(p);
+			return;
+		}
 		String id = stringKey(e.getCurrentItem());
 		if (id == null) return;
 		report(p, MercenaryCompanyService.upgrade(guild, p.getName(), id));
 		companyUpgradeView(p, guild, inventory);
+	}
+
+	private static String queueCancelPayload(ItemStack item) {
+		if (item == null || !item.hasItemMeta()) return null;
+		return item.getItemMeta().getPersistentDataContainer().get(Keys.QUEUE_CANCEL, PersistentDataType.STRING);
 	}
 
 	private static String stringKey(ItemStack item) {

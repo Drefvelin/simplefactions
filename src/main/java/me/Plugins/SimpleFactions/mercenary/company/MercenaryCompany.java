@@ -407,6 +407,22 @@ public class MercenaryCompany {
         upgradeQueue.add(new UpgradeExpansion(u, time));
     }
 
+    public boolean cancelSlotQueue(int index) {
+        if (index < 0 || index >= slotQueue.size()) {
+            return false;
+        }
+        slotQueue.remove(index);
+        return true;
+    }
+
+    public boolean cancelUpgradeQueue(int index) {
+        if (index < 0 || index >= upgradeQueue.size()) {
+            return false;
+        }
+        upgradeQueue.remove(index);
+        return true;
+    }
+
     /** Total of a company modifier across its upgrades; guild modifiers are untouched. */
     public double getModifier(GuildModifier modifier) {
         double amount = 0;

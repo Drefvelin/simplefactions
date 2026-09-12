@@ -23,6 +23,7 @@ public class Regiment {
 	private int expansionTime;
 	
 	private boolean levy;
+	private boolean professional;
 	private boolean offense;
 	private boolean mercenary;
 	
@@ -52,6 +53,7 @@ public class Regiment {
 			}
 		}
 		levy = config.getBoolean("levy", false);
+		professional = config.getBoolean("professional", false);
 		offense = config.getBoolean("offense", false);
 		mercenary = config.getBoolean("mercenary", false);
 		toOverlord = 0;
@@ -67,6 +69,7 @@ public class Regiment {
 		icon = another.getIcon().clone();
 		description = another.getDescription();
 		levy = another.isLevy();
+		professional = another.isProfessional();
 		toOverlord = another.sentToOverlord();
 		offense = another.isOffensive();
 		mercenary = another.isMercenary();
@@ -105,6 +108,10 @@ public class Regiment {
 	
 	public boolean isLevy() {
 		return levy;
+	}
+
+	public boolean isProfessional() {
+		return professional;
 	}
 
 	/** Mercenary regiments belong to a company, never to a faction military. */

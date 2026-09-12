@@ -227,6 +227,7 @@ public class SimpleFactions extends JavaPlugin{
 		registerListeners();
 		loadConfigs();
 		registerCustomCropsFertilityHooks();
+		registerRpCharactersIntegrationHooks();
 		vehicleRegistryPersistence = new VehicleRegistryPersistence(
 			new File(getDataFolder(), "Cache"),
 			vehicleRegistry);
@@ -319,6 +320,7 @@ public class SimpleFactions extends JavaPlugin{
 	}
 	@Override
 	public void onDisable() {
+		me.Plugins.SimpleFactions.integration.rpcharacters.chat.RpCharactersChatIntegration.unregister();
 		MercenaryStatService.clearAll();
 		me.Plugins.SimpleFactions.mercenary.company.MercenaryEligibility.reset();
 		vehicleMaintenanceDecayTask.stop();
@@ -397,10 +399,7 @@ public class SimpleFactions extends JavaPlugin{
 		me.Plugins.SimpleFactions.mercenary.contract.ContractTerminationService.setReputationSeam(
 				new me.Plugins.SimpleFactions.mercenary.company.MercenaryReputationSeam());
 		if (getServer().getPluginManager().isPluginEnabled("RPCharacters")) {
-			me.Plugins.SimpleFactions.mercenary.company.MercenaryEligibility.setProbe(
-					new me.Plugins.SimpleFactions.mercenary.company.RpCharactersMercenaryTraitProbe());
-			me.Plugins.SimpleFactions.prestige.MemberPlaytime.setProbe(
-					new me.Plugins.SimpleFactions.prestige.RpCharactersPlaytimeProbe());
+			registerRpCharactersIntegration();
 		}
 	}
 	public void createFolders() {
@@ -546,6 +545,30 @@ public class SimpleFactions extends JavaPlugin{
 			CustomCropsFertilityBridge.registerReloadListener(this, customCropsFertilityBridge);
 			customCropsFertilityRegistered = true;
 		}
+	}
+
+	private void registerRpCharactersIntegrationHooks() {
+		getServer().getPluginManager().registerEvents(new Listener() {
+			@EventHandler
+			public void onPluginEnable(PluginEnableEvent event) {
+				if ("RPCharacters".equalsIgnoreCase(event.getPlugin().getName())) {
+					registerRpCharactersIntegration();
+				}
+			}
+		}, this);
+		registerRpCharactersIntegration();
+	}
+
+	private void registerRpCharactersIntegration() {
+		if (getServer().getPluginManager() == null
+				|| !getServer().getPluginManager().isPluginEnabled("RPCharacters")) {
+			return;
+		}
+		me.Plugins.SimpleFactions.mercenary.company.MercenaryEligibility.setProbe(
+				new me.Plugins.SimpleFactions.mercenary.company.RpCharactersMercenaryTraitProbe());
+		me.Plugins.SimpleFactions.prestige.MemberPlaytime.setProbe(
+				new me.Plugins.SimpleFactions.prestige.RpCharactersPlaytimeProbe());
+		me.Plugins.SimpleFactions.integration.rpcharacters.chat.RpCharactersChatIntegration.register();
 	}
 
 	private void registerVehicleIntegrationHooks() {
