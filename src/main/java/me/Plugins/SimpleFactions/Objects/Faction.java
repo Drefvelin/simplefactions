@@ -546,6 +546,21 @@ public class Faction {
 			prestigeModifiers.add(p);
 		}
 	}
+	public void setPersistentPrestigeModifier(String type, double amount) {
+		for(int i = 0; i < prestigeModifiers.size(); i++) {
+			if(prestigeModifiers.get(i).getType().equalsIgnoreCase(type)) {
+				if(Double.compare(amount, 0) == 0) {
+					prestigeModifiers.remove(i);
+				} else {
+					prestigeModifiers.set(i, new Modifier(type, amount, true));
+				}
+				return;
+			}
+		}
+		if(Double.compare(amount, 0) != 0) {
+			prestigeModifiers.add(new Modifier(type, amount, true));
+		}
+	}
 	public void setBanner(ItemStack banner) {
 		BannerMeta b = (BannerMeta) banner.getItemMeta();
 		this.bannerPatterns.clear();

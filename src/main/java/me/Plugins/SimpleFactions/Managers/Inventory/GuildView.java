@@ -152,7 +152,7 @@ public class GuildView {
 		i.clear();
 		if(guild.isMember(player)) i.setItem(1, creator.createMenuItem(player, guild, MenuItemType.BANNER_GET));
 		i.setItem(10, creator.createMenuItem(player, guild, MenuItemType.BANNER));
-		if(/*guild.isLeader(player) && */!guild.isBase()) i.setItem(19, creator.createMenuItem(player, guild, MenuItemType.BANNER_RANDOM));
+		if(guild.isLeader(player) && !guild.isBase()) i.setItem(19, creator.createMenuItem(player, guild, MenuItemType.BANNER_RANDOM));
 		i.setItem(11, creator.createMenuItem(player, guild, MenuItemType.LEADER));
 		i.setItem(12, creator.createMenuItem(player, guild, MenuItemType.WEALTH));
 		i.setItem(15, creator.createMenuItem(player, guild, MenuItemType.MEMBERS));
@@ -293,6 +293,10 @@ public class GuildView {
 				return;
 			}
 			if(e.getSlot() == 19) {
+				if(!guild.isLeader(p) || guild.isBase()) {
+					p.sendMessage("§cYou must be the leader of a guild to change the banner!");
+					return;
+				}
 				guild.setBannerPatterns(RestServer.fetchBannerList());
 				inventory.setItem(10, creator.createMenuItem(p, guild, MenuItemType.BANNER));
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BIT, 1f, 1f);
