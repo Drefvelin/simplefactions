@@ -14,6 +14,7 @@ import com.google.gson.JsonObject;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
+import me.Plugins.SimpleFactions.Cache;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
@@ -86,6 +87,12 @@ class ChronicleSnapshotTest {
 	private static void withSnapshot(Body body) {
 		Faction faction = faction();
 		List<Faction> factions = List.of(faction);
+		String previousMapRef = Cache.mapRef;
+		String previousChapterId = Cache.chapterId;
+		String previousChapterName = Cache.chapterName;
+		Cache.mapRef = "main";
+		Cache.chapterId = "vardera";
+		Cache.chapterName = "Vardera";
 
 		try (MockedStatic<FactionManager> factionManager = mockStatic(FactionManager.class);
 				MockedStatic<RelationManager> relations = mockStatic(RelationManager.class);
@@ -112,6 +119,10 @@ class ChronicleSnapshotTest {
 			wars.when(WarManager::getActive).thenReturn(List.of());
 
 			body.run(ChronicleSnapshot.build(factions, 143, 43200, Instant.parse("2026-09-01T10:35:00Z")), faction);
+		} finally {
+			Cache.mapRef = previousMapRef;
+			Cache.chapterId = previousChapterId;
+			Cache.chapterName = previousChapterName;
 		}
 	}
 
@@ -119,6 +130,9 @@ class ChronicleSnapshotTest {
 	void snapshot_hasEnvelopeKeys() {
 		withSnapshot((root, faction) -> {
 			assertEquals(ChronicleSnapshot.SCHEMA_VERSION, root.get("schema_version").getAsInt());
+			assertEquals("main", root.get("map_id").getAsString());
+			assertEquals("vardera", root.get("chapter_id").getAsString());
+			assertEquals("Vardera", root.get("chapter_name").getAsString());
 			assertEquals("2026-09-01T10:35:00Z", root.get("captured_at").getAsString());
 			assertEquals(143, root.get("server_day").getAsInt());
 			assertEquals(43200, root.get("day_progress_seconds").getAsInt());

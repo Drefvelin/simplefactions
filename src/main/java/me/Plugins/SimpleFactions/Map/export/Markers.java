@@ -25,6 +25,7 @@ public final class Markers {
     public static void export(File out) throws IOException {
         JsonObject root = new JsonObject();
         root.addProperty("map_id", Cache.mapRef);
+        ChapterIdentity.putOnEnvelope(root);
         root.addProperty("exported_at", Instant.now().toString());
         root.addProperty("settlement_large_population_threshold", Cache.settlementLargePopulationThreshold);
 

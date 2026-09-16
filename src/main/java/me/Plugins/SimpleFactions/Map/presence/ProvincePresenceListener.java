@@ -9,5 +9,6 @@ public final class ProvincePresenceListener implements Listener {
 	public void onPlayerQuit(PlayerQuitEvent event) {
 		ProvincePresenceService.getInstance().handleQuit(event.getPlayer());
 		TitlePresenceService.getInstance().handleQuit(event.getPlayer());
+		RegionPresenceService.getInstance().handleQuit(event.getPlayer());
 	}
 }

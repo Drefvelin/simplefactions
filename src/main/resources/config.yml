@@ -59,7 +59,12 @@ enable-provinces: true
 # Daily wealth/prestige snapshot uploaded to ProvinceSystem for season graphs.
 # Independent of enable-map so a broken chronicle never blocks a map regen.
 enable-chronicle: true
+# Live upload socket (URL folder). Season archive uses map-id / map-name, not this.
 map-reference: main
+# Chapter slug (alphanumeric). Prefills a future Archive; not the live folder.
+map-id: unknown
+# Display name for that chapter. Blank becomes Unknown; not derived from map-id.
+map-name: Unknown
 settlement-large-population-threshold: 8
 port-sea-proximity-blocks: 20
 

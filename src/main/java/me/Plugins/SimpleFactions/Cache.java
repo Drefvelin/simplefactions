@@ -18,6 +18,9 @@ import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 
 public class Cache {
 	public static String mapRef;
+	/** Chapter slug for a future Archive prefill. Not the live upload folder. */
+	public static String chapterId = "unknown";
+	public static String chapterName = "Unknown";
 	public static String worldName;
 
 	public static int maxMembers;

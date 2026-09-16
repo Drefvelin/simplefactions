@@ -45,6 +45,7 @@ public final class ProvincePresenceService {
 							Bukkit.getPluginManager().callEvent(
 									new PlayerProvinceEnterEvent(player, provinceId, previousProvinceId));
 							TitlePresenceService.getInstance().applyProvince(player, provinceId);
+							RegionPresenceService.getInstance().applyProvince(player, provinceId);
 						}
 					}
 

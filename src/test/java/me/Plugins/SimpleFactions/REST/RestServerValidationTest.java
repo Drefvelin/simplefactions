@@ -55,4 +55,17 @@ class RestServerValidationTest {
 		assertDoesNotThrow(() -> RestServer.validate(
 				"map_markers", parse("{\"settlements\":[]}")));
 	}
+
+	@Test
+	void regions_acceptsObjectIncludingEmpty() {
+		assertDoesNotThrow(() -> RestServer.validate("regions", parse("{}")));
+		assertDoesNotThrow(() -> RestServer.validate(
+				"regions", parse("{\"REGION_1\":{\"name\":\"A\",\"provinces\":[1]}}")));
+	}
+
+	@Test
+	void regions_rejectsArray() {
+		assertThrows(IllegalStateException.class,
+				() -> RestServer.validate("regions", parse("[]")));
+	}
 }

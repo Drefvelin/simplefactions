@@ -104,6 +104,9 @@ public class RestServer {
 			if (!obj.has("factions") || !obj.get("factions").isJsonArray())
 				throw new IllegalStateException("chronicle upload must include factions array");
 		}
+
+		if (mode.equals("regions") && !payload.isJsonObject())
+			throw new IllegalStateException("regions upload must be JSON object");
 	}
 
 	public static void commenceRegen(String regenType) {

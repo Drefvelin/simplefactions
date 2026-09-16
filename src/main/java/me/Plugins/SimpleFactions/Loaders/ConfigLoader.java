@@ -13,6 +13,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Map.export.ChapterIdentity;
 import me.Plugins.SimpleFactions.War.battle.enums.BattleLootMode;
 import me.Plugins.SimpleFactions.War.battle.enums.DefenderRespawnMode;
 import me.Plugins.SimpleFactions.War.enums.WarGoalType;
@@ -24,6 +25,8 @@ public class ConfigLoader {
 	public void loadConfig(File configFile) {
 		FileConfiguration config = loadYaml(configFile);
 		Cache.mapRef = config.getString("map-reference", "main");
+		Cache.chapterId = ChapterIdentity.normalizeId(config.getString("map-id"));
+		Cache.chapterName = ChapterIdentity.normalizeName(config.getString("map-name"));
 		Cache.worldName = config.getString("world-name", "TFMC_Map");
 
 		Cache.maxMembers = config.getInt("max-members", 64);

@@ -54,6 +54,7 @@ public final class ChronicleSnapshot {
 		JsonObject root = new JsonObject();
 		root.addProperty("schema_version", SCHEMA_VERSION);
 		root.addProperty("map_id", Cache.mapRef);
+		ChapterIdentity.putOnEnvelope(root);
 		root.addProperty("captured_at", capturedAt.toString());
 		root.addProperty("server_day", serverDay);
 		root.addProperty("day_progress_seconds", dayProgressSeconds);

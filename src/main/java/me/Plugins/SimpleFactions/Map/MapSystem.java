@@ -102,6 +102,10 @@ public class MapSystem {
 		RestServer.upload("duchy", new File("plugins/SimpleFactions/Input/duchy.json"));
 		RestServer.upload("kingdom", new File("plugins/SimpleFactions/Input/kingdom.json"));
 		RestServer.upload("empire", new File("plugins/SimpleFactions/Input/empire.json"));
+		File regions = new File("plugins/SimpleFactions/Input/regions.json");
+		if (regions.isFile()) {
+			RestServer.upload("regions", regions);
+		}
 	}
 
 	public void uploadLiveFiles() {
