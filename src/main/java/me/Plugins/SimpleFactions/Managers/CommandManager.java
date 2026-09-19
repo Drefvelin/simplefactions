@@ -30,7 +30,6 @@ import me.Plugins.SimpleFactions.Loaders.TitleLoader;
 import me.Plugins.SimpleFactions.Map.Provinces.Province;
 import me.Plugins.SimpleFactions.Objects.Bank;
 import me.Plugins.SimpleFactions.Objects.BankPlacementValidator;
-import me.Plugins.SimpleFactions.Objects.Request.VehicleTransferConsentRequest;
 import me.Plugins.SimpleFactions.Objects.Faction;
 import me.Plugins.SimpleFactions.Objects.Modifier;
 import me.Plugins.SimpleFactions.REST.RestServer;
@@ -181,15 +180,16 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cCould not find the player "+invitee);
 					return true;
 				}
-				if(guild.isInvited(invitee)) {
+				String name = invited.getName();
+				if(guild.isInvited(name)) {
 					p.sendMessage("§cPlayer is already invited");
 					return true;
 				}
-				if(guild.isMember(invitee)) {
+				if(guild.isMember(name)) {
 					p.sendMessage("§cPlayer is already a member");
 					return true;
 				}
-				Guild otherGuild = FactionManager.getGuildByMember(invitee);
+				Guild otherGuild = FactionManager.getGuildByMember(name);
 				if(otherGuild != null) {
 					if(!otherGuild.getFaction().equals(guild.getFaction())) {
 						p.sendMessage("§cPlayer is already in a guild ("+otherGuild.getName()+") in another faction");
@@ -199,16 +199,18 @@ public class CommandManager implements Listener, CommandExecutor{
 						p.sendMessage("§cPlayer is already in a guild ("+otherGuild.getName()+") in the same faction");
 						return true;
 					}
-					if(otherGuild.isLeader(invitee)) {
+					if(otherGuild.isLeader(name)) {
 						p.sendMessage("§cPlayer is the leader of the faction, cannot invite");
 						return true;
 					}
 				}
-				if(otherGuild == null && guild.getFaction().hasFactionRule(Rules.CLOSED_BORDERS) && !guild.getFaction().isLeader(p.getName())) {
+				boolean inThisFaction = guild.getFaction().isMemberIgnoreCase(name)
+						|| (otherGuild != null && otherGuild.getFaction().equals(guild.getFaction()));
+				if(!inThisFaction && guild.getFaction().hasFactionRule(Rules.CLOSED_BORDERS) && !guild.getFaction().isLeader(p.getName())) {
 					p.sendMessage("§cThe faction has closed borders, cannot invite members from outside the faction");
 					return true;
 				} 
-				guild.invite(invitee);
+				guild.invite(name);
 				invited.sendMessage("§aYou have been invited to the guild "+guild.getName());
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("join") && args.length == 2) {
@@ -221,7 +223,7 @@ public class CommandManager implements Listener, CommandExecutor{
 					return true;
 				}
 				Guild g = FactionManager.getGuildByString(args[1]);
-				if(!g.isInvited(p.getName())) {
+				if(!g.consumeInvite(p.getName())) {
 					p.sendMessage("§cYou need to be invited to this guild by the leader first!");
 					return true;
 				}
@@ -656,20 +658,11 @@ public class CommandManager implements Listener, CommandExecutor{
 				
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("accept") && args.length == 1) {
-				if(RequestManager.hasRequest(p)
-						&& RequestManager.getRequest(p) instanceof VehicleTransferConsentRequest) {
-					RequestManager.accept(p);
+				if(!RequestManager.hasRequest(p)) {
+					p.sendMessage("§cYou have no requests to accept");
 					return true;
 				}
-				if(FactionManager.getByLeader(p.getName()) != null) {
-					if(!RequestManager.hasRequest(p)) {
-						p.sendMessage("§cYou have no requests to accept");
-						return true;
-					}
-					RequestManager.accept(p);
-				} else {
-					p.sendMessage("§cYou need to be a faction leader to accept requests");
-				}
+				RequestManager.accept(p);
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("setcolour") && args.length == 2) {
 			    if(FactionManager.getByLeader(p.getName()) != null) {
@@ -821,11 +814,17 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cOnly the leader can invite players!");
 					return true;
 				}
-				if(f.getMembers().contains(args[1])) {
+				Player invited = Bukkit.getPlayer(args[1]);
+				if(invited == null) {
+					p.sendMessage("§cNo player found by that IGN");
+					return true;
+				}
+				String name = invited.getName();
+				if(f.isMemberIgnoreCase(name)) {
 					p.sendMessage("§cPlayer is already a member");
 					return true;
 				}
-				if(FactionManager.getByMember(args[1]) != null) {
+				if(FactionManager.getByMember(name) != null) {
 					p.sendMessage("§cPlayer is a member of another faction");
 					return true;
 				}
@@ -833,18 +832,10 @@ public class CommandManager implements Listener, CommandExecutor{
 					p.sendMessage("§cMain faction guild already has the maximum amount of members");
 					return true;
 				}
-				if(Bukkit.getPlayer(args[1]) == null) {
-					p.sendMessage("§cNo player found by that IGN");
-					return true;
-				}
-				f.getInvited().add(args[1]);
-				p.sendMessage("§aInvited "+args[1]);
-				for(Player pl : Bukkit.getOnlinePlayers()) {
-					if(pl.getName().equalsIgnoreCase(args[1])) {
-						pl.sendMessage("§a"+p.getName()+ " invited you to "+f.getName());
-						pl.sendMessage("§aType /faction join "+f.getId() +"§a to join");
-					}
-				}
+				f.invite(name);
+				p.sendMessage("§aInvited "+name);
+				invited.sendMessage("§a"+p.getName()+ " invited you to "+f.getName());
+				invited.sendMessage("§aType /faction join "+f.getId() +"§a to join");
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("join") && args.length == 2) {
 				if(FactionManager.getByMember(p.getName()) != null) {
@@ -852,11 +843,10 @@ public class CommandManager implements Listener, CommandExecutor{
 					return true;
 				}
 				Faction f = FactionManager.getByString(args[1]);
-				if(!f.getInvited().contains(p.getName())) {
+				if(!f.consumeInvite(p.getName())) {
 					p.sendMessage("§cYou need to be invited to this faction by the leader first!");
 					return true;
 				}
-				f.getInvited().remove(p.getName());
 				f.addMember(p.getName());
 				p.sendMessage("§aJoined "+f.getName());
 				f.updatePrestige();
@@ -1763,15 +1753,7 @@ public class CommandManager implements Listener, CommandExecutor{
 	}
 
 	private static Faction resolveProvinceOwner(int provinceId) {
-		Faction owner = FactionManager.getByProvince(provinceId);
-		if (owner != null) {
-			return owner;
-		}
-		Title title = TitleLoader.getByProvince(provinceId);
-		if (title == null) {
-			return null;
-		}
-		return FactionManager.getTitleOwner(title);
+		return FactionManager.getByProvince(provinceId);
 	}
 
 }

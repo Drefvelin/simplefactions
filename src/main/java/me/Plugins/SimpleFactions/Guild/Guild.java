@@ -384,10 +384,17 @@ public class Guild {
     }
     public List<String> getInvites() { return invites; }
     public boolean isInvited(String p) {
-        return invites.contains(p);
+        return findIgnoreCase(invites, p) != null;
     }
     public void invite(String p) {
-        if(!invites.contains(p)) invites.add(p);
+        if(p == null || isInvited(p)) return;
+        invites.add(p);
+    }
+    public boolean consumeInvite(String p) {
+        String stored = findIgnoreCase(invites, p);
+        if(stored == null) return false;
+        invites.remove(stored);
+        return true;
     }
     public String getId() { return id; }
     public String getName() { return isBase() ? host.getName() : name; }
@@ -395,18 +402,19 @@ public class Guild {
     /** Backing name, even while this guild is a faction base (display name follows the host). */
     public String getOwnName() { return name; }
     public List<String> getMembers() { return members; }
-    public boolean isMember(String p) { return members.contains(p); }
+    public boolean isMember(String p) { return findIgnoreCase(members, p) != null; }
     public boolean isMember(Player p) { return isMember(p.getName()); }
     public void addMember(String p) {
         if(isMember(p)) return;
         if(!isBase() && host.getOrCreateMainGuild().isMember(p)) {
             host.getOrCreateMainGuild().kick(p);
         } 
-        if(isInvited(p)) invites.remove(p);
+        consumeInvite(p);
         members.add(p);
     }
     public void kick(String member) {
-        members.remove(member);
+        String stored = findIgnoreCase(members, member);
+        if(stored != null) members.remove(stored);
     }
     public String getLeader() { return isBase() ? host.getLeader() : leader; }
     public void setLeader(String leader) {
@@ -1013,5 +1021,13 @@ public class Guild {
     private void clearFavoursAndRepressions() {
         favoured = false;
         repressed = false;
+    }
+
+    public static String findIgnoreCase(List<String> names, String name) {
+        if(name == null || names == null) return null;
+        for(String stored : names) {
+            if(stored != null && stored.equalsIgnoreCase(name)) return stored;
+        }
+        return null;
     }
 }

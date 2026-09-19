@@ -452,11 +452,7 @@ public class Faction {
 	}
 
 	public boolean ownsProvince(int provinceId) {
-		if (provinceHandler.hasProvince(provinceId)) {
-			return true;
-		}
-		Title title = TitleLoader.getByProvince(provinceId);
-		return title != null && hasTitle(title);
+		return provinceHandler.hasProvince(provinceId);
 	}
 	
 	public void addProvince(int i) {
@@ -474,6 +470,22 @@ public class Faction {
 	}
 	public void setInvited(List<String> invited) {
 		this.invited = invited;
+	}
+	public boolean isInvited(String name) {
+		return Guild.findIgnoreCase(invited, name) != null;
+	}
+	public void invite(String name) {
+		if(name == null || isInvited(name)) return;
+		invited.add(name);
+	}
+	public boolean consumeInvite(String name) {
+		String stored = Guild.findIgnoreCase(invited, name);
+		if(stored == null) return false;
+		invited.remove(stored);
+		return true;
+	}
+	public boolean isMemberIgnoreCase(String name) {
+		return Guild.findIgnoreCase(getMembers(), name) != null;
 	}
 	public List<Modifier> getWealthModifiers() {
 		List<Modifier> list = new ArrayList<>(getOrCreateMainGuild().getWealthModifiers());

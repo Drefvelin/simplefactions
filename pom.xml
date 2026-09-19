@@ -11,10 +11,13 @@
     <properties>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <tfmc.refs>D:/Documents/TFMC/ReferenceLibs</tfmc.refs>
-        <tfmc.builds>D:/Documents/TFMC/Builds/SimpleFactions</tfmc.builds>
-        <tfmc.tlibs>D:/Documents/TFMC/Builds/TLibs</tfmc.tlibs>
-        <tfmc.plugins>D:/Documents/TFMC/Workspace/plugins</tfmc.plugins>
+        <tfmc.refs>D:/Dokumenter/My Plugins/Reference Libs</tfmc.refs>
+        <tfmc.builds>D:/Dokumenter/My Plugins/TFMC/SimpleFactions</tfmc.builds>
+        <tfmc.tlibs>D:/Dokumenter/My Plugins/TFMC/TLibs</tfmc.tlibs>
+        <tfmc.plugins>D:/Dokumenter/My Plugins/TFMC/DenarEconomy</tfmc.plugins>
+        <tfmc.rpcharacters>D:/Dokumenter/My Plugins/TFMC/RPCharacters</tfmc.rpcharacters>
+        <tfmc.vehicleframework>D:/Dokumenter/My Plugins/TFMC/VehicleFramework</tfmc.vehicleframework>
+        <tfmc.vfbuilders>D:/Dokumenter/My Plugins/TFMC/VFBuilders</tfmc.vfbuilders>
     </properties>
 
     <dependencies>
@@ -75,9 +78,9 @@
         <dependency>
             <groupId>local</groupId>
             <artifactId>RPCharacters</artifactId>
-            <version>1.1.6</version>
+            <version>1.1.7</version>
             <scope>system</scope>
-            <systemPath>${tfmc.refs}/rpcharacters-1.1.6.jar</systemPath>
+            <systemPath>${tfmc.rpcharacters}/rpcharacters-1.1.7.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
@@ -91,14 +94,14 @@
             <artifactId>VehicleFramework</artifactId>
             <version>1.1.11</version>
             <scope>system</scope>
-            <systemPath>${tfmc.refs}/vehicleframework-1.1.11.jar</systemPath>
+            <systemPath>${tfmc.vehicleframework}/vehicleframework-1.1.11.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
             <artifactId>VFBuilders</artifactId>
             <version>1.0.0</version>
             <scope>system</scope>
-            <systemPath>${tfmc.refs}/vfbuilders-1.0.0.jar</systemPath>
+            <systemPath>${tfmc.vfbuilders}/vfbuilders-1.0.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>commons-lang</groupId>

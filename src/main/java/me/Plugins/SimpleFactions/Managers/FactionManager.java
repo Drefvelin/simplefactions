@@ -540,9 +540,10 @@ public class FactionManager implements Listener{
 	}
 
 	public static Guild getGuildByMember(String player) {
+		if(player == null) return null;
 		for(Faction f : factions) {
 			for(Guild guild : f.getGuildHandler().getGuilds()) {
-				if(guild.isMember(player)) return guild;
+				if(Guild.findIgnoreCase(guild.getMembers(), player) != null) return guild;
 			}
 		}
 		return null;
@@ -746,8 +747,9 @@ public class FactionManager implements Listener{
 		return null;
 	}
 	public static Faction getByMember(String name) {
+		if(name == null) return null;
 		for(Faction f : factions) {
-			if(f.getMembers().contains(name)) return f;
+			if(f.isMemberIgnoreCase(name)) return f;
 			if(f.getLeader().equalsIgnoreCase(name)) {
 				f.addMember(name);
 				return f;

@@ -63,10 +63,26 @@ public class ProvinceManager {
         return snap;
     }
 
+    public void clearGuildData(String guildId) {
+        if (guildId == null) {
+            return;
+        }
+        for (Province p : provinces.values()) {
+            p.clearGuildData(guildId);
+        }
+    }
+
+    public void dropMissingGuilds() {
+        for (Province p : provinces.values()) {
+            p.dropMissingGuilds();
+        }
+    }
+
     public void recalculate() {
         if (!Cache.provincesEnabled) {
             return;
         }
+        dropMissingGuilds();
         for(Guild g : FactionManager.getAllGuilds()) {
             if (!g.hasCapital()) continue;
             recalculateGuild(g);
@@ -84,6 +100,7 @@ public class ProvinceManager {
             return;
         }
         if (!g.hasCapital()) return;
+        dropMissingGuilds();
         recalculateGuild(g);
         recalculateProduction(g);
         if(save) {
@@ -108,12 +125,8 @@ public class ProvinceManager {
     }
 
     private void recalculateGuild(Guild guild) {
-        String guildId = guild.getId();
-
         // 1) Clear only this guild’s data
-        for (Province p : provinces.values()) {
-            p.clearGuildData(guildId);
-        }
+        clearGuildData(guild.getId());
 
         // 2) Recalculate trade graph
         Province capital = provinces.get(guild.getCapital());

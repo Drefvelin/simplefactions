@@ -74,6 +74,10 @@ public class Province {
         data.remove(guildId);
     }
 
+    public void dropMissingGuilds() {
+        data.entrySet().removeIf(e -> FactionManager.getGuildByString(e.getKey()) == null);
+    }
+
     public void calculateTrade(
             ProvinceManager manager,
             Guild guild,
