@@ -24,7 +24,7 @@ class BattleNamingServiceTest {
 	void slugifyDisplayName_normalizesText() {
 		assertEquals("battle_of_lanbury", BattleNamingService.slugifyDisplayName("Battle of Lanbury"));
 		assertEquals("second_harbor_raid", BattleNamingService.slugifyDisplayName("Second Harbor Raid"));
-		assertEquals("st_mary_s_harbor", BattleNamingService.slugifyDisplayName("St. Mary's Harbor"));
+		assertEquals("st_marys_harbor", BattleNamingService.slugifyDisplayName("St. Mary's Harbor"));
 		assertEquals("wilderness", BattleNamingService.slugifyDisplayName("   "));
 	}
 

@@ -58,6 +58,7 @@ class LedgerNetIncomeTest {
 			relationManagerStatic.close();
 		}
 		FactionManager.factions = new ArrayList<>();
+		Ledger.setNodeUpkeepLookup(null);
 		if (tempDir != null) {
 			Files.walk(tempDir)
 				.sorted(java.util.Comparator.reverseOrder())
@@ -119,6 +120,43 @@ class LedgerNetIncomeTest {
 
 		assertEquals(0.0, ledger.getIncome(Cashflow.INSTALLATIONS));
 		assertEquals(0.0, ledger.getIncome(Cashflow.MILITARY_UPKEEP));
+	}
+
+	@Test
+	void nodes_includedInNetIncome_fromLookup() {
+		Faction faction = mock(Faction.class);
+		Guild guild = mock(Guild.class);
+		Military military = mock(Military.class);
+		InstallationHandler installationHandler = mock(InstallationHandler.class);
+
+		when(faction.getMilitary()).thenReturn(military);
+		when(military.getTotalUpkeep()).thenReturn(0.0);
+		when(faction.getInstallationHandler()).thenReturn(installationHandler);
+		when(installationHandler.getAll()).thenReturn(Collections.emptyList());
+
+		Ledger.setNodeUpkeepLookup(g -> 40.0);
+		Ledger ledger = baseLedger(faction, guild, true);
+
+		assertEquals(-40.0, ledger.getIncome(Cashflow.NODES));
+		assertEquals(-40.0, ledger.getNetIncome());
+	}
+
+	@Test
+	void nodes_zeroWhenLookupUnset() {
+		Faction faction = mock(Faction.class);
+		Guild guild = mock(Guild.class);
+		Military military = mock(Military.class);
+		InstallationHandler installationHandler = mock(InstallationHandler.class);
+
+		when(faction.getMilitary()).thenReturn(military);
+		when(military.getTotalUpkeep()).thenReturn(0.0);
+		when(faction.getInstallationHandler()).thenReturn(installationHandler);
+		when(installationHandler.getAll()).thenReturn(Collections.emptyList());
+
+		Ledger ledger = baseLedger(faction, guild, true);
+
+		assertEquals(0.0, ledger.getIncome(Cashflow.NODES));
+		assertEquals(0.0, ledger.getNetIncome());
 	}
 
 	@Test

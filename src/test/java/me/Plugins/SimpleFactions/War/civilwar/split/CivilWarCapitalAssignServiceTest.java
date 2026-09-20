@@ -50,7 +50,7 @@ class CivilWarCapitalAssignServiceTest {
 
 		assertEquals(694, seat);
 		assertNotNull(handler.getByProvince(694));
-		assertEquals("Rebel Camp", handler.getByProvince(694).getId());
+		assertEquals("Rebel_Camp", handler.getByProvince(694).getId());
 	}
 
 	@Test

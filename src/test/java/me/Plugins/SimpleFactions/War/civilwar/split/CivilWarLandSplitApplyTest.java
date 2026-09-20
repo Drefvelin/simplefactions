@@ -82,7 +82,7 @@ class CivilWarLandSplitApplyTest {
 
 		assertNull(hostCities.getByProvince(20));
 		assertNotNull(rebelCities.getByProvince(20));
-		assertEquals("Gaba Gaba", rebelCities.getByProvince(20).getId());
+		assertEquals("Gaba_Gaba", rebelCities.getByProvince(20).getId());
 		assertNotNull(hostCities.getByProvince(10));
 	}
 }

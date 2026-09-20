@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.ToDoubleFunction;
 
 import org.bukkit.Bukkit;
 
@@ -46,6 +47,13 @@ public class Ledger {
     // Pushed by the games plugin as tables win, and saved with the bank balance it arrived in,
     // so a restart cannot quietly wipe a day of gambling income before it is taxed.
     private double casinoProfit;
+
+    // Dowsing registers this; unset means no nodes plugin, so the line is 0.
+    private static ToDoubleFunction<Guild> nodeUpkeepLookup = guild -> 0.0;
+
+    public static void setNodeUpkeepLookup(ToDoubleFunction<Guild> lookup) {
+        nodeUpkeepLookup = lookup == null ? guild -> 0.0 : lookup;
+    }
 
     public Ledger(Guild guild) {
         this.guild = guild;
@@ -247,6 +255,9 @@ public class Ledger {
                     amount -= guild.getCompany().getUpgradeUpkeep();
                 }
                 break;
+            case NODES:
+                amount = -nodeUpkeepLookup.applyAsDouble(guild);
+                break;
             //Mercenary contracts
             case MERCENARY_CONTRACT:
                 amount = getAggregatedContractEarnings();
@@ -395,6 +406,7 @@ public class Ledger {
                 case UPGRADES_UPKEEP:
                 case INSTALLATIONS:
                 case MILITARY_UPKEEP:
+                case NODES:
                 case PENALTIES:
                 case GUILD_PAYMENTS:
                 case OVERLORD_TAX:
@@ -465,6 +477,7 @@ public class Ledger {
                 case UPGRADES_UPKEEP:
                 case INSTALLATIONS:
                 case MILITARY_UPKEEP:
+                case NODES:
                 case PENALTIES:
                 case GUILD_PAYMENTS:
                 case OVERLORD_TAX:
@@ -726,6 +739,7 @@ public class Ledger {
             case TRADE:
             case TRADE_UPKEEP:
             // INSTALLATIONS: withdrawn in Faction.newDay(), so getIncome() is ledger GUI display only
+            // NODES: withdrawn when a Dowsing cycle starts, so getIncome() is ledger GUI display only
             case UPGRADES_UPKEEP:
             case PENALTIES:
             case CITIZENS:
@@ -899,6 +913,7 @@ public class Ledger {
 
             // Display only - dividends settle in PostSettlementPayouts after other movements,
             // and the mercenary receiving halves are moved by the paying side above.
+            case NODES:
             case DIVIDEND_PAYOUT:
             case DIVIDEND_PAYMENT:
             case GUILDS:
