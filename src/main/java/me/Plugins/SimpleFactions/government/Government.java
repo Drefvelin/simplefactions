@@ -126,7 +126,11 @@ public class Government {
     }
 
     public void ping() {
-        if (power == -1) power = f.getMembers().size() * 10;
+        if (power == -1) {
+            double seed = f.getMembers().size() * 10;
+            double max = getMaxPower();
+            power = Formatter.formatDouble(Math.max(0, Math.min(seed, max)));
+        }
 
         if (shouldStartElection()) {
             election.start();

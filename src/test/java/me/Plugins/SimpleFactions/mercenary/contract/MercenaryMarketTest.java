@@ -3,6 +3,7 @@ package me.Plugins.SimpleFactions.mercenary.contract;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -222,6 +223,10 @@ class MercenaryMarketTest {
         List<String> members = new java.util.ArrayList<>(List.of(council));
         members.add("Farmhand");
         when(fixture.hirer.getMembers()).thenReturn(members);
+        when(fixture.hirer.isMemberIgnoreCase(anyString())).thenAnswer(inv -> {
+            String name = inv.getArgument(0);
+            return members.stream().anyMatch(m -> m.equalsIgnoreCase(name));
+        });
         assertTrue(FactionManager.factions.contains(fixture.hirer));
     }
 }

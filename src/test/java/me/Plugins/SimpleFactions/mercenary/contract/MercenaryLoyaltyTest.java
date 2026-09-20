@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -188,8 +189,7 @@ class MercenaryLoyaltyTest {
         when(gov.isCouncilMember("Chancellor")).thenReturn(true);
         when(gov.isCouncilMember("Farmhand")).thenReturn(false);
         when(host.getGovernment()).thenReturn(gov);
-        when(fixture.host.guild.isMember("Chancellor")).thenReturn(true);
-        when(fixture.host.guild.isMember("Farmhand")).thenReturn(true);
+        when(fixture.host.guild.getMembers()).thenReturn(new ArrayList<>(List.of("Chancellor", "Farmhand")));
 
         assertFalse(MercenaryLoyalty.canDeploy("Chancellor", host));
         assertTrue(MercenaryLoyalty.canDeploy("Farmhand", host),
@@ -215,8 +215,7 @@ class MercenaryLoyaltyTest {
         when(gov.isCouncilMember("Chancellor")).thenReturn(true);
         when(gov.isCouncilMember("Farmhand")).thenReturn(false);
         when(host.getGovernment()).thenReturn(gov);
-        when(fixture.host.guild.isMember("Chancellor")).thenReturn(true);
-        when(fixture.host.guild.isMember("Farmhand")).thenReturn(true);
+        when(fixture.host.guild.getMembers()).thenReturn(new ArrayList<>(List.of("Chancellor", "Farmhand")));
 
         assertEquals(List.of("Chancellor"), MercenaryLoyalty.blockedAgainst(fixture.company, host));
     }
