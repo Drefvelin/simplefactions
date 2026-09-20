@@ -4,7 +4,7 @@
 
 Two pieces exist per faction: the cached scalar `Faction.prestige`, and the `List<Modifier>` breakdown that produced it. Both are rebuilt together by `Faction.updatePrestige()`.
 
-**Assembly:** `Objects/PrestigeBreakdown.java` - **Input gathering:** `Faction.updatePrestige()` - **Playtime term:** `prestige/`
+**Assembly:** `Objects/PrestigeBreakdown.java` - **Input gathering:** `Faction.updatePrestige()` - **Playtime / trade curves:** `prestige/`
 
 ---
 
@@ -17,6 +17,7 @@ Rebuilt from scratch on every recompute, in this order. The order matters becaus
 | Persistent modifiers | Carried over untouched. Admin grants via `/faction addprestigemodifier`, war outcomes, and anything else flagged persistent |
 | **Members** | `pow(memberCount + 4, 1.8) + 5`, **plus** the playtime sum below |
 | **Wealth** | `(wealth / globalWealth) * max-prestige-from-wealth`, capped at the faction's own wealth |
+| **Trade** | Linear `tradePower * prestige-per-trade-power` up to `prestige-from-trade-soft-cap` (default 2000). Past that the marginal rate decays toward `prestige-from-trade-falloff` (default 0.1) over each further cap-sized band, so it never hard-caps. Own guilds only; overlords still get a cut of subject prestige via **Subjects** |
 | **Provinces** | `province tier prestige * provinceCount` |
 | **Titles** | Prestige of the highest title tier held |
 | **Subjects** | `sum(subject.getPrestige() * givePercent / 100)` over vassals |
@@ -78,10 +79,13 @@ So a `MemberPlaytime.Probe` must answer from memory. The RPCharacters index is a
 | Key | Default | Meaning |
 |-----|---------|---------|
 | `max-prestige-from-wealth` | `800` | Ceiling on the Wealth line, shared out by share of global wealth |
+| `prestige-per-trade-power` | `0.1` | Prestige per point of the faction's own guilds' trade power, before the soft cap. `0` hides the Trade line |
+| `prestige-from-trade-soft-cap` | `2000` | Linear Trade prestige up to this value. `0` disables the soft cap |
+| `prestige-from-trade-falloff` | `0.1` | Marginal rate after one more cap-sized band. `1` is no falloff; `0` hard-caps at the soft cap |
 | `max-prestige-playtime-exponent` | `5` | Ceiling on the per-member playtime exponent. `5` means a member tops out at `2^5` = 32, reached at 500 online hours |
 
 Other prestige inputs are not `Cache` keys: per-tier prestige in `tiers.yml`, `minimum-prestige` per rank in `ranks.yml`, and the `prestige` / `prestige_bonus` modifiers plus `scale: relative_prestige` in `diplomacy.yml`.
 
 ## Tests
 
-`PrestigeBreakdownTest` covers assembly and idempotency. `PlaytimePrestigeTest` covers the curve and the cap. `MemberPlaytimeTest` covers the roster sum, unknown members, and that the default probe leaves prestige untouched.
+`PrestigeBreakdownTest` covers assembly and idempotency. `PlaytimePrestigeTest` covers the curve and the cap. `TradePrestigeTest` covers the trade soft cap and falloff. `MemberPlaytimeTest` covers the roster sum, unknown members, and that the default probe leaves prestige untouched.

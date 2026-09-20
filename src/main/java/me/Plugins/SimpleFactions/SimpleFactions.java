@@ -453,6 +453,9 @@ public class SimpleFactions extends JavaPlugin{
 
 	public static void reloadConfigs() {
 		plugin.loadConfigs();
+		FactionManager.rebindRanks();
+		FactionManager.rebindDiplomacy();
+		FactionManager.updateAllPrestigeConverged();
 	}
 
 	public static SimpleFactions getInstance() {

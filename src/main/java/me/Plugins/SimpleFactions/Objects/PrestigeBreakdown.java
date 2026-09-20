@@ -19,6 +19,7 @@ public final class PrestigeBreakdown {
 			List<Modifier> persistent,
 			double members,
 			double wealth,
+			double trade,
 			double provinces,
 			double titles,
 			double subjects,
@@ -31,6 +32,7 @@ public final class PrestigeBreakdown {
 		}
 		modifiers.add(new Modifier("Members", Formatter.formatDouble(members), false));
 		modifiers.add(new Modifier("Wealth", Formatter.formatDouble(wealth), false));
+		if(trade > 0) modifiers.add(new Modifier("Trade", Formatter.formatDouble(trade), false));
 		if(provinces > 0) modifiers.add(new Modifier("Provinces", Formatter.formatDouble(provinces), false));
 		if(titles > 0) modifiers.add(new Modifier("Titles", Formatter.formatDouble(titles), false));
 		if(subjects > 0) modifiers.add(new Modifier("Subjects", Formatter.formatDouble(subjects), false));

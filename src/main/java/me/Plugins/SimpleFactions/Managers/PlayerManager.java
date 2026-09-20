@@ -300,10 +300,7 @@ public class PlayerManager implements Listener{
         Coin c = DenarEconomy.getMoneyManager().getCoin(i);
 		if(c == null) return;
 		if(c.canWithdraw()) return;
-		if(FactionManager.getByMember(p.getName()) == null) return;
-		Faction f = FactionManager.getByMember(p.getName());
-		if(f.getBank() == null) return;
-		if(!f.getBank().getChunk().equals(p.getLocation().getChunk())) return;
+		if(!inFactionOrGuildBankChunk(p)) return;
 		DenarEconomy.getMoneyManager().addMoneyToAccount(p.getUniqueId().toString(), c.getValue()*i.getAmount(), false, true, Accounts.BANK);
 		p.playSound(p, Sound.BLOCK_NOTE_BLOCK_CHIME, 1f, 1f);
 		i.setAmount(0);
@@ -325,24 +322,27 @@ public class PlayerManager implements Listener{
             return false;
         }
 
-        Chunk playerChunk = p.getLocation().getChunk();
-
-        boolean inFactionBank = false;
-        boolean inGuildBank = false;
-
-        if (f != null && f.getBank() != null && f.getBank().getChunk() != null) {
-            inFactionBank = f.getBank().getChunk().equals(playerChunk);
-        }
-
-        if (g != null && g.getBank() != null && g.getBank().getChunk() != null) {
-            inGuildBank = g.getBank().getChunk().equals(playerChunk);
-        }
-
-        if (!inFactionBank && !inGuildBank) {
+        if (!inFactionOrGuildBankChunk(p)) {
             p.sendMessage("§a[DenarEconomy] §cYou must be inside the bank chunk to deposit/withdraw");
             return false;
         }
 
         return true;
+    }
+
+    private boolean inFactionOrGuildBankChunk(Player p) {
+        Faction f = FactionManager.getByMember(p.getName());
+        Guild g = FactionManager.getGuildByMember(p.getName());
+        Chunk playerChunk = p.getLocation().getChunk();
+
+        if (f != null && f.getBank() != null && f.getBank().getChunk() != null
+                && f.getBank().getChunk().equals(playerChunk)) {
+            return true;
+        }
+        if (g != null && g.getBank() != null && g.getBank().getChunk() != null
+                && g.getBank().getChunk().equals(playerChunk)) {
+            return true;
+        }
+        return false;
     }
 }

@@ -1,11 +1,15 @@
 package me.Plugins.SimpleFactions.Managers;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import me.Plugins.SimpleFactions.Diplomacy.RelationType;
+import me.Plugins.SimpleFactions.Loaders.RelationLoader;
 import me.Plugins.SimpleFactions.SimpleFactions;
 import me.Plugins.SimpleFactions.Objects.Request.AutoresolveRequest;
 import me.Plugins.SimpleFactions.Objects.Request.ElevateRequest;
@@ -63,6 +67,27 @@ public class RequestManager {
 			return;
 		}
 		requests.put(p, r);
+	}
+
+	public static void rebindRelationRequests() {
+		List<Player> cancel = new ArrayList<>();
+		for (Map.Entry<Player, Request> entry : requests.entrySet()) {
+			if (!(entry.getValue() instanceof RelationRequest relationRequest)) continue;
+			RelationType current = relationRequest.getType();
+			if (current == null || current.getId() == null) {
+				cancel.add(entry.getKey());
+				continue;
+			}
+			RelationType rebound = RelationLoader.getType(current.getId());
+			if (rebound == null) {
+				cancel.add(entry.getKey());
+			} else {
+				relationRequest.setType(rebound);
+			}
+		}
+		for (Player player : cancel) {
+			requests.remove(player);
+		}
 	}
 	
 	public static void accept(Player p) {

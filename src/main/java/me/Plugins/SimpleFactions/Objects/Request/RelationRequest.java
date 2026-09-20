@@ -23,6 +23,10 @@ public class RelationRequest extends Request{
 		return type;
 	}
 
+	public void setType(RelationType type) {
+		this.type = type;
+	}
+
 	public boolean isTrade() {
 		return trade;
 	}

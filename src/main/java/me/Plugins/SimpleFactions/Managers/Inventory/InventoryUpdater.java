@@ -1,5 +1,7 @@
 package me.Plugins.SimpleFactions.Managers.Inventory;
 
+import java.util.EnumSet;
+import java.util.Set;
 
 import me.Plugins.SimpleFactions.War.battle.engine.core.Battle;
 import org.bukkit.Bukkit;
@@ -39,6 +41,23 @@ public class InventoryUpdater {
 	}
 
 	private static final String BATTLE_LIST_TITLE = "§7Battle List";
+
+	private static final Set<SFGUI> SKIP_PERIODIC_REFRESH = EnumSet.of(
+			SFGUI.GUILD_VIEW,
+			SFGUI.GUILD_LIST,
+			SFGUI.FACTION_GUILDS,
+			SFGUI.LAW_PROPOSAL_SELECT,
+			SFGUI.LAW_SELECT,
+			SFGUI.FAVOUR_REPRESS_SELECT,
+			SFGUI.PROPOSALS,
+			SFGUI.CAUSES_VIEW,
+			SFGUI.CAUSE_VIEW,
+			SFGUI.LEDGER_VIEW,
+			SFGUI.COMPANY_VIEW);
+
+	static boolean skipsPeriodicRefresh(SFGUI type) {
+		return type != null && SKIP_PERIODIC_REFRESH.contains(type);
+	}
 
 	public void updateInventory() {
 		for (Player p : Bukkit.getOnlinePlayers()) {
@@ -84,6 +103,9 @@ public class InventoryUpdater {
 
 	private void refreshSFHolder(Player p, Inventory i, SFInventoryHolder h) {
 		SFGUI type = h.getType();
+		if (skipsPeriodicRefresh(type)) {
+			return;
+		}
 
 		// Screens with no faction/guild id
 		if (type == SFGUI.FACTION_LIST) {

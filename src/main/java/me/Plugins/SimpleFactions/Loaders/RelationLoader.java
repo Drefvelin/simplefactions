@@ -118,7 +118,7 @@ public class RelationLoader {
 		Set<String> set = config.getConfigurationSection("types").getKeys(false);
 
 		List<String> list = new ArrayList<String>(set);
-		
+		types.clear();
 		for(String key : list) {
 			RelationType r = new RelationType(key, config.getConfigurationSection("types."+key));
 			System.out.println("loaded relationtype "+r.getId());
@@ -135,7 +135,7 @@ public class RelationLoader {
 		Set<String> set = config.getConfigurationSection("attitudes").getKeys(false);
 
 		List<String> list = new ArrayList<String>(set);
-		
+		attitudes.clear();
 		for(String key : list) {
 			Attitude a = new Attitude(key, config.getConfigurationSection("attitudes."+key));
 			attitudes.add(a);

@@ -11,6 +11,14 @@ logging: true
 wipe-log: true
 
 max-prestige-from-wealth: 800 # shared between factions based on % of global wealth
+# Prestige from the faction's own guilds' trade power (not vassals).
+# 0.1 means 10 trade power is 1 prestige. 0 disables the Trade line.
+prestige-per-trade-power: 0.1
+# Linear until this much Trade prestige, then the next points keep paying
+# but the rate decays toward prestige-from-trade-falloff over each further
+# cap-sized band. 0.1 means very slow growth past ~2000. 1.0 is no falloff.
+prestige-from-trade-soft-cap: 2000
+prestige-from-trade-falloff: 0.1
 # Each member adds 2^(online hours / 100) to the Members prestige term, so 100 h
 # doubles their share and this cap ends the curve. 5 means a member is worth at
 # most 32, reached at 500 h. Needs RPCharacters; without it the term is 0.

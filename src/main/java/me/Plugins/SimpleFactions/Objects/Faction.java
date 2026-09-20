@@ -754,6 +754,9 @@ public class Faction {
 			}
 		}
 
+		double tradeAmount = me.Plugins.SimpleFactions.prestige.TradePrestige.fromTradePower(
+				guildHandler.getTotalTradePower());
+
 		int provincePrestige = TierLoader.getByString("province").getPrestige();
 		double provinceAmount = (double) (provincePrestige*provinceHandler.getProvinces().size());
 
@@ -771,7 +774,7 @@ public class Faction {
 		double bonusPercent = getModifier(FactionModifiers.PRESTIGE_BONUS).getAmount();
 
 		prestigeModifiers = PrestigeBreakdown.build(
-				prestigeModifiers, members, wealthAmount, provinceAmount, titleAmount, fromSubjects, bonusPercent);
+				prestigeModifiers, members, wealthAmount, tradeAmount, provinceAmount, titleAmount, fromSubjects, bonusPercent);
 		prestige = PrestigeBreakdown.total(prestigeModifiers);
 		
 		if(this.rank.getLevel() < RankLoader.getRanks().size()) {

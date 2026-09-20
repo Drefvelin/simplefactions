@@ -22,6 +22,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import me.Plugins.SimpleFactions.Database.Database;
 import me.Plugins.SimpleFactions.Database.LoanData;
 import me.Plugins.SimpleFactions.Diplomacy.Attitude;
+import me.Plugins.SimpleFactions.Diplomacy.DiplomacyHandler;
 import me.Plugins.SimpleFactions.Diplomacy.Relation;
 import me.Plugins.SimpleFactions.Diplomacy.RelationType;
 import me.Plugins.SimpleFactions.Guild.Guild;
@@ -330,6 +331,64 @@ public class FactionManager implements Listener{
 				newTitles.add(title);
 			}
 			f.resetTitles(newTitles);
+		}
+	}
+
+	public static void rebindRanks() {
+		PrestigeRank fallback = RankLoader.getRanks().isEmpty() ? null : RankLoader.getLowest();
+		for (Faction f : factions) {
+			if (f == null) continue;
+			PrestigeRank current = f.getRank();
+			String id = current != null ? current.getId() : null;
+			PrestigeRank rebound = id != null ? RankLoader.getByString(id) : null;
+			if (rebound == null) {
+				rebound = fallback;
+			}
+			f.setRank(rebound);
+		}
+	}
+
+	public static void rebindDiplomacy() {
+		RelationType defaultType = RelationLoader.getTypes().isEmpty() ? null : RelationLoader.getDefaultType();
+		Attitude defaultAttitude = RelationLoader.getAttitudes().isEmpty() ? null : RelationLoader.getDefaultAttitude();
+		for (Faction f : factions) {
+			if (f == null || f.getDiplomacyHandler() == null) continue;
+			DiplomacyHandler handler = f.getDiplomacyHandler();
+			for (Relation relation : handler.getRelations().values()) {
+				if (relation == null) continue;
+				RelationType type = relation.getType();
+				String typeId = type != null ? type.getId() : null;
+				RelationType reboundType = typeId != null ? RelationLoader.getType(typeId) : null;
+				relation.setType(reboundType != null ? reboundType : defaultType);
+				Attitude attitude = relation.getAttitude();
+				String attitudeId = attitude != null ? attitude.getId() : null;
+				Attitude reboundAttitude = attitudeId != null ? RelationLoader.getAttitude(attitudeId) : null;
+				relation.setAttitude(reboundAttitude != null ? reboundAttitude : defaultAttitude);
+			}
+			rebindRelationTypeMap(handler.getTradeRelations());
+			rebindRelationTypeMap(handler.getTreatyRelations());
+		}
+		RequestManager.rebindRelationRequests();
+	}
+
+	private static void rebindRelationTypeMap(Map<String, RelationType> map) {
+		if (map == null || map.isEmpty()) return;
+		List<String> drop = new ArrayList<>();
+		for (Map.Entry<String, RelationType> entry : map.entrySet()) {
+			RelationType current = entry.getValue();
+			if (current == null || current.getId() == null) {
+				drop.add(entry.getKey());
+				continue;
+			}
+			RelationType rebound = RelationLoader.getType(current.getId());
+			if (rebound == null) {
+				drop.add(entry.getKey());
+			} else {
+				entry.setValue(rebound);
+			}
+		}
+		for (String key : drop) {
+			map.remove(key);
 		}
 	}
 

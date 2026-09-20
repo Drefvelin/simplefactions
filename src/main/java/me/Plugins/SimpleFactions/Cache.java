@@ -25,6 +25,9 @@ public class Cache {
 
 	public static int maxMembers;
 	public static int maxWealthPrestige;
+	public static double prestigePerTradePower = 0.1;
+	public static double prestigeFromTradeSoftCap = 2000;
+	public static double prestigeFromTradeFalloff = 0.1;
 	public static double maxPlaytimePrestigeExponent = 5;
 	public static String baseYear;
 	public static int baseIrlYear = java.time.Year.now().getValue();
