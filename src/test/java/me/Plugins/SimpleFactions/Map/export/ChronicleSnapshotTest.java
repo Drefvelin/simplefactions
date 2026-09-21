@@ -15,6 +15,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import me.Plugins.SimpleFactions.Cache;
+import me.Plugins.SimpleFactions.Guild.Guild;
+import me.Plugins.SimpleFactions.Guild.GuildType;
+import me.Plugins.SimpleFactions.Guild.income.Ledger;
+import me.Plugins.SimpleFactions.Guild.income.TradeBreakdown;
+import me.Plugins.SimpleFactions.Guild.loans.LoanHandler;
 import me.Plugins.SimpleFactions.Loaders.RankLoader;
 import me.Plugins.SimpleFactions.Managers.FactionManager;
 import me.Plugins.SimpleFactions.Managers.RelationManager;
@@ -31,9 +36,47 @@ import me.Plugins.SimpleFactions.settlement.handler.SettlementHandler;
 
 class ChronicleSnapshotTest {
 
+	private static void stubGuildExport(Guild guild, String id, String name) {
+		Ledger ledger = mock(Ledger.class);
+		when(ledger.getNetIncome()).thenReturn(0.0);
+		when(ledger.getInflationDelta()).thenReturn(0.0);
+		TradeBreakdown trade = mock(TradeBreakdown.class);
+		when(trade.getTradePower()).thenReturn(0.0);
+		LoanHandler loans = mock(LoanHandler.class);
+		when(loans.getCreditScore()).thenReturn(50);
+		GuildType type = mock(GuildType.class);
+		when(type.getName()).thenReturn("Guild");
+		Bank bank = mock(Bank.class);
+		when(bank.getWealth()).thenReturn(0.0);
+
+		when(guild.getId()).thenReturn(id);
+		when(guild.getOwnName()).thenReturn(name);
+		when(guild.getType()).thenReturn(type);
+		when(guild.getLedger()).thenReturn(ledger);
+		when(guild.getTradeBreakdown()).thenReturn(trade);
+		when(guild.getLoanHandler()).thenReturn(loans);
+		when(guild.getBank()).thenReturn(bank);
+		when(guild.getTotalExpansionSpent()).thenReturn(0.0);
+		when(guild.getSize()).thenReturn(0);
+	}
+
 	private static Faction faction() {
+		Guild main = mock(Guild.class);
+		stubGuildExport(main, "rhodesia", "Rhodesia");
+		when(main.isBase()).thenReturn(true);
+		when(main.getWealthModifiers()).thenReturn(List.of(
+				new Modifier("Bank", 4000.0, false),
+				new Modifier("Nodes", 8000.0, true)));
+
+		Guild sub = mock(Guild.class);
+		stubGuildExport(sub, "The_Betriebsrat", "The Betriebsrat");
+		when(sub.isBase()).thenReturn(false);
+		when(sub.getName()).thenReturn(
+				"§x§a§3§a§1§8§4The Betriebsrat #a39ba8(§x§b§d§a§4§6§4Guild#a39ba8)");
+		when(sub.getWealth()).thenReturn(224.71);
+
 		GuildHandler guilds = mock(GuildHandler.class);
-		when(guilds.getGuilds()).thenReturn(List.of());
+		when(guilds.getGuilds()).thenReturn(List.of(main, sub));
 
 		SettlementHandler settlements = mock(SettlementHandler.class);
 		when(settlements.getAll()).thenReturn(List.of());
@@ -58,6 +101,7 @@ class ChronicleSnapshotTest {
 		when(faction.getRGB()).thenReturn("128,64,32");
 		when(faction.getFoundedAt()).thenReturn(1725184500L);
 		when(faction.getGuildHandler()).thenReturn(guilds);
+		when(faction.getOrCreateMainGuild()).thenReturn(main);
 		when(faction.getSettlementHandler()).thenReturn(settlements);
 		when(faction.getInstallationHandler()).thenReturn(installations);
 		when(faction.getBank()).thenReturn(bank);
@@ -72,7 +116,11 @@ class ChronicleSnapshotTest {
 		when(faction.getCompleteMemberList()).thenReturn(List.of("ann", "bob", "cid"));
 		when(faction.getWealthModifiers()).thenReturn(List.of(
 				new Modifier("Bank", 4000.0, false),
-				new Modifier("Nodes", 8000.0, true)));
+				new Modifier("Nodes", 8000.0, true),
+				new Modifier(
+						"§x§a§3§a§1§8§4The Betriebsrat #a39ba8(§x§b§d§a§4§6§4Guild#a39ba8)",
+						224.71,
+						false)));
 		when(faction.getPrestigeModifiers()).thenReturn(List.of(
 				new Modifier("Members", 300.0, false),
 				new Modifier("Provinces", 2150.0, false)));
@@ -170,6 +218,9 @@ class ChronicleSnapshotTest {
 			JsonObject wealth = row.getAsJsonObject("wealth_breakdown");
 			assertEquals(4000.0, wealth.get("Bank").getAsDouble(), 1e-9);
 			assertEquals(8000.0, wealth.get("Nodes").getAsDouble(), 1e-9);
+			assertEquals(224.71, wealth.get("The_Betriebsrat").getAsDouble(), 1e-9);
+			assertTrue(!wealth.has(
+					"§x§a§3§a§1§8§4The Betriebsrat #a39ba8(§x§b§d§a§4§6§4Guild#a39ba8)"));
 
 			JsonObject prestige = row.getAsJsonObject("prestige_breakdown");
 			assertEquals(300.0, prestige.get("Members").getAsDouble(), 1e-9);

@@ -120,7 +120,7 @@ public final class ChronicleSnapshot {
 			row.add("subjects", subjects);
 
 			row.addProperty("wealth", faction.getWealth());
-			row.add("wealth_breakdown", breakdown(faction.getWealthModifiers()));
+			row.add("wealth_breakdown", wealthBreakdown(faction));
 			row.addProperty("bank", faction.getBank() != null ? faction.getBank().getWealth() : 0.0);
 			row.addProperty("vassal_wealth", faction.getVassalWealth());
 
@@ -216,6 +216,20 @@ public final class ChronicleSnapshot {
 			}
 		}
 		return rows;
+	}
+
+	private static JsonObject wealthBreakdown(Faction faction) {
+		Guild main = faction.getOrCreateMainGuild();
+		JsonObject object = breakdown(main != null ? main.getWealthModifiers() : null);
+		if (faction.getGuildHandler() == null) {
+			return object;
+		}
+		for (Guild guild : faction.getGuildHandler().getGuilds()) {
+			if (guild == null || guild.isBase() || guild.getWealth() == 0) continue;
+			if (guild.getId() == null) continue;
+			object.addProperty(guild.getId(), guild.getWealth());
+		}
+		return object;
 	}
 
 	private static JsonObject breakdown(List<Modifier> modifiers) {
