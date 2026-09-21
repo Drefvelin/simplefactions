@@ -60,10 +60,32 @@ public class Ledger {
     }
 
     public void addCitizenTaxEntry(String p, Double tax) {
+        if(p == null || p.isBlank() || tax == null || tax <= 0) return;
         if(citizenTaxes.containsKey(p)) {
             citizenTaxes.put(p, citizenTaxes.get(p)+tax);
         } else {
             citizenTaxes.put(p, tax);
+        }
+    }
+
+    /** Copy for save. The live map stays on this ledger. */
+    public Map<String, Double> getCitizenTaxesCopy() {
+        return new HashMap<>(citizenTaxes);
+    }
+
+    /** Seeded from disk at load, so an unsettled day survives a restart. */
+    public void setCitizenTaxes(Map<String, Double> taxes) {
+        citizenTaxes.clear();
+        if (taxes == null || taxes.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<String, Double> entry : taxes.entrySet()) {
+            String name = entry.getKey();
+            Double tax = entry.getValue();
+            if (name == null || name.isBlank() || tax == null || tax <= 0) {
+                continue;
+            }
+            citizenTaxes.merge(name, tax, Double::sum);
         }
     }
 
@@ -703,7 +725,9 @@ public class Ledger {
         for (Cashflow cf : Cashflow.values()) {
             applySettlementFor(cf, buffer);
         }
-        citizenTaxes.clear();
+        if (!guild.isBankrupt()) {
+            citizenTaxes.clear();
+        }
         loanPayments.clear();
         interestPayments.clear();
         // Taxed once, on the day it was won.

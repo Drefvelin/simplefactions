@@ -381,6 +381,8 @@ public class Database {
                 gd.dividendPercent = g.getDividendPercent();
                 gd.dividendEligible = g.getDividendEligibleSnapshot();
                 gd.casinoProfit = g.getLedger().getCasinoProfit();
+                Map<String, Double> citizenTaxes = g.getLedger().getCitizenTaxesCopy();
+                gd.citizenTaxes = citizenTaxes.isEmpty() ? null : citizenTaxes;
                 gd.company = g.getCompany() != null ? g.getCompany().serialize() : null;
 
                 // --- Bank ---
